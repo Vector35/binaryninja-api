@@ -411,30 +411,29 @@ static bool LiftBranches(Architecture* arch, LowLevelILFunction &il, const Instr
 static ExprId ByteReverseRegister(LowLevelILFunction &il, uint32_t reg, size_t size)
 {
 	ExprId swap = BN_INVALID_EXPR;
-	size_t opsz = (size > 4) ? 8 : 4;
 
 	for (size_t srcIndex = 0; srcIndex < size; srcIndex++)
 	{
-		ExprId extracted = il.Register(opsz, reg);
+		ExprId extracted = il.Register(4, reg);
 		size_t dstIndex = size - srcIndex - 1;
 
 		if (dstIndex > srcIndex)
 		{
-			ExprId mask = il.Const(opsz, 0xffull << (srcIndex * 8));
-			extracted = il.And(opsz, extracted, mask);
-			extracted = il.ShiftLeft(opsz, extracted, il.Const(opsz, (dstIndex - srcIndex) * 8));
+			ExprId mask = il.Const(4, 0xffull << (srcIndex * 8));
+			extracted = il.And(4, extracted, mask);
+			extracted = il.ShiftLeft(4, extracted, il.Const(4, (dstIndex - srcIndex) * 8));
 		}
 		else if (srcIndex > dstIndex)
 		{
-			ExprId mask = il.Const(opsz, 0xffull << (dstIndex * 8));
-			extracted = il.LogicalShiftRight(opsz, extracted, il.Const(opsz, (srcIndex - dstIndex) * 8));
-			extracted = il.And(opsz, extracted, mask);
+			ExprId mask = il.Const(4, 0xffull << (dstIndex * 8));
+			extracted = il.LogicalShiftRight(4, extracted, il.Const(4, (srcIndex - dstIndex) * 8));
+			extracted = il.And(4, extracted, mask);
 		}
 
 		if (swap == BN_INVALID_EXPR)
 			swap = extracted;
 		else
-			swap = il.Or(opsz, swap, extracted);
+			swap = il.Or(4, swap, extracted);
 	}
 
 	return swap;
@@ -467,86 +466,16 @@ static void ByteReversedStore(LowLevelILFunction &il, Instruction* instruction, 
 	il.AddInstruction(il.Store(size, addr, val));                             // [(rA|0) + (rB)] = swap(rS)
 }
 
-// Power ISA SINGLE/DOUBLE memory conversions are bit packing, not arithmetic
-// conversions: in particular they do not quiet signaling NaNs or update FPSCR.
-static ExprId SingleBits(LowLevelILFunction& il, ExprId value)
-{
-	il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0), value));
-	auto source = [&]() { return il.Register(8, LLIL_TEMP(0)); };
-	auto exponent = [&]() { return il.And(4, il.LowPart(4,
-		il.LogicalShiftRight(8, source(), il.Const(1, 52))), il.Const(4, 0x7ff)); };
-	auto sign = [&]() { return il.And(4, il.LowPart(4,
-		il.LogicalShiftRight(8, source(), il.Const(1, 32))), il.Const(4, 0x80000000)); };
-	LowLevelILLabel normal, small, denormal, zero, done;
-	il.AddInstruction(il.If(il.CompareUnsignedGreaterThan(4, exponent(), il.Const(4, 896)), normal, small));
-	il.MarkLabel(normal);
-	il.AddInstruction(il.SetRegister(4, LLIL_TEMP(1), il.Or(4,
-		il.And(4, il.LowPart(4, il.LogicalShiftRight(8, source(), il.Const(1, 32))), il.Const(4, 0xc0000000)),
-		il.And(4, il.LowPart(4, il.LogicalShiftRight(8, source(), il.Const(1, 29))), il.Const(4, 0x3fffffff)))));
-	il.AddInstruction(il.Goto(done));
-	il.MarkLabel(small);
-	il.AddInstruction(il.If(il.CompareUnsignedGreaterEqual(4, exponent(), il.Const(4, 874)), denormal, zero));
-	il.MarkLabel(denormal);
-	il.AddInstruction(il.SetRegister(4, LLIL_TEMP(1), il.Or(4, sign(), il.LowPart(4,
-		il.LogicalShiftRight(8,
-			il.Or(8, il.And(8, source(), il.Const(8, 0x000fffffffffffffULL)), il.Const(8, 1ULL << 52)),
-			il.Sub(4, il.Const(4, 926), exponent()))))));
-	il.AddInstruction(il.Goto(done));
-	il.MarkLabel(zero);
-	// Out-of-range nonzero inputs have undefined results; choose signed zero.
-	il.AddInstruction(il.SetRegister(4, LLIL_TEMP(1), sign()));
-	il.MarkLabel(done);
-	return il.Register(4, LLIL_TEMP(1));
-}
-
-static ExprId DoubleBits(LowLevelILFunction& il, ExprId value)
-{
-	il.AddInstruction(il.SetRegister(4, LLIL_TEMP(0), value));
-	auto source = [&]() { return il.Register(4, LLIL_TEMP(0)); };
-	auto fraction = [&]() { return il.And(4, source(), il.Const(4, 0x7fffff)); };
-	auto exponent = [&]() { return il.And(4,
-		il.LogicalShiftRight(4, source(), il.Const(1, 23)), il.Const(4, 0xff)); };
-	auto sign = [&]() { return il.ShiftLeft(8,
-		il.ZeroExtend(8, il.And(4, source(), il.Const(4, 0x80000000))), il.Const(1, 32)); };
-	LowLevelILLabel normal, small, denormal, zero, done;
-	il.AddInstruction(il.If(il.CompareEqual(4, exponent(), il.Const(4, 0)), small, normal));
-	il.MarkLabel(normal);
-	ExprId exp = il.Add(8, il.ZeroExtend(8, exponent()), il.Const(8, 896));
-	// Map exponent 255 to 2047 while preserving the NaN payload/signaling bit.
-	exp = il.Add(8, exp, il.Mult(8, il.BoolToInt(8,
-		il.CompareEqual(4, exponent(), il.Const(4, 255))), il.Const(8, 896)));
-	il.AddInstruction(il.SetRegister(8, LLIL_TEMP(1), il.Or(8, sign(), il.Or(8,
-		il.ShiftLeft(8, exp, il.Const(1, 52)),
-		il.ShiftLeft(8, il.ZeroExtend(8, fraction()), il.Const(1, 29))))));
-	il.AddInstruction(il.Goto(done));
-	il.MarkLabel(small);
-	il.AddInstruction(il.If(il.CompareEqual(4, fraction(), il.Const(4, 0)), zero, denormal));
-	il.MarkLabel(denormal);
-	il.AddInstruction(il.SetRegister(4, LLIL_TEMP(2),
-		il.Sub(4, il.CountLeadingZeros(4, fraction()), il.Const(4, 8))));
-	ExprId shift = il.Register(4, LLIL_TEMP(2));
-	exp = il.Sub(8, il.Const(8, 897), il.ZeroExtend(8, shift));
-	ExprId frac = il.And(4, il.ShiftLeft(4, fraction(), shift), il.Const(4, 0x7fffff));
-	il.AddInstruction(il.SetRegister(8, LLIL_TEMP(1), il.Or(8, sign(), il.Or(8,
-		il.ShiftLeft(8, exp, il.Const(1, 52)),
-		il.ShiftLeft(8, il.ZeroExtend(8, frac), il.Const(1, 29))))));
-	il.AddInstruction(il.Goto(done));
-	il.MarkLabel(zero);
-	il.AddInstruction(il.SetRegister(8, LLIL_TEMP(1), sign()));
-	il.MarkLabel(done);
-	return il.Register(8, LLIL_TEMP(1));
-}
-
 static void load_float(LowLevelILFunction& il,
 	int load_sz,
 	Operand* operand1, /* register that gets read/written */
 	Operand* operand2, /* location the read/write occurs */
 	Operand* operand3=0,
-	bool update=false,
-	size_t addrsz=4
+	bool update=false
 	)
 {
 	ExprId tmp = BN_INVALID_EXPR;
+	const int addrsz = 4;
 	// assume single
 	if (!load_sz)
 		load_sz = 4;
@@ -554,36 +483,28 @@ static void load_float(LowLevelILFunction& il,
 	// operand1.reg = [operand2.reg + operand2.imm]
 	if (operand2->cls == PPC_OP_MEM_RA)
 	{
-		if (operand2->mem.reg == PPC_REG_GPR0)
+		if (operand2->mem.reg == 0)
 		{
 			tmp = il.Const(addrsz, operand2->mem.offset);
 		}
 		else
 		{
 			tmp = il.Add(addrsz, il.Register(addrsz, operand2->mem.reg), il.Const(addrsz, operand2->mem.offset));
+		}		
+	}
+	else if(operand2->cls == PPC_OP_REG_RA)
+	{
+		if ((operand3 != 0) && (operand3->cls == PPC_OP_REG_RB))
+		{
+			tmp = il.Add(4, il.Register(addrsz, operand2->reg), il.Register(addrsz, operand3->reg));
 		}
 	}
-	else if (operand3 && operand3->cls == PPC_OP_REG_RB)
-	{
-		tmp = il.Add(addrsz, operToIL(il, operand2, OTI_GPR0_ZERO, 0, addrsz),
-			operToIL_a(il, operand3, addrsz));
-	}
 
-	if (tmp == BN_INVALID_EXPR)
-	{
-		il.AddInstruction(il.Unimplemented());
-		return;
-	}
-	// FPRs hold binary64 values, including single-precision loads.
-	ExprId value = il.Operand(1, il.Load(load_sz, tmp));
-	if (load_sz == 4)
-		value = DoubleBits(il, value);
-	il.AddInstruction(il.SetRegister(8, operand1->reg, value));
-
+	il.AddInstruction(il.SetRegister(load_sz, operand1->reg, il.FloatConvert(load_sz, il.Operand(1, il.Load(load_sz, tmp)))));
+	
 	if (update == true)
 	{
-		uint32_t base = operand2->cls == PPC_OP_MEM_RA ? operand2->mem.reg : operand2->reg;
-		tmp = il.SetRegister(addrsz, base, tmp);
+		tmp = il.SetRegister(4, operand2->reg, tmp);
 		il.AddInstruction(tmp);
 	}
 }
@@ -676,344 +597,6 @@ static void LiftStringWord(Architecture* arch, LowLevelILFunction& il, Instructi
 	}
 }
 
-// Integer record forms compare the native-width result with zero and copy XER[SO].
-static void RecordCR0(LowLevelILFunction& il, uint32_t reg, size_t size)
-{
-	il.AddInstruction(il.SetFlag(IL_FLAG_LT,
-		il.CompareSignedLessThan(size, il.Register(size, reg), il.Const(size, 0))));
-	il.AddInstruction(il.SetFlag(IL_FLAG_GT,
-		il.CompareSignedGreaterThan(size, il.Register(size, reg), il.Const(size, 0))));
-	il.AddInstruction(il.SetFlag(IL_FLAG_EQ,
-		il.CompareEqual(size, il.Register(size, reg), il.Const(size, 0))));
-	il.AddInstruction(il.SetFlag(IL_FLAG_SO, il.Flag(IL_FLAG_XER_SO)));
-}
-
-/* stwcx./stdcx. set CR0 = 0b00 || store_performed || XER[SO]. */
-static void SetStoreConditionalCR0(LowLevelILFunction& il, bool succeeded)
-{
-	il.AddInstruction(il.SetFlag(IL_FLAG_LT, il.Const(0, 0)));
-	il.AddInstruction(il.SetFlag(IL_FLAG_GT, il.Const(0, 0)));
-	il.AddInstruction(il.SetFlag(IL_FLAG_EQ, il.Const(0, succeeded ? 1 : 0)));
-	il.AddInstruction(il.SetFlag(IL_FLAG_SO, il.Flag(IL_FLAG_XER_SO)));
-}
-
-/* Effective address (rA|0) + rB shared by the reservation instructions. */
-static ExprId ReservationAddress(LowLevelILFunction& il, Operand* ra, Operand* rb, size_t addressSize)
-{
-	return il.Add(addressSize,
-		operToIL(il, ra, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize),
-		operToIL_a(il, rb, addressSize));
-}
-
-static void LiftLoadReserve(LowLevelILFunction& il, Instruction* instruction, size_t size, size_t addressSize)
-{
-	il.AddInstruction(il.SetRegister(addressSize, LLIL_TEMP(0),
-		ReservationAddress(il, &instruction->operands[1], &instruction->operands[2], addressSize)));
-	ExprId value = il.Load(size, il.Register(addressSize, LLIL_TEMP(0)));
-	if (size < addressSize)
-		value = il.ZeroExtend(addressSize, value);
-	il.AddInstruction(il.SetRegister(addressSize, instruction->operands[0].reg, value));
-	il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_SET_RESERVATION,
-		{il.Register(addressSize, LLIL_TEMP(0)), il.Const(4, size)}));
-}
-
-static void LiftIndexedLoad(LowLevelILFunction& il, Instruction* instruction, size_t size,
-	size_t addressSize, bool isSigned, bool update)
-{
-	const auto* ops = instruction->operands;
-	if (update && (ops[1].cls != PPC_OP_REG_RA || ops[1].reg == PPC_REG_GPR0 || ops[1].reg == ops[0].reg))
-	{
-		il.AddInstruction(il.Undefined());
-		return;
-	}
-	il.AddInstruction(il.SetRegister(addressSize, LLIL_TEMP(0),
-		ReservationAddress(il, &instruction->operands[1], &instruction->operands[2], addressSize)));
-	ExprId value = il.Load(size, il.Register(addressSize, LLIL_TEMP(0)));
-	if (size < addressSize)
-		value = isSigned ? il.SignExtend(addressSize, value) : il.ZeroExtend(addressSize, value);
-	il.AddInstruction(il.SetRegister(addressSize, ops[0].reg, value));
-	if (update)
-		il.AddInstruction(il.SetRegister(addressSize, ops[1].reg, il.Register(addressSize, LLIL_TEMP(0))));
-}
-
-/* stwcx./stdcx.: the reservation status is provided by an intrinsic, and the
-   store plus its CR0 result are conditional on it.  This mirrors how the mips
-   (ll/sc) and armv7/arm64 (ldrex/strex) lifters model store-conditional. */
-static void LiftStoreConditional(LowLevelILFunction& il, Instruction* instruction, size_t size, size_t addressSize)
-{
-	Operand* rs = &instruction->operands[0];
-	Operand* ra = &instruction->operands[1];
-	Operand* rb = &instruction->operands[2];
-
-	il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(LLIL_TEMP(0))},
-		PPC_INTRIN_CHECK_RESERVATION, {ReservationAddress(il, ra, rb, addressSize), il.Const(4, size)}));
-
-	LowLevelILLabel success, fail, done;
-	il.AddInstruction(il.If(
-		il.Register(1, LLIL_TEMP(0)), success, fail));
-
-	// reservation held: perform the store and report success in CR0
-	il.MarkLabel(success);
-	ExprId value = (size < addressSize)
-		? il.LowPart(size, operToIL_a(il, rs, addressSize))
-		: operToIL_a(il, rs, size);
-	il.AddInstruction(il.Store(size, ReservationAddress(il, ra, rb, addressSize), value));
-	SetStoreConditionalCR0(il, true);
-	il.AddInstruction(il.Goto(done));
-
-	// reservation lost: no store, CR0 reports failure
-	il.MarkLabel(fail);
-	SetStoreConditionalCR0(il, false);
-
-	il.MarkLabel(done);
-}
-
-/* Map a condition-encoding trap mnemonic (e.g. "tdlgt") to its 5-bit TO field. */
-static uint32_t TrapConditionMask(uint32_t id)
-{
-	switch (id)
-	{
-		case PPC_ID_TDLGT: case PPC_ID_TDLGTI:
-		case PPC_ID_TWLGT: case PPC_ID_TWLGTI: return 0x01; // a >u b
-		case PPC_ID_TDLLT: case PPC_ID_TDLLTI:
-		case PPC_ID_TWLLT: case PPC_ID_TWLLTI: return 0x02; // a <u b
-		case PPC_ID_TDEQ:  case PPC_ID_TDEQI:
-		case PPC_ID_TWEQ:  case PPC_ID_TWEQI:  return 0x04; // a == b
-		case PPC_ID_TDGT:  case PPC_ID_TDGTI:
-		case PPC_ID_TWGT:  case PPC_ID_TWGTI:  return 0x08; // a >s b
-		case PPC_ID_TDLT:  case PPC_ID_TDLTI:
-		case PPC_ID_TWLT:  case PPC_ID_TWLTI:  return 0x10; // a <s b
-		case PPC_ID_TDNE:  case PPC_ID_TDNEI:
-		case PPC_ID_TWNE:  case PPC_ID_TWNEI:  return 0x18; // a != b
-		case PPC_ID_TDU:   case PPC_ID_TDUI:
-		case PPC_ID_TWU:   case PPC_ID_TWUI:
-		case PPC_ID_TRAP:                      return 0x1f; // unconditional
-		case PPC_ID_TWGEI:                     return 0x0c; // a >=s b
-		case PPC_ID_TWLEI:                     return 0x14; // a <=s b
-		case PPC_ID_TWLLEI:                    return 0x06; // a <=u b
-		default:                               return 0x00;
-	}
-}
-
-/* Build the boolean condition for a trap from its TO field.  TO bit meanings:
-   0x10 = <s, 0x08 = >s, 0x04 = ==, 0x02 = <u, 0x01 = >u. */
-static ExprId TrapCondition(LowLevelILFunction& il, uint32_t to, Operand* aOp, Operand* bOp, size_t size)
-{
-	ExprId a = operToIL_a(il, aOp, size);
-	ExprId b = operToIL_a(il, bOp, size);
-
-	// Every trap mnemonic the decoder produces maps to a single comparison.
-	switch (to & 0x1f)
-	{
-		case 0x01: return il.CompareUnsignedGreaterThan(size, a, b);
-		case 0x02: return il.CompareUnsignedLessThan(size, a, b);
-		case 0x03: return il.CompareNotEqual(size, a, b);            // <u or >u
-		case 0x04: return il.CompareEqual(size, a, b);
-		case 0x05: return il.CompareUnsignedGreaterEqual(size, a, b);
-		case 0x06: return il.CompareUnsignedLessEqual(size, a, b);
-		case 0x08: return il.CompareSignedGreaterThan(size, a, b);
-		case 0x0c: return il.CompareSignedGreaterEqual(size, a, b);
-		case 0x10: return il.CompareSignedLessThan(size, a, b);
-		case 0x14: return il.CompareSignedLessEqual(size, a, b);
-		case 0x18: return il.CompareNotEqual(size, a, b);            // <s or >s
-		default: break;
-	}
-
-	// General case (arbitrary TO on a generic td/tw): OR the enabled comparisons.
-	static const uint32_t bits[5] = { 0x10, 0x08, 0x04, 0x02, 0x01 };
-	ExprId cond = BN_INVALID_EXPR;
-	bool first = true;
-	for (int i = 0; i < 5; i++)
-	{
-		uint32_t bit = bits[i];
-		if ((to & bit) == 0)
-			continue;
-
-		ExprId cmp;
-		switch (bit)
-		{
-			case 0x10: cmp = il.CompareSignedLessThan(size, a, b); break;
-			case 0x08: cmp = il.CompareSignedGreaterThan(size, a, b); break;
-			case 0x04: cmp = il.CompareEqual(size, a, b); break;
-			case 0x02: cmp = il.CompareUnsignedLessThan(size, a, b); break;
-			default:   cmp = il.CompareUnsignedGreaterThan(size, a, b); break;
-		}
-
-		cond = first ? cmp : il.Or(0, cond, cmp);
-		first = false;
-	}
-
-	return cond;
-}
-
-/* <op> [TO,] rA, (rB | SIMM): trap if the selected comparison of rA holds. */
-static void LiftTrap(LowLevelILFunction& il, Instruction* instruction, size_t size)
-{
-	uint32_t to;
-	Operand* aOp;
-	Operand* bOp;
-
-	switch (instruction->id)
-	{
-		// generic forms carry an explicit TO operand
-		case PPC_ID_TD:
-		case PPC_ID_TW:
-		case PPC_ID_TDI:
-		case PPC_ID_TWI:
-			if (instruction->numOperands < 3)
-			{
-				il.AddInstruction(il.Unimplemented());
-				return;
-			}
-			to = (uint32_t)instruction->operands[0].uimm;
-			aOp = &instruction->operands[1];
-			bOp = &instruction->operands[2];
-			break;
-
-		default:
-			to = TrapConditionMask(instruction->id);
-			aOp = &instruction->operands[0];
-			bOp = &instruction->operands[1];
-			break;
-	}
-
-	if ((to & 0x1f) == 0)
-	{
-		il.AddInstruction(il.Nop());
-		return;
-	}
-
-	if ((to & 0x1f) == 0x1f)
-	{
-		il.AddInstruction(il.Trap(0));
-		return;
-	}
-
-	LowLevelILLabel trapLabel, nextLabel;
-	if (instruction->numOperands < 2)
-	{
-		il.AddInstruction(il.Unimplemented());
-		return;
-	}
-	il.AddInstruction(il.If(TrapCondition(il, to, aOp, bOp, size), trapLabel, nextLabel));
-	il.MarkLabel(trapLabel);
-	il.AddInstruction(il.Trap(0));
-	il.MarkLabel(nextLabel);
-}
-
-static void WriteOverflow(LowLevelILFunction& il, ExprId overflow)
-{
-	il.AddInstruction(il.SetFlag(IL_FLAG_XER_OV, overflow));
-	il.AddInstruction(il.SetFlag(IL_FLAG_XER_SO, il.Or(0, il.Flag(IL_FLAG_XER_SO), il.Flag(IL_FLAG_XER_OV))));
-	// ISA 3.0 OE forms implemented here also report OV32. Other XER bits,
-	// notably the string byte count and CA32, remain untouched.
-	il.AddInstruction(il.SetRegister(4, PPC_REG_XER,
-		il.Or(4, il.And(4, il.Register(4, PPC_REG_XER), il.Const(4, ~(1u << 19))),
-			il.ShiftLeft(4, il.BoolToInt(4, il.Flag(IL_FLAG_XER_OV)), il.Const(1, 19)))));
-}
-
-static void RecordCR1(LowLevelILFunction& il)
-{
-	for (uint32_t bit = 0; bit < 4; bit++)
-		il.AddInstruction(il.SetFlag(IL_FLAG_LT_1 + bit,
-			il.TestBit(4, il.Register(4, PPC_REG_FPSCR), il.Const(1, 31 - bit))));
-}
-
-static void LiftScalarFP(LowLevelILFunction& il, Instruction* instruction, uint32_t intrinsic)
-{
-	il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(instruction->operands[0].reg),
-		RegisterOrFlag::Register(PPC_REG_FPSCR)}, intrinsic,
-		{il.Register(8, instruction->operands[1].reg), il.Register(8, PPC_REG_FPSCR)}));
-	if (instruction->flags.rc)
-		RecordCR1(il);
-}
-
-static void LiftExtendedDivide(LowLevelILFunction& il, Instruction* instruction,
-	size_t size, size_t addressSize, bool isSigned)
-{
-	const auto* ops = instruction->operands;
-	const size_t wide = size * 2;
-	ExprId invalid = il.CompareEqual(size, il.Register(size, ops[2].reg), il.Const(size, 0));
-	if (isSigned)
-		invalid = il.Or(0, invalid, il.And(0,
-			il.CompareEqual(size, il.Register(size, ops[1].reg), il.Const(size, 1ULL << (size * 8 - 1))),
-			il.CompareEqual(size, il.Register(size, ops[2].reg), il.Const(size, -1))));
-	LowLevelILLabel fail, divide, success, done;
-	il.AddInstruction(il.If(invalid, fail, divide));
-	il.MarkLabel(divide);
-	ExprId dividend = isSigned ? il.SignExtend(wide, il.Register(size, ops[1].reg))
-		: il.ZeroExtend(wide, il.Register(size, ops[1].reg));
-	dividend = il.ShiftLeft(wide, dividend, il.Const(1, size * 8));
-	ExprId divisor = isSigned ? il.SignExtend(wide, il.Register(size, ops[2].reg))
-		: il.ZeroExtend(wide, il.Register(size, ops[2].reg));
-	il.AddInstruction(il.SetRegister(wide, LLIL_TEMP(0), isSigned
-		? il.DivSigned(wide, dividend, divisor) : il.DivUnsigned(wide, dividend, divisor)));
-	ExprId narrowed = il.LowPart(size, il.Register(wide, LLIL_TEMP(0)));
-	ExprId extended = isSigned ? il.SignExtend(wide, narrowed) : il.ZeroExtend(wide, narrowed);
-	il.AddInstruction(il.If(il.CompareEqual(wide, il.Register(wide, LLIL_TEMP(0)), extended), success, fail));
-	il.MarkLabel(success);
-	ExprId result = il.LowPart(size, il.Register(wide, LLIL_TEMP(0)));
-	if (size < addressSize)
-		result = isSigned ? il.SignExtend(addressSize, result) : il.ZeroExtend(addressSize, result);
-	il.AddInstruction(il.SetRegister(addressSize, ops[0].reg, result));
-	if (instruction->flags.oe)
-		WriteOverflow(il, il.Const(0, 0));
-	il.AddInstruction(il.Goto(done));
-	il.MarkLabel(fail);
-	il.AddInstruction(il.SetRegister(addressSize, ops[0].reg, il.Undefined()));
-	if (instruction->flags.oe)
-		WriteOverflow(il, il.Const(0, 1));
-	il.MarkLabel(done);
-	if (instruction->flags.rc)
-		RecordCR0(il, ops[0].reg, addressSize);
-}
-
-static void LiftMultiply(LowLevelILFunction& il, Instruction* instruction, bool high, bool isSigned)
-{
-	const auto* ops = instruction->operands;
-	ExprId product = isSigned
-		? il.MultDoublePrecSigned(8, il.Register(8, ops[1].reg), il.Register(8, ops[2].reg))
-		: il.MultDoublePrecUnsigned(8, il.Register(8, ops[1].reg), il.Register(8, ops[2].reg));
-	il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0), product));
-	if (!high && instruction->flags.oe)
-		WriteOverflow(il, il.CompareNotEqual(16, il.Register(16, LLIL_TEMP(0)),
-			il.SignExtend(16, il.LowPart(8, il.Register(16, LLIL_TEMP(0))))));
-	ExprId result = il.Register(16, LLIL_TEMP(0));
-	if (high)
-		result = il.LogicalShiftRight(16, result, il.Const(1, 64));
-	il.AddInstruction(il.SetRegister(8, ops[0].reg, il.LowPart(8, result)));
-	if (instruction->flags.rc)
-		RecordCR0(il, ops[0].reg, 8);
-}
-
-// Guard invalid divisors before evaluating the divide. Exceptional results are
-// architecturally undefined; OE still reports overflow and updates sticky SO.
-static void LiftDivide(LowLevelILFunction& il, Instruction* instruction, size_t size, bool isSigned)
-{
-	const auto* ops = instruction->operands;
-	ExprId invalid = il.CompareEqual(size, il.Register(size, ops[2].reg), il.Const(size, 0));
-	if (isSigned)
-		invalid = il.Or(0, invalid, il.And(0,
-			il.CompareEqual(size, il.Register(size, ops[1].reg), il.Const(size, 1ULL << (size * 8 - 1))),
-			il.CompareEqual(size, il.Register(size, ops[2].reg), il.Const(size, -1))));
-	LowLevelILLabel fail, success, done;
-	il.AddInstruction(il.If(invalid, fail, success));
-	il.MarkLabel(success);
-	il.AddInstruction(il.SetRegister(size, ops[0].reg, isSigned
-		? il.DivSigned(size, il.Register(size, ops[1].reg), il.Register(size, ops[2].reg))
-		: il.DivUnsigned(size, il.Register(size, ops[1].reg), il.Register(size, ops[2].reg))));
-	if (instruction->flags.oe)
-		WriteOverflow(il, il.Const(0, 0));
-	il.AddInstruction(il.Goto(done));
-	il.MarkLabel(fail);
-	il.AddInstruction(il.SetRegister(size, ops[0].reg, il.Undefined()));
-	if (instruction->flags.oe)
-		WriteOverflow(il, il.Const(0, 1));
-	il.MarkLabel(done);
-	if (instruction->flags.rc)
-		RecordCR0(il, ops[0].reg, size);
-}
-
 /* returns TRUE - if this IL continues
           FALSE - if this IL terminates a block */
 bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
@@ -1021,25 +604,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 {
 	if (LiftBranches(arch, il, instruction, addr))
 		return true;
-
-	// Older arithmetic lifters do not expose FPSCR status. Do not let a later
-	// scalar conversion or mffs observe a falsely unchanged rounding/status value.
-	switch (instruction->id)
-	{
-	case PPC_ID_FADDx: case PPC_ID_FADDSx:
-	case PPC_ID_FSUBx: case PPC_ID_FSUBSx:
-	case PPC_ID_FMULx: case PPC_ID_FMULSx:
-	case PPC_ID_FDIVx: case PPC_ID_FDIVSx:
-	case PPC_ID_FMADDx: case PPC_ID_FMADDSx:
-	case PPC_ID_FMSUBx: case PPC_ID_FMSUBSx:
-	case PPC_ID_FNMADDx: case PPC_ID_FNMADDSx:
-	case PPC_ID_FNMSUBx: case PPC_ID_FNMSUBSx:
-	case PPC_ID_FRSPx: case PPC_ID_FCMPU: case PPC_ID_FCMPO:
-		il.AddInstruction(il.SetRegister(8, PPC_REG_FPSCR, il.Unimplemented()));
-		break;
-	default:
-		break;
-	}
 
 	int i;
 	size_t addressSize_l = arch->GetAddressSize();
@@ -1215,63 +779,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei2);
 			break;
 
-		/* GT of crfD = any byte of rB equals the low byte of rA; LT/EQ/SO = 0 */
-		case PPC_ID_CMPEQB:
-		{
-			REQUIRE3OPS
-			uint32_t crf = oper0->reg - PPC_REG_CRF0;
-
-			ei0 = BN_INVALID_EXPR;
-			for (uint32_t byteIdx = 0; byteIdx < 8; byteIdx++)
-			{
-				ei1 = il.CompareEqual(1,
-					il.LowPart(1, il.LogicalShiftRight(8, il.Register(8, oper2->reg), il.Const(1, 8*byteIdx))),
-					il.LowPart(1, il.Register(8, oper1->reg)));
-				ei0 = (byteIdx == 0) ? ei1 : il.Or(0, ei0, ei1);
-			}
-
-			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_LT, il.Const(0, 0)));
-			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_GT, ei0));
-			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_EQ, il.Const(0, 0)));
-			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_SO, il.Const(0, 0)));
-			break;
-		}
-
-		/* GT of crfD = low byte of rA within the byte range(s) held in rB's low
-		   word: bytes 1:0 are one range's hi:lo bound, and with L=1 bytes 3:2
-		   form a second accepted range; LT/EQ/SO = 0 */
-		case PPC_ID_CMPRB:
-		{
-			REQUIRE4OPS
-			uint32_t crf = oper0->reg - PPC_REG_CRF0;
-
-			ei0 = il.And(0,
-				il.CompareUnsignedGreaterEqual(1,
-					il.LowPart(1, il.Register(4, oper2->reg)),
-					il.LowPart(1, il.Register(4, oper3->reg))),
-				il.CompareUnsignedLessEqual(1,
-					il.LowPart(1, il.Register(4, oper2->reg)),
-					il.LowPart(1, il.LogicalShiftRight(4, il.Register(4, oper3->reg), il.Const(1, 8)))));
-
-			if (oper1->uimm == 1)
-			{
-				ei1 = il.And(0,
-					il.CompareUnsignedGreaterEqual(1,
-						il.LowPart(1, il.Register(4, oper2->reg)),
-						il.LowPart(1, il.LogicalShiftRight(4, il.Register(4, oper3->reg), il.Const(1, 16)))),
-					il.CompareUnsignedLessEqual(1,
-						il.LowPart(1, il.Register(4, oper2->reg)),
-						il.LowPart(1, il.LogicalShiftRight(4, il.Register(4, oper3->reg), il.Const(1, 24)))));
-				ei0 = il.Or(0, ei0, ei1);
-			}
-
-			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_LT, il.Const(0, 0)));
-			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_GT, ei0));
-			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_EQ, il.Const(0, 0)));
-			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_SO, il.Const(0, 0)));
-			break;
-		}
-
 		case PPC_ID_CMPWI: /* compare (signed) word(32-bit) immediate */
 			REQUIRE3OPS
 			ei0 = operToIL(il, oper1);
@@ -1420,32 +927,12 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
         case PPC_ID_MFSPR:
            REQUIRE2OPS
-           if (oper1->uimm == 268 || oper1->uimm == 269)
-               il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
-                   oper1->uimm == 268 ? PPC_INTRIN_MFTB : PPC_INTRIN_MFTBU, {}));
-           else
-               il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
-                   PPC_INTRIN_MFSPR, {il.Const(4, oper1->uimm)}));
-           break;
-
-        case PPC_ID_MTSPR:
-           REQUIRE2OPS
-           il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_MTSPR,
-               {il.Const(4, oper0->uimm), operToIL_a(il, oper1, addressSize_l)}));
+           il.AddInstruction(il.SetRegister(4, oper0->reg, il.Unimplemented()));
            break;
 
         case PPC_ID_MFMSR:
            REQUIRE1OP
-           il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, il.Register(addressSize_l, PPC_REG_MSR)));
-           break;
-
-        case PPC_ID_MTMSR:
-        case PPC_ID_MTMSRD:
-           REQUIRE1OP
-           il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(PPC_REG_MSR)},
-               instruction->id == PPC_ID_MTMSR ? PPC_INTRIN_MTMSR : PPC_INTRIN_MTMSRD,
-               {il.Register(addressSize_l, PPC_REG_MSR), operToIL_a(il, oper0, addressSize_l),
-                il.Const(4, instruction->numOperands > 1 ? oper1->uimm : 0)}));
+           il.AddInstruction(il.SetRegister(4, oper0->reg, il.Unimplemented()));
            break;
 
 		case PPC_ID_MCRF:
@@ -1474,48 +961,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				}
 			}
 			break;
-
-		case PPC_ID_MTOCRF:
-			REQUIRE2OPS
-			for (uint8_t test = 0x80, i = 0; test; test >>= 1, i++)
-			{
-				if (test & oper0->uimm)
-				{
-					for (uint32_t bit = 0; bit < 4; bit++)
-						il.AddInstruction(il.SetFlag(4 * i + bit,
-							il.TestBit(4, il.Register(4, oper1->reg), il.Const(1, 31 - 4 * i - bit))));
-				}
-			}
-			break;
-
-		/* rD = the selected CR field's bits, in their CR positions */
-		case PPC_ID_MFOCRF:
-		{
-			REQUIRE2OPS
-			ei0 = BN_INVALID_EXPR;
-			for (uint32_t n = 0; n < 8; n++)
-			{
-				if ((oper1->uimm & (0x80u >> n)) == 0)
-					continue;
-
-				ei1 = il.Or(4,
-					il.FlagBit(4, 4*n + IL_FLAG_LT, 31 - 4*n),
-					il.Or(4,
-						il.FlagBit(4, 4*n + IL_FLAG_GT, 30 - 4*n),
-						il.Or(4,
-							il.FlagBit(4, 4*n + IL_FLAG_EQ, 29 - 4*n),
-							il.FlagBit(4, 4*n + IL_FLAG_SO, 28 - 4*n))));
-				ei0 = (ei0 == BN_INVALID_EXPR) ? ei1 : il.Or(4, ei0, ei1);
-			}
-
-			if (ei0 == BN_INVALID_EXPR)
-				ei0 = il.Const(4, 0);
-
-			if (addressSize_l == 8)
-				ei0 = il.ZeroExtend(8, ei0);
-			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
-			break;
-		}
 
 		case PPC_ID_EXTSBx:
 		case PPC_ID_EXTSHx:
@@ -1631,7 +1076,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 			// if update, rA is set to effective address (d(rA))
 			if(instruction->id == PPC_ID_LBZU) {
-				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL_a(il, oper1, addressSize_l));
+				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL(il, oper1, addressSize_l));
 				il.AddInstruction(ei0);
 			}
 
@@ -1644,15 +1089,19 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LBZX:
 		case PPC_ID_LBZUX:
 			REQUIRE3OPS
-			LiftIndexedLoad(il, instruction, 1, addressSize_l, false, instruction->id == PPC_ID_LBZUX);
-			break;
-		case PPC_ID_LBARX:
-			REQUIRE3OPS
-			LiftLoadReserve(il, instruction, 1, addressSize_l);
-			break;
-		case PPC_ID_LHARX:
-			REQUIRE3OPS
-			LiftLoadReserve(il, instruction, 2, addressSize_l);
+			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l);              // d(rA) or 0
+			ei0 = il.Load(1, il.Add(addressSize_l, ei0, operToIL_a(il, oper2, addressSize_l))); // [d(rA) + d(rB)]
+			ei0 = il.ZeroExtend(addressSize_l, ei0);
+			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);              // rD = [d(rA)]
+			il.AddInstruction(ei0);
+
+			// if update, rA is set to effective address (d(rA))
+			if (instruction->id == PPC_ID_LBZUX && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0)
+			{
+				ei0 = il.SetRegister(addressSize_l, oper1->reg, operToIL_a(il, oper1, addressSize_l));
+				il.AddInstruction(ei0);
+			}
+
 			break;
 
 		/*
@@ -1697,9 +1146,21 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LHAX:
 		case PPC_ID_LHAUX:
 			REQUIRE3OPS
-			LiftIndexedLoad(il, instruction, 2, addressSize_l,
-				instruction->id == PPC_ID_LHAX || instruction->id == PPC_ID_LHAUX,
-				instruction->id == PPC_ID_LHZUX || instruction->id == PPC_ID_LHAUX);
+			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l);              // d(rA) or 0
+			ei0 = il.Load(2, il.Add(addressSize_l, ei0, operToIL_a(il, oper2, addressSize_l))); // [d(rA) + d(rB)]
+			if(instruction->id == PPC_ID_LHZX || instruction->id == PPC_ID_LHZUX)
+				ei0 = il.ZeroExtend(addressSize_l, ei0);
+			else
+				ei0 = il.SignExtend(addressSize_l, ei0);
+			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);              // rD = [d(rA)]
+			il.AddInstruction(ei0);
+
+			// if update, rA is set to effective address (d(rA))
+			if((instruction->id == PPC_ID_LHZUX || instruction->id == PPC_ID_LHAUX) && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0) {
+				ei0 = il.SetRegister(addressSize_l, oper1->reg, operToIL_a(il, oper1, addressSize_l));
+				il.AddInstruction(ei0);
+			}
+
 			break;
 
 		/*
@@ -1738,17 +1199,23 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		*/
 		case PPC_ID_LWZX:
 		case PPC_ID_LWZUX:
+        case PPC_ID_LWARX:
 			REQUIRE3OPS
-			LiftIndexedLoad(il, instruction, 4, addressSize_l, false, instruction->id == PPC_ID_LWZUX);
-			break;
+			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l);              // d(rA) or 0
+			ei0 = il.Load(4, il.Add(addressSize_l, ei0, operToIL_a(il, oper2, addressSize_l))); // [d(rA) + d(rB)]
+			if(addressSize_l == 8)
+			{
+				ei0 = il.ZeroExtend(addressSize_l, ei0);
+			}
+			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);              // rD = [d(rA)]
+			il.AddInstruction(ei0);
 
-		case PPC_ID_LWARX:
-			REQUIRE3OPS
-			LiftLoadReserve(il, instruction, 4, addressSize_l);
-			break;
-		case PPC_ID_LDARX:
-			REQUIRE3OPS
-			LiftLoadReserve(il, instruction, 8, addressSize_l);
+			// if update, rA is set to effective address (d(rA))
+			if(instruction->id == PPC_ID_LWZUX && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0) {
+				ei0 = il.SetRegister(addressSize_l, oper1->reg, operToIL_a(il, oper1, addressSize_l));
+				il.AddInstruction(ei0);
+			}
+
 			break;
 
 		/*
@@ -1757,14 +1224,14 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LD:
 		case PPC_ID_LDU:
 			REQUIRE2OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, 0, addressSize_l); // d(rA) or 0
+			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO); // d(rA) or 0
 			ei0 = il.Load(8, ei0);                    // [d(rA)]
 			ei0 = il.SetRegister(8, oper0->reg, ei0); // rD = [d(rA)]
 			il.AddInstruction(ei0);
 
 			// if update, rA is set to effective address (d(rA))
-			if(instruction->id == PPC_ID_LDU) {
-				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL_a(il, oper1, addressSize_l));
+			if(instruction->id == PPC_ID_LWZU) {
+				ei0 = il.SetRegister(8, oper1->mem.reg, operToIL(il, oper1));
 				il.AddInstruction(ei0);
 			}
 
@@ -1776,23 +1243,17 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LDX:
 		case PPC_ID_LDUX:
 			REQUIRE3OPS
-			LiftIndexedLoad(il, instruction, 8, addressSize_l, false, instruction->id == PPC_ID_LDUX);
-			break;
-
-		/* load word algebraic: load 4 bytes and sign-extend to the register */
-		case PPC_ID_LWA:
-			REQUIRE2OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l); // d(rA) or 0
-			ei0 = il.Load(4, ei0);
-			ei0 = il.SignExtend(addressSize_l, ei0);
-			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);
+			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO);              // d(rA) or 0
+			ei0 = il.Load(8, il.Add(8, ei0, operToIL(il, oper2))); // [d(rA) + d(rB)]
+			ei0 = il.SetRegister(8, oper0->reg, ei0);              // rD = [d(rA)]
 			il.AddInstruction(ei0);
-			break;
 
-		case PPC_ID_LWAX:
-		case PPC_ID_LWAUX:
-			REQUIRE3OPS
-			LiftIndexedLoad(il, instruction, 4, addressSize_l, true, instruction->id == PPC_ID_LWAUX);
+			// if update, rA is set to effective address (d(rA))
+			if(instruction->id == PPC_ID_LWZUX && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0) {
+				ei0 = il.SetRegister(8, oper1->reg, operToIL(il, oper1));
+				il.AddInstruction(ei0);
+			}
+
 			break;
 
 		case PPC_ID_LHBRX:
@@ -1805,11 +1266,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			ByteReversedLoad(il, instruction, 4, addressSize_l);
 			break;
 
-		case PPC_ID_LDBRX:
-			REQUIRE3OPS
-			ByteReversedLoad(il, instruction, 8, addressSize_l);
-			break;
-
 		case PPC_ID_STHBRX:
 			REQUIRE3OPS
 			ByteReversedStore(il, instruction, 2, addressSize_l);
@@ -1818,11 +1274,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_STWBRX:
 			REQUIRE3OPS
 			ByteReversedStore(il, instruction, 4, addressSize_l);
-			break;
-
-		case PPC_ID_STDBRX:
-			REQUIRE3OPS
-			ByteReversedStore(il, instruction, 8, addressSize_l);
 			break;
 
 		case PPC_ID_MFCTR: // move from ctr
@@ -1854,7 +1305,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			break;
 
 		case PPC_ID_NOP:
-		case PPC_ID_XNOP:
 			il.AddInstruction(il.Nop());
 			break;
 
@@ -2126,6 +1576,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		/* store word indexed [with update] */
 		case PPC_ID_STWX:
+        case PPC_ID_STWCX:
 		case PPC_ID_STWUX: /* store(size, addr, val) */
 			REQUIRE3OPS
 			if (addressSize_l == 8)
@@ -2155,21 +1606,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 			break;
 
-		case PPC_ID_STBCX: /* store byte conditional */
-			REQUIRE3OPS
-			LiftStoreConditional(il, instruction, 1, addressSize_l);
-			break;
-
-		case PPC_ID_STHCX: /* store half word conditional */
-			REQUIRE3OPS
-			LiftStoreConditional(il, instruction, 2, addressSize_l);
-			break;
-
-		case PPC_ID_STWCX: /* store word conditional */
-			REQUIRE3OPS
-			LiftStoreConditional(il, instruction, 4, addressSize_l);
-			break;
-
 		/* store double word [with update] */
 		case PPC_ID_STD:
 		case PPC_ID_STDU: /* store(size, addr, val) */
@@ -2181,20 +1617,20 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei0);
 
 			// if update, then rA gets updated address
-			if(instruction->id == PPC_ID_STDU) {
+			if(instruction->id == PPC_ID_STWU) {
 				ei0 = il.SetRegister(8, oper1->mem.reg, operToIL_a(il, oper1, 8));
 				il.AddInstruction(ei0);
 			}
 
 			break;
 
-		/* store double word indexed [with update] */
+		/* store word indexed [with update] */
 		case PPC_ID_STDX:
 		case PPC_ID_STDUX: /* store(size, addr, val) */
 			REQUIRE3OPS
 			ei0 = il.Store(8,
-				il.Add(addressSize_l, operToIL(il, oper1, OTI_GPR0_ZERO, 0, addressSize_l), operToIL_a(il, oper2, addressSize_l)),
-				operToIL_a(il, oper0, 8)
+				il.Add(8, operToIL(il, oper1, OTI_GPR0_ZERO), operToIL_a(il, oper2, addressSize_l)),
+				operToIL(il, oper0)
 			);
 			il.AddInstruction(ei0);
 
@@ -2206,11 +1642,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				il.AddInstruction(ei0);
 			}
 
-			break;
-
-		case PPC_ID_STDCX: /* store double word conditional */
-			REQUIRE3OPS
-			LiftStoreConditional(il, instruction, 8, addressSize_l);
 			break;
 
 		case PPC_ID_RLWIMIx:
@@ -2651,313 +2082,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			));
 			break;
 
-		case PPC_ID_MULLDx:
-			REQUIRE3OPS
-			LiftMultiply(il, instruction, false, true);
-			break;
-
-		case PPC_ID_MULHDx:
-			REQUIRE3OPS
-			LiftMultiply(il, instruction, true, true);
-			break;
-
-		case PPC_ID_MULHDUx:
-			REQUIRE3OPS
-			LiftMultiply(il, instruction, true, false);
-			break;
-
-		case PPC_ID_DIVDx:
-			REQUIRE3OPS
-			LiftDivide(il, instruction, 8, true);
-			break;
-
-		case PPC_ID_DIVDUx:
-			REQUIRE3OPS
-			LiftDivide(il, instruction, 8, false);
-			break;
-
-		/* divide extended: rD = (rA << 32) / rB */
-		case PPC_ID_DIVWEx:
-			REQUIRE3OPS
-			LiftExtendedDivide(il, instruction, 4, addressSize_l, true);
-			break;
-
-		case PPC_ID_DIVWEUx:
-			REQUIRE3OPS
-			LiftExtendedDivide(il, instruction, 4, addressSize_l, false);
-			break;
-
-		/* divide extended doubleword: rD = (rA << 64) / rB */
-		case PPC_ID_DIVDEx:
-			REQUIRE3OPS
-			LiftExtendedDivide(il, instruction, 8, addressSize_l, true);
-			break;
-
-		case PPC_ID_DIVDEUx:
-			REQUIRE3OPS
-			LiftExtendedDivide(il, instruction, 8, addressSize_l, false);
-			break;
-
-		/* rA = (rS sign-extended from 32 bits) << SH */
-		case PPC_ID_EXTSWSLIx:
-			REQUIRE3OPS
-			ei0 = il.SignExtend(8, il.Register(4, oper1->reg));
-			ei0 = il.ShiftLeft(8, ei0, il.Const(1, oper2->uimm));
-			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0));
-			if (instruction->flags.rc)
-				RecordCR0(il, oper0->reg, 8);
-			break;
-
-		/* rD = -1, 1, or 0 from the LT/GT bits of the given CR field */
-		case PPC_ID_SETB:
-		{
-			REQUIRE2OPS
-			uint32_t crf = oper1->reg - PPC_REG_CRF0;
-			ei0 = il.Sub(addressSize_l,
-				il.BoolToInt(addressSize_l, il.And(0, il.Flag(4*crf + IL_FLAG_GT), il.Not(0, il.Flag(4*crf + IL_FLAG_LT)))),
-				il.BoolToInt(addressSize_l, il.Flag(4*crf + IL_FLAG_LT)));
-			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
-			break;
-		}
-
-		// =====================================
-		// memory barriers
-		// =====================================
-
-		case PPC_ID_SYNC:
-			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_SYNC, {}));
-			break;
-
-		case PPC_ID_LWSYNC:
-			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_LWSYNC, {}));
-			break;
-
-		case PPC_ID_PTESYNC:
-			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_PTESYNC, {}));
-			break;
-
-		case PPC_ID_EIEIO:
-			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_EIEIO, {}));
-			break;
-
-		case PPC_ID_ISYNC:
-			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_ISYNC, {}));
-			break;
-
-		case PPC_ID_MBAR:
-			REQUIRE1OP
-			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_MBAR, {il.Const(4, oper0->uimm)}));
-			break;
-
-		// =====================================
-		// cache management
-		// =====================================
-
-		/* maintenance ops with visible memory effects (dcbz zeroes a block) */
-		case PPC_ID_DCBZ:
-		case PPC_ID_DCBZL:
-		case PPC_ID_DCBF:
-		case PPC_ID_DCBFL:
-		case PPC_ID_DCBFLP:
-		case PPC_ID_DCBST:
-		case PPC_ID_DCBI:
-		case PPC_ID_ICBI:
-		{
-			REQUIRE2OPS
-			uint32_t intrin;
-			switch (instruction->id)
-			{
-				case PPC_ID_DCBZ:  intrin = PPC_INTRIN_DCBZ; break;
-				case PPC_ID_DCBZL: intrin = PPC_INTRIN_DCBZL; break;
-				case PPC_ID_DCBF:
-				case PPC_ID_DCBFL:
-				case PPC_ID_DCBFLP: intrin = PPC_INTRIN_DCBF; break;
-				case PPC_ID_DCBST: intrin = PPC_INTRIN_DCBST; break;
-				case PPC_ID_DCBI:  intrin = PPC_INTRIN_DCBI; break;
-				default:           intrin = PPC_INTRIN_ICBI; break;
-			}
-
-			vector<ExprId> inputs{il.Add(addressSize_l,
-				operToIL(il, oper0, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
-				operToIL_a(il, oper1, addressSize_l))};
-			if (intrin == PPC_INTRIN_DCBF)
-				inputs.push_back(il.Const(4, instruction->id == PPC_ID_DCBFL ? 1
-					: instruction->id == PPC_ID_DCBFLP ? 3 : instruction->numOperands > 2 ? oper2->uimm : 0));
-			il.AddInstruction(il.Intrinsic({}, intrin, inputs));
-			break;
-		}
-
-		/* pure prefetch/placement hints */
-		case PPC_ID_DCBT:
-		case PPC_ID_DCBTT:
-		case PPC_ID_DCBTST:
-		case PPC_ID_DCBTSTT:
-		case PPC_ID_DCBA:
-			il.AddInstruction(il.Nop());
-			break;
-
-		// =====================================
-		// bit operations without LLIL equivalents
-		// =====================================
-
-		case PPC_ID_POPCNTB:
-		case PPC_ID_POPCNTW:
-		case PPC_ID_POPCNTD:
-		{
-			REQUIRE2OPS
-			uint32_t intrin;
-			switch (instruction->id)
-			{
-				case PPC_ID_POPCNTB: intrin = PPC_INTRIN_POPCNTB; break;
-				case PPC_ID_POPCNTW: intrin = PPC_INTRIN_POPCNTW; break;
-				default:             intrin = PPC_INTRIN_POPCNTD; break;
-			}
-
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
-				intrin, {operToIL_a(il, oper1, addressSize_l)}));
-			break;
-		}
-
-		case PPC_ID_CMPB:
-			REQUIRE3OPS
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
-				PPC_INTRIN_CMPB,
-				{operToIL_a(il, oper1, addressSize_l), operToIL_a(il, oper2, addressSize_l)}));
-			break;
-
-		case PPC_ID_BPERMD:
-			REQUIRE3OPS
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
-				PPC_INTRIN_BPERMD,
-				{operToIL_a(il, oper1, 8), operToIL_a(il, oper2, 8)}));
-			break;
-
-		case PPC_ID_DARN:
-			REQUIRE2OPS
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
-				PPC_INTRIN_DARN, {il.Const(4, oper1->uimm)}));
-			break;
-
-		// =====================================
-		// time base
-		// =====================================
-
-		case PPC_ID_MFTB:
-			REQUIRE1OP
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
-				PPC_INTRIN_MFTB, {}));
-			break;
-
-		case PPC_ID_MFTBU:
-			REQUIRE1OP
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
-				PPC_INTRIN_MFTBU, {}));
-			break;
-
-		// =====================================
-		// FPSCR access
-		// =====================================
-
-		case PPC_ID_MFFSx:
-			REQUIRE1OP
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
-				PPC_INTRIN_MFFS, {il.Register(8, PPC_REG_FPSCR)}));
-			if (instruction->flags.rc)
-				RecordCR1(il);
-			break;
-
-		case PPC_ID_MTFSFx:
-			REQUIRE2OPS
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(PPC_REG_FPSCR)}, PPC_INTRIN_MTFSF,
-				{il.Register(8, PPC_REG_FPSCR), il.Const(4, oper0->uimm), operToIL_a(il, oper1, 8),
-				 il.Const(4, instruction->numOperands > 2 ? oper2->uimm : 0),
-				 il.Const(4, instruction->numOperands > 3 ? oper3->uimm : 0)}));
-			if (instruction->flags.rc)
-				RecordCR1(il);
-			break;
-
-		case PPC_ID_MTFSB0x:
-		case PPC_ID_MTFSB1x:
-			REQUIRE1OP
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(PPC_REG_FPSCR)},
-				instruction->id == PPC_ID_MTFSB0x ? PPC_INTRIN_MTFSB0 : PPC_INTRIN_MTFSB1,
-				{il.Register(8, PPC_REG_FPSCR), il.Const(4, oper0->uimm)}));
-			if (instruction->flags.rc)
-				RecordCR1(il);
-			break;
-
-		// =====================================
-		// XER access
-		// =====================================
-
-		/* Keep unmodeled XER bits (including byte count, OV32 and CA32) in
-		   the backing register, and overlay the authoritative SO/OV/CA flags. */
-		case PPC_ID_MFXER:
-			REQUIRE1OP
-			ei0 = il.Or(4, il.And(4, il.Register(4, PPC_REG_XER), il.Const(4, 0x1fffffff)), il.Or(4,
-				il.FlagBit(4, IL_FLAG_XER_SO, 31),
-				il.Or(4,
-					il.FlagBit(4, IL_FLAG_XER_OV, 30),
-					il.FlagBit(4, IL_FLAG_XER_CA, 29))));
-			if (addressSize_l == 8)
-				ei0 = il.ZeroExtend(8, ei0);
-			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
-			break;
-
-		case PPC_ID_MTXER:
-			REQUIRE1OP
-			il.AddInstruction(il.SetRegister(4, PPC_REG_XER, operToIL(il, oper0)));
-			il.AddInstruction(il.SetFlag(IL_FLAG_XER_SO,
-				il.TestBit(4, operToIL(il, oper0), il.Const(1, 31))));
-			il.AddInstruction(il.SetFlag(IL_FLAG_XER_OV,
-				il.TestBit(4, operToIL(il, oper0), il.Const(1, 30))));
-			il.AddInstruction(il.SetFlag(IL_FLAG_XER_CA,
-				il.TestBit(4, operToIL(il, oper0), il.Const(1, 29))));
-			break;
-
-		case PPC_ID_MODSW:
-			REQUIRE3OPS
-			ei0 = il.ModSigned(4, il.Register(4, oper1->reg), il.Register(4, oper2->reg));
-			if (addressSize_l == 8)
-				ei0 = il.SignExtend(8, ei0);
-			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
-			break;
-
-		case PPC_ID_MODUW:
-			REQUIRE3OPS
-			ei0 = il.ModUnsigned(4, il.Register(4, oper1->reg), il.Register(4, oper2->reg));
-			if (addressSize_l == 8)
-				ei0 = il.ZeroExtend(8, ei0);
-			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
-			break;
-
-		case PPC_ID_MODSD:
-			REQUIRE3OPS
-			ei0 = il.ModSigned(8, il.Register(8, oper1->reg), il.Register(8, oper2->reg));
-			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0));
-			break;
-
-		case PPC_ID_MODUD:
-			REQUIRE3OPS
-			ei0 = il.ModUnsigned(8, il.Register(8, oper1->reg), il.Register(8, oper2->reg));
-			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0));
-			break;
-
-		/* rD = address of the next instruction */
-		case PPC_ID_LNIA:
-			REQUIRE1OP
-			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg,
-				il.ConstPointer(addressSize_l, addr + 4)));
-			break;
-
-		/* rD = address of the next instruction + (signed d << 16) */
-		case PPC_ID_ADDPCIS:
-			REQUIRE2OPS
-			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg,
-				il.ConstPointer(addressSize_l,
-					addr + 4 + (int64_t)(int32_t)((uint32_t)oper1->uimm << 16))));
-			break;
-
 		case PPC_ID_MRx: /* move register */
 			REQUIRE2OPS
 			ei0 = il.SetRegister(addressSize_l, oper0->reg, operToIL_a(il, oper1, addressSize_l),
@@ -2970,57 +2094,11 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			break;
 
 		case PPC_ID_RFI:
-		case PPC_ID_RFID:
-		case PPC_ID_HRFID:
-		case PPC_ID_RFCI:
-		case PPC_ID_RFDI:
-		case PPC_ID_RFMCI:
-		case PPC_ID_RFEBB:
 			il.AddInstruction(il.Return(il.Unimplemented()));
 			break;
 
-		// trap doubleword: trap if the TO-selected comparison of rA holds
-		case PPC_ID_TD:
-		case PPC_ID_TDI:
-		case PPC_ID_TDEQ:
-		case PPC_ID_TDEQI:
-		case PPC_ID_TDGT:
-		case PPC_ID_TDGTI:
-		case PPC_ID_TDLGT:
-		case PPC_ID_TDLGTI:
-		case PPC_ID_TDLLT:
-		case PPC_ID_TDLLTI:
-		case PPC_ID_TDLT:
-		case PPC_ID_TDLTI:
-		case PPC_ID_TDNE:
-		case PPC_ID_TDNEI:
-		case PPC_ID_TDU:
-		case PPC_ID_TDUI:
-			LiftTrap(il, instruction, 8);
-			break;
-
-		// trap word
-		case PPC_ID_TW:
-		case PPC_ID_TWI:
-		case PPC_ID_TWEQ:
-		case PPC_ID_TWEQI:
-		case PPC_ID_TWGT:
-		case PPC_ID_TWGTI:
-		case PPC_ID_TWGEI:
-		case PPC_ID_TWLEI:
-		case PPC_ID_TWLLEI:
-		case PPC_ID_TWLGT:
-		case PPC_ID_TWLGTI:
-		case PPC_ID_TWLLT:
-		case PPC_ID_TWLLTI:
-		case PPC_ID_TWLT:
-		case PPC_ID_TWLTI:
-		case PPC_ID_TWNE:
-		case PPC_ID_TWNEI:
 		case PPC_ID_TWU:
-		case PPC_ID_TWUI:
-		case PPC_ID_TRAP:
-			LiftTrap(il, instruction, 4);
+			il.AddInstruction(il.Trap(0));
 			break;
 
 		// =====================================
@@ -3079,201 +2157,29 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei0);
 			break;
 
-		case PPC_ID_FSQRTx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FSQRT);
-			break;
-
-		case PPC_ID_FSQRTSx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FSQRTS);
-			break;
-
-		/* round to double-precision integer: frin to nearest, friz toward zero,
-		   frip toward +inf, frim toward -inf */
-		case PPC_ID_FRINx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FRIN);
-			break;
-
-		case PPC_ID_FRIZx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FRIZ);
-			break;
-
-		case PPC_ID_FRIPx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FRIP);
-			break;
-
-		case PPC_ID_FRIMx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FRIM);
-			break;
-
-		// Preserve unsignedness, rounding mode, exceptions and FPR packaging.
-		case PPC_ID_FCTIWx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCTIW);
-			break;
-		case PPC_ID_FCTIWZx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCTIWZ);
-			break;
-
-		case PPC_ID_FCTIWUx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCTIWU);
-			break;
-		case PPC_ID_FCTIWUZx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCTIWUZ);
-			break;
-
-		/* convert to integer doubleword */
-		case PPC_ID_FCTIDx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCTID);
-			break;
-		case PPC_ID_FCTIDZx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCTIDZ);
-			break;
-		case PPC_ID_FCTIDUx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCTIDU);
-			break;
-		case PPC_ID_FCTIDUZx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCTIDUZ);
-			break;
-
-		/* convert integer doubleword to floating point */
-		case PPC_ID_FCFIDx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCFID);
-			break;
-		case PPC_ID_FCFIDUx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCFIDU);
-			break;
-
-		case PPC_ID_FCFIDSx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCFIDS);
-			break;
-		case PPC_ID_FCFIDUSx:
-			REQUIRE2OPS
-			LiftScalarFP(il, instruction, PPC_INTRIN_FCFIDUS);
-			break;
-
-		/* frD = sign of frA with magnitude of frB */
-		case PPC_ID_FCPSGNx:
-			REQUIRE3OPS
-			ei0 = il.Or(8,
-				il.And(8, operToIL_a(il, oper1, 8), il.Const(8, 0x8000000000000000ULL)),
-				il.And(8, operToIL_a(il, oper2, 8), il.Const(8, 0x7fffffffffffffffULL)));
-			ei0 = il.SetRegister(8, oper0->reg, ei0);
-			il.AddInstruction(ei0);
-			if (instruction->flags.rc)
-				RecordCR1(il);
-			break;
-
-		/* frD = (frA >= 0.0) ? frC : frB */
-		case PPC_ID_FSELx:
-		{
-			REQUIRE4OPS
-			LowLevelILLabel selTrue, selFalse, selDone;
-			il.AddInstruction(il.If(
-				il.FloatCompareGreaterEqual(8, operToIL_a(il, oper1, 8), il.FloatConstDouble(0.0)),
-				selTrue, selFalse));
-			il.MarkLabel(selTrue);
-			il.AddInstruction(il.SetRegister(8, oper0->reg, operToIL_a(il, oper2, 8)));
-			il.AddInstruction(il.Goto(selDone));
-			il.MarkLabel(selFalse);
-			il.AddInstruction(il.SetRegister(8, oper0->reg, operToIL_a(il, oper3, 8)));
-			il.MarkLabel(selDone);
-			if (instruction->flags.rc)
-				RecordCR1(il);
-			break;
-		}
-
 		case PPC_ID_STFS:
-		case PPC_ID_STFSU:
 			REQUIRE2OPS
-			ei0 = SingleBits(il, operToIL_a(il, oper0, 8));
-			ei0 = il.Store(4, operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l), ei0);
+			ei0 = il.FloatConvert(4, operToIL(il, oper0));
+			ei0 = il.Store(4, operToIL(il, oper1), ei0);
+			// ei0 = il.FloatConvert(4, ei0);
 			il.AddInstruction(ei0);
-
-			// if update, rA is set to the effective address
-			if (instruction->id == PPC_ID_STFSU) {
-				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL_a(il, oper1, addressSize_l));
-				il.AddInstruction(ei0);
-			}
-
 			break;
 
 		case PPC_ID_STFSX:
-		case PPC_ID_STFSUX:
 			REQUIRE3OPS
-			ei0 = SingleBits(il, operToIL_a(il, oper0, 8));
-			ei1 = il.Add(addressSize_l,
-				operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
-				operToIL_a(il, oper2, addressSize_l));
+			ei0 = il.FloatConvert(4, operToIL(il, oper0));
+			ei1 = il.Add(4, operToIL(il, oper1), operToIL(il, oper2));
 			ei0 = il.Store(4, ei1, ei0);
+			// ei0 = il.FloatConvert(4, ei0);
 			il.AddInstruction(ei0);
-
-			// if update, rA is set to the effective address (rA + rB)
-			if (instruction->id == PPC_ID_STFSUX) {
-				ei0 = il.SetRegister(addressSize_l, oper1->reg,
-					il.Add(addressSize_l, operToIL_a(il, oper1, addressSize_l), operToIL_a(il, oper2, addressSize_l)));
-				il.AddInstruction(ei0);
-			}
-
 			break;
 
 		case PPC_ID_STFD:
-		case PPC_ID_STFDU:
 			REQUIRE2OPS
-			ei0 = il.Store(8, operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
-				operToIL_a(il, oper0, 8));
+			ei0 = il.Store(8, operToIL(il, oper1),
+				il.FloatConvert(8, operToIL_a(il, oper0,  8)));
+			// ei0 = il.FloatConvert(8, ei0);
 			il.AddInstruction(ei0);
-
-			// if update, rA is set to the effective address
-			if (instruction->id == PPC_ID_STFDU) {
-				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL_a(il, oper1, addressSize_l));
-				il.AddInstruction(ei0);
-			}
-
-			break;
-
-		case PPC_ID_STFDX:
-		case PPC_ID_STFDUX:
-			REQUIRE3OPS
-			ei0 = il.Store(8,
-				il.Add(addressSize_l,
-					operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
-					operToIL_a(il, oper2, addressSize_l)),
-				operToIL_a(il, oper0, 8));
-			il.AddInstruction(ei0);
-
-			// if update, rA is set to the effective address (rA + rB)
-			if (instruction->id == PPC_ID_STFDUX) {
-				ei0 = il.SetRegister(addressSize_l, oper1->reg,
-					il.Add(addressSize_l, operToIL_a(il, oper1, addressSize_l), operToIL_a(il, oper2, addressSize_l)));
-				il.AddInstruction(ei0);
-			}
-
-			break;
-
-		/* store the low integer word of frS */
-		case PPC_ID_STFIWX:
-			REQUIRE3OPS
-			il.AddInstruction(il.Store(4,
-				il.Add(addressSize_l,
-					operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
-					operToIL_a(il, oper2, addressSize_l)),
-				il.LowPart(4, operToIL_a(il, oper0, 8))));
 			break;
 
 		case PPC_ID_LFS:
@@ -3285,7 +2191,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		    // il.AddInstruction(ei1);
 
 			// alternatively, do it the way arm64 does it
-			load_float(il, 4, oper0, oper1, 0, false, addressSize_l);
+			load_float(il, 4, oper0, oper1);
 			break;
 
 		case PPC_ID_LFSX:
@@ -3298,17 +2204,17 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			// // alternatively, do it the way arm64 does it
 			// il.AddInstruction(ei0);
 
-			load_float(il, 4, oper0, oper1, oper2, false, addressSize_l);
+			load_float(il, 4, oper0, oper1, oper2);
 			break;
 
 		case PPC_ID_LFSU:
 			REQUIRE2OPS
-			load_float(il, 4, oper0, oper1, 0, true, addressSize_l);
+			load_float(il, 4, oper0, oper1, 0, true);
 			break;
 
 		case PPC_ID_LFSUX:
 			REQUIRE3OPS
-			load_float(il, 4, oper0, oper1, oper2, true, addressSize_l);
+			load_float(il, 4, oper0, oper1, oper2, true);
 			break;
 
 		case PPC_ID_LFD:
@@ -3319,36 +2225,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		    // il.AddInstruction(ei0);
 
 			// same as lfs
-			load_float(il, 8, oper0, oper1, 0, false, addressSize_l);
-			break;
-
-		case PPC_ID_LFDX:
-			REQUIRE3OPS
-			load_float(il, 8, oper0, oper1, oper2, false, addressSize_l);
-			break;
-
-		case PPC_ID_LFDU:
-			REQUIRE2OPS
-			load_float(il, 8, oper0, oper1, 0, true, addressSize_l);
-			break;
-
-		case PPC_ID_LFDUX:
-			REQUIRE3OPS
-			load_float(il, 8, oper0, oper1, oper2, true, addressSize_l);
-			break;
-
-		/* load integer word into frD, sign/zero extended */
-		case PPC_ID_LFIWAX:
-		case PPC_ID_LFIWZX:
-			REQUIRE3OPS
-			ei0 = il.Load(4, il.Add(addressSize_l,
-				operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
-				operToIL_a(il, oper2, addressSize_l)));
-			if (instruction->id == PPC_ID_LFIWAX)
-				ei0 = il.SignExtend(8, ei0);
-			else
-				ei0 = il.ZeroExtend(8, ei0);
-			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0));
+			load_float(il, 8, oper0, oper1);
 			break;
 
 		case PPC_ID_FMULx:
@@ -3413,6 +2290,19 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			ei0 = il.FloatSub(4, ei0, operToIL(il, oper3));
 			ei1 = il.SetRegister(4, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
 			il.AddInstruction(ei1);
+			break;
+
+		// this is a weird one, its described as round a float to an int towards 0, then set
+		// bits 32-63 of a double reg to that result, ignoring the lower 32 bits 0-31.
+		// TODO: needs further testing to verify that this is functional, and verify that the
+		// method used was correct, as well as the registers afffected, like FPSCR.
+		case PPC_ID_FCTIWZx:
+			REQUIRE2OPS
+			ei0 = il.FloatTrunc(RZF, operToIL(il, oper1));
+			ei1 = il.Const(4, 32);
+			ei2 = il.ShiftLeft(8, ei0, ei1);
+			ei0 = il.SetRegister(8, oper0->reg, ei2, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
 			break;
 
 		case PPC_ID_FNEGx:
@@ -3496,25 +2386,11 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei1);
 			break;
 
-		// count leading/trailing zeros: <op>[.] rA, rS
 		case PPC_ID_CNTLZWx:
-		case PPC_ID_CNTLZDx:
-		case PPC_ID_CNTTZWx:
-		case PPC_ID_CNTTZDx:
-		{
-			REQUIRE2OPS
-			const bool word = instruction->id == PPC_ID_CNTLZWx || instruction->id == PPC_ID_CNTTZWx;
-			const size_t size = word ? 4 : 8;
-			const bool trailing = instruction->id == PPC_ID_CNTTZWx || instruction->id == PPC_ID_CNTTZDx;
-			ei0 = trailing ? il.CountTrailingZeros(size, il.Register(size, oper1->reg))
-				: il.CountLeadingZeros(size, il.Register(size, oper1->reg));
-			if (size < addressSize_l)
-				ei0 = il.ZeroExtend(addressSize_l, ei0);
-			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
-			if (instruction->flags.rc)
-				RecordCR0(il, oper0->reg, addressSize_l);
+			ei0 = il.Intrinsic({RegisterOrFlag::Register(oper1->reg)}, PPC_INTRIN_CNTLZW,
+				{operToIL(il, oper0)});
+			il.AddInstruction(ei0);
 			break;
-		}
 
 		case PPC_ID_PAIREDSINGLE_PSQ_ST:
 			REQUIRE4OPS
@@ -3601,3 +2477,4 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 	return rc;
 }
+

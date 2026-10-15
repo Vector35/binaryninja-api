@@ -791,6 +791,29 @@ class PowerpcArchitecture: public Architecture
 			return "__mtfsb0";
 		case PPC_INTRIN_MTFSB1:
 			return "__mtfsb1";
+		case PPC_INTRIN_FADD: return "__fadd";
+		case PPC_INTRIN_FADDS: return "__fadds";
+		case PPC_INTRIN_FSUB: return "__fsub";
+		case PPC_INTRIN_FSUBS: return "__fsubs";
+		case PPC_INTRIN_FMUL: return "__fmul";
+		case PPC_INTRIN_FMULS: return "__fmuls";
+		case PPC_INTRIN_FDIV: return "__fdiv";
+		case PPC_INTRIN_FDIVS: return "__fdivs";
+		case PPC_INTRIN_FMADD: return "__fmadd";
+		case PPC_INTRIN_FMADDS: return "__fmadds";
+		case PPC_INTRIN_FMSUB: return "__fmsub";
+		case PPC_INTRIN_FMSUBS: return "__fmsubs";
+		case PPC_INTRIN_FNMADD: return "__fnmadd";
+		case PPC_INTRIN_FNMADDS: return "__fnmadds";
+		case PPC_INTRIN_FNMSUB: return "__fnmsub";
+		case PPC_INTRIN_FNMSUBS: return "__fnmsubs";
+		case PPC_INTRIN_ROUND_SINGLE: return "__frsp";
+		case PPC_INTRIN_FRE: return "__fre";
+		case PPC_INTRIN_FRES: return "__fres";
+		case PPC_INTRIN_FRSQRTE: return "__frsqrte";
+		case PPC_INTRIN_FRSQRTES: return "__frsqrtes";
+		case PPC_INTRIN_FCMPU: return "__fcmpu";
+		case PPC_INTRIN_FCMPO: return "__fcmpo";
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
 			{
@@ -850,6 +873,16 @@ class PowerpcArchitecture: public Architecture
 		if (intrinsic >= PPC_INTRIN_FSQRT && intrinsic <= PPC_INTRIN_FCFIDUS)
 			return {NameAndType("value", Type::IntegerType(8, false)),
 				NameAndType("fpscr", Type::IntegerType(8, false))};
+		if (intrinsic >= PPC_INTRIN_FADD && intrinsic <= PPC_INTRIN_FCMPO)
+		{
+			size_t count = intrinsic <= PPC_INTRIN_FDIVS ? 2
+				: intrinsic <= PPC_INTRIN_FNMSUBS ? 3 : intrinsic >= PPC_INTRIN_FCMPU ? 2 : 1;
+			vector<NameAndType> inputs;
+			for (size_t i = 0; i < count; i++)
+				inputs.emplace_back(Type::IntegerType(8, false));
+			inputs.emplace_back("fpscr", Type::IntegerType(8, false));
+			return inputs;
+		}
 		switch (intrinsic)
 		{
 		case PPC_INTRIN_CNTLZW:
@@ -936,8 +969,11 @@ class PowerpcArchitecture: public Architecture
 
 	virtual vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic) override
 	{
-		if (intrinsic >= PPC_INTRIN_FSQRT && intrinsic <= PPC_INTRIN_FCFIDUS)
+		if ((intrinsic >= PPC_INTRIN_FSQRT && intrinsic <= PPC_INTRIN_FCFIDUS)
+			|| (intrinsic >= PPC_INTRIN_FADD && intrinsic <= PPC_INTRIN_FRSQRTES))
 			return {Type::IntegerType(8, false), Type::IntegerType(8, false)};
+		if (intrinsic == PPC_INTRIN_FCMPU || intrinsic == PPC_INTRIN_FCMPO)
+			return {Type::BoolType(), Type::BoolType(), Type::BoolType(), Type::BoolType(), Type::IntegerType(8, false)};
 		switch (intrinsic)
 		{
 		case PPC_INTRIN_CNTLZW:

@@ -807,6 +807,14 @@ class PowerpcArchitecture: public Architecture
 		case PPC_INTRIN_FRSQRTES: return "__frsqrtes";
 		case PPC_INTRIN_FCMPU: return "__fcmpu";
 		case PPC_INTRIN_FCMPO: return "__fcmpo";
+		case PPC_INTRIN_MTFSFI: return "__mtfsfi";
+		case PPC_INTRIN_MCRFS: return "__mcrfs";
+		case PPC_INTRIN_MFFSCE: return "__mffsce";
+		case PPC_INTRIN_MFFSCDRN: return "__mffscdrn";
+		case PPC_INTRIN_MFFSCDRNI: return "__mffscdrni";
+		case PPC_INTRIN_MFFSCRN: return "__mffscrn";
+		case PPC_INTRIN_MFFSCRNI: return "__mffscrni";
+		case PPC_INTRIN_MFFSL: return "__mffsl";
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
 			{
@@ -929,7 +937,23 @@ class PowerpcArchitecture: public Architecture
 				NameAndType("value", Type::IntegerType(8, false)),
 				NameAndType("l", Type::IntegerType(4, false)),
 				NameAndType("w", Type::IntegerType(4, false))};
+		case PPC_INTRIN_MTFSFI:
+			return {NameAndType("fpscr", Type::IntegerType(8, false)),
+				NameAndType("field", Type::IntegerType(4, false)),
+				NameAndType("value", Type::IntegerType(4, false)),
+				NameAndType("w", Type::IntegerType(4, false))};
+		case PPC_INTRIN_MCRFS:
+			return {NameAndType("fpscr", Type::IntegerType(8, false)),
+				NameAndType("field", Type::IntegerType(4, false))};
+		case PPC_INTRIN_MFFSCDRN:
+		case PPC_INTRIN_MFFSCRN:
+			return {NameAndType("fpscr", Type::IntegerType(8, false)), NameAndType("value", Type::IntegerType(8, false))};
+		case PPC_INTRIN_MFFSCDRNI:
+		case PPC_INTRIN_MFFSCRNI:
+			return {NameAndType("fpscr", Type::IntegerType(8, false)), NameAndType("value", Type::IntegerType(4, false))};
 		case PPC_INTRIN_MFFS:
+		case PPC_INTRIN_MFFSCE:
+		case PPC_INTRIN_MFFSL:
 			return {NameAndType("fpscr", Type::IntegerType(8, false))};
 		case PPC_INTRIN_MTFSB0:
 		case PPC_INTRIN_MTFSB1:
@@ -965,8 +989,10 @@ class PowerpcArchitecture: public Architecture
 		if ((intrinsic >= PPC_INTRIN_FSQRT && intrinsic <= PPC_INTRIN_FCFIDUS)
 			|| (intrinsic >= PPC_INTRIN_FADD && intrinsic <= PPC_INTRIN_FRSQRTES))
 			return {Type::IntegerType(8, false), Type::IntegerType(8, false)};
-		if (intrinsic == PPC_INTRIN_FCMPU || intrinsic == PPC_INTRIN_FCMPO)
+		if (intrinsic == PPC_INTRIN_FCMPU || intrinsic == PPC_INTRIN_FCMPO || intrinsic == PPC_INTRIN_MCRFS)
 			return {Type::BoolType(), Type::BoolType(), Type::BoolType(), Type::BoolType(), Type::IntegerType(8, false)};
+		if (intrinsic >= PPC_INTRIN_MFFSCE && intrinsic <= PPC_INTRIN_MFFSCRNI)
+			return {Type::IntegerType(8, false), Type::IntegerType(8, false)};
 		switch (intrinsic)
 		{
 		case PPC_INTRIN_CNTLZW:
@@ -993,7 +1019,9 @@ class PowerpcArchitecture: public Architecture
 		case PPC_INTRIN_MFTBU:
 			return {Type::IntegerType(4, false)};
 		case PPC_INTRIN_MFFS:
+		case PPC_INTRIN_MFFSL:
 		case PPC_INTRIN_MTFSF:
+		case PPC_INTRIN_MTFSFI:
 		case PPC_INTRIN_MTFSB0:
 		case PPC_INTRIN_MTFSB1:
 			return {Type::IntegerType(8, false)};

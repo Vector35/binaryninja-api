@@ -2854,12 +2854,63 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			break;
 
 		case PPC_ID_MFFSx:
+		case PPC_ID_MFFSL:
 			REQUIRE1OP
 			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
-				PPC_INTRIN_MFFS, {il.Register(8, PPC_REG_FPSCR)}));
+				instruction->id == PPC_ID_MFFSx ? PPC_INTRIN_MFFS : PPC_INTRIN_MFFSL,
+				{il.Register(8, PPC_REG_FPSCR)}));
 			if (instruction->flags.rc)
 				RecordCR1(il);
 			break;
+
+		case PPC_ID_MFFSCE:
+		case PPC_ID_MFFSCDRN:
+		case PPC_ID_MFFSCDRNI:
+		case PPC_ID_MFFSCRN:
+		case PPC_ID_MFFSCRNI:
+		{
+			REQUIRE1OP
+			uint32_t intrinsic = PPC_INTRIN_MFFSCE;
+			switch (instruction->id)
+			{
+			case PPC_ID_MFFSCDRN: intrinsic = PPC_INTRIN_MFFSCDRN; break;
+			case PPC_ID_MFFSCDRNI: intrinsic = PPC_INTRIN_MFFSCDRNI; break;
+			case PPC_ID_MFFSCRN: intrinsic = PPC_INTRIN_MFFSCRN; break;
+			case PPC_ID_MFFSCRNI: intrinsic = PPC_INTRIN_MFFSCRNI; break;
+			default: break;
+			}
+			vector<ExprId> inputs{il.Register(8, PPC_REG_FPSCR)};
+			if (instruction->id != PPC_ID_MFFSCE)
+			{
+				REQUIRE2OPS
+				inputs.push_back(oper1->cls == PPC_OP_UIMM ? il.Const(4, oper1->uimm) : il.Register(8, oper1->reg));
+			}
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg),
+				RegisterOrFlag::Register(PPC_REG_FPSCR)}, intrinsic, inputs));
+			break;
+		}
+
+		case PPC_ID_MTFSFIx:
+			REQUIRE2OPS
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(PPC_REG_FPSCR)}, PPC_INTRIN_MTFSFI,
+				{il.Register(8, PPC_REG_FPSCR), il.Const(4, oper0->reg - PPC_REG_CRF0),
+				 il.Const(4, oper1->uimm), il.Const(4, instruction->numOperands > 2 ? oper2->uimm : 0)}));
+			if (instruction->flags.rc)
+				RecordCR1(il);
+			break;
+
+		case PPC_ID_MCRFS:
+		{
+			REQUIRE2OPS
+			uint32_t flagBase = 4 * (oper0->reg - PPC_REG_CRF0);
+			vector<RegisterOrFlag> outputs;
+			for (uint32_t bit = 0; bit < 4; bit++)
+				outputs.push_back(RegisterOrFlag::Flag(flagBase + bit));
+			outputs.push_back(RegisterOrFlag::Register(PPC_REG_FPSCR));
+			il.AddInstruction(il.Intrinsic(outputs, PPC_INTRIN_MCRFS,
+				{il.Register(8, PPC_REG_FPSCR), il.Const(4, oper1->reg - PPC_REG_CRF0)}));
+			break;
+		}
 
 		case PPC_ID_MTFSFx:
 			REQUIRE2OPS

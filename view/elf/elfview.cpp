@@ -1314,7 +1314,7 @@ bool ElfView::Init()
 			continue;
 		}
 
-		if (m_objectFile)
+		if (m_objectFile && entry->section != ELF_SHN_ABS)
 		{
 			if (entry->section >= m_elfSections.size())
 				continue;
@@ -1333,7 +1333,7 @@ bool ElfView::Init()
 					break;
 				}
 			}
-		} else
+		} else if (entry->section != ELF_SHN_ABS)
 			entry->value += imageBaseAdjustment;
 
 		if (entry->section == ELF_SHN_UNDEF)
@@ -1598,14 +1598,12 @@ bool ElfView::Init()
 							}
 						}
 
-						if (entry.type == ELF_STT_SECTION)
+						if (entry.section == ELF_SHN_ABS)
 						{
-							// Section relative relocation
-							if (auto section = GetSectionByName(entry.name); section)
-							{
-								DefineRelocation(m_arch, relocInfo, section->GetStart(), relocInfo.address);
-								continue;
-							}
+							// Absolute symbols are literal values, not addresses relative
+							// to the image or a section. They need not lie inside the view.
+							DefineRelocation(m_arch, relocInfo, entry.value, relocInfo.address);
+							continue;
 						}
 						else if (!entry.section)
 						{
@@ -1653,24 +1651,22 @@ bool ElfView::Init()
 						}
 						else if (entry.section < m_elfSections.size())
 						{
-							// Linked images' st_value already contains a virtual address;
-							// do not add the section address a second time. Keep ET_REL
-							// lookup separate, since its st_value is section relative.
-							uint64_t target = m_objectFile ? m_elfSections[entry.section].address + entry.value :
-								entry.value + imageBaseAdjustment;
+							// Only ET_REL st_value is section relative. Resolve both local
+							// and section symbols by their section index, not a potentially
+							// ambiguous name, and apply placement exactly once.
+							uint64_t target = entry.value + imageBaseAdjustment;
+							if (m_objectFile)
+								target += m_elfSections[entry.section].address;
 							auto symbol = GetSymbolByAddress(target);
 							if (symbol && !displayAliasAddresses.count(target))
 							{
 								DefineRelocation(m_arch, relocInfo, symbol, relocInfo.address);
 								continue;
 							}
-							if (!m_objectFile)
-							{
-								// A missing analysis symbol does not make a different
-								// same-named GOT slot a definition of this ELF symbol.
-								DefineRelocation(m_arch, relocInfo, target, relocInfo.address);
-								continue;
-							}
+							// A missing analysis symbol does not make a different
+							// same-named local symbol or GOT slot a definition.
+							DefineRelocation(m_arch, relocInfo, target, relocInfo.address);
+							continue;
 						}
 
 						// retrieve first symbol that is not a symbol relocation

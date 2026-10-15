@@ -1169,6 +1169,59 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei2);
 			break;
 
+		case PPC_ID_CMPEQB:
+		{
+			REQUIRE3OPS
+			uint32_t crf = oper0->reg - PPC_REG_CRF0;
+
+			ei0 = BN_INVALID_EXPR;
+			for (uint32_t byteIdx = 0; byteIdx < 8; byteIdx++)
+			{
+				ei1 = il.CompareEqual(1,
+					il.LowPart(1, il.LogicalShiftRight(8, il.Register(8, oper2->reg), il.Const(1, 8*byteIdx))),
+					il.LowPart(1, il.Register(8, oper1->reg)));
+				ei0 = (byteIdx == 0) ? ei1 : il.Or(0, ei0, ei1);
+			}
+
+			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_LT, il.Const(0, 0)));
+			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_GT, ei0));
+			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_EQ, il.Const(0, 0)));
+			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_SO, il.Const(0, 0)));
+			break;
+		}
+
+		case PPC_ID_CMPRB:
+		{
+			REQUIRE4OPS
+			uint32_t crf = oper0->reg - PPC_REG_CRF0;
+
+			ei0 = il.And(0,
+				il.CompareUnsignedGreaterEqual(1,
+					il.LowPart(1, il.Register(4, oper2->reg)),
+					il.LowPart(1, il.Register(4, oper3->reg))),
+				il.CompareUnsignedLessEqual(1,
+					il.LowPart(1, il.Register(4, oper2->reg)),
+					il.LowPart(1, il.LogicalShiftRight(4, il.Register(4, oper3->reg), il.Const(1, 8)))));
+
+			if (oper1->uimm == 1)
+			{
+				ei1 = il.And(0,
+					il.CompareUnsignedGreaterEqual(1,
+						il.LowPart(1, il.Register(4, oper2->reg)),
+						il.LowPart(1, il.LogicalShiftRight(4, il.Register(4, oper3->reg), il.Const(1, 16)))),
+					il.CompareUnsignedLessEqual(1,
+						il.LowPart(1, il.Register(4, oper2->reg)),
+						il.LowPart(1, il.LogicalShiftRight(4, il.Register(4, oper3->reg), il.Const(1, 24)))));
+				ei0 = il.Or(0, ei0, ei1);
+			}
+
+			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_LT, il.Const(0, 0)));
+			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_GT, ei0));
+			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_EQ, il.Const(0, 0)));
+			il.AddInstruction(il.SetFlag(4*crf + IL_FLAG_SO, il.Const(0, 0)));
+			break;
+		}
+
 		case PPC_ID_CMPWI: /* compare (signed) word(32-bit) immediate */
 			REQUIRE3OPS
 			ei0 = operToIL(il, oper1);
@@ -1351,6 +1404,47 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				}
 			}
 			break;
+
+		case PPC_ID_MTOCRF:
+			REQUIRE2OPS
+			for (uint8_t test = 0x80, i = 0; test; test >>= 1, i++)
+			{
+				if (test & oper0->uimm)
+				{
+					for (uint32_t bit = 0; bit < 4; bit++)
+						il.AddInstruction(il.SetFlag(4 * i + bit,
+							il.TestBit(4, il.Register(4, oper1->reg), il.Const(1, 31 - 4 * i - bit))));
+				}
+			}
+			break;
+
+		case PPC_ID_MFOCRF:
+		{
+			REQUIRE2OPS
+			ei0 = BN_INVALID_EXPR;
+			for (uint32_t n = 0; n < 8; n++)
+			{
+				if ((oper1->uimm & (0x80u >> n)) == 0)
+					continue;
+
+				ei1 = il.Or(4,
+					il.FlagBit(4, 4*n + IL_FLAG_LT, 31 - 4*n),
+					il.Or(4,
+						il.FlagBit(4, 4*n + IL_FLAG_GT, 30 - 4*n),
+						il.Or(4,
+							il.FlagBit(4, 4*n + IL_FLAG_EQ, 29 - 4*n),
+							il.FlagBit(4, 4*n + IL_FLAG_SO, 28 - 4*n))));
+				ei0 = (ei0 == BN_INVALID_EXPR) ? ei1 : il.Or(4, ei0, ei1);
+			}
+
+			if (ei0 == BN_INVALID_EXPR)
+				ei0 = il.Const(4, 0);
+
+			if (addressSize_l == 8)
+				ei0 = il.ZeroExtend(8, ei0);
+			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
+			break;
+		}
 
 		case PPC_ID_EXTSBx:
 		case PPC_ID_EXTSHx:

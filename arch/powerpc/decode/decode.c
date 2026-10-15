@@ -3535,10 +3535,10 @@ InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 			return PPC_ID_CMPB;
 
 		case 0x400:
-			if ((word32 & 0x00fff800) != 0)
+			if ((word32 & 0x007ff800) != 0)
 				return PPC_ID_INVALID;
 
-			break;
+			return PPC_ID_MCRXR;
 
 		case 0x418:
 		case 0x419:
@@ -6107,4 +6107,3 @@ size_t VleGetInstructionLength(const uint8_t* data, size_t data_length, uint32_t
 			return 2;
 	}
 }
-

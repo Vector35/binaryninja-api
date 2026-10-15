@@ -852,6 +852,11 @@ static void WriteOverflow(LowLevelILFunction& il, ExprId overflow)
 {
 	il.AddInstruction(il.SetFlag(IL_FLAG_XER_OV, overflow));
 	il.AddInstruction(il.SetFlag(IL_FLAG_XER_SO, il.Or(0, il.Flag(IL_FLAG_XER_SO), il.Flag(IL_FLAG_XER_OV))));
+	// ISA 3.0 OE forms implemented here also report OV32. Other XER bits,
+	// notably the string byte count and CA32, remain untouched.
+	il.AddInstruction(il.SetRegister(4, PPC_REG_XER,
+		il.Or(4, il.And(4, il.Register(4, PPC_REG_XER), il.Const(4, ~(1u << 19))),
+			il.ShiftLeft(4, il.BoolToInt(4, il.Flag(IL_FLAG_XER_OV)), il.Const(1, 19)))));
 }
 
 static void RecordCR1(LowLevelILFunction& il)
@@ -865,7 +870,7 @@ static void LiftScalarFP(LowLevelILFunction& il, Instruction* instruction, uint3
 {
 	il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(instruction->operands[0].reg),
 		RegisterOrFlag::Register(PPC_REG_FPSCR)}, intrinsic,
-		{il.Register(8, instruction->operands[1].reg), il.Register(4, PPC_REG_FPSCR)}));
+		{il.Register(8, instruction->operands[1].reg), il.Register(8, PPC_REG_FPSCR)}));
 	if (instruction->flags.rc)
 		RecordCR1(il);
 }
@@ -989,7 +994,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 	case PPC_ID_FNMADDx: case PPC_ID_FNMADDSx:
 	case PPC_ID_FNMSUBx: case PPC_ID_FNMSUBSx:
 	case PPC_ID_FRSPx: case PPC_ID_FCMPU: case PPC_ID_FCMPO:
-		il.AddInstruction(il.SetRegister(4, PPC_REG_FPSCR, il.Unimplemented()));
+		il.AddInstruction(il.SetRegister(8, PPC_REG_FPSCR, il.Unimplemented()));
 		break;
 	default:
 		break;
@@ -1370,12 +1375,32 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
         case PPC_ID_MFSPR:
            REQUIRE2OPS
-           il.AddInstruction(il.SetRegister(4, oper0->reg, il.Unimplemented()));
+           if (oper1->uimm == 268 || oper1->uimm == 269)
+               il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
+                   oper1->uimm == 268 ? PPC_INTRIN_MFTB : PPC_INTRIN_MFTBU, {}));
+           else
+               il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
+                   PPC_INTRIN_MFSPR, {il.Const(4, oper1->uimm)}));
+           break;
+
+        case PPC_ID_MTSPR:
+           REQUIRE2OPS
+           il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_MTSPR,
+               {il.Const(4, oper0->uimm), operToIL_a(il, oper1, addressSize_l)}));
            break;
 
         case PPC_ID_MFMSR:
            REQUIRE1OP
-           il.AddInstruction(il.SetRegister(4, oper0->reg, il.Unimplemented()));
+           il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, il.Register(addressSize_l, PPC_REG_MSR)));
+           break;
+
+        case PPC_ID_MTMSR:
+        case PPC_ID_MTMSRD:
+           REQUIRE1OP
+           il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(PPC_REG_MSR)},
+               instruction->id == PPC_ID_MTMSR ? PPC_INTRIN_MTMSR : PPC_INTRIN_MTMSRD,
+               {il.Register(addressSize_l, PPC_REG_MSR), operToIL_a(il, oper0, addressSize_l),
+                il.Const(4, instruction->numOperands > 1 ? oper1->uimm : 0)}));
            break;
 
 		case PPC_ID_MCRF:
@@ -2642,6 +2667,175 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
 			break;
 		}
+
+		case PPC_ID_SYNC:
+			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_SYNC, {}));
+			break;
+
+		case PPC_ID_LWSYNC:
+			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_LWSYNC, {}));
+			break;
+
+		case PPC_ID_PTESYNC:
+			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_PTESYNC, {}));
+			break;
+
+		case PPC_ID_EIEIO:
+			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_EIEIO, {}));
+			break;
+
+		case PPC_ID_ISYNC:
+			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_ISYNC, {}));
+			break;
+
+		case PPC_ID_MBAR:
+			REQUIRE1OP
+			il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_MBAR, {il.Const(4, oper0->uimm)}));
+			break;
+
+		case PPC_ID_DCBZ:
+		case PPC_ID_DCBZL:
+		case PPC_ID_DCBF:
+		case PPC_ID_DCBFL:
+		case PPC_ID_DCBFLP:
+		case PPC_ID_DCBST:
+		case PPC_ID_DCBI:
+		case PPC_ID_ICBI:
+		{
+			REQUIRE2OPS
+			uint32_t intrin;
+			switch (instruction->id)
+			{
+				case PPC_ID_DCBZ:  intrin = PPC_INTRIN_DCBZ; break;
+				case PPC_ID_DCBZL: intrin = PPC_INTRIN_DCBZL; break;
+				case PPC_ID_DCBF:
+				case PPC_ID_DCBFL:
+				case PPC_ID_DCBFLP: intrin = PPC_INTRIN_DCBF; break;
+				case PPC_ID_DCBST: intrin = PPC_INTRIN_DCBST; break;
+				case PPC_ID_DCBI:  intrin = PPC_INTRIN_DCBI; break;
+				default:           intrin = PPC_INTRIN_ICBI; break;
+			}
+
+			vector<ExprId> inputs{il.Add(addressSize_l,
+				operToIL(il, oper0, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
+				operToIL_a(il, oper1, addressSize_l))};
+			if (intrin == PPC_INTRIN_DCBF)
+				inputs.push_back(il.Const(4, instruction->id == PPC_ID_DCBFL ? 1
+					: instruction->id == PPC_ID_DCBFLP ? 3 : instruction->numOperands > 2 ? oper2->uimm : 0));
+			il.AddInstruction(il.Intrinsic({}, intrin, inputs));
+			break;
+		}
+
+		case PPC_ID_DCBT:
+		case PPC_ID_DCBTT:
+		case PPC_ID_DCBTST:
+		case PPC_ID_DCBTSTT:
+		case PPC_ID_DCBA:
+			il.AddInstruction(il.Nop());
+			break;
+
+		case PPC_ID_POPCNTB:
+		case PPC_ID_POPCNTW:
+		case PPC_ID_POPCNTD:
+		{
+			REQUIRE2OPS
+			uint32_t intrin;
+			switch (instruction->id)
+			{
+				case PPC_ID_POPCNTB: intrin = PPC_INTRIN_POPCNTB; break;
+				case PPC_ID_POPCNTW: intrin = PPC_INTRIN_POPCNTW; break;
+				default:             intrin = PPC_INTRIN_POPCNTD; break;
+			}
+
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
+				intrin, {operToIL_a(il, oper1, addressSize_l)}));
+			break;
+		}
+
+		case PPC_ID_CMPB:
+			REQUIRE3OPS
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
+				PPC_INTRIN_CMPB,
+				{operToIL_a(il, oper1, addressSize_l), operToIL_a(il, oper2, addressSize_l)}));
+			break;
+
+		case PPC_ID_BPERMD:
+			REQUIRE3OPS
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
+				PPC_INTRIN_BPERMD,
+				{operToIL_a(il, oper1, 8), operToIL_a(il, oper2, 8)}));
+			break;
+
+		case PPC_ID_DARN:
+			REQUIRE2OPS
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
+				PPC_INTRIN_DARN, {il.Const(4, oper1->uimm)}));
+			break;
+
+		case PPC_ID_MFTB:
+			REQUIRE1OP
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
+				PPC_INTRIN_MFTB, {}));
+			break;
+
+		case PPC_ID_MFTBU:
+			REQUIRE1OP
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
+				PPC_INTRIN_MFTBU, {}));
+			break;
+
+		case PPC_ID_MFFSx:
+			REQUIRE1OP
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(oper0->reg)},
+				PPC_INTRIN_MFFS, {il.Register(8, PPC_REG_FPSCR)}));
+			if (instruction->flags.rc)
+				RecordCR1(il);
+			break;
+
+		case PPC_ID_MTFSFx:
+			REQUIRE2OPS
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(PPC_REG_FPSCR)}, PPC_INTRIN_MTFSF,
+				{il.Register(8, PPC_REG_FPSCR), il.Const(4, oper0->uimm), operToIL_a(il, oper1, 8),
+				 il.Const(4, instruction->numOperands > 2 ? oper2->uimm : 0),
+				 il.Const(4, instruction->numOperands > 3 ? oper3->uimm : 0)}));
+			if (instruction->flags.rc)
+				RecordCR1(il);
+			break;
+
+		case PPC_ID_MTFSB0x:
+		case PPC_ID_MTFSB1x:
+			REQUIRE1OP
+			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(PPC_REG_FPSCR)},
+				instruction->id == PPC_ID_MTFSB0x ? PPC_INTRIN_MTFSB0 : PPC_INTRIN_MTFSB1,
+				{il.Register(8, PPC_REG_FPSCR), il.Const(4, oper0->uimm)}));
+			if (instruction->flags.rc)
+				RecordCR1(il);
+			break;
+
+		// Keep unmodeled XER bits (including byte count, OV32 and CA32) in
+		// the backing register, and overlay the authoritative SO/OV/CA flags.
+		case PPC_ID_MFXER:
+			REQUIRE1OP
+			ei0 = il.Or(4, il.And(4, il.Register(4, PPC_REG_XER), il.Const(4, 0x1fffffff)), il.Or(4,
+				il.FlagBit(4, IL_FLAG_XER_SO, 31),
+				il.Or(4,
+					il.FlagBit(4, IL_FLAG_XER_OV, 30),
+					il.FlagBit(4, IL_FLAG_XER_CA, 29))));
+			if (addressSize_l == 8)
+				ei0 = il.ZeroExtend(8, ei0);
+			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
+			break;
+
+		case PPC_ID_MTXER:
+			REQUIRE1OP
+			il.AddInstruction(il.SetRegister(4, PPC_REG_XER, operToIL(il, oper0)));
+			il.AddInstruction(il.SetFlag(IL_FLAG_XER_SO,
+				il.TestBit(4, operToIL(il, oper0), il.Const(1, 31))));
+			il.AddInstruction(il.SetFlag(IL_FLAG_XER_OV,
+				il.TestBit(4, operToIL(il, oper0), il.Const(1, 30))));
+			il.AddInstruction(il.SetFlag(IL_FLAG_XER_CA,
+				il.TestBit(4, operToIL(il, oper0), il.Const(1, 29))));
+			break;
 
 		case PPC_ID_MODSW:
 			REQUIRE3OPS

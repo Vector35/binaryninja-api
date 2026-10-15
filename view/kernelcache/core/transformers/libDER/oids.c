@@ -26,6 +26,9 @@
  * oids.c - OID consts
  *
  */
+/*
+ * NOTICE: This file was modified by Vector 35 on 2025-07-16 to remove an unused OID.
+ */
 
 #include <libDER/libDER.h>
 #include <libDER/oids.h>

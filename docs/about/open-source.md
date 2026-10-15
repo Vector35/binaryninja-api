@@ -65,6 +65,10 @@ The previous tools are used to generate our documentation but are not distribute
     - [zstd-rs] ([zstd-rs license] - MIT) used by the IDB import plugin
     - [pygments] ([pygments license] - 2-clause BSD) used for syntax highlighting in the Snippets plugin
     - [QCodeEditor] ([QCodeEditor license] - MIT) line number rendering in the Snippets plugin editor
+    - [ObjectiveNinja] ([ObjectiveNinja license] - 3-clause BSD) used as the basis for the [Objective-C plugin and workflow]
+    - [lzfse] ([lzfse license] - 3-clause BSD) used for kernelcache decompression
+    - [libimg4] ([libimg4 license] - MIT) from PongoOS, used for kernelcache decompression
+    - [libDER] ([libDER license] - APSL 2.0) from Apple CommonCrypto, modified by xerub for libimg4, used for kernelcache decompression
 
 ## Bundled Python Packages
 
@@ -265,6 +269,15 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [pygments license]: https://github.com/pygments/pygments/blob/master/LICENSE
 [QCodeEditor]: https://github.com/luchko/QCodeEditor
 [QCodeEditor license]: https://github.com/luchko/QCodeEditor/blob/master/LICENSE.txt
+[ObjectiveNinja]: https://github.com/jonpalmisc/ObjectiveNinja
+[ObjectiveNinja license]: https://github.com/jonpalmisc/ObjectiveNinja/blob/master/LICENSE.txt
+[Objective-C plugin and workflow]: https://github.com/Vector35/binaryninja-api/tree/dev/plugins/workflow_objc
+[lzfse]: https://github.com/lzfse/lzfse
+[lzfse license]: https://github.com/lzfse/lzfse/blob/master/LICENSE
+[libimg4]: https://github.com/checkra1n/PongoOS/tree/master/src/lib/img4
+[libimg4 license]: https://github.com/checkra1n/PongoOS/blob/master/LICENSE.md
+[libDER]: https://github.com/apple-oss-distributions/CommonCrypto/tree/1be355a598cbdb57722d9ebdf490d1cae1ea7033/Source/libDER/libDER
+[libDER license]: https://github.com/Vector35/binaryninja-api/blob/dev/view/kernelcache/core/transformers/libDER/LICENSE
 [requests]: https://github.com/psf/requests
 [requests license]: https://github.com/psf/requests/blob/main/LICENSE
 [certifi]: https://github.com/certifi/python-certifi

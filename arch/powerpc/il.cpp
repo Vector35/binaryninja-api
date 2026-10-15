@@ -1573,6 +1573,20 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
                 il.Const(4, instruction->numOperands > 1 ? oper1->uimm : 0)}));
            break;
 
+		case PPC_ID_WRTEE:
+		case PPC_ID_WRTEEI:
+		{
+			REQUIRE1OP
+			// Book E changes only MSR[EE] (LSB-numbered bit 15).
+			ExprId ee = instruction->id == PPC_ID_WRTEEI
+				? il.Const(addressSize_l, (oper0->uimm & 1) << 15)
+				: il.And(addressSize_l, operToIL_a(il, oper0, addressSize_l), il.Const(addressSize_l, 1u << 15));
+			il.AddInstruction(il.SetRegister(addressSize_l, PPC_REG_MSR,
+				il.Or(addressSize_l,
+					il.And(addressSize_l, il.Register(addressSize_l, PPC_REG_MSR), il.Const(addressSize_l, ~(1ULL << 15))), ee)));
+			break;
+		}
+
 		case PPC_ID_MCRF:
 		{
 			REQUIRE2OPS
@@ -3071,6 +3085,9 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_RFDI:
 		case PPC_ID_RFMCI:
 		case PPC_ID_RFEBB:
+			// Return state is restored from exception context, which is not yet
+			// modeled. Invalidate MSR rather than claiming it is preserved.
+			il.AddInstruction(il.SetRegister(addressSize_l, PPC_REG_MSR, il.Unimplemented()));
 			il.AddInstruction(il.Return(il.Unimplemented()));
 			break;
 

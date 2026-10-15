@@ -48,6 +48,10 @@ def evaluate(il, registers=None, flags=None, memory=None, intrinsic=None):
         if op in ('LOW_PART', 'ZX'): return expr(args[0]) & mask
         if op == 'SX': return signed(expr(args[0]), args[0].size) & mask
         if op == 'NOT': return ~expr(args[0]) & mask
+        if op == 'FCMP_GE':
+            a, b = [struct.unpack('>d', expr(arg).to_bytes(8, 'big'))[0] for arg in args]
+            return int(a >= b)
+        if op == 'FLOAT_CONST': return int.from_bytes(struct.pack('>d' if e.size == 8 else '>f', args[0]), 'big')
         if op in ('CLZ', 'CTZ'):
             value = expr(args[0])
             return (e.size * 8 - value.bit_length() if op == 'CLZ' else
@@ -278,3 +282,72 @@ def test_byte_reverse_and_pc_materialization(arch_name):
     for word, result in [(0x4c600004, 0x1004), (0x4c7fffc5, 0xffffffffffff1004)]:
         regs, _, _, _ = evaluate(lift(word, arch_name))
         assert regs['r3'] == result
+
+
+@pytest.mark.parametrize('word,size,is_signed', [(0x7c642b56, 4, True), (0x7c642b16, 4, False),
+                                               (0x7c642b52, 8, True), (0x7c642b12, 8, False)])
+@pytest.mark.parametrize('a,b', [(1, 3), (-1, 3), (3, 1), (1, 0)])
+@pytest.mark.parametrize('old_so', [0, 1])
+def test_extended_divide(word, size, is_signed, a, b, old_so):
+    if not is_signed and a < 0: a = 1
+    quotient = None if not b else abs(a << (size * 8)) // abs(b) * (-1 if (a < 0) != (b < 0) else 1)
+    limit = 1 << (size * 8 - int(is_signed))
+    overflow = quotient is None or not (-limit <= quotient < limit if is_signed else 0 <= quotient < limit)
+    regs, flags, _, _ = evaluate(lift(word | 0x401),
+                                 {'r4': a & ((1 << 64) - 1), 'r5': b}, {'xer_so': old_so})
+    assert flags['xer_ov'] == overflow and flags['xer_so'] == (old_so | overflow)
+    if not overflow: assert regs['r3'] == quotient & ((1 << 64) - 1)
+
+
+@pytest.mark.parametrize('lt,gt', [(0, 0), (0, 1), (1, 0), (1, 1)])
+def test_setb_priority(lt, gt):
+    regs, _, _, _ = evaluate(lift(0x7c600100), flags={'lt': lt, 'gt': gt})
+    assert regs['r3'] == (-1 if lt else 1 if gt else 0) & ((1 << 64) - 1)
+
+
+FP_UNARY = [(0xfc20102c, '__fsqrt'), (0xec20102c, '__fsqrts'),
+            (0xfc201310, '__frin'), (0xfc201350, '__friz'), (0xfc201390, '__frip'), (0xfc2013d0, '__frim'),
+            (0xfc20101c, '__fctiw'), (0xfc20101e, '__fctiwz'),
+            (0xfc20111c, '__fctiwu'), (0xfc20111e, '__fctiwuz'),
+            (0xfc20165c, '__fctid'), (0xfc20165e, '__fctidz'),
+            (0xfc20175c, '__fctidu'), (0xfc20175e, '__fctiduz'),
+            (0xfc20169c, '__fcfid'), (0xfc20179c, '__fcfidu'),
+            (0xec20169c, '__fcfids'), (0xec20179c, '__fcfidus')]
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('word,name', FP_UNARY)
+def test_scalar_fp_intrinsic_contract(arch_name, word, name):
+    for record in (False, True):
+        il = lift(word | int(record), arch_name)
+        assert il[0].operation == bn.LowLevelILOperation.LLIL_INTRINSIC
+        assert str(il[0].intrinsic) == name
+        assert [str(out) for out in il[0].output] == ['f1', 'fpscr']
+        assert [p.size for p in il[0].params] == [8, 4]
+        def fp(op, params):
+            assert op == name and params == [0x8000000000000000, 3]
+            return [0x43e0000000000000, 0xa0000003]
+        regs, flags, _, events = evaluate(il, {'f2': 0x8000000000000000, 'fpscr': 3},
+                                         {'lt': 1, 'gt': 1, 'eq': 0, 'so': 1}, intrinsic=fp)
+        assert regs['f1'] == 0x43e0000000000000 and regs['fpscr'] == 0xa0000003
+        assert [flags[f] for f in ('lt', 'gt', 'eq', 'so')] == [1, 1, 0, 1]
+        if record:
+            assert [flags[f'cr1{f}'] for f in ('lt', 'gt', 'eq', 'so')] == [1, 0, 1, 0]
+
+
+def test_fcpsgn_record():
+    regs, flags, _, _ = evaluate(lift(0xfc221811),
+                                 {'f2': 1 << 63, 'f3': 0x3ff0000000000000, 'fpscr': 0x50000000}, {'eq': 1})
+    assert regs['f1'] == 0xbff0000000000000 and regs['fpscr'] == 0x50000000
+    assert flags['eq'] == 1
+    assert [flags[f'cr1{f}'] for f in ('lt', 'gt', 'eq', 'so')] == [0, 1, 0, 1]
+
+
+@pytest.mark.parametrize('value,selected', [(0.0, 3), (-0.0, 3), (-1.0, 4), (float('nan'), 4)])
+def test_fsel_record(value, selected):
+    bits = int.from_bytes(struct.pack('>d', value), 'big')
+    regs, flags, _, _ = evaluate(lift(0xfc2220ef),
+                                 {'f2': bits, 'f3': 0x33, 'f4': 0x44, 'fpscr': 0x50000000}, {'eq': 1})
+    assert regs['f1'] == {3: 0x33, 4: 0x44}[selected]
+    assert flags['eq'] == 1
+    assert [flags[f'cr1{f}'] for f in ('lt', 'gt', 'eq', 'so')] == [0, 1, 0, 1]

@@ -221,6 +221,26 @@ enum PPCIntrinsic : uint32_t
     // Append new IDs here; the preceding IDs are stored in existing databases.
     PPC_INTRIN_SET_RESERVATION,
     PPC_INTRIN_CHECK_RESERVATION,
+    // Each scalar FP intrinsic consumes (FPR bits, FPSCR) and returns
+    // (FPR bits, FPSCR), including rounding, exceptions and result packaging.
+    PPC_INTRIN_FSQRT,
+    PPC_INTRIN_FSQRTS,
+    PPC_INTRIN_FRIN,
+    PPC_INTRIN_FRIZ,
+    PPC_INTRIN_FRIP,
+    PPC_INTRIN_FRIM,
+    PPC_INTRIN_FCTIW,
+    PPC_INTRIN_FCTIWZ,
+    PPC_INTRIN_FCTIWU,
+    PPC_INTRIN_FCTIWUZ,
+    PPC_INTRIN_FCTID,
+    PPC_INTRIN_FCTIDZ,
+    PPC_INTRIN_FCTIDU,
+    PPC_INTRIN_FCTIDUZ,
+    PPC_INTRIN_FCFID,
+    PPC_INTRIN_FCFIDU,
+    PPC_INTRIN_FCFIDS,
+    PPC_INTRIN_FCFIDUS,
     PPC_INTRIN_ADDITIONAL_END,
 	PPC_INTRIN_INVALID = 0xFFFFFFFF,
 };

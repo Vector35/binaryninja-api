@@ -698,6 +698,24 @@ class PowerpcArchitecture: public Architecture
 			return "__set_reservation";
 		case PPC_INTRIN_CHECK_RESERVATION:
 			return "__check_reservation";
+		case PPC_INTRIN_FSQRT: return "__fsqrt";
+		case PPC_INTRIN_FSQRTS: return "__fsqrts";
+		case PPC_INTRIN_FRIN: return "__frin";
+		case PPC_INTRIN_FRIZ: return "__friz";
+		case PPC_INTRIN_FRIP: return "__frip";
+		case PPC_INTRIN_FRIM: return "__frim";
+		case PPC_INTRIN_FCTIW: return "__fctiw";
+		case PPC_INTRIN_FCTIWZ: return "__fctiwz";
+		case PPC_INTRIN_FCTIWU: return "__fctiwu";
+		case PPC_INTRIN_FCTIWUZ: return "__fctiwuz";
+		case PPC_INTRIN_FCTID: return "__fctid";
+		case PPC_INTRIN_FCTIDZ: return "__fctidz";
+		case PPC_INTRIN_FCTIDU: return "__fctidu";
+		case PPC_INTRIN_FCTIDUZ: return "__fctiduz";
+		case PPC_INTRIN_FCFID: return "__fcfid";
+		case PPC_INTRIN_FCFIDU: return "__fcfidu";
+		case PPC_INTRIN_FCFIDS: return "__fcfids";
+		case PPC_INTRIN_FCFIDUS: return "__fcfidus";
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
 			{
@@ -751,6 +769,9 @@ class PowerpcArchitecture: public Architecture
 
 	virtual vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override
 	{
+		if (intrinsic >= PPC_INTRIN_FSQRT && intrinsic <= PPC_INTRIN_FCFIDUS)
+			return {NameAndType("value", Type::IntegerType(8, false)),
+				NameAndType("fpscr", Type::IntegerType(4, false))};
 		switch (intrinsic)
 		{
 		case PPC_INTRIN_CNTLZW:
@@ -793,6 +814,8 @@ class PowerpcArchitecture: public Architecture
 
 	virtual vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic) override
 	{
+		if (intrinsic >= PPC_INTRIN_FSQRT && intrinsic <= PPC_INTRIN_FCFIDUS)
+			return {Type::IntegerType(8, false), Type::IntegerType(4, false)};
 		switch (intrinsic)
 		{
 		case PPC_INTRIN_CNTLZW:
@@ -1605,7 +1628,8 @@ class PowerpcArchitecture: public Architecture
 			PPC_REG_GPR16,  PPC_REG_GPR17,  PPC_REG_GPR18,  PPC_REG_GPR19,
 			PPC_REG_GPR20,  PPC_REG_GPR21,  PPC_REG_GPR22,  PPC_REG_GPR23,
 			PPC_REG_GPR24,  PPC_REG_GPR25,  PPC_REG_GPR26,  PPC_REG_GPR27,
-			PPC_REG_GPR28,  PPC_REG_GPR29,  PPC_REG_GPR30,  PPC_REG_GPR31
+			PPC_REG_GPR28,  PPC_REG_GPR29,  PPC_REG_GPR30,  PPC_REG_GPR31,
+			PPC_REG_FPSCR
 		};
 	}
 
@@ -1637,7 +1661,7 @@ class PowerpcArchitecture: public Architecture
 			PPC_REG_GPR24, PPC_REG_GPR25, PPC_REG_GPR26, PPC_REG_GPR27,
 			PPC_REG_GPR28, PPC_REG_GPR29, PPC_REG_GPR30, PPC_REG_GPR31,
 
-			PPC_REG_XER, PPC_REG_LR, // PPC_REG_CTR,
+			PPC_REG_XER, PPC_REG_LR, PPC_REG_FPSCR, // PPC_REG_CTR,
 
 			// PPC_REG_FR0,  PPC_REG_FR1,  PPC_REG_FR2,  PPC_REG_FR3,
 			// PPC_REG_FR4,  PPC_REG_FR5,  PPC_REG_FR6,  PPC_REG_FR7,
@@ -1744,6 +1768,7 @@ class PowerpcArchitecture: public Architecture
 
 			case PPC_REG_CARRY: return RegisterInfo(PPC_REG_CARRY, 0, 4);
 			case PPC_REG_XER: return RegisterInfo(PPC_REG_XER, 0, 4);
+			case PPC_REG_FPSCR: return RegisterInfo(PPC_REG_FPSCR, 0, 4);
 			case PPC_REG_LR: return RegisterInfo(PPC_REG_LR, 0, addressSize);
 			case PPC_REG_CTR: return RegisterInfo(PPC_REG_CTR, 0, addressSize);
 			case PPC_REG_RM: return RegisterInfo(PPC_REG_RM, 0, addressSize);

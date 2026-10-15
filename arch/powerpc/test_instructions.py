@@ -62,6 +62,7 @@ def evaluate(il, registers=None, flags=None, memory=None, intrinsic=None):
                      struct.unpack('>d' if src.size == 8 else '>f', expr(src).to_bytes(src.size, 'big'))[0])
             return int.from_bytes(struct.pack('>d' if e.size == 8 else '>f', value), 'big')
         ops = {'ADD': operator.add, 'SUB': operator.sub, 'OR': operator.or_,
+               'MUL': operator.mul,
                'AND': operator.and_, 'XOR': operator.xor, 'LSL': operator.lshift,
                'LSR': operator.rshift, 'CMP_E': operator.eq, 'CMP_NE': operator.ne,
                'CMP_UGE': operator.ge, 'CMP_ULE': operator.le,
@@ -473,7 +474,8 @@ def test_fpscr_system_state(arch_name, word, name, args):
                                  0x7c842828, 0x7c64292d, 0x7c610124,
                                  0x7c8300f4, 0x7c8302f4, 0x7c8303f4, 0x7c832bf8,
                                  0x7c8329f8, 0x7c6105e6, 0x7c6c42a6, 0x7c6d42a6,
-                                 0x7c641aa6, 0x7c641ba6, 0xfc20101f, 0xec20102d])
+                                 0x7c641aa6, 0x7c641ba6, 0xfc20101f, 0xec20102d,
+                                 0xc0240010, 0xd0240010, 0xd4240010, 0x7c242d6e])
 def test_instruction_analysis_and_intrinsic_types(arch_name, word):
     arch = bn.Architecture[arch_name]
     il = lift(word, arch_name)
@@ -500,3 +502,28 @@ def test_oe_preserves_xer_byte_count_and_ca32(overflow):
     assert regs['xer'] & 0x4007f == 0x4007f
     assert bool(regs['xer'] & (1 << 19)) == overflow
     assert flags['xer_ca'] == 1
+
+
+# Explicit bit-pattern pairs, including signaling NaNs: Python numeric float
+# conversion itself may quiet those, so it is not the expected-value oracle.
+MEMORY_FP_BITS = [(0x00000000, 0x0000000000000000), (0x80000000, 0x8000000000000000),
+                  (0x00000001, 0x36a0000000000000), (0x007fffff, 0x380fffffc0000000),
+                  (0x00800000, 0x3810000000000000), (0x3f800000, 0x3ff0000000000000),
+                  (0x7f800000, 0x7ff0000000000000), (0xff800000, 0xfff0000000000000),
+                  (0x7f800001, 0x7ff0000020000000), (0x7fc00000, 0x7ff8000000000000)]
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('single,double', MEMORY_FP_BITS)
+def test_fp_memory_bit_packing(arch_name, single, double):
+    regs, flags, _, _ = evaluate(lift(0xc0240010, arch_name), {'r4': 0x1000, 'fpscr': 0x1234},
+                                 {'eq': 1}, {0x1010: single})
+    assert regs['f1'] == double and regs['fpscr'] == 0x1234 and flags['eq'] == 1
+    regs, flags, memory, _ = evaluate(lift(0xd0240010, arch_name), {'r4': 0x1000, 'f1': double, 'fpscr': 0x1234},
+                                     {'eq': 1})
+    assert memory[0x1010] == single and regs['fpscr'] == 0x1234 and flags['eq'] == 1
+
+
+def test_single_store_is_not_arithmetic_rounding():
+    _, _, memory, _ = evaluate(lift(0xd0240010), {'r4': 0x1000, 'f1': 0x3ff000001fffffff})
+    assert memory[0x1010] == 0x3f800000

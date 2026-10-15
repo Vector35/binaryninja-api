@@ -76,3 +76,12 @@ The existing `xer` register backs the bits not individually modeled as flags.
 the backing register and those flags. The new OE arithmetic also updates OV32
 while preserving byte count and CA32. Older arithmetic still has incomplete
 XER status modeling; these changes do not attempt an architecture-wide rewrite.
+
+## Floating-point memory packing
+
+`lfs*` and `stfs*` implement the ISA's non-arithmetic DOUBLE and SINGLE bit
+conversions using integer IL. They preserve signaling NaNs/payloads, signed
+zero and subnormal encodings without updating FPSCR. These are not generic
+rounded FP arithmetic conversions. Doubleword FP memory forms transfer bits
+directly. Out-of-range SINGLE inputs with architecturally undefined results
+may produce signed zero rather than introducing arithmetic rounding semantics.

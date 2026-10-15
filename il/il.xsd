@@ -48,6 +48,7 @@
 			<xs:documentation>A hand-written mixin the op's Python class derives from. Its class name is the trait's words in CamelCase, with ssa as SSA.</xs:documentation>
 		</xs:annotation>
 		<xs:restriction base="xs:string">
+			<xs:enumeration value="aliased_variable_instruction"/>
 			<xs:enumeration value="arithmetic"/>
 			<xs:enumeration value="comparison"/>
 			<xs:enumeration value="constant"/>
@@ -62,13 +63,16 @@
 			<xs:enumeration value="register_stack"/>
 			<xs:enumeration value="return"/>
 			<xs:enumeration value="set_reg"/>
+			<xs:enumeration value="set_var"/>
 			<xs:enumeration value="signed"/>
 			<xs:enumeration value="ssa"/>
+			<xs:enumeration value="ssa_variable_instruction"/>
 			<xs:enumeration value="stack_operation"/>
 			<xs:enumeration value="store"/>
 			<xs:enumeration value="syscall"/>
 			<xs:enumeration value="tailcall"/>
 			<xs:enumeration value="terminal"/>
+			<xs:enumeration value="variable_instruction"/>
 		</xs:restriction>
 	</xs:simpleType>
 
@@ -158,7 +162,7 @@
 			</xs:element>
 			<xs:element name="flags">
 				<xs:annotation>
-					<xs:documentation>Where the flags the op writes go, rendered as {&lt;flags&gt;}.</xs:documentation>
+					<xs:documentation>Where the flags the op writes go, rendered as {&lt;flags&gt;}, for an op that takes flags. An op that takes none renders nothing here.</xs:documentation>
 				</xs:annotation>
 				<xs:complexType/>
 			</xs:element>
@@ -199,6 +203,11 @@
 				<xs:documentation>The C++ type an accessor returns. A map's is a map from its key to its value unless given.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
+		<xs:attribute name="stem-type" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>In place of type, the type after the level's class stem. Instruction is LowLevelILInstruction in LLIL.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
 		<xs:attribute name="reader" type="xs:string">
 			<xs:annotation>
 				<xs:documentation>The suffix of the instruction's GetRawOperandAs method that reads the value, such as Integer.</xs:documentation>
@@ -209,6 +218,11 @@
 				<xs:documentation>The GetRawOperandAs suffix that reads a partial value in place of reader. A partial value's version is two slots on.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
+		<xs:attribute name="cast" type="Flag" default="false">
+			<xs:annotation>
+				<xs:documentation>Whether the read is cast to the type.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
 		<xs:attribute name="decoder" type="Name">
 			<xs:annotation>
 				<xs:documentation>Names the special case the accessors generator applies to the read, such as nonzero for a bool.</xs:documentation>
@@ -216,12 +230,12 @@
 		</xs:attribute>
 		<xs:attribute name="verb" type="xs:string" default="Get">
 			<xs:annotation>
-				<xs:documentation>Starts the C++ accessor name of a value of this kind, as Is for a bool.</xs:documentation>
+				<xs:documentation>Starts the C++ accessor name of a value of this kind, such as Is for a bool.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 		<xs:attribute name="operand" type="xs:string">
 			<xs:annotation>
-				<xs:documentation>The LowLevelILOperandType a value reports from GetOperands, such as Integer.</xs:documentation>
+				<xs:documentation>The operand type a value reports from GetOperands, before the level's operand stem. Integer is IntegerLowLevelOperand in LLIL.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 		<xs:attribute name="operand-type" type="xs:string">
@@ -261,7 +275,12 @@
 		</xs:attribute>
 		<xs:attribute name="writer" type="xs:string">
 			<xs:annotation>
-				<xs:documentation>The suffix of the instruction's UpdateRawOperandAs method that a setter rewrites a stored list of this kind with.</xs:documentation>
+				<xs:documentation>The suffix of the instruction's UpdateRawOperandAs method that a setter rewrites a stored list of this kind with. A setter for a list of expressions takes either instructions or expression indices.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="settable" type="Flag" default="false">
+			<xs:annotation>
+				<xs:documentation>Whether an op's setter element can name a value of this kind, which core rewrites in place. A settable kind needs a writer.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 		<xs:attribute name="version-setter" type="xs:string">
@@ -285,6 +304,11 @@
 		<xs:attribute name="detailed-type" type="xs:string">
 			<xs:annotation>
 				<xs:documentation>The type detailed_operands names, where the annotation has quotes or module qualifiers. A list's is a List of its item kind's.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="stem-type" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>In place of type, the type after the level's class stem. Instruction is LowLevelILInstruction in LLIL.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 		<xs:attribute name="reader" type="Name">
@@ -312,6 +336,11 @@
 				<xs:documentation>The value's tag in ILOperations, where it isn't the reader's name.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
+		<xs:attribute name="shared-tag" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>The tag for a pair whose variable another pair in the op shares, in place of the value's usual tag.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
 		<xs:attribute name="param" type="xs:string">
 			<xs:annotation>
 				<xs:documentation>A builder parameter's type annotation. A list's is a List of its item kind's param unless given.</xs:documentation>
@@ -325,6 +354,11 @@
 		<xs:attribute name="converter" type="xs:string">
 			<xs:annotation>
 				<xs:documentation>What a builder calls on the parameter to get the stored value.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="encoder" type="Name">
+			<xs:annotation>
+				<xs:documentation>Names the special case the Python generator turns a parameter into its stored slots with, in place of converter.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 		<xs:attribute name="default" type="xs:string">
@@ -344,15 +378,65 @@
 		</xs:attribute>
 	</xs:attributeGroup>
 
+	<xs:simpleType name="RustTraits">
+		<xs:annotation>
+			<xs:documentation>Traits beyond Clone, Debug and PartialEq, which every stored type has. A struct derives a trait when all its fields implement it. A lifted struct never derives Copy.</xs:documentation>
+		</xs:annotation>
+		<xs:list>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="Copy"/>
+					<xs:enumeration value="Hash"/>
+					<xs:enumeration value="Eq"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:list>
+	</xs:simpleType>
+
 	<xs:attributeGroup name="RustKind">
 		<xs:attribute name="type" type="xs:string">
 			<xs:annotation>
-				<xs:documentation>The type an accessor returns. A list's is a Vec of its item kind's type unless given.</xs:documentation>
+				<xs:documentation>The type an LLIL accessor returns, or the type an MLIL operation struct stores. An LLIL list's is a Vec of its item kind's type unless given. An MLIL list stores the start and count of its items instead.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="implements" type="RustTraits">
+			<xs:annotation>
+				<xs:documentation>What the MLIL and HLIL stored type implements, for a type that isn't a Rust primitive.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 		<xs:attribute name="decoder" type="Name">
 			<xs:annotation>
-				<xs:documentation>Names the Rust generator's code that decodes the value from its slots.</xs:documentation>
+				<xs:documentation>Names the Rust generator's code that decodes the value from its slots. An MLIL decoder may store several fields, as constant_data's does.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="field-suffix" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>Ends the MLIL stored field's name after the value's, such as _index for a possible value set stored as its cache index.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="lifted-type" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>The type an MLIL lifted operation holds, where the value doesn't lift to itself. A list's is a Vec of its item kind's type unless given.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="lifted-boxed" type="Flag" default="false">
+			<xs:annotation>
+				<xs:documentation>Whether the MLIL and HLIL lifted type is boxed, as a lifted instruction must be because it can contain itself.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="lifted-implements" type="RustTraits">
+			<xs:annotation>
+				<xs:documentation>What the MLIL and HLIL lifted type implements. A list's Vec of its item kind's type implements what the item type does, except Copy.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="lifter" type="Name">
+			<xs:annotation>
+				<xs:documentation>Names the Rust generator's code that lifts an MLIL stored value to the lifted type.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="operand" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>The MLIL lifted operand variant that reports the value, such as Int. It takes a clone of a value whose type isn't Copy, and unboxes a boxed one.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 	</xs:attributeGroup>
@@ -376,6 +460,21 @@
 									<xs:documentation>How C++ spells, reads and writes a value of this kind.</xs:documentation>
 								</xs:annotation>
 								<xs:complexType>
+									<xs:sequence>
+										<xs:element name="level" minOccurs="0" maxOccurs="unbounded">
+											<xs:annotation>
+												<xs:documentation>At the named levels, the attributes this element gives replace the cpp element's.</xs:documentation>
+											</xs:annotation>
+											<xs:complexType>
+												<xs:attribute name="name" type="Names" use="required">
+													<xs:annotation>
+														<xs:documentation>The levels this element applies to, such as mlil. No level is named by two level elements.</xs:documentation>
+													</xs:annotation>
+												</xs:attribute>
+												<xs:attributeGroup ref="CppKind"/>
+											</xs:complexType>
+										</xs:element>
+									</xs:sequence>
 									<xs:attribute name="suffix" type="xs:string">
 										<xs:annotation>
 											<xs:documentation>Ends the C++ accessor name of a value of this kind, after the verb and the operand's role. GetSourceSSARegister is role Source with suffix SSARegister.</xs:documentation>
@@ -389,14 +488,44 @@
 									<xs:documentation>How Python spells, reads and writes a value of this kind.</xs:documentation>
 								</xs:annotation>
 								<xs:complexType>
+									<xs:sequence>
+										<xs:element name="level" minOccurs="0" maxOccurs="unbounded">
+											<xs:annotation>
+												<xs:documentation>At the named levels, the attributes this element gives replace the py element's.</xs:documentation>
+											</xs:annotation>
+											<xs:complexType>
+												<xs:attribute name="name" type="Names" use="required">
+													<xs:annotation>
+														<xs:documentation>The levels this element applies to, such as mlil. No level is named by two level elements.</xs:documentation>
+													</xs:annotation>
+												</xs:attribute>
+												<xs:attributeGroup ref="PyKind"/>
+											</xs:complexType>
+										</xs:element>
+									</xs:sequence>
 									<xs:attributeGroup ref="PyKind"/>
 								</xs:complexType>
 							</xs:element>
 							<xs:element name="rust" minOccurs="0">
 								<xs:annotation>
-									<xs:documentation>How Rust spells and decodes a value of this kind.</xs:documentation>
+									<xs:documentation>How Rust spells, decodes and lifts a value of this kind. LLIL's operation accessors decode a value directly. MLIL stores it in an operation struct, then lifts it. Each level's attributes are only those its generator reads.</xs:documentation>
 								</xs:annotation>
 								<xs:complexType>
+									<xs:sequence>
+										<xs:element name="level" minOccurs="0" maxOccurs="unbounded">
+											<xs:annotation>
+												<xs:documentation>At the named levels, the attributes this element gives replace the rust element's.</xs:documentation>
+											</xs:annotation>
+											<xs:complexType>
+												<xs:attribute name="name" type="Names" use="required">
+													<xs:annotation>
+														<xs:documentation>The levels this element applies to, such as mlil. No level is named by two level elements.</xs:documentation>
+													</xs:annotation>
+												</xs:attribute>
+												<xs:attributeGroup ref="RustKind"/>
+											</xs:complexType>
+										</xs:element>
+									</xs:sequence>
 									<xs:attribute name="suffix" type="xs:string">
 										<xs:annotation>
 											<xs:documentation>Ends the LLIL Rust accessor name of a value of this kind, after the operand's role in snake case. `dest_reg` is role `dest` with suffix `reg`.</xs:documentation>
@@ -509,9 +638,35 @@
 		</xs:key>
 	</xs:element>
 
+	<xs:element name="common">
+		<xs:annotation>
+			<xs:documentation>The shapes and ops that more than one level shares, which each of those levels lists and refines with what's particular to it.</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="shape" type="Shape" maxOccurs="unbounded"/>
+				<xs:element ref="op" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+		<xs:key name="commonOpName">
+			<xs:selector xpath="op"/>
+			<xs:field xpath="@name"/>
+		</xs:key>
+		<xs:key name="commonShapeName">
+			<xs:selector xpath="shape"/>
+			<xs:field xpath="@name"/>
+		</xs:key>
+	</xs:element>
+
 	<xs:element name="il">
 		<xs:annotation>
-			<xs:documentation>The operations of one IL level, in the order of the generated enum.</xs:documentation>
+			<xs:documentation>The operations of one IL level, in the order of the generated enum.
+
+An op with the name of one in common.xml refines it.
+Its attributes replace common.xml's.
+Its operands refine common.xml's operands of the same name, and new ones follow them.
+Its cpp, py and rust elements add to common.xml's, and their children replace common.xml's children about the same value.
+Its other children replace common.xml's children of the same tag.</xs:documentation>
 		</xs:annotation>
 		<xs:complexType>
 			<xs:sequence>
@@ -554,6 +709,8 @@
 				<xs:simpleType>
 					<xs:restriction base="xs:string">
 						<xs:enumeration value="llil"/>
+						<xs:enumeration value="mlil"/>
+						<xs:enumeration value="hlil"/>
 					</xs:restriction>
 				</xs:simpleType>
 			</xs:attribute>
@@ -599,18 +756,6 @@
 			<xs:selector xpath="pair"/>
 			<xs:field xpath="@version"/>
 		</xs:keyref>
-		<xs:keyref name="fixedValue" refer="valueName">
-			<xs:selector xpath="builder/fixed"/>
-			<xs:field xpath="@operand"/>
-		</xs:keyref>
-		<xs:keyref name="defaultedValue" refer="valueName">
-			<xs:selector xpath="builder/default"/>
-			<xs:field xpath="@operand"/>
-		</xs:keyref>
-		<xs:keyref name="sizedPart" refer="valueName">
-			<xs:selector xpath="builder/part-size"/>
-			<xs:field xpath="@part"/>
-		</xs:keyref>
 	</xs:element>
 
 	<xs:complexType name="Group">
@@ -630,34 +775,40 @@
 
 	<xs:complexType name="Shape">
 		<xs:annotation>
-			<xs:documentation>A list of operands shared by many ops, such as the left and right operands of binary arithmetic. An op's shape also gives its shared base class in C++ and Python.</xs:documentation>
+			<xs:documentation>A list of operands shared by many ops, such as the left and right operands of binary arithmetic. An op's shape also gives its shared base class in C++ and Python.
+
+A level's shape with the name of one in common.xml refines it the way a level's op refines an op there, and gives only what's particular to the level. Every shape ends up with operands and both base classes.</xs:documentation>
 		</xs:annotation>
 		<xs:sequence>
-			<xs:element name="operand" type="Operand" maxOccurs="unbounded"/>
+			<xs:element name="operand" type="Operand" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="accessor" type="DerivedAccessor" minOccurs="0" maxOccurs="unbounded"/>
 			<xs:element name="result" type="Result" minOccurs="0">
 				<xs:annotation>
 					<xs:documentation>The value every expression op of the shape produces. An op's own result element replaces it, and statements produce none.</xs:documentation>
 				</xs:annotation>
 			</xs:element>
-			<xs:element name="cpp" type="CppShape">
+			<xs:element name="cpp" type="CppShape" minOccurs="0">
 				<xs:annotation>
-					<xs:documentation>The C++ base class every op of the shape derives from.</xs:documentation>
+					<xs:documentation>The C++ base class every op of the shape derives from, and the setters it implements.</xs:documentation>
 				</xs:annotation>
 			</xs:element>
-			<xs:element name="py" type="PyShape">
+			<xs:element name="py" type="PyShape" minOccurs="0">
 				<xs:annotation>
-					<xs:documentation>The Python base class every op of the shape derives from, and the builder parameter names its ops share. An op's own py element overrides them.</xs:documentation>
+					<xs:documentation>The Python base class every op of the shape derives from, and the builder parameters and property names its ops share. An op's own py element overrides them.</xs:documentation>
 				</xs:annotation>
 			</xs:element>
 			<xs:element name="rust" minOccurs="0">
 				<xs:annotation>
-					<xs:documentation>The LLIL Rust operation marker every op of the shape uses, unless the op's own rust element names another. Its lift elements give the widths the lifters build the shape's operands at, and the op's own add to them.</xs:documentation>
+					<xs:documentation>The Rust facts every op of the shape shares. Its marker is the LLIL operation marker, and its struct is the MLIL or HLIL operation struct, unless the op's own rust element names another. The op's own renames, list fields and LLIL lifter widths add to the shape's, and take precedence for the same value.</xs:documentation>
 				</xs:annotation>
 				<xs:complexType>
 					<xs:sequence>
+						<xs:element name="rename" type="RustRename" minOccurs="0" maxOccurs="unbounded"/>
 						<xs:element name="lift" type="RustLift" minOccurs="0" maxOccurs="unbounded"/>
+						<xs:element name="list" type="RustList" minOccurs="0" maxOccurs="unbounded"/>
 					</xs:sequence>
-					<xs:attribute name="marker" type="xs:string" use="required"/>
+					<xs:attribute name="marker" type="xs:string"/>
+					<xs:attribute name="struct" type="xs:string"/>
 				</xs:complexType>
 			</xs:element>
 		</xs:sequence>
@@ -729,7 +880,7 @@ Its default operand list is its operands in order, with each part replaced by th
 `statement` means only as a top-level instruction.
 `expression` means only inside another instruction.
 `either` means in both places.
-`part` means only inside the ops that contain it through an operand's part attribute, or inside any op named in part-of.</xs:documentation>
+`part` means only inside the ops that contain it through an operand's part or items attribute, or inside any op named in part-of.</xs:documentation>
 			</xs:annotation>
 			<xs:simpleType>
 				<xs:restriction base="xs:string">
@@ -747,7 +898,12 @@ Its default operand list is its operands in order, with each part replaced by th
 		</xs:attribute>
 		<xs:attribute name="part-of" type="OpNames">
 			<xs:annotation>
-				<xs:documentation>Further ops this part is valid inside, where no operand says so. For ops that may appear among a parent's ordinary child expressions, such as SEPARATE_PARAM_LIST_SSA inside CALL_PARAM.</xs:documentation>
+				<xs:documentation>Further ops this part is valid inside, where no operand says so. It's for parts that can appear among a parent's ordinary child expressions, such as SEPARATE_PARAM_LIST_SSA inside CALL_PARAM.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="visit-order" type="Names">
+			<xs:annotation>
+				<xs:documentation>The child expression operands in the order the expression walk visits them, where it isn't storage order. Core's analysis depends on this order. It's usually the order they're evaluated in, and a comment on the op notes where it isn't.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 		<xs:attribute name="sized" type="Flag" default="true">
@@ -766,10 +922,18 @@ Its default operand list is its operands in order, with each part replaced by th
 		<xs:annotation>
 			<xs:documentation>One stored value, in storage order. Slots are assigned in order from each kind's width.
 
-An expression operand says what sort of value it holds. For an expression list, that's the sort of each item.</xs:documentation>
+An expression operand says what sort of value it holds, or that it holds statements. For an expression list, that's the sort of each item.</xs:documentation>
 		</xs:annotation>
 		<xs:sequence>
-			<xs:group ref="Value" minOccurs="0"/>
+			<xs:choice minOccurs="0">
+				<xs:group ref="Value"/>
+				<xs:element name="statement">
+					<xs:annotation>
+						<xs:documentation>The expression, or each item of the list, is a statement rather than a value, such as the statements an MLIL BLOCK_TO_EXPAND holds.</xs:documentation>
+					</xs:annotation>
+					<xs:complexType/>
+				</xs:element>
+			</xs:choice>
 			<xs:element name="description" type="Prose" minOccurs="0">
 				<xs:annotation>
 					<xs:documentation>The documentation of the builder parameter that writes this operand.</xs:documentation>
@@ -788,9 +952,14 @@ An expression operand says what sort of value it holds. For an expression list, 
 				<xs:documentation>The part op this operand holds. The parent reads values through it rather than treating it as a child expression. The operand's accessor elements say which of the part's values the parent exposes, where they differ from the part's exposes attribute.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
+		<xs:attribute name="items" type="OpNames">
+			<xs:annotation>
+				<xs:documentation>The ops this expression operand, or each element of this expression list, may be. The operand holds those ops rather than a value, so it has no value sort. A call's outputs are ops that name what the call writes.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
 		<xs:attribute name="written" type="Flag" default="false">
 			<xs:annotation>
-				<xs:documentation>The instruction writes this register, flag, or SSA or memory version, rather than reading it.</xs:documentation>
+				<xs:documentation>The instruction writes this register, variable, flag, or SSA or memory version, rather than reading it.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 		<xs:attribute name="signed" type="Flag" default="false">
@@ -803,6 +972,11 @@ An expression operand says what sort of value it holds. For an expression list, 
 				<xs:documentation>Whether the bindings' default operand lists include the value. A value that isn't listed is one the builders fix, such as whether an unimplemented expression is unknown.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
+		<xs:attribute name="visited" type="Flag" default="true">
+			<xs:annotation>
+				<xs:documentation>Whether VisitExprs visits this child. Visiting an MLIL untyped call's stack expression changes analysis output.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
 	</xs:complexType>
 
 	<xs:complexType name="Pair">
@@ -812,17 +986,17 @@ An expression operand says what sort of value it holds. For an expression list, 
 		<xs:attribute name="name" type="Name" use="required"/>
 		<xs:attribute name="kind" type="Name" use="required">
 			<xs:annotation>
-				<xs:documentation>A kind from kinds.xml with ssa-of, such as ssa_register_stack.</xs:documentation>
+				<xs:documentation>A kind from kinds.xml with ssa-of, such as ssa_variable.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 		<xs:attribute name="of" type="Name" use="required">
 			<xs:annotation>
-				<xs:documentation>The operand holding the register, register stack or flag.</xs:documentation>
+				<xs:documentation>The operand holding the register, register stack or variable.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 		<xs:attribute name="version" type="Name" use="required">
 			<xs:annotation>
-				<xs:documentation>The operand holding the version, an ssa_version.</xs:documentation>
+				<xs:documentation>The operand holding the version, which is an ssa_version, or a memory_version for an aliased variable.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 	</xs:complexType>
@@ -844,6 +1018,15 @@ An expression operand says what sort of value it holds. For an expression list, 
 				<xs:documentation>The part's operand or accessor to read. Defaults to the accessor's own name.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
+	</xs:complexType>
+
+	<xs:complexType name="DerivedAccessor">
+		<xs:annotation>
+			<xs:documentation>A value every op of a shape exposes that isn't stored, such as the variables an MLIL call writes. The shape's base class or mixin implements it by hand, and the schema fixes its name, kind and position.</xs:documentation>
+		</xs:annotation>
+		<xs:attribute name="name" type="Name" use="required"/>
+		<xs:attribute name="kind" type="Name" use="required"/>
+		<xs:attribute name="derived" type="Flag" use="required" fixed="true"/>
 	</xs:complexType>
 
 	<xs:complexType name="Builder">
@@ -922,7 +1105,7 @@ An op's flags argument follows the required arguments, defaulting to 0 in C++ an
 
 	<xs:complexType name="RustRename">
 		<xs:annotation>
-			<xs:documentation>Renames an operand's or accessor's Rust accessor. `to` is the new name. `suffix="false"` instead drops the suffix the naming convention appends, which is the kind's suffix after the role or _expr after a part operand's name.</xs:documentation>
+			<xs:documentation>Renames an operand or accessor in Rust. `to` is the new name. `suffix="false"` instead drops the suffix the LLIL naming convention appends to an accessor, which is the kind's suffix after the role or _expr after a part operand's name.</xs:documentation>
 		</xs:annotation>
 		<xs:attribute name="operand" type="Name" use="required"/>
 		<xs:attribute name="to" type="xs:string"/>
@@ -937,6 +1120,14 @@ An op's flags argument follows the required arguments, defaulting to 0 in C++ an
 		<xs:attribute name="to" type="xs:string" use="required"/>
 	</xs:complexType>
 
+	<xs:complexType name="RustList">
+		<xs:annotation>
+			<xs:documentation>The {item} that an MLIL or HLIL operation struct's fields for a list are named after, where it isn't the item names.xml gives the value. The struct holds the start and length of the list's items in the operand pool as first_{item} and num_{item}s, and its lifted struct holds the items.</xs:documentation>
+		</xs:annotation>
+		<xs:attribute name="operand" type="Name" use="required"/>
+		<xs:attribute name="item" type="Name" use="required"/>
+	</xs:complexType>
+
 	<xs:complexType name="Cpp">
 		<xs:annotation>
 			<xs:documentation>Everything specific to the C++ API.
@@ -945,6 +1136,7 @@ An accessor's C++ name is its kind's verb, then the role of its canonical name i
 		</xs:annotation>
 		<xs:choice minOccurs="0" maxOccurs="unbounded">
 			<xs:element name="rename" type="CppRename"/>
+			<xs:element name="setter" type="CppSetter"/>
 			<xs:element name="usage">
 				<xs:annotation>
 					<xs:documentation>The operand usage a value reports through GetOperands(), where it isn't the accessor's name after its verb, or for a partial value, its kind's partial reader.</xs:documentation>
@@ -986,6 +1178,24 @@ An accessor's C++ name is its kind's verb, then the role of its canonical name i
 		</xs:annotation>
 		<xs:choice minOccurs="0" maxOccurs="unbounded">
 			<xs:element name="rename" type="Rename"/>
+			<xs:element name="alias">
+				<xs:annotation>
+					<xs:documentation>An extra property name for an existing value.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:attribute name="name" type="Name" use="required"/>
+					<xs:attribute name="of" type="Name" use="required"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="accessor">
+				<xs:annotation>
+					<xs:documentation>A value only Python has, which the op's mixin computes.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:attribute name="name" type="Name" use="required"/>
+					<xs:attribute name="kind" type="Name" use="required"/>
+				</xs:complexType>
+			</xs:element>
 			<xs:element name="param" type="PyParam"/>
 		</xs:choice>
 		<xs:attribute name="builder" type="Name">
@@ -1005,7 +1215,7 @@ An accessor's C++ name is its kind's verb, then the role of its canonical name i
 		</xs:attribute>
 		<xs:attribute name="operands" type="Names">
 			<xs:annotation>
-				<xs:documentation>The values .operands returns, in order, where they differ from the default.</xs:documentation>
+				<xs:documentation>The values .operands returns, in order, where they differ from the default. They can include aliases and Python accessors.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 		<xs:attribute name="mixin" type="xs:string">
@@ -1015,12 +1225,53 @@ An accessor's C++ name is its kind's verb, then the role of its canonical name i
 		</xs:attribute>
 	</xs:complexType>
 
-	<xs:complexType name="PyParam">
+	<xs:complexType name="CppSetter">
 		<xs:annotation>
-			<xs:documentation>The name of the builder parameter for a value, where it isn't the value's property name.</xs:documentation>
+			<xs:documentation>A setter for an expression list that core rewrites in place, such as an MLIL SSA call's parameters. Versions and written SSA lists get setters from their kind.</xs:documentation>
 		</xs:annotation>
 		<xs:attribute name="operand" type="Name" use="required"/>
-		<xs:attribute name="name" type="Name" use="required"/>
+	</xs:complexType>
+
+	<xs:complexType name="PyParam">
+		<xs:annotation>
+			<xs:documentation>The builder parameter for a value, where its name isn't the value's property name, or it takes something other than its kind does.</xs:documentation>
+		</xs:annotation>
+		<xs:attribute name="operand" type="Name" use="required"/>
+		<xs:attribute name="name" type="Name"/>
+		<xs:attribute name="annotation" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>The parameter's type annotation.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="conversion" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>The expression that converts the parameter, {p}, to what its kind's conversion takes.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="default" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>The parameter's default value, which C++ doesn't have.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+
+	<xs:complexType name="CppShape">
+		<xs:annotation>
+			<xs:documentation>The C++ facts a shape gives every op of it.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="setter" type="CppSetter" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+		<xs:attribute name="base" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>The hand-written base class after the level's class stem, such as TwoOperandInstruction for LowLevelILTwoOperandInstruction. It reads the shape's values.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="implements" type="Names">
+			<xs:annotation>
+				<xs:documentation>The stored values whose getters, and any declared setters, the base class implements, where it doesn't implement them all. It always implements the derived values.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
 	</xs:complexType>
 
 	<xs:complexType name="PyShape">
@@ -1028,9 +1279,15 @@ An accessor's C++ name is its kind's verb, then the role of its canonical name i
 			<xs:documentation>The Python facts a shape gives every op of it.</xs:documentation>
 		</xs:annotation>
 		<xs:sequence>
+			<xs:element name="rename" type="Rename" minOccurs="0" maxOccurs="unbounded"/>
 			<xs:element name="param" type="PyParam" minOccurs="0" maxOccurs="unbounded"/>
 		</xs:sequence>
-		<xs:attribute name="base" type="xs:string" use="required">
+		<xs:attribute name="mixin" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>The hand-written mixin that implements the shape's derived accessors. An op's class derives from it after the op's own mixin.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="base" type="xs:string">
 			<xs:annotation>
 				<xs:documentation>The hand-written base class after the level's class stem, such as BinaryBase for LowLevelILBinaryBase.</xs:documentation>
 			</xs:annotation>
@@ -1047,20 +1304,9 @@ An accessor's C++ name is its kind's verb, then the role of its canonical name i
 		</xs:attribute>
 	</xs:complexType>
 
-	<xs:complexType name="CppShape">
-		<xs:annotation>
-			<xs:documentation>The C++ facts a shape gives every op of it.</xs:documentation>
-		</xs:annotation>
-		<xs:attribute name="base" type="xs:string" use="required">
-			<xs:annotation>
-				<xs:documentation>The hand-written base class after the level's class stem, such as TwoOperandInstruction for LowLevelILTwoOperandInstruction. It reads the shape's values.</xs:documentation>
-			</xs:annotation>
-		</xs:attribute>
-	</xs:complexType>
-
 	<xs:complexType name="Rust">
 		<xs:annotation>
-			<xs:documentation>Everything specific to the Rust API.
+			<xs:documentation>Everything specific to the Rust API. LLIL's API reads values through operation markers, and MLIL's holds them in operation structs it lifts, so marker, lifter, lift and type are for LLIL alone, and struct, lifted and list for MLIL alone.
 
 LLIL generates a lifter on LowLevelILMutableFunction for each builder name of an op that isn't a part. It lifts the name's first builder, when that builder isn't hand-written and every operand it doesn't fix is an expression. lifting.rs writes the others by hand.</xs:documentation>
 		</xs:annotation>
@@ -1076,6 +1322,7 @@ LLIL generates a lifter on LowLevelILMutableFunction for each builder name of an
 					<xs:attribute name="name" type="Name" use="required"/>
 				</xs:complexType>
 			</xs:element>
+			<xs:element name="list" type="RustList" minOccurs="0" maxOccurs="unbounded"/>
 			<xs:element name="type" minOccurs="0" maxOccurs="unbounded">
 				<xs:annotation>
 					<xs:documentation>The type an LLIL accessor returns, where it isn't its kind's. It must be a type that decode.py's TYPE_CONVERSIONS converts to, such as usize.</xs:documentation>
@@ -1099,6 +1346,21 @@ LLIL generates a lifter on LowLevelILMutableFunction for each builder name of an
 		<xs:attribute name="lifter" type="Name">
 			<xs:annotation>
 				<xs:documentation>The LLIL lifter method name of an op with one builder name, where it isn't the op name in lower case.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="struct" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>The MLIL or HLIL operation struct, where it isn't the variant name. Ops that name the same struct share it, so their Rust values must match.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="lifted" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>The MLIL or HLIL lifted operation struct, where it isn't Lifted then the struct name. An op whose values all lift to themselves has none, and its lifted variant holds the operation struct.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="operands" type="Names">
+			<xs:annotation>
+				<xs:documentation>The values Rust exposes, where they differ from the default.</xs:documentation>
 			</xs:annotation>
 		</xs:attribute>
 	</xs:complexType>

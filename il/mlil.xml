@@ -1,0 +1,1180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<il xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="il.xsd" level="mlil" slots="5">
+	<shape name="binary">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="comparison">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="unary">
+		<rust struct="UnaryOp"/>
+	</shape>
+	<shape name="carry">
+		<rust struct="BinaryOpCarry"/>
+	</shape>
+	<shape name="shift">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="rotate_carry">
+		<rust struct="BinaryOpCarry"/>
+	</shape>
+	<shape name="double_precision_division">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="float_binary">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="float_comparison">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="float_unary">
+		<rust struct="UnaryOp"/>
+	</shape>
+	<shape name="constant">
+		<py base="ConstBase" trait="constant"/>
+		<rust struct="Constant"/>
+	</shape>
+
+	<shape name="constant_data">
+		<operand name="constant_data" kind="constant_data">
+			<description>The constant data</description>
+		</operand>
+		<result>
+			<bits width="size"/>
+		</result>
+		<cpp base="ConstantDataInstruction"/>
+		<py base="ConstBase" trait="constant">
+			<param operand="constant_data" name="data"/>
+		</py>
+	</shape>
+
+	<!-- VisitExprs visits a call's outputs before its parameters, though the call reads its parameters before it
+		writes its outputs. -->
+	<shape name="call">
+		<operand name="output_exprs" kind="expr_list" items="VAR_OUTPUT VAR_OUTPUT_FIELD STORE_OUTPUT RETURN_BY_REF">
+			<description>Where the call's results go</description>
+		</operand>
+		<accessor name="output" kind="variable_list" derived="true"/>
+		<cpp base="CallInstruction"/>
+		<py base="CallBase" mixin="_CallOutput">
+			<param operand="output_exprs" name="output" annotation="CallOutputList" conversion="self._call_output_list({p})"/>
+		</py>
+		<rust>
+			<rename operand="output_exprs" to="output"/>
+		</rust>
+	</shape>
+
+	<!-- VisitExprs visits the outputs before the parameters, as with the call shape. -->
+	<shape name="call_ssa">
+		<operand name="output_expr" part="CALL_OUTPUT_SSA"/>
+		<accessor name="output" kind="ssa_variable_list" derived="true"/>
+		<cpp base="CallSSAInstruction" implements="output_exprs">
+			<setter operand="output_exprs"/>
+			<setter operand="params"/>
+		</cpp>
+		<py base="CallBase" mixin="_CallSsaOutput">
+			<rename operand="dest_memory" to="output_dest_memory"/>
+		</py>
+		<rust>
+			<rename operand="output_exprs" to="output"/>
+		</rust>
+	</shape>
+
+	<op name="NOP"/>
+
+	<op name="SET_VAR" placement="statement" ssa-form="SET_VAR_SSA">
+		<description>Sets variable <ref name="dest"/> to <ref name="src"/>.</description>
+		<form><ref name="dest"/> = <ref name="src"/></form>
+		<operand name="dest" kind="variable" written="true">
+			<description>The variable to set</description>
+		</operand>
+		<operand name="src">
+			<bits width="size"/>
+			<description>The value to set it to</description>
+		</operand>
+		<py mixin="_SetVarVars" traits="set_var"/>
+	</op>
+
+	<op name="SET_VAR_FIELD" placement="statement" ssa-form="SET_VAR_SSA_FIELD">
+		<description>Sets the <ref name="size"/> bytes at offset <ref name="offset"/> within variable
+			<ref name="dest"/> to <ref name="src"/>, leaving the rest of the variable as it
+			was.</description>
+		<form><ref name="dest"/>:<ref name="offset"/><size/> = <ref name="src"/></form>
+		<operand name="dest" kind="variable" written="true">
+			<description>The variable to set part of</description>
+		</operand>
+		<operand name="offset" kind="immediate">
+			<description>The offset of the part within the variable, in bytes</description>
+		</operand>
+		<operand name="src">
+			<bits width="size"/>
+			<description>The value to set the part to</description>
+		</operand>
+		<py traits="set_var"/>
+	</op>
+
+	<op name="SET_VAR_SPLIT" placement="statement" ssa-form="SET_VAR_SPLIT_SSA">
+		<description>Sets the pair of variables <ref name="high"/> and <ref name="low"/>, as one value
+			of <code>2 * <ref name="size"/></code> bytes, to <ref name="src"/>.</description>
+		<size>The size of each variable in bytes</size>
+		<form><ref name="high"/>:<ref name="low"/> = <ref name="src"/></form>
+		<operand name="high" kind="variable" written="true">
+			<description>The variable that receives the high half</description>
+		</operand>
+		<operand name="low" kind="variable" written="true">
+			<description>The variable that receives the low half</description>
+		</operand>
+		<operand name="src">
+			<bits width="twice-size"/>
+			<description>The value to set them to</description>
+		</operand>
+		<py mixin="_SetVarSplitVars" traits="set_var">
+			<param operand="high" name="hi"/>
+			<param operand="low" name="lo"/>
+		</py>
+	</op>
+
+	<op name="ASSERT" placement="statement">
+		<description>Asserts that variable <ref name="src"/> holds one of the values
+			<ref name="constraint"/> allows. Core inserts it where a user has set possible values for
+			<ref name="src"/>.</description>
+		<size>The size of the variable in bytes</size>
+		<form>ASSERT(<ref name="src"/>, <ref name="constraint"/>)</form>
+		<operand name="src" kind="variable">
+			<description>The variable to constrain</description>
+		</operand>
+		<operand name="constraint" kind="possible_value_set">
+			<description>The values the variable may hold</description>
+		</operand>
+		<py builder="assert_expr"/>
+	</op>
+
+	<op name="FORCE_VER" placement="statement">
+		<description>Gives variable <ref name="dest"/> a new SSA version holding the value of
+			<ref name="src"/>. Analysis can then use this as a new variable definition site.</description>
+		<size>The size of the variable in bytes</size>
+		<form>FORCE_VER(<ref name="dest"/> = <ref name="src"/>)</form>
+		<operand name="dest" kind="variable" written="true">
+			<description>The variable to give a new version</description>
+		</operand>
+		<operand name="src" kind="variable">
+			<description>The variable whose value it takes</description>
+		</operand>
+		<operand name="reason" kind="force_version_reason">
+			<description>Why the new version is needed</description>
+		</operand>
+		<py mixin="_ForceVerVars">
+			<param operand="reason" default="ForceVersionReason.UserForceVersionReason"/>
+		</py>
+	</op>
+
+	<op name="LOAD">
+		<py>
+			<param operand="src" name="src"/>
+		</py>
+	</op>
+
+	<op name="LOAD_STRUCT" ssa-form="LOAD_STRUCT_SSA">
+		<description>Reads <ref name="size"/> bytes from memory <ref name="offset"/> bytes past
+			<ref name="src"/>, such as a member of the structure it points to. Shows the member's name
+			when the type of <ref name="src"/> has a member at <ref name="offset"/>.</description>
+		<form>[<ref name="src"/> + <ref name="offset"/>]<size/></form>
+		<operand name="src">
+			<integer width="any"/>
+			<description>The base address</description>
+		</operand>
+		<operand name="offset" kind="immediate">
+			<description>The offset from <ref name="src"/>, in bytes</description>
+		</operand>
+		<result>
+			<bits width="size"/>
+		</result>
+		<py traits="load"/>
+	</op>
+
+	<op name="STORE"/>
+
+	<op name="STORE_STRUCT" placement="statement" ssa-form="STORE_STRUCT_SSA">
+		<description>Writes the <ref name="size"/> bytes of <ref name="src"/> to memory
+			<ref name="offset"/> bytes past <ref name="dest"/>, such as a member of the structure it
+			points to. Shows the member's name when the type of <ref name="dest"/> has a member at
+			<ref name="offset"/>.</description>
+		<form>[<ref name="dest"/> + <ref name="offset"/>]<size/> = <ref name="src"/></form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The base address</description>
+		</operand>
+		<operand name="offset" kind="immediate">
+			<description>The offset from <ref name="dest"/>, in bytes</description>
+		</operand>
+		<operand name="src">
+			<bits width="size"/>
+			<description>The value to write</description>
+		</operand>
+		<py traits="store"/>
+	</op>
+
+	<op name="VAR" ssa-form="VAR_SSA">
+		<description>Reads variable <ref name="src"/>.</description>
+		<form><ref name="src"/></form>
+		<operand name="src" kind="variable">
+			<description>The variable to read</description>
+		</operand>
+		<result>
+			<bits width="size"/>
+		</result>
+		<py operands="var" traits="variable_instruction">
+			<alias name="var" of="src"/>
+		</py>
+	</op>
+
+	<op name="VAR_FIELD" ssa-form="VAR_SSA_FIELD">
+		<description>Reads the <ref name="size"/> bytes at offset <ref name="offset"/> within variable
+			<ref name="src"/>.</description>
+		<form><ref name="src"/>:<ref name="offset"/><size/></form>
+		<operand name="src" kind="variable">
+			<description>The variable to read part of</description>
+		</operand>
+		<operand name="offset" kind="immediate">
+			<description>The offset of the part within the variable, in bytes</description>
+		</operand>
+		<result>
+			<bits width="size"/>
+		</result>
+		<rust struct="Field"/>
+	</op>
+
+	<op name="VAR_SPLIT" ssa-form="VAR_SPLIT_SSA">
+		<description>Reads the pair of variables <ref name="high"/> and <ref name="low"/> as one value
+			of <code>2 * <ref name="size"/></code> bytes.</description>
+		<size>The size of each variable in bytes</size>
+		<form><ref name="high"/>:<ref name="low"/></form>
+		<operand name="high" kind="variable">
+			<description>The variable that holds the high half</description>
+		</operand>
+		<operand name="low" kind="variable">
+			<description>The variable that holds the low half</description>
+		</operand>
+		<result>
+			<bits width="twice-size"/>
+		</result>
+		<py>
+			<param operand="high" name="hi"/>
+			<param operand="low" name="lo"/>
+		</py>
+	</op>
+
+	<op name="ADDRESS_OF" sized="false">
+		<description>The address of variable <ref name="src"/>.</description>
+		<form>&amp;<ref name="src"/></form>
+		<operand name="src" kind="variable">
+			<description>The variable to take the address of</description>
+		</operand>
+		<result>
+			<integer width="any"/>
+		</result>
+		<py mixin="_AddressOfVars">
+			<param operand="src" name="var"/>
+		</py>
+		<rust struct="Var"/>
+	</op>
+
+	<op name="ADDRESS_OF_FIELD" sized="false">
+		<description>The address of the byte at offset <ref name="offset"/> within variable
+			<ref name="src"/>.</description>
+		<form>&amp;<ref name="src"/>:<ref name="offset"/></form>
+		<operand name="src" kind="variable">
+			<description>The variable that holds the byte</description>
+		</operand>
+		<operand name="offset" kind="immediate">
+			<description>The offset into the variable, in bytes</description>
+		</operand>
+		<result>
+			<integer width="any"/>
+		</result>
+		<py mixin="_AddressOfVars">
+			<param operand="src" name="var"/>
+		</py>
+		<rust struct="Field"/>
+	</op>
+
+	<op name="PASS_BY_REF" shape="unary">
+		<description>Passes <ref name="src"/> to a call by reference, as the calling convention
+			requires. <ref name="src"/> is a pointer to the value. Only appears as a call's
+			parameter.</description>
+		<size>The size of the pointer in bytes</size>
+		<form>ref *<ref name="src"/></form>
+		<operand name="src">
+			<bits width="any"/>
+			<description>The address of the value being passed</description>
+		</operand>
+		<result>
+			<bits width="size"/>
+		</result>
+	</op>
+
+	<op name="RETURN_BY_REF" shape="unary" placement="part">
+		<description>Receives a call's result in <ref name="src"/> through a pointer the caller
+			supplies. Only appears among a call's outputs.</description>
+		<size>The size of the result in bytes</size>
+		<form>ref <ref name="src"/></form>
+		<operand name="src" items="VAR_OUTPUT VAR_OUTPUT_FIELD VAR_OUTPUT_SSA VAR_OUTPUT_SSA_FIELD VAR_OUTPUT_ALIASED VAR_OUTPUT_ALIASED_FIELD STORE_OUTPUT">
+			<description>Where the result goes</description>
+		</operand>
+		<builder/>
+		<py>
+			<param operand="src" name="dest"/>
+		</py>
+	</op>
+
+	<op name="CONST"/>
+
+	<op name="CONST_DATA" shape="constant_data">
+		<description>Constant data that isn't a plain integer, such as a string or a value with known
+			extension.</description>
+		<form><ref name="constant_data"/></form>
+		<py operands="constant">
+			<alias name="constant" of="constant_data"/>
+		</py>
+	</op>
+
+	<op name="CONST_PTR">
+		<py mixin="_ConstPtrString"/>
+	</op>
+
+	<op name="EXTERN_PTR">
+		<cpp>
+			<type operand="offset" is="int64_t"/>
+		</cpp>
+		<rust struct="ExternPtr"/>
+	</op>
+
+	<op name="FLOAT_CONST">
+		<rust struct="FloatConst"/>
+	</op>
+
+	<op name="IMPORT" builder="imported_address" shape="constant">
+		<description>The constant address <ref name="constant"/> of an imported symbol. Renders as the
+			symbol's name where one is known.</description>
+		<form>[<ref name="constant"/>]</form>
+	</op>
+
+	<op name="ADD"/>
+
+	<op name="ADC" builder="add_with_carry">
+		<py builder="add_carry"/>
+	</op>
+
+	<op name="SUB"/>
+
+	<op name="SBB" builder="sub_with_borrow">
+		<py builder="sub_borrow"/>
+	</op>
+
+	<op name="AND"/>
+
+	<op name="OR"/>
+
+	<op name="XOR"/>
+
+	<op name="LSL"/>
+
+	<op name="LSR"/>
+
+	<op name="ASR"/>
+
+	<op name="ROL"/>
+
+	<op name="RLC"/>
+
+	<op name="ROR"/>
+
+	<op name="RRC"/>
+
+	<op name="MUL"/>
+
+	<op name="MULU_DP"/>
+
+	<op name="MULS_DP"/>
+
+	<op name="DIVU"/>
+
+	<op name="DIVU_DP"/>
+
+	<op name="DIVS"/>
+
+	<op name="DIVS_DP"/>
+
+	<op name="MODU"/>
+
+	<op name="MODU_DP"/>
+
+	<op name="MODS"/>
+
+	<op name="MODS_DP"/>
+
+	<op name="NEG"/>
+
+	<op name="NOT"/>
+
+	<op name="SX"/>
+
+	<op name="ZX"/>
+
+	<op name="LOW_PART"/>
+
+	<op name="JUMP"/>
+
+	<op name="JUMP_TO">
+		<rust>
+			<list operand="targets" item="operand"/>
+		</rust>
+	</op>
+
+	<op name="RET_HINT" builder="return_hint" placement="statement" sized="false">
+		<doc>Appears only in intermediate forms</doc>
+		<operand name="dest">
+			<integer width="any"/>
+		</operand>
+		<py no-builder="true" traits="control_flow"/>
+		<rust struct="Jump"/>
+	</op>
+
+	<op name="CALL" shape="call" placement="statement" sized="false" ssa-form="CALL_SSA" visit-order="dest output_exprs params">
+		<description>Calls <ref name="dest"/> with <ref name="params"/>. Its results go to
+			<ref name="output_exprs"/>.</description>
+		<form><ref name="output_exprs"/> = <ref name="dest"/>(<ref name="params"/>)</form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The address to call</description>
+		</operand>
+		<operand name="params" kind="expr_list">
+			<bits width="any"/>
+			<description>The parameters</description>
+		</operand>
+		<py operands="output dest params" traits="localcall"/>
+	</op>
+
+	<op name="CALL_UNTYPED" shape="call" placement="statement" sized="false" ssa-form="CALL_UNTYPED_SSA" visit-order="dest output_exprs param stack">
+		<description>Calls <ref name="dest"/> with <ref name="params"/> where analysis couldn't resolve
+			the call's stack usage. Its results go to <ref name="output_exprs"/>. Both lists hold only
+			what analysis could find.</description>
+		<form><ref name="output_exprs"/> = call(<ref name="dest"/>, <ref name="params"/>, stack =
+			<ref name="stack"/>)</form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The address to call</description>
+		</operand>
+		<operand name="param" part="CALL_PARAM"/>
+		<!-- VisitExprs doesn't visit the stack expression, because visiting it changes analysis output. -->
+		<operand name="stack" visited="false">
+			<integer width="any"/>
+			<description>The top of the stack at the call</description>
+		</operand>
+		<py operands="output dest params stack" traits="localcall"/>
+	</op>
+
+	<op name="CALL_PARAM" placement="part" exposes="params" sized="false">
+		<operand name="params" kind="expr_list">
+			<bits width="any"/>
+			<description>The parameters</description>
+		</operand>
+		<cpp>
+			<parent-usage name="UntypedParameterExprs" operand="params"/>
+		</cpp>
+		<py mixin="_ParamListFormatting">
+			<rename operand="params" to="src"/>
+		</py>
+	</op>
+
+	<op name="SEPARATE_PARAM_LIST" placement="part" part-of="CALL_PARAM CALL_PARAM_SSA" sized="false">
+		<description>Parameters of an untyped call that the calling convention passes separately from
+			the others, such as floating point parameters in their own registers.</description>
+		<form>(<ref name="params"/>)</form>
+		<operand name="params" kind="expr_list">
+			<bits width="any"/>
+			<description>The parameters</description>
+		</operand>
+		<builder/>
+		<py mixin="_NestedParamListFormatting"/>
+	</op>
+
+	<op name="SHARED_PARAM_SLOT" placement="part" part-of="SEPARATE_PARAM_LIST" sized="false">
+		<description>Alternative values for one parameter slot of an untyped call, such as an integer
+			and a floating point register that the calling convention assigns to the same
+			slot.</description>
+		<form><ref name="params"/></form>
+		<operand name="params" kind="expr_list">
+			<bits width="any"/>
+			<description>The alternatives</description>
+		</operand>
+		<builder/>
+		<py mixin="_NestedParamListFormatting"/>
+	</op>
+
+	<op name="VAR_OUTPUT" placement="part">
+		<description>A call output that writes variable <ref name="dest"/>.</description>
+		<size>The size of the result in bytes</size>
+		<form><ref name="dest"/></form>
+		<operand name="dest" kind="variable" written="true">
+			<description>The variable the result goes to</description>
+		</operand>
+		<builder/>
+		<py mixin="_VarOutputVars" traits="register_stack"/>
+	</op>
+
+	<op name="VAR_OUTPUT_FIELD" placement="part">
+		<description>A call output that writes the <ref name="size"/> bytes at offset
+			<ref name="offset"/> within variable <ref name="dest"/>, such as a result placed in part
+			of a structure.</description>
+		<size>The size of the result in bytes</size>
+		<form><ref name="dest"/>:<ref name="offset"/><size/></form>
+		<operand name="dest" kind="variable" written="true">
+			<description>The variable to write part of</description>
+		</operand>
+		<operand name="offset" kind="immediate">
+			<description>The offset of the part within the variable, in bytes</description>
+		</operand>
+		<builder/>
+		<py traits="set_var"/>
+	</op>
+
+	<op name="STORE_OUTPUT" placement="part">
+		<description>A call output that writes <ref name="size"/> bytes to memory at
+			<ref name="dest"/>, for a result that doesn't go to a local variable.</description>
+		<size>The size of the result in bytes</size>
+		<form>[<ref name="dest"/>]<size/></form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The address the result goes to</description>
+		</operand>
+		<builder/>
+		<py traits="store"/>
+	</op>
+
+	<op name="RET" builder="return" placement="statement" sized="false">
+		<description>Returns <ref name="src"/> from the function.</description>
+		<form>return <ref name="src"/></form>
+		<operand name="src" kind="expr_list">
+			<bits width="any"/>
+			<description>The values to return</description>
+		</operand>
+		<cpp>
+			<setter operand="src"/>
+		</cpp>
+		<py builder="ret" traits="return">
+			<param operand="src" name="sources"/>
+		</py>
+		<rust>
+			<list operand="src" item="operand"/>
+		</rust>
+	</op>
+
+	<op name="NORET"/>
+
+	<op name="IF" placement="statement" sized="false">
+		<operand name="condition">
+			<boolean/>
+		</operand>
+		<operand name="true" kind="target"/>
+		<operand name="false" kind="target"/>
+		<builder handwritten="true"/>
+		<py builder="if_expr" traits="terminal">
+			<param operand="condition" name="operand"/>
+			<param operand="true" name="t"/>
+			<param operand="false" name="f"/>
+		</py>
+		<rust struct="MediumLevelILOperationIf" lifted="LiftedIf">
+			<rename operand="true" to="dest_true"/>
+			<rename operand="false" to="dest_false"/>
+		</rust>
+	</op>
+
+	<op name="GOTO" placement="statement" sized="false">
+		<operand name="dest" kind="target"/>
+		<builder handwritten="true"/>
+		<cpp>
+			<rename operand="dest" to="Target"/>
+		</cpp>
+		<py traits="terminal">
+			<param operand="dest" name="label"/>
+		</py>
+	</op>
+
+	<op name="CMP_E"/>
+
+	<op name="CMP_NE"/>
+
+	<op name="CMP_SLT"/>
+
+	<op name="CMP_ULT"/>
+
+	<op name="CMP_SLE"/>
+
+	<op name="CMP_ULE"/>
+
+	<op name="CMP_SGE"/>
+
+	<op name="CMP_UGE"/>
+
+	<op name="CMP_SGT"/>
+
+	<op name="CMP_UGT"/>
+
+	<op name="TEST_BIT"/>
+
+	<op name="BOOL_TO_INT"/>
+
+	<op name="ADD_OVERFLOW"/>
+
+	<op name="SYSCALL" shape="call" placement="statement" sized="false" ssa-form="SYSCALL_SSA">
+		<description>Makes a system call with <ref name="params"/>. Its results go to
+			<ref name="output_exprs"/>.</description>
+		<form><ref name="output_exprs"/> = syscall(<ref name="params"/>)</form>
+		<operand name="params" kind="expr_list">
+			<bits width="any"/>
+			<description>The parameters</description>
+		</operand>
+		<py builder="system_call" operands="output params" traits="syscall"/>
+		<rust lifted="LiftedSyscallCall"/>
+	</op>
+
+	<op name="SYSCALL_UNTYPED" shape="call" placement="statement" sized="false" ssa-form="SYSCALL_UNTYPED_SSA">
+		<description>Makes a system call with <ref name="params"/> where analysis couldn't resolve the
+			call's stack usage. Its results go to <ref name="output_exprs"/>. Both lists hold only what
+			analysis could find.</description>
+		<form><ref name="output_exprs"/> = syscall(<ref name="params"/>, stack =
+			<ref name="stack"/>)</form>
+		<operand name="param" part="CALL_PARAM"/>
+		<operand name="stack" visited="false">
+			<integer width="any"/>
+			<description>The top of the stack at the call</description>
+		</operand>
+		<py builder="system_call_untyped" operands="output params stack" traits="syscall"/>
+	</op>
+
+	<op name="TAILCALL" builder="tail_call" shape="call" placement="statement" sized="false" ssa-form="TAILCALL_SSA" visit-order="dest output_exprs params">
+		<description>Jumps to <ref name="dest"/> with <ref name="params"/> as a tail call. Its results
+			go to <ref name="output_exprs"/>.</description>
+		<form>return <ref name="dest"/>(<ref name="params"/>) __tailcall</form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The address to jump to</description>
+		</operand>
+		<operand name="params" kind="expr_list">
+			<bits width="any"/>
+			<description>The parameters</description>
+		</operand>
+		<py builder="tailcall" operands="output dest params" traits="tailcall"/>
+		<rust struct="Call"/>
+	</op>
+
+	<op name="TAILCALL_UNTYPED" builder="tail_call_untyped" shape="call" placement="statement" sized="false" ssa-form="TAILCALL_UNTYPED_SSA" visit-order="dest output_exprs param stack">
+		<description>Jumps to <ref name="dest"/> with <ref name="params"/> as a tail call where
+			analysis couldn't resolve the call's stack usage. Its results go to
+			<ref name="output_exprs"/>. Both lists hold only what analysis could find.</description>
+		<form><ref name="output_exprs"/> = tailcall(<ref name="dest"/>, <ref name="params"/>, stack =
+			<ref name="stack"/>)</form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The address to jump to</description>
+		</operand>
+		<operand name="param" part="CALL_PARAM"/>
+		<operand name="stack" visited="false">
+			<integer width="any"/>
+			<description>The top of the stack at the call</description>
+		</operand>
+		<py builder="tailcall_untyped" operands="output dest params stack" traits="tailcall"/>
+		<rust struct="CallUntyped"/>
+	</op>
+
+	<op name="INTRINSIC" placement="statement" sized="false" ssa-form="INTRINSIC_SSA">
+		<description>Calls intrinsic <ref name="intrinsic"/> with <ref name="params"/>. An intrinsic
+			is an architecture operation lifted as a call to a built-in function that doesn't exist
+			in the binary. Its results go to the variables <ref name="output"/>.</description>
+		<form><ref name="output"/> = <ref name="intrinsic"/>(<ref name="params"/>)</form>
+		<operand name="output" kind="variable_list" written="true">
+			<description>The variables the intrinsic writes</description>
+		</operand>
+		<operand name="intrinsic" kind="intrinsic">
+			<description>The architecture intrinsic to call</description>
+		</operand>
+		<operand name="params" kind="expr_list">
+			<bits width="any"/>
+			<description>The parameters</description>
+		</operand>
+		<py mixin="_IntrinsicVars" traits="intrinsic">
+			<param operand="output" name="outputs"/>
+		</py>
+	</op>
+
+	<op name="FREE_VAR_SLOT" placement="statement" sized="false" ssa-form="FREE_VAR_SLOT_SSA">
+		<description>Frees the slot of variable <ref name="dest"/> on its register stack.</description>
+		<form>__free_slot(<ref name="dest"/>)</form>
+		<operand name="dest" kind="variable" written="true">
+			<description>The register stack variable whose slot to free</description>
+		</operand>
+		<py traits="register_stack">
+			<param operand="dest" name="var"/>
+		</py>
+	</op>
+
+	<op name="BP"/>
+
+	<op name="TRAP"/>
+
+	<op name="UNDEF"/>
+
+	<op name="UNIMPL"/>
+
+	<op name="UNIMPL_MEM"/>
+
+	<group title="Floating point">
+		<op name="FADD"/>
+
+		<op name="FSUB"/>
+
+		<op name="FMUL"/>
+
+		<op name="FDIV"/>
+
+		<op name="FSQRT"/>
+
+		<op name="FNEG"/>
+
+		<op name="FABS"/>
+
+		<op name="FLOAT_TO_INT"/>
+
+		<op name="INT_TO_FLOAT"/>
+
+		<op name="FLOAT_CONV"/>
+
+		<op name="ROUND_TO_INT"/>
+
+		<op name="FLOOR"/>
+
+		<op name="CEIL"/>
+
+		<op name="FTRUNC"/>
+
+		<op name="FCMP_E"/>
+
+		<op name="FCMP_NE"/>
+
+		<op name="FCMP_LT"/>
+
+		<op name="FCMP_LE"/>
+
+		<op name="FCMP_GE"/>
+
+		<op name="FCMP_GT"/>
+
+		<op name="FCMP_O"/>
+
+		<op name="FCMP_UO"/>
+	</group>
+
+	<group title="The following instructions are only used in SSA form" ssa-only="true">
+		<op name="SET_VAR_SSA" placement="statement">
+			<operand name="dest" kind="ssa_variable" written="true"/>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<py mixin="_SetVarSsaVars" traits="set_var ssa"/>
+		</op>
+
+		<op name="SET_VAR_SSA_FIELD" placement="statement">
+			<operand name="var" kind="variable"/>
+			<operand name="dest_version" kind="ssa_version" written="true"/>
+			<operand name="prev_version" kind="ssa_version"/>
+			<operand name="offset" kind="immediate"/>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<pair name="dest" kind="ssa_variable" of="var" version="dest_version"/>
+			<pair name="prev" kind="ssa_variable" of="var" version="prev_version"/>
+			<py mixin="_SetVarFieldVars" traits="set_var ssa"/>
+		</op>
+
+		<op name="SET_VAR_SPLIT_SSA" builder="set_var_ssa_split" placement="statement">
+			<operand name="high" kind="ssa_variable" written="true"/>
+			<operand name="low" kind="ssa_variable" written="true"/>
+			<operand name="src">
+				<bits width="twice-size"/>
+			</operand>
+			<py mixin="_SetVarSplitSsaVars" traits="set_var ssa"/>
+		</op>
+
+		<op name="SET_VAR_ALIASED" placement="statement">
+			<operand name="var" kind="variable"/>
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="prev_memory" kind="memory_version"/>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<pair name="dest" kind="ssa_variable" of="var" version="dest_memory"/>
+			<pair name="prev" kind="ssa_variable" of="var" version="prev_memory"/>
+			<py mixin="_SetVarSsaVars" traits="set_var ssa"/>
+		</op>
+
+		<op name="SET_VAR_ALIASED_FIELD" placement="statement">
+			<operand name="var" kind="variable"/>
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="prev_memory" kind="memory_version"/>
+			<operand name="offset" kind="immediate"/>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<pair name="dest" kind="ssa_variable" of="var" version="dest_memory"/>
+			<pair name="prev" kind="ssa_variable" of="var" version="prev_memory"/>
+			<py mixin="_SetVarFieldVars" traits="set_var ssa"/>
+			<rust struct="SetVarSsaField"/>
+		</op>
+
+		<op name="VAR_SSA">
+			<operand name="src" kind="ssa_variable"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py operands="var" traits="ssa_variable_instruction">
+				<alias name="var" of="src"/>
+			</py>
+		</op>
+
+		<op name="VAR_SSA_FIELD">
+			<operand name="src" kind="ssa_variable"/>
+			<operand name="offset" kind="immediate"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="VAR_ALIASED">
+			<operand name="var" kind="variable"/>
+			<operand name="src_memory" kind="memory_version"/>
+			<pair name="src" kind="ssa_variable" of="var" version="src_memory"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="ssa aliased_variable_instruction"/>
+			<rust struct="VarSsa"/>
+		</op>
+
+		<op name="VAR_ALIASED_FIELD">
+			<operand name="var" kind="variable"/>
+			<operand name="src_memory" kind="memory_version"/>
+			<operand name="offset" kind="immediate"/>
+			<pair name="src" kind="ssa_variable" of="var" version="src_memory"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="ssa"/>
+			<rust struct="VarSsaField"/>
+		</op>
+
+		<op name="VAR_SPLIT_SSA">
+			<operand name="high" kind="ssa_variable"/>
+			<operand name="low" kind="ssa_variable"/>
+			<result>
+				<bits width="twice-size"/>
+			</result>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="ASSERT_SSA" placement="statement">
+			<operand name="src" kind="ssa_variable"/>
+			<operand name="constraint" kind="possible_value_set"/>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="FORCE_VER_SSA" placement="statement">
+			<operand name="dest" kind="ssa_variable" written="true"/>
+			<operand name="src" kind="ssa_variable"/>
+			<operand name="reason" kind="force_version_reason"/>
+			<py mixin="_ForceVerSsaVars" traits="ssa"/>
+		</op>
+
+		<op name="CALL_SSA" shape="call_ssa" placement="statement" sized="false" visit-order="dest output_expr params">
+			<operand name="dest">
+				<integer width="any"/>
+			</operand>
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<operand name="src_memory" kind="memory_version"/>
+			<builder params="output_exprs dest params dest_memory src_memory"/>
+			<py operands="output dest_memory dest params src_memory" traits="localcall ssa"/>
+			<rust operands="output_exprs dest params src_memory"/>
+		</op>
+
+		<op name="CALL_UNTYPED_SSA" shape="call_ssa" placement="statement" sized="false" visit-order="dest output_expr param stack">
+			<operand name="dest">
+				<integer width="any"/>
+			</operand>
+			<operand name="param" part="CALL_PARAM_SSA"/>
+			<operand name="stack" visited="false">
+				<integer width="any"/>
+			</operand>
+			<builder params="output_exprs dest params dest_memory src_memory stack"/>
+			<py operands="output dest_memory dest params src_memory stack" traits="localcall ssa">
+				<rename operand="src_memory" to="params_src_memory"/>
+			</py>
+			<rust operands="output_exprs dest params stack"/>
+		</op>
+
+		<op name="SYSCALL_SSA" shape="call_ssa" placement="statement" sized="false">
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<operand name="src_memory" kind="memory_version"/>
+			<builder params="output_exprs params dest_memory src_memory"/>
+			<py operands="output dest_memory params src_memory" traits="syscall ssa"/>
+			<rust operands="output_exprs params src_memory"/>
+		</op>
+
+		<op name="SYSCALL_UNTYPED_SSA" shape="call_ssa" placement="statement" sized="false">
+			<operand name="param" part="CALL_PARAM_SSA"/>
+			<operand name="stack" visited="false">
+				<integer width="any"/>
+			</operand>
+			<builder params="output_exprs params dest_memory src_memory stack"/>
+			<py operands="output dest_memory params src_memory stack" traits="syscall ssa">
+				<rename operand="src_memory" to="params_src_memory"/>
+			</py>
+			<rust operands="output_exprs params stack"/>
+		</op>
+
+		<op name="TAILCALL_SSA" builder="tail_call_ssa" shape="call_ssa" placement="statement" sized="false" visit-order="dest output_expr params">
+			<operand name="dest">
+				<integer width="any"/>
+			</operand>
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<operand name="src_memory" kind="memory_version"/>
+			<builder params="output_exprs dest params dest_memory src_memory"/>
+			<py operands="output dest_memory dest params src_memory" traits="tailcall ssa"/>
+			<rust struct="CallSsa" operands="output_exprs dest params src_memory"/>
+		</op>
+
+		<op name="TAILCALL_UNTYPED_SSA" builder="tail_call_untyped_ssa" shape="call_ssa" placement="statement" sized="false" visit-order="dest output_expr param stack">
+			<operand name="dest">
+				<integer width="any"/>
+			</operand>
+			<operand name="param" part="CALL_PARAM_SSA"/>
+			<operand name="stack" visited="false">
+				<integer width="any"/>
+			</operand>
+			<builder params="output_exprs dest params dest_memory src_memory stack"/>
+			<py operands="output dest_memory dest params src_memory stack" traits="tailcall ssa">
+				<rename operand="src_memory" to="params_src_memory"/>
+			</py>
+			<rust struct="CallUntypedSsa" operands="output_exprs dest params stack"/>
+		</op>
+
+		<op name="CALL_PARAM_SSA" placement="part" exposes="params src_memory" sized="false">
+			<operand name="src_memory" kind="memory_version"/>
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<cpp>
+				<parent-usage name="ParameterSSAMemoryVersion" operand="src_memory"/>
+				<parent-usage name="UntypedParameterSSAExprs" operand="params"/>
+			</cpp>
+			<py mixin="_ParamListFormatting" traits="ssa">
+				<rename operand="params" to="src"/>
+			</py>
+		</op>
+
+		<op name="CALL_OUTPUT_SSA" placement="part" exposes="output_exprs dest_memory" sized="false">
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="output_exprs" kind="expr_list" items="VAR_OUTPUT_SSA VAR_OUTPUT_SSA_FIELD VAR_OUTPUT_ALIASED VAR_OUTPUT_ALIASED_FIELD STORE_OUTPUT RETURN_BY_REF"/>
+			<cpp>
+				<parent-usage name="OutputSSAMemoryVersion" operand="dest_memory"/>
+				<parent-usage name="OutputExprsSubExpr" operand="output_exprs"/>
+			</cpp>
+			<py mixin="_CallOutputSsaVars" operands="dest_memory dest" traits="ssa">
+				<rename operand="output_exprs" to="dest_exprs"/>
+				<accessor name="dest" kind="ssa_variable_list"/>
+			</py>
+			<rust>
+				<rename operand="output_exprs" to="output"/>
+			</rust>
+		</op>
+
+		<op name="VAR_OUTPUT_SSA" placement="part">
+			<operand name="dest" kind="ssa_variable" written="true"/>
+			<builder/>
+			<py mixin="_VarOutputSsaVars" operands="var" traits="ssa_variable_instruction">
+				<alias name="var" of="dest"/>
+			</py>
+		</op>
+
+		<op name="VAR_OUTPUT_SSA_FIELD" placement="part">
+			<operand name="var" kind="variable"/>
+			<operand name="dest_version" kind="ssa_version" written="true"/>
+			<operand name="prev_version" kind="ssa_version"/>
+			<operand name="offset" kind="immediate"/>
+			<pair name="dest" kind="ssa_variable" of="var" version="dest_version"/>
+			<pair name="prev" kind="ssa_variable" of="var" version="prev_version"/>
+			<builder/>
+			<py mixin="_VarOutputFieldVars" traits="set_var ssa"/>
+		</op>
+
+		<op name="VAR_OUTPUT_ALIASED" placement="part">
+			<operand name="var" kind="variable"/>
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="prev_memory" kind="memory_version"/>
+			<pair name="dest" kind="ssa_variable" of="var" version="dest_memory"/>
+			<pair name="prev" kind="ssa_variable" of="var" version="prev_memory"/>
+			<builder/>
+			<py mixin="_VarOutputSsaVars" traits="set_var ssa"/>
+		</op>
+
+		<op name="VAR_OUTPUT_ALIASED_FIELD" placement="part">
+			<operand name="var" kind="variable"/>
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="prev_memory" kind="memory_version"/>
+			<operand name="offset" kind="immediate"/>
+			<pair name="dest" kind="ssa_variable" of="var" version="dest_memory"/>
+			<pair name="prev" kind="ssa_variable" of="var" version="prev_memory"/>
+			<builder/>
+			<py mixin="_VarOutputFieldVars" traits="set_var ssa"/>
+		</op>
+
+		<op name="MEMORY_INTRINSIC_OUTPUT_SSA" placement="part" exposes="output dest_memory" sized="false">
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="output" kind="ssa_variable_list" written="true"/>
+			<cpp>
+				<parent-usage name="OutputSSAMemoryVersion" operand="dest_memory"/>
+				<parent-usage name="OutputSSAVariablesSubExpr" operand="output"/>
+			</cpp>
+			<py mixin="_MemoryIntrinsicOutputSsaFormatting" traits="ssa"/>
+		</op>
+
+		<op name="LOAD_SSA"/>
+
+		<op name="LOAD_STRUCT_SSA">
+			<operand name="src">
+				<integer width="any"/>
+			</operand>
+			<operand name="offset" kind="immediate"/>
+			<operand name="src_memory" kind="memory_version"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="load ssa"/>
+		</op>
+
+		<op name="STORE_SSA"/>
+
+		<op name="STORE_STRUCT_SSA" placement="statement">
+			<operand name="dest">
+				<integer width="any"/>
+			</operand>
+			<operand name="offset" kind="immediate"/>
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="src_memory" kind="memory_version"/>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<py traits="store ssa"/>
+		</op>
+
+		<op name="INTRINSIC_SSA" placement="statement" sized="false">
+			<operand name="output" kind="ssa_variable_list" written="true"/>
+			<operand name="intrinsic" kind="intrinsic"/>
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<py mixin="_IntrinsicSsaVars" traits="ssa"/>
+		</op>
+
+		<op name="MEMORY_INTRINSIC_SSA" placement="statement" sized="false">
+			<operand name="output_expr" part="MEMORY_INTRINSIC_OUTPUT_SSA"/>
+			<operand name="intrinsic" kind="intrinsic"/>
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<operand name="src_memory" kind="memory_version"/>
+			<builder params="output intrinsic params dest_memory src_memory"/>
+			<py mixin="_IntrinsicSsaVars" traits="ssa"/>
+			<rust operands="output_expr intrinsic params src_memory">
+				<rename operand="output_expr" to="output"/>
+			</rust>
+		</op>
+
+		<op name="FREE_VAR_SLOT_SSA" placement="statement" sized="false">
+			<operand name="var" kind="variable"/>
+			<operand name="dest_version" kind="ssa_version" written="true"/>
+			<operand name="prev_version" kind="ssa_version"/>
+			<pair name="dest" kind="ssa_variable" of="var" version="dest_version"/>
+			<pair name="prev" kind="ssa_variable" of="var" version="prev_version"/>
+			<py traits="ssa register_stack"/>
+		</op>
+
+		<op name="VAR_PHI" placement="statement" sized="false">
+			<operand name="dest" kind="ssa_variable" written="true"/>
+			<operand name="src" kind="ssa_variable_list"/>
+			<py mixin="_VarPhiVars" traits="set_var phi ssa"/>
+			<rust>
+				<list operand="src" item="operand"/>
+			</rust>
+		</op>
+
+		<op name="MEM_PHI">
+			<rust>
+				<list operand="src_memory" item="operand"/>
+			</rust>
+		</op>
+	</group>
+
+	<op name="BLOCK_TO_EXPAND" placement="statement" sized="false">
+		<doc>Holds instructions that a later workflow step expands in its place</doc>
+		<description>Holds the statements <ref name="src"/> until a later analysis step expands them in
+			place of this instruction.</description>
+		<form>{ <ref name="src"/> }</form>
+		<operand name="src" kind="expr_list">
+			<statement/>
+			<description>The statements</description>
+		</operand>
+		<cpp>
+			<setter operand="src"/>
+		</cpp>
+		<py>
+			<rename operand="src" to="exprs"/>
+		</py>
+		<rust>
+			<rename operand="src" to="exprs"/>
+			<list operand="src" item="operand"/>
+		</rust>
+	</op>
+
+	<group title="Bit manipulation">
+		<op name="BSWAP"/>
+
+		<op name="POPCNT"/>
+
+		<op name="CLZ"/>
+
+		<op name="CTZ"/>
+
+		<op name="RBIT"/>
+
+		<op name="CLS"/>
+	</group>
+
+	<group title="Integer minimum, maximum and absolute value">
+		<op name="MINS"/>
+
+		<op name="MAXS"/>
+
+		<op name="MINU"/>
+
+		<op name="MAXU"/>
+
+		<op name="ABS"/>
+	</group>
+</il>

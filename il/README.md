@@ -1,10 +1,11 @@
 # IL schema
 
-These files describe every LLIL operation once. The C++, Python and Rust
-APIs' operand tables, accessors, builders and classes are generated from
-them.
+These files describe every LLIL and MLIL operation once. The C++, Python
+and Rust APIs' operand tables, accessors, builders and classes are
+generated from them.
 
-- `llil.xml` describes LLIL's operations.
+- `llil.xml` and `mlil.xml` describe each level's operations.
+- `common.xml` holds definitions shared by more than one level.
 - `kinds.xml` says how each kind of operand value is spelled in each binding.
 - `names.xml` gives the roles and binding spellings of operand names.
 - `il.xsd` validates all of the above.

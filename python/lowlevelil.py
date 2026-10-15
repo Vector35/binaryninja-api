@@ -7009,7 +7009,8 @@ class LowLevelILFunction:
 		loc: Optional['ILSourceLocation'] = None,
 	) -> ExpressionIndex:
 		"""
-		The absolute value of ``value`` as a signed integer.
+		The absolute value of ``value`` as a signed integer. The most negative value is its own absolute
+		value.
 
 		:param size: The size of the result in bytes
 		:param value: The operand

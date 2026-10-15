@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <initializer_list>
 
 #include "sharedilinstruction.h"
 
@@ -53,54 +54,55 @@ struct OperandUsageType
 	}
 };
 
+// BEGIN GENERATED mlil-operand-tables: from api/il, do not edit
 static constexpr std::array s_operandTypeForUsage = {
-	OperandUsageType{SourceExprMediumLevelOperandUsage, ExprMediumLevelOperand},
-	OperandUsageType{SourceVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-	OperandUsageType{SourceSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
-	OperandUsageType{PartialSSAVariableSourceMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
-	OperandUsageType{DestExprMediumLevelOperandUsage, ExprMediumLevelOperand},
 	OperandUsageType{DestVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-	OperandUsageType{DestSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
+	OperandUsageType{SourceExprMediumLevelOperandUsage, ExprMediumLevelOperand},
+	OperandUsageType{OffsetMediumLevelOperandUsage, IntegerMediumLevelOperand},
+	OperandUsageType{HighVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
+	OperandUsageType{LowVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
+	OperandUsageType{SourceVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
+	OperandUsageType{ConstraintMediumLevelOperandUsage, ConstraintMediumLevelOperand},
+	OperandUsageType{ForceVersionReasonMediumLevelOperandUsage, ForceVersionReasonMediumLevelOperand},
+	OperandUsageType{DestExprMediumLevelOperandUsage, ExprMediumLevelOperand},
+	OperandUsageType{ConstantMediumLevelOperandUsage, IntegerMediumLevelOperand},
+	OperandUsageType{ConstantDataMediumLevelOperandUsage, ConstantDataMediumLevelOperand},
 	OperandUsageType{LeftExprMediumLevelOperandUsage, ExprMediumLevelOperand},
 	OperandUsageType{RightExprMediumLevelOperandUsage, ExprMediumLevelOperand},
 	OperandUsageType{CarryExprMediumLevelOperandUsage, ExprMediumLevelOperand},
+	OperandUsageType{TargetsMediumLevelOperandUsage, IndexMapMediumLevelOperand},
+	OperandUsageType{OutputExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
+	OperandUsageType{ParameterExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
+	OperandUsageType{UntypedParameterExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
 	OperandUsageType{StackExprMediumLevelOperandUsage, ExprMediumLevelOperand},
+	OperandUsageType{SourceExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
 	OperandUsageType{ConditionExprMediumLevelOperandUsage, ExprMediumLevelOperand},
-	OperandUsageType{HighVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-	OperandUsageType{LowVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-	OperandUsageType{HighSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
-	OperandUsageType{LowSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
-	OperandUsageType{OffsetMediumLevelOperandUsage, IntegerMediumLevelOperand},
-	OperandUsageType{ConstantMediumLevelOperandUsage, IntegerMediumLevelOperand},
-	OperandUsageType{ConstantDataMediumLevelOperandUsage, ConstantDataMediumLevelOperand},
-	OperandUsageType{VectorMediumLevelOperandUsage, IntegerMediumLevelOperand},
-	OperandUsageType{IntrinsicMediumLevelOperandUsage, IntrinsicMediumLevelOperand},
-	OperandUsageType{TargetMediumLevelOperandUsage, IndexMediumLevelOperand},
 	OperandUsageType{TrueTargetMediumLevelOperandUsage, IndexMediumLevelOperand},
 	OperandUsageType{FalseTargetMediumLevelOperandUsage, IndexMediumLevelOperand},
-	OperandUsageType{DestMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
-	OperandUsageType{SourceMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
-	OperandUsageType{TargetsMediumLevelOperandUsage, IndexMapMediumLevelOperand},
-	OperandUsageType{SourceMemoryVersionsMediumLevelOperandUsage, IndexListMediumLevelOperand},
+	OperandUsageType{TargetMediumLevelOperandUsage, IndexMediumLevelOperand},
 	OperandUsageType{OutputVariablesMediumLevelOperandUsage, VariableListMediumLevelOperand},
-	OperandUsageType{OutputVariablesSubExprMediumLevelOperandUsage, VariableListMediumLevelOperand},
-	OperandUsageType{OutputVariablesSubExprMediumLevelOperandUsage, ExprListMediumLevelOperand},
-	OperandUsageType{OutputSSAVariablesMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
-	OperandUsageType{OutputSSAVariablesSubExprMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
+	OperandUsageType{IntrinsicMediumLevelOperandUsage, IntrinsicMediumLevelOperand},
+	OperandUsageType{VectorMediumLevelOperandUsage, IntegerMediumLevelOperand},
+	OperandUsageType{DestSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
+	OperandUsageType{PartialSSAVariableSourceMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
+	OperandUsageType{HighSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
+	OperandUsageType{LowSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
+	OperandUsageType{SourceSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
 	OperandUsageType{OutputExprsSubExprMediumLevelOperandUsage, ExprListMediumLevelOperand},
 	OperandUsageType{OutputSSAMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
-	OperandUsageType{ParameterExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
-	OperandUsageType{SourceExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
-	OperandUsageType{UntypedParameterExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
+	OperandUsageType{SourceMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
 	OperandUsageType{UntypedParameterSSAExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
 	OperandUsageType{ParameterSSAMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
-	OperandUsageType{SourceSSAVariablesMediumLevelOperandUsages, SSAVariableListMediumLevelOperand},
-	OperandUsageType{ConstraintMediumLevelOperandUsage, ConstraintMediumLevelOperand},
-	OperandUsageType{ForceVersionReasonMediumLevelOperandUsage, ForceVersionReasonMediumLevelOperand},
+	OperandUsageType{DestMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
+	OperandUsageType{OutputSSAVariablesMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
+	OperandUsageType{OutputSSAVariablesSubExprMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
+	OperandUsageType{SourceSSAVariablesMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
+	OperandUsageType{SourceMemoryVersionsMediumLevelOperandUsage, IndexListMediumLevelOperand},
 };
 
 static_assert(std::is_sorted(s_operandTypeForUsage.begin(), s_operandTypeForUsage.end()),
-			  "Operand type mapping array is not sorted by usage value");
+	"Operand type mapping array is not sorted by usage value");
+
 
 constexpr inline MediumLevelILOperandType OperandTypeForUsage(MediumLevelILOperandUsage usage)
 {
@@ -110,215 +112,198 @@ constexpr inline MediumLevelILOperandType OperandTypeForUsage(MediumLevelILOpera
 	throw MediumLevelILInstructionAccessException();
 }
 
-struct MediumLevelILOperationTraits
+
+static constexpr size_t MaxOperands = 6;
+using OperandLocations = detail::ILInstructionOperandLocations<BNMediumLevelILOperation, MediumLevelILOperandLocation, MaxOperands>;
+
+static constexpr std::array s_operandLocations = {
+	OperandLocations{MLIL_NOP},
+	OperandLocations{MLIL_SET_VAR, {{DestVariableMediumLevelOperandUsage, 0}, {SourceExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_SET_VAR_FIELD, {{DestVariableMediumLevelOperandUsage, 0}, {OffsetMediumLevelOperandUsage, 1}, {SourceExprMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_SET_VAR_SPLIT, {{HighVariableMediumLevelOperandUsage, 0}, {LowVariableMediumLevelOperandUsage, 1}, {SourceExprMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_ASSERT, {{SourceVariableMediumLevelOperandUsage, 0}, {ConstraintMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FORCE_VER, {{DestVariableMediumLevelOperandUsage, 0}, {SourceVariableMediumLevelOperandUsage, 1}, {ForceVersionReasonMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_LOAD, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_LOAD_STRUCT, {{SourceExprMediumLevelOperandUsage, 0}, {OffsetMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_STORE, {{DestExprMediumLevelOperandUsage, 0}, {SourceExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_STORE_STRUCT, {{DestExprMediumLevelOperandUsage, 0}, {OffsetMediumLevelOperandUsage, 1}, {SourceExprMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_VAR, {{SourceVariableMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_VAR_FIELD, {{SourceVariableMediumLevelOperandUsage, 0}, {OffsetMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_VAR_SPLIT, {{HighVariableMediumLevelOperandUsage, 0}, {LowVariableMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_ADDRESS_OF, {{SourceVariableMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_ADDRESS_OF_FIELD, {{SourceVariableMediumLevelOperandUsage, 0}, {OffsetMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_PASS_BY_REF, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_RETURN_BY_REF, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_CONST, {{ConstantMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_CONST_DATA, {{ConstantDataMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_CONST_PTR, {{ConstantMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_EXTERN_PTR, {{ConstantMediumLevelOperandUsage, 0}, {OffsetMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FLOAT_CONST, {{ConstantMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_IMPORT, {{ConstantMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_ADD, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_ADC, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}, {CarryExprMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_SUB, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_SBB, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}, {CarryExprMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_AND, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_OR, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_XOR, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_LSL, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_LSR, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_ASR, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_ROL, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_RLC, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}, {CarryExprMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_ROR, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_RRC, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}, {CarryExprMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_MUL, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_MULU_DP, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_MULS_DP, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_DIVU, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_DIVU_DP, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_DIVS, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_DIVS_DP, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_MODU, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_MODU_DP, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_MODS, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_MODS_DP, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_NEG, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_NOT, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_SX, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_ZX, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_LOW_PART, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_JUMP, {{DestExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_JUMP_TO, {{DestExprMediumLevelOperandUsage, 0}, {TargetsMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_RET_HINT, {{DestExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_CALL, {{OutputExprsMediumLevelOperandUsage, 0}, {DestExprMediumLevelOperandUsage, 2}, {ParameterExprsMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_CALL_UNTYPED, {{OutputExprsMediumLevelOperandUsage, 0}, {DestExprMediumLevelOperandUsage, 2}, {UntypedParameterExprsMediumLevelOperandUsage, 3, 0}, {StackExprMediumLevelOperandUsage, 4}}},
+	OperandLocations{MLIL_CALL_PARAM, {{ParameterExprsMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_SEPARATE_PARAM_LIST, {{ParameterExprsMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_SHARED_PARAM_SLOT, {{ParameterExprsMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_VAR_OUTPUT, {{DestVariableMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_VAR_OUTPUT_FIELD, {{DestVariableMediumLevelOperandUsage, 0}, {OffsetMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_STORE_OUTPUT, {{DestExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_RET, {{SourceExprsMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_NORET},
+	OperandLocations{MLIL_IF, {{ConditionExprMediumLevelOperandUsage, 0}, {TrueTargetMediumLevelOperandUsage, 1}, {FalseTargetMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_GOTO, {{TargetMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_CMP_E, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_CMP_NE, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_CMP_SLT, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_CMP_ULT, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_CMP_SLE, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_CMP_ULE, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_CMP_SGE, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_CMP_UGE, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_CMP_SGT, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_CMP_UGT, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_TEST_BIT, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_BOOL_TO_INT, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_ADD_OVERFLOW, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_SYSCALL, {{OutputExprsMediumLevelOperandUsage, 0}, {ParameterExprsMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_SYSCALL_UNTYPED, {{OutputExprsMediumLevelOperandUsage, 0}, {UntypedParameterExprsMediumLevelOperandUsage, 2, 0}, {StackExprMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_TAILCALL, {{OutputExprsMediumLevelOperandUsage, 0}, {DestExprMediumLevelOperandUsage, 2}, {ParameterExprsMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_TAILCALL_UNTYPED, {{OutputExprsMediumLevelOperandUsage, 0}, {DestExprMediumLevelOperandUsage, 2}, {UntypedParameterExprsMediumLevelOperandUsage, 3, 0}, {StackExprMediumLevelOperandUsage, 4}}},
+	OperandLocations{MLIL_INTRINSIC, {{OutputVariablesMediumLevelOperandUsage, 0}, {IntrinsicMediumLevelOperandUsage, 2}, {ParameterExprsMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_FREE_VAR_SLOT, {{DestVariableMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_BP},
+	OperandLocations{MLIL_TRAP, {{VectorMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_UNDEF},
+	OperandLocations{MLIL_UNIMPL},
+	OperandLocations{MLIL_UNIMPL_MEM, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_FADD, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FSUB, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FMUL, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FDIV, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FSQRT, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_FNEG, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_FABS, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_FLOAT_TO_INT, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_INT_TO_FLOAT, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_FLOAT_CONV, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_ROUND_TO_INT, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_FLOOR, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_CEIL, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_FTRUNC, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_FCMP_E, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FCMP_NE, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FCMP_LT, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FCMP_LE, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FCMP_GE, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FCMP_GT, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FCMP_O, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_FCMP_UO, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_SET_VAR_SSA, {{DestSSAVariableMediumLevelOperandUsage, 0}, {SourceExprMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_SET_VAR_SSA_FIELD, {{DestSSAVariableMediumLevelOperandUsage, 0}, {PartialSSAVariableSourceMediumLevelOperandUsage, 0, std::nullopt, true}, {OffsetMediumLevelOperandUsage, 3}, {SourceExprMediumLevelOperandUsage, 4}}},
+	OperandLocations{MLIL_SET_VAR_SPLIT_SSA, {{HighSSAVariableMediumLevelOperandUsage, 0}, {LowSSAVariableMediumLevelOperandUsage, 2}, {SourceExprMediumLevelOperandUsage, 4}}},
+	OperandLocations{MLIL_SET_VAR_ALIASED, {{DestSSAVariableMediumLevelOperandUsage, 0}, {PartialSSAVariableSourceMediumLevelOperandUsage, 0, std::nullopt, true}, {SourceExprMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_SET_VAR_ALIASED_FIELD, {{DestSSAVariableMediumLevelOperandUsage, 0}, {PartialSSAVariableSourceMediumLevelOperandUsage, 0, std::nullopt, true}, {OffsetMediumLevelOperandUsage, 3}, {SourceExprMediumLevelOperandUsage, 4}}},
+	OperandLocations{MLIL_VAR_SSA, {{SourceSSAVariableMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_VAR_SSA_FIELD, {{SourceSSAVariableMediumLevelOperandUsage, 0}, {OffsetMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_VAR_ALIASED, {{SourceSSAVariableMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_VAR_ALIASED_FIELD, {{SourceSSAVariableMediumLevelOperandUsage, 0}, {OffsetMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_VAR_SPLIT_SSA, {{HighSSAVariableMediumLevelOperandUsage, 0}, {LowSSAVariableMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_ASSERT_SSA, {{SourceSSAVariableMediumLevelOperandUsage, 0}, {ConstraintMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_FORCE_VER_SSA, {{DestSSAVariableMediumLevelOperandUsage, 0}, {SourceSSAVariableMediumLevelOperandUsage, 2}, {ForceVersionReasonMediumLevelOperandUsage, 4}}},
+	OperandLocations{MLIL_CALL_SSA, {{OutputExprsSubExprMediumLevelOperandUsage, 0, 1}, {OutputSSAMemoryVersionMediumLevelOperandUsage, 0, 0}, {DestExprMediumLevelOperandUsage, 1}, {ParameterExprsMediumLevelOperandUsage, 2}, {SourceMemoryVersionMediumLevelOperandUsage, 4}}},
+	OperandLocations{MLIL_CALL_UNTYPED_SSA, {{OutputExprsSubExprMediumLevelOperandUsage, 0, 1}, {OutputSSAMemoryVersionMediumLevelOperandUsage, 0, 0}, {DestExprMediumLevelOperandUsage, 1}, {UntypedParameterSSAExprsMediumLevelOperandUsage, 2, 1}, {ParameterSSAMemoryVersionMediumLevelOperandUsage, 2, 0}, {StackExprMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_SYSCALL_SSA, {{OutputExprsSubExprMediumLevelOperandUsage, 0, 1}, {OutputSSAMemoryVersionMediumLevelOperandUsage, 0, 0}, {ParameterExprsMediumLevelOperandUsage, 1}, {SourceMemoryVersionMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_SYSCALL_UNTYPED_SSA, {{OutputExprsSubExprMediumLevelOperandUsage, 0, 1}, {OutputSSAMemoryVersionMediumLevelOperandUsage, 0, 0}, {UntypedParameterSSAExprsMediumLevelOperandUsage, 1, 1}, {ParameterSSAMemoryVersionMediumLevelOperandUsage, 1, 0}, {StackExprMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_TAILCALL_SSA, {{OutputExprsSubExprMediumLevelOperandUsage, 0, 1}, {OutputSSAMemoryVersionMediumLevelOperandUsage, 0, 0}, {DestExprMediumLevelOperandUsage, 1}, {ParameterExprsMediumLevelOperandUsage, 2}, {SourceMemoryVersionMediumLevelOperandUsage, 4}}},
+	OperandLocations{MLIL_TAILCALL_UNTYPED_SSA, {{OutputExprsSubExprMediumLevelOperandUsage, 0, 1}, {OutputSSAMemoryVersionMediumLevelOperandUsage, 0, 0}, {DestExprMediumLevelOperandUsage, 1}, {UntypedParameterSSAExprsMediumLevelOperandUsage, 2, 1}, {ParameterSSAMemoryVersionMediumLevelOperandUsage, 2, 0}, {StackExprMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_CALL_PARAM_SSA, {{SourceMemoryVersionMediumLevelOperandUsage, 0}, {ParameterExprsMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_CALL_OUTPUT_SSA, {{DestMemoryVersionMediumLevelOperandUsage, 0}, {OutputExprsMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_VAR_OUTPUT_SSA, {{DestSSAVariableMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_VAR_OUTPUT_SSA_FIELD, {{DestSSAVariableMediumLevelOperandUsage, 0}, {PartialSSAVariableSourceMediumLevelOperandUsage, 0, std::nullopt, true}, {OffsetMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_VAR_OUTPUT_ALIASED, {{DestSSAVariableMediumLevelOperandUsage, 0}, {PartialSSAVariableSourceMediumLevelOperandUsage, 0, std::nullopt, true}}},
+	OperandLocations{MLIL_VAR_OUTPUT_ALIASED_FIELD, {{DestSSAVariableMediumLevelOperandUsage, 0}, {PartialSSAVariableSourceMediumLevelOperandUsage, 0, std::nullopt, true}, {OffsetMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_MEMORY_INTRINSIC_OUTPUT_SSA, {{DestMemoryVersionMediumLevelOperandUsage, 0}, {OutputSSAVariablesMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_LOAD_SSA, {{SourceExprMediumLevelOperandUsage, 0}, {SourceMemoryVersionMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_LOAD_STRUCT_SSA, {{SourceExprMediumLevelOperandUsage, 0}, {OffsetMediumLevelOperandUsage, 1}, {SourceMemoryVersionMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_STORE_SSA, {{DestExprMediumLevelOperandUsage, 0}, {DestMemoryVersionMediumLevelOperandUsage, 1}, {SourceMemoryVersionMediumLevelOperandUsage, 2}, {SourceExprMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_STORE_STRUCT_SSA, {{DestExprMediumLevelOperandUsage, 0}, {OffsetMediumLevelOperandUsage, 1}, {DestMemoryVersionMediumLevelOperandUsage, 2}, {SourceMemoryVersionMediumLevelOperandUsage, 3}, {SourceExprMediumLevelOperandUsage, 4}}},
+	OperandLocations{MLIL_INTRINSIC_SSA, {{OutputSSAVariablesMediumLevelOperandUsage, 0}, {IntrinsicMediumLevelOperandUsage, 2}, {ParameterExprsMediumLevelOperandUsage, 3}}},
+	OperandLocations{MLIL_MEMORY_INTRINSIC_SSA, {{OutputSSAVariablesSubExprMediumLevelOperandUsage, 0, 1}, {OutputSSAMemoryVersionMediumLevelOperandUsage, 0, 0}, {IntrinsicMediumLevelOperandUsage, 1}, {ParameterExprsMediumLevelOperandUsage, 2}, {SourceMemoryVersionMediumLevelOperandUsage, 4}}},
+	OperandLocations{MLIL_FREE_VAR_SLOT_SSA, {{DestSSAVariableMediumLevelOperandUsage, 0}, {PartialSSAVariableSourceMediumLevelOperandUsage, 0, std::nullopt, true}}},
+	OperandLocations{MLIL_VAR_PHI, {{DestSSAVariableMediumLevelOperandUsage, 0}, {SourceSSAVariablesMediumLevelOperandUsage, 2}}},
+	OperandLocations{MLIL_MEM_PHI, {{DestMemoryVersionMediumLevelOperandUsage, 0}, {SourceMemoryVersionsMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_BLOCK_TO_EXPAND, {{SourceExprsMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_BSWAP, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_POPCNT, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_CLZ, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_CTZ, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_RBIT, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_CLS, {{SourceExprMediumLevelOperandUsage, 0}}},
+	OperandLocations{MLIL_MINS, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_MAXS, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_MINU, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_MAXU, {{LeftExprMediumLevelOperandUsage, 0}, {RightExprMediumLevelOperandUsage, 1}}},
+	OperandLocations{MLIL_ABS, {{SourceExprMediumLevelOperandUsage, 0}}},
+};
+
+
+VALIDATE_INSTRUCTION_ORDER(s_operandLocations);
+// END GENERATED mlil-operand-tables
+
+
+std::optional<MediumLevelILOperandLocation> OperandLocationForUsage(
+    BNMediumLevelILOperation operation, MediumLevelILOperandUsage usage)
 {
-	using ILOperation = BNMediumLevelILOperation;
-	using OperandUsage = MediumLevelILOperandUsage;
-	static constexpr size_t MaxOperands = 6;
+	if (operation >= s_operandLocations.size())
+		return std::nullopt;
+	return s_operandLocations[operation].Find(usage);
+}
 
-	static constexpr uint8_t GetOperandIndexAdvance(OperandUsage usage, size_t operandIndex)
+
+// Returns the instruction's operand for the first of `usages` it reports.
+MediumLevelILOperand OperandForUsages(
+    const MediumLevelILInstruction& instr, std::initializer_list<MediumLevelILOperandUsage> usages)
+{
+	for (MediumLevelILOperandUsage usage : usages)
 	{
-		switch (usage)
-		{
-		case PartialSSAVariableSourceMediumLevelOperandUsage:
-			// SSA variables are usually two slots, but this one has a previously defined
-			// variables and thus only takes one slot
-			return 1;
-		case OutputVariablesSubExprMediumLevelOperandUsage:
-		case UntypedParameterExprsMediumLevelOperandUsage:
-			// Represented as subexpression, so only takes one slot even though it is a list
-			return 1;
-		case OutputSSAVariablesSubExprMediumLevelOperandUsage:
-		case OutputExprsSubExprMediumLevelOperandUsage:
-			// OutputSSAMemoryVersionMediumLevelOperandUsage follows at same operand
-			return 0;
-		case UntypedParameterSSAExprsMediumLevelOperandUsage:
-			// ParameterSSAMemoryVersionMediumLevelOperandUsage follows at same operand
-			return 0;
-		default:
-			switch (OperandTypeForUsage(usage)) {
-			case SSAVariableMediumLevelOperand:
-			case IndexListMediumLevelOperand:
-			case IndexMapMediumLevelOperand:
-			case VariableListMediumLevelOperand:
-			case SSAVariableListMediumLevelOperand:
-			case ExprListMediumLevelOperand:
-				return 2;
-			default:
-				return 1;
-			}
-		}
+		if (std::optional<MediumLevelILOperandLocation> location = OperandLocationForUsage(instr.operation, usage))
+			return MediumLevelILOperand(instr, *location);
 	}
-};
-
-using OperandUsage = detail::ILInstructionOperandUsage<MediumLevelILOperationTraits>;
-static_assert(sizeof(OperandUsage) == 14);
-
-
-static constexpr std::array s_instructionOperandUsage = {
-	OperandUsage{MLIL_NOP},
-	OperandUsage{MLIL_SET_VAR, {DestVariableMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SET_VAR_FIELD, {DestVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SET_VAR_SPLIT, {HighVariableMediumLevelOperandUsage, LowVariableMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ASSERT, {SourceVariableMediumLevelOperandUsage, ConstraintMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FORCE_VER, {DestVariableMediumLevelOperandUsage, SourceVariableMediumLevelOperandUsage, ForceVersionReasonMediumLevelOperandUsage}},
-	OperandUsage{MLIL_LOAD, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_LOAD_STRUCT, {SourceExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_STORE, {DestExprMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_STORE_STRUCT, {DestExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR, {SourceVariableMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_FIELD, {SourceVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_SPLIT, {HighVariableMediumLevelOperandUsage, LowVariableMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ADDRESS_OF, {SourceVariableMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ADDRESS_OF_FIELD, {SourceVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_PASS_BY_REF, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_RETURN_BY_REF, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CONST, {ConstantMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CONST_DATA, {ConstantDataMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CONST_PTR, {ConstantMediumLevelOperandUsage}},
-	OperandUsage{MLIL_EXTERN_PTR, {ConstantMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FLOAT_CONST, {ConstantMediumLevelOperandUsage}},
-	OperandUsage{MLIL_IMPORT, {ConstantMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ADD, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ADC, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SUB, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SBB, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_AND, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_OR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_XOR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_LSL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_LSR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ASR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ROL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_RLC, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ROR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_RRC, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MUL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MULU_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MULS_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_DIVU, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_DIVU_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_DIVS, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_DIVS_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MODU, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MODU_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MODS, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MODS_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_NEG, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_NOT, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SX, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ZX, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_LOW_PART, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_JUMP, {DestExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_JUMP_TO, {DestExprMediumLevelOperandUsage, TargetsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_RET_HINT, {DestExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_UNTYPED, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_PARAM, {ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SEPARATE_PARAM_LIST, {ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SHARED_PARAM_SLOT, {ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_OUTPUT, {DestVariableMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_OUTPUT_FIELD, {DestVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_STORE_OUTPUT, {DestExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_RET, {SourceExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_NORET},
-	OperandUsage{MLIL_IF, {ConditionExprMediumLevelOperandUsage, TrueTargetMediumLevelOperandUsage, FalseTargetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_GOTO, {TargetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CMP_E, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CMP_NE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CMP_SLT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CMP_ULT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CMP_SLE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CMP_ULE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CMP_SGE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CMP_UGE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CMP_SGT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CMP_UGT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_TEST_BIT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_BOOL_TO_INT, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ADD_OVERFLOW, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SYSCALL, {OutputExprsMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SYSCALL_UNTYPED, {OutputExprsMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_TAILCALL, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_TAILCALL_UNTYPED, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_INTRINSIC, {OutputVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FREE_VAR_SLOT, {DestVariableMediumLevelOperandUsage}},
-	OperandUsage{MLIL_BP},
-	OperandUsage{MLIL_TRAP, {VectorMediumLevelOperandUsage}},
-	OperandUsage{MLIL_UNDEF},
-	OperandUsage{MLIL_UNIMPL},
-	OperandUsage{MLIL_UNIMPL_MEM, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FADD, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FSUB, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FMUL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FDIV, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FSQRT, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FNEG, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FABS, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FLOAT_TO_INT, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_INT_TO_FLOAT, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FLOAT_CONV, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ROUND_TO_INT, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FLOOR, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CEIL, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FTRUNC, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FCMP_E, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FCMP_NE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FCMP_LT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FCMP_LE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FCMP_GE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FCMP_GT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FCMP_O, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FCMP_UO, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SET_VAR_SSA, {DestSSAVariableMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SET_VAR_SSA_FIELD, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SET_VAR_SPLIT_SSA, {HighSSAVariableMediumLevelOperandUsage, LowSSAVariableMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SET_VAR_ALIASED, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SET_VAR_ALIASED_FIELD, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_SSA, {SourceSSAVariableMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_SSA_FIELD, {SourceSSAVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_ALIASED, {SourceSSAVariableMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_ALIASED_FIELD, {SourceSSAVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_SPLIT_SSA, {HighSSAVariableMediumLevelOperandUsage, LowSSAVariableMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ASSERT_SSA, {SourceSSAVariableMediumLevelOperandUsage, ConstraintMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FORCE_VER_SSA, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariableMediumLevelOperandUsage, ForceVersionReasonMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_UNTYPED_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SYSCALL_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SYSCALL_UNTYPED_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_TAILCALL_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-	OperandUsage{MLIL_TAILCALL_UNTYPED_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_PARAM_SSA, {SourceMemoryVersionMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_OUTPUT_SSA, {DestMemoryVersionMediumLevelOperandUsage, OutputExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_OUTPUT_SSA, {DestSSAVariableMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_OUTPUT_SSA_FIELD, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_OUTPUT_ALIASED, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_OUTPUT_ALIASED_FIELD, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MEMORY_INTRINSIC_OUTPUT_SSA, {DestMemoryVersionMediumLevelOperandUsage, OutputSSAVariablesMediumLevelOperandUsage}},
-	OperandUsage{MLIL_LOAD_SSA, {SourceExprMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-	OperandUsage{MLIL_LOAD_STRUCT_SSA, {SourceExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-	OperandUsage{MLIL_STORE_SSA, {DestExprMediumLevelOperandUsage, DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_STORE_STRUCT_SSA, {DestExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_INTRINSIC_SSA, {OutputSSAVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MEMORY_INTRINSIC_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-	OperandUsage{MLIL_FREE_VAR_SLOT_SSA, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage}},
-	OperandUsage{MLIL_VAR_PHI, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariablesMediumLevelOperandUsages}},
-	OperandUsage{MLIL_MEM_PHI, {DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_BLOCK_TO_EXPAND, {SourceExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_BSWAP, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_POPCNT, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CLZ, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CTZ, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_RBIT, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CLS, {SourceExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MINS, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MAXS, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MINU, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MAXU, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_ABS, {SourceExprMediumLevelOperandUsage}},
-};
-
-VALIDATE_INSTRUCTION_ORDER(s_instructionOperandUsage);
+	throw MediumLevelILInstructionAccessException();
+}
 
 } // anonymous namespace
 
@@ -709,10 +694,21 @@ MediumLevelILInstructionList::operator vector<ExprId>() const
 
 
 MediumLevelILOperand::MediumLevelILOperand(
-    const MediumLevelILInstruction& instr, MediumLevelILOperandUsage usage, size_t operandIndex) :
-    m_instr(instr),
-    m_usage(usage), m_type(OperandTypeForUsage(usage)), m_operandIndex(operandIndex)
+    const MediumLevelILInstruction& instr, const MediumLevelILOperandLocation& location) :
+    m_instr(instr), m_location(location), m_type(OperandTypeForUsage(location.usage))
 {
+}
+
+
+MediumLevelILInstruction MediumLevelILOperand::Holder() const
+{
+	return m_location.field ? m_instr.GetRawOperandAsExpr(m_location.slot) : m_instr;
+}
+
+
+size_t MediumLevelILOperand::Slot() const
+{
+	return m_location.field.value_or(m_location.slot);
 }
 
 
@@ -720,7 +716,7 @@ uint64_t MediumLevelILOperand::GetInteger() const
 {
 	if (m_type != IntegerMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsInteger(m_operandIndex);
+	return Holder().GetRawOperandAsInteger(Slot());
 }
 
 
@@ -728,7 +724,7 @@ ConstantData MediumLevelILOperand::GetConstantData() const
 {
 	if (m_type != ConstantDataMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsConstantData(m_operandIndex);
+	return Holder().GetRawOperandAsConstantData(Slot());
 }
 
 
@@ -736,10 +732,7 @@ size_t MediumLevelILOperand::GetIndex() const
 {
 	if (m_type != IndexMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	if ((m_usage == OutputSSAMemoryVersionMediumLevelOperandUsage)
-	    || (m_usage == ParameterSSAMemoryVersionMediumLevelOperandUsage))
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsIndex(0);
-	return m_instr.GetRawOperandAsIndex(m_operandIndex);
+	return Holder().GetRawOperandAsIndex(Slot());
 }
 
 
@@ -747,7 +740,7 @@ uint32_t MediumLevelILOperand::GetIntrinsic() const
 {
 	if (m_type != IntrinsicMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	return (uint32_t)m_instr.GetRawOperandAsInteger(m_operandIndex);
+	return (uint32_t)Holder().GetRawOperandAsInteger(Slot());
 }
 
 
@@ -755,7 +748,7 @@ MediumLevelILInstruction MediumLevelILOperand::GetExpr() const
 {
 	if (m_type != ExprMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsExpr(m_operandIndex);
+	return Holder().GetRawOperandAsExpr(Slot());
 }
 
 
@@ -763,7 +756,7 @@ Variable MediumLevelILOperand::GetVariable() const
 {
 	if (m_type != VariableMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsVariable(m_operandIndex);
+	return Holder().GetRawOperandAsVariable(Slot());
 }
 
 
@@ -771,9 +764,9 @@ SSAVariable MediumLevelILOperand::GetSSAVariable() const
 {
 	if (m_type != SSAVariableMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	if (m_usage == PartialSSAVariableSourceMediumLevelOperandUsage)
-		return m_instr.GetRawOperandAsPartialSSAVariableSource(m_operandIndex - 2);
-	return m_instr.GetRawOperandAsSSAVariable(m_operandIndex);
+	if (m_location.partial)
+		return Holder().GetRawOperandAsPartialSSAVariableSource(Slot());
+	return Holder().GetRawOperandAsSSAVariable(Slot());
 }
 
 
@@ -781,7 +774,7 @@ MediumLevelILIndexList MediumLevelILOperand::GetIndexList() const
 {
 	if (m_type != IndexListMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsIndexList(m_operandIndex);
+	return Holder().GetRawOperandAsIndexList(Slot());
 }
 
 
@@ -789,7 +782,7 @@ MediumLevelILIndexMap MediumLevelILOperand::GetIndexMap() const
 {
 	if (m_type != IndexMapMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsIndexMap(m_operandIndex);
+	return Holder().GetRawOperandAsIndexMap(Slot());
 }
 
 
@@ -797,9 +790,7 @@ MediumLevelILVariableList MediumLevelILOperand::GetVariableList() const
 {
 	if (m_type != VariableListMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	if (m_usage == OutputVariablesSubExprMediumLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsVariableList(0);
-	return m_instr.GetRawOperandAsVariableList(m_operandIndex);
+	return Holder().GetRawOperandAsVariableList(Slot());
 }
 
 
@@ -807,9 +798,7 @@ MediumLevelILSSAVariableList MediumLevelILOperand::GetSSAVariableList() const
 {
 	if (m_type != SSAVariableListMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	if (m_usage == OutputSSAVariablesSubExprMediumLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSAVariableList(1);
-	return m_instr.GetRawOperandAsSSAVariableList(m_operandIndex);
+	return Holder().GetRawOperandAsSSAVariableList(Slot());
 }
 
 
@@ -817,29 +806,37 @@ MediumLevelILInstructionList MediumLevelILOperand::GetExprList() const
 {
 	if (m_type != ExprListMediumLevelOperand)
 		throw MediumLevelILInstructionAccessException();
-	if (m_usage == UntypedParameterExprsMediumLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsExprList(0);
-	if (m_usage == UntypedParameterSSAExprsMediumLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsExprList(1);
-	if (m_usage == OutputExprsSubExprMediumLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsExprList(1);
-	return m_instr.GetRawOperandAsExprList(m_operandIndex);
+	return Holder().GetRawOperandAsExprList(Slot());
+}
+
+
+PossibleValueSet MediumLevelILOperand::GetConstraint() const
+{
+	if (m_type != ConstraintMediumLevelOperand)
+		throw MediumLevelILInstructionAccessException();
+	return Holder().GetRawOperandAsPossibleValueSet(Slot());
+}
+
+
+BNForceVersionReason MediumLevelILOperand::GetForceVersionReason() const
+{
+	if (m_type != ForceVersionReasonMediumLevelOperand)
+		throw MediumLevelILInstructionAccessException();
+	return (BNForceVersionReason)Holder().GetRawOperandAsInteger(Slot());
 }
 
 
 const MediumLevelILOperand MediumLevelILOperandList::ListIterator::operator*()
 {
-	MediumLevelILOperandUsage usage = owner->m_usages[index];
-	size_t operandIndex = owner->m_indices[index];
-	return MediumLevelILOperand(owner->m_instr, usage, operandIndex);
+	if (index >= owner->m_count)
+		throw MediumLevelILInstructionAccessException();
+	return MediumLevelILOperand(owner->m_instr, owner->m_locations[index]);
 }
 
 
-MediumLevelILOperandList::MediumLevelILOperandList(const MediumLevelILInstruction& instr,
-    const MediumLevelILOperandUsage* usages,
-    const uint8_t* indices, uint8_t count) :
-    m_instr(instr),
-    m_usages(usages), m_indices(indices), m_count(count)
+MediumLevelILOperandList::MediumLevelILOperandList(
+    const MediumLevelILInstruction& instr, const MediumLevelILOperandLocation* locations, uint8_t count) :
+    m_instr(instr), m_locations(locations), m_count(count)
 {}
 
 
@@ -871,9 +868,7 @@ const MediumLevelILOperand MediumLevelILOperandList::operator[](size_t i) const
 {
 	if (i >= m_count)
 		throw MediumLevelILInstructionAccessException();
-	MediumLevelILOperandUsage usage = m_usages[i];
-	size_t operandIndex = m_indices[i];
-	return MediumLevelILOperand(m_instr, usage, operandIndex);
+	return MediumLevelILOperand(m_instr, m_locations[i]);
 }
 
 
@@ -939,11 +934,11 @@ MediumLevelILInstruction::MediumLevelILInstruction(const MediumLevelILInstructio
 
 MediumLevelILOperandList MediumLevelILInstructionBase::GetOperands() const
 {
-	if (operation >= s_instructionOperandUsage.size())
+	if (operation >= s_operandLocations.size())
 		throw MediumLevelILInstructionAccessException();
-	
-	const auto& info = s_instructionOperandUsage[operation];
-	return MediumLevelILOperandList(*(const MediumLevelILInstruction*)this, info.usages, info.indices, info.count);
+
+	const auto& info = s_operandLocations[operation];
+	return MediumLevelILOperandList(*(const MediumLevelILInstruction*)this, info.locations, info.count);
 }
 
 
@@ -1383,6 +1378,7 @@ void MediumLevelILInstructionBase::ClearAttribute(BNILInstructionAttribute attri
 }
 
 
+// BEGIN GENERATED mlil-visit: from api/il, do not edit
 void MediumLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const MediumLevelILInstruction& expr)> func) const
 {
 	if (!func(*this))
@@ -1392,118 +1388,17 @@ void MediumLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const Medi
 	case MLIL_SET_VAR:
 		GetSourceExpr<MLIL_SET_VAR>().VisitExprs(func);
 		break;
-	case MLIL_SET_VAR_SSA:
-		GetSourceExpr<MLIL_SET_VAR_SSA>().VisitExprs(func);
-		break;
-	case MLIL_SET_VAR_ALIASED:
-		GetSourceExpr<MLIL_SET_VAR_ALIASED>().VisitExprs(func);
+	case MLIL_SET_VAR_FIELD:
+		GetSourceExpr<MLIL_SET_VAR_FIELD>().VisitExprs(func);
 		break;
 	case MLIL_SET_VAR_SPLIT:
 		GetSourceExpr<MLIL_SET_VAR_SPLIT>().VisitExprs(func);
 		break;
-	case MLIL_SET_VAR_SPLIT_SSA:
-		GetSourceExpr<MLIL_SET_VAR_SPLIT_SSA>().VisitExprs(func);
+	case MLIL_LOAD:
+		GetSourceExpr<MLIL_LOAD>().VisitExprs(func);
 		break;
-	case MLIL_SET_VAR_FIELD:
-		GetSourceExpr<MLIL_SET_VAR_FIELD>().VisitExprs(func);
-		break;
-	case MLIL_SET_VAR_SSA_FIELD:
-		GetSourceExpr<MLIL_SET_VAR_SSA_FIELD>().VisitExprs(func);
-		break;
-	case MLIL_SET_VAR_ALIASED_FIELD:
-		GetSourceExpr<MLIL_SET_VAR_ALIASED_FIELD>().VisitExprs(func);
-		break;
-	case MLIL_CALL:
-		GetDestExpr<MLIL_CALL>().VisitExprs(func);
-		for (auto i : GetOutputExprs<MLIL_CALL>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_CALL>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_CALL_UNTYPED:
-		GetDestExpr<MLIL_CALL_UNTYPED>().VisitExprs(func);
-		for (auto i : GetOutputExprs<MLIL_CALL_UNTYPED>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_CALL_UNTYPED>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_CALL_SSA:
-		GetDestExpr<MLIL_CALL_SSA>().VisitExprs(func);
-		for (auto i : GetOutputExprs<MLIL_CALL_SSA>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_CALL_SSA>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_CALL_UNTYPED_SSA:
-		GetDestExpr<MLIL_CALL_UNTYPED_SSA>().VisitExprs(func);
-		for (auto i : GetOutputExprs<MLIL_CALL_UNTYPED_SSA>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_CALL_UNTYPED_SSA>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_SYSCALL:
-		for (auto i : GetOutputExprs<MLIL_SYSCALL>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_SYSCALL>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_SYSCALL_UNTYPED:
-		for (auto i : GetOutputExprs<MLIL_SYSCALL_UNTYPED>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_SYSCALL_UNTYPED>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_SYSCALL_SSA:
-		for (auto i : GetOutputExprs<MLIL_SYSCALL_SSA>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_SYSCALL_SSA>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_SYSCALL_UNTYPED_SSA:
-		for (auto i : GetOutputExprs<MLIL_SYSCALL_UNTYPED_SSA>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_SYSCALL_UNTYPED_SSA>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_TAILCALL:
-		GetDestExpr<MLIL_TAILCALL>().VisitExprs(func);
-		for (auto i : GetOutputExprs<MLIL_TAILCALL>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_TAILCALL>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_TAILCALL_UNTYPED:
-		GetDestExpr<MLIL_TAILCALL_UNTYPED>().VisitExprs(func);
-		for (auto i : GetOutputExprs<MLIL_TAILCALL_UNTYPED>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_TAILCALL_UNTYPED>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_TAILCALL_SSA:
-		GetDestExpr<MLIL_TAILCALL_SSA>().VisitExprs(func);
-		for (auto i : GetOutputExprs<MLIL_TAILCALL_SSA>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_TAILCALL_SSA>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_TAILCALL_UNTYPED_SSA:
-		GetDestExpr<MLIL_TAILCALL_UNTYPED_SSA>().VisitExprs(func);
-		for (auto i : GetOutputExprs<MLIL_TAILCALL_UNTYPED_SSA>())
-			i.VisitExprs(func);
-		for (auto i : GetParameterExprs<MLIL_TAILCALL_UNTYPED_SSA>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_SEPARATE_PARAM_LIST:
-		for (auto i : GetParameterExprs<MLIL_SEPARATE_PARAM_LIST>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_SHARED_PARAM_SLOT:
-		for (auto i : GetParameterExprs<MLIL_SHARED_PARAM_SLOT>())
-			i.VisitExprs(func);
-		break;
-	case MLIL_RET:
-		for (auto i : GetSourceExprs<MLIL_RET>())
-			i.VisitExprs(func);
+	case MLIL_LOAD_STRUCT:
+		GetSourceExpr<MLIL_LOAD_STRUCT>().VisitExprs(func);
 		break;
 	case MLIL_STORE:
 		GetDestExpr<MLIL_STORE>().VisitExprs(func);
@@ -1513,6 +1408,395 @@ void MediumLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const Medi
 		GetDestExpr<MLIL_STORE_STRUCT>().VisitExprs(func);
 		GetSourceExpr<MLIL_STORE_STRUCT>().VisitExprs(func);
 		break;
+	case MLIL_PASS_BY_REF:
+		GetSourceExpr<MLIL_PASS_BY_REF>().VisitExprs(func);
+		break;
+	case MLIL_RETURN_BY_REF:
+		GetSourceExpr<MLIL_RETURN_BY_REF>().VisitExprs(func);
+		break;
+	case MLIL_ADD:
+		GetLeftExpr<MLIL_ADD>().VisitExprs(func);
+		GetRightExpr<MLIL_ADD>().VisitExprs(func);
+		break;
+	case MLIL_ADC:
+		GetLeftExpr<MLIL_ADC>().VisitExprs(func);
+		GetRightExpr<MLIL_ADC>().VisitExprs(func);
+		GetCarryExpr<MLIL_ADC>().VisitExprs(func);
+		break;
+	case MLIL_SUB:
+		GetLeftExpr<MLIL_SUB>().VisitExprs(func);
+		GetRightExpr<MLIL_SUB>().VisitExprs(func);
+		break;
+	case MLIL_SBB:
+		GetLeftExpr<MLIL_SBB>().VisitExprs(func);
+		GetRightExpr<MLIL_SBB>().VisitExprs(func);
+		GetCarryExpr<MLIL_SBB>().VisitExprs(func);
+		break;
+	case MLIL_AND:
+		GetLeftExpr<MLIL_AND>().VisitExprs(func);
+		GetRightExpr<MLIL_AND>().VisitExprs(func);
+		break;
+	case MLIL_OR:
+		GetLeftExpr<MLIL_OR>().VisitExprs(func);
+		GetRightExpr<MLIL_OR>().VisitExprs(func);
+		break;
+	case MLIL_XOR:
+		GetLeftExpr<MLIL_XOR>().VisitExprs(func);
+		GetRightExpr<MLIL_XOR>().VisitExprs(func);
+		break;
+	case MLIL_LSL:
+		GetLeftExpr<MLIL_LSL>().VisitExprs(func);
+		GetRightExpr<MLIL_LSL>().VisitExprs(func);
+		break;
+	case MLIL_LSR:
+		GetLeftExpr<MLIL_LSR>().VisitExprs(func);
+		GetRightExpr<MLIL_LSR>().VisitExprs(func);
+		break;
+	case MLIL_ASR:
+		GetLeftExpr<MLIL_ASR>().VisitExprs(func);
+		GetRightExpr<MLIL_ASR>().VisitExprs(func);
+		break;
+	case MLIL_ROL:
+		GetLeftExpr<MLIL_ROL>().VisitExprs(func);
+		GetRightExpr<MLIL_ROL>().VisitExprs(func);
+		break;
+	case MLIL_RLC:
+		GetLeftExpr<MLIL_RLC>().VisitExprs(func);
+		GetRightExpr<MLIL_RLC>().VisitExprs(func);
+		GetCarryExpr<MLIL_RLC>().VisitExprs(func);
+		break;
+	case MLIL_ROR:
+		GetLeftExpr<MLIL_ROR>().VisitExprs(func);
+		GetRightExpr<MLIL_ROR>().VisitExprs(func);
+		break;
+	case MLIL_RRC:
+		GetLeftExpr<MLIL_RRC>().VisitExprs(func);
+		GetRightExpr<MLIL_RRC>().VisitExprs(func);
+		GetCarryExpr<MLIL_RRC>().VisitExprs(func);
+		break;
+	case MLIL_MUL:
+		GetLeftExpr<MLIL_MUL>().VisitExprs(func);
+		GetRightExpr<MLIL_MUL>().VisitExprs(func);
+		break;
+	case MLIL_MULU_DP:
+		GetLeftExpr<MLIL_MULU_DP>().VisitExprs(func);
+		GetRightExpr<MLIL_MULU_DP>().VisitExprs(func);
+		break;
+	case MLIL_MULS_DP:
+		GetLeftExpr<MLIL_MULS_DP>().VisitExprs(func);
+		GetRightExpr<MLIL_MULS_DP>().VisitExprs(func);
+		break;
+	case MLIL_DIVU:
+		GetLeftExpr<MLIL_DIVU>().VisitExprs(func);
+		GetRightExpr<MLIL_DIVU>().VisitExprs(func);
+		break;
+	case MLIL_DIVU_DP:
+		GetLeftExpr<MLIL_DIVU_DP>().VisitExprs(func);
+		GetRightExpr<MLIL_DIVU_DP>().VisitExprs(func);
+		break;
+	case MLIL_DIVS:
+		GetLeftExpr<MLIL_DIVS>().VisitExprs(func);
+		GetRightExpr<MLIL_DIVS>().VisitExprs(func);
+		break;
+	case MLIL_DIVS_DP:
+		GetLeftExpr<MLIL_DIVS_DP>().VisitExprs(func);
+		GetRightExpr<MLIL_DIVS_DP>().VisitExprs(func);
+		break;
+	case MLIL_MODU:
+		GetLeftExpr<MLIL_MODU>().VisitExprs(func);
+		GetRightExpr<MLIL_MODU>().VisitExprs(func);
+		break;
+	case MLIL_MODU_DP:
+		GetLeftExpr<MLIL_MODU_DP>().VisitExprs(func);
+		GetRightExpr<MLIL_MODU_DP>().VisitExprs(func);
+		break;
+	case MLIL_MODS:
+		GetLeftExpr<MLIL_MODS>().VisitExprs(func);
+		GetRightExpr<MLIL_MODS>().VisitExprs(func);
+		break;
+	case MLIL_MODS_DP:
+		GetLeftExpr<MLIL_MODS_DP>().VisitExprs(func);
+		GetRightExpr<MLIL_MODS_DP>().VisitExprs(func);
+		break;
+	case MLIL_NEG:
+		GetSourceExpr<MLIL_NEG>().VisitExprs(func);
+		break;
+	case MLIL_NOT:
+		GetSourceExpr<MLIL_NOT>().VisitExprs(func);
+		break;
+	case MLIL_SX:
+		GetSourceExpr<MLIL_SX>().VisitExprs(func);
+		break;
+	case MLIL_ZX:
+		GetSourceExpr<MLIL_ZX>().VisitExprs(func);
+		break;
+	case MLIL_LOW_PART:
+		GetSourceExpr<MLIL_LOW_PART>().VisitExprs(func);
+		break;
+	case MLIL_JUMP:
+		GetDestExpr<MLIL_JUMP>().VisitExprs(func);
+		break;
+	case MLIL_JUMP_TO:
+		GetDestExpr<MLIL_JUMP_TO>().VisitExprs(func);
+		break;
+	case MLIL_RET_HINT:
+		GetDestExpr<MLIL_RET_HINT>().VisitExprs(func);
+		break;
+	case MLIL_CALL:
+		GetDestExpr<MLIL_CALL>().VisitExprs(func);
+		for (const auto& expr : GetOutputExprs<MLIL_CALL>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_CALL>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_CALL_UNTYPED:
+		GetDestExpr<MLIL_CALL_UNTYPED>().VisitExprs(func);
+		for (const auto& expr : GetOutputExprs<MLIL_CALL_UNTYPED>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_CALL_UNTYPED>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_SEPARATE_PARAM_LIST:
+		for (const auto& expr : GetParameterExprs<MLIL_SEPARATE_PARAM_LIST>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_SHARED_PARAM_SLOT:
+		for (const auto& expr : GetParameterExprs<MLIL_SHARED_PARAM_SLOT>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_STORE_OUTPUT:
+		GetDestExpr<MLIL_STORE_OUTPUT>().VisitExprs(func);
+		break;
+	case MLIL_RET:
+		for (const auto& expr : GetSourceExprs<MLIL_RET>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_IF:
+		GetConditionExpr<MLIL_IF>().VisitExprs(func);
+		break;
+	case MLIL_CMP_E:
+		GetLeftExpr<MLIL_CMP_E>().VisitExprs(func);
+		GetRightExpr<MLIL_CMP_E>().VisitExprs(func);
+		break;
+	case MLIL_CMP_NE:
+		GetLeftExpr<MLIL_CMP_NE>().VisitExprs(func);
+		GetRightExpr<MLIL_CMP_NE>().VisitExprs(func);
+		break;
+	case MLIL_CMP_SLT:
+		GetLeftExpr<MLIL_CMP_SLT>().VisitExprs(func);
+		GetRightExpr<MLIL_CMP_SLT>().VisitExprs(func);
+		break;
+	case MLIL_CMP_ULT:
+		GetLeftExpr<MLIL_CMP_ULT>().VisitExprs(func);
+		GetRightExpr<MLIL_CMP_ULT>().VisitExprs(func);
+		break;
+	case MLIL_CMP_SLE:
+		GetLeftExpr<MLIL_CMP_SLE>().VisitExprs(func);
+		GetRightExpr<MLIL_CMP_SLE>().VisitExprs(func);
+		break;
+	case MLIL_CMP_ULE:
+		GetLeftExpr<MLIL_CMP_ULE>().VisitExprs(func);
+		GetRightExpr<MLIL_CMP_ULE>().VisitExprs(func);
+		break;
+	case MLIL_CMP_SGE:
+		GetLeftExpr<MLIL_CMP_SGE>().VisitExprs(func);
+		GetRightExpr<MLIL_CMP_SGE>().VisitExprs(func);
+		break;
+	case MLIL_CMP_UGE:
+		GetLeftExpr<MLIL_CMP_UGE>().VisitExprs(func);
+		GetRightExpr<MLIL_CMP_UGE>().VisitExprs(func);
+		break;
+	case MLIL_CMP_SGT:
+		GetLeftExpr<MLIL_CMP_SGT>().VisitExprs(func);
+		GetRightExpr<MLIL_CMP_SGT>().VisitExprs(func);
+		break;
+	case MLIL_CMP_UGT:
+		GetLeftExpr<MLIL_CMP_UGT>().VisitExprs(func);
+		GetRightExpr<MLIL_CMP_UGT>().VisitExprs(func);
+		break;
+	case MLIL_TEST_BIT:
+		GetLeftExpr<MLIL_TEST_BIT>().VisitExprs(func);
+		GetRightExpr<MLIL_TEST_BIT>().VisitExprs(func);
+		break;
+	case MLIL_BOOL_TO_INT:
+		GetSourceExpr<MLIL_BOOL_TO_INT>().VisitExprs(func);
+		break;
+	case MLIL_ADD_OVERFLOW:
+		GetLeftExpr<MLIL_ADD_OVERFLOW>().VisitExprs(func);
+		GetRightExpr<MLIL_ADD_OVERFLOW>().VisitExprs(func);
+		break;
+	case MLIL_SYSCALL:
+		for (const auto& expr : GetOutputExprs<MLIL_SYSCALL>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_SYSCALL>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_SYSCALL_UNTYPED:
+		for (const auto& expr : GetOutputExprs<MLIL_SYSCALL_UNTYPED>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_SYSCALL_UNTYPED>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_TAILCALL:
+		GetDestExpr<MLIL_TAILCALL>().VisitExprs(func);
+		for (const auto& expr : GetOutputExprs<MLIL_TAILCALL>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_TAILCALL>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_TAILCALL_UNTYPED:
+		GetDestExpr<MLIL_TAILCALL_UNTYPED>().VisitExprs(func);
+		for (const auto& expr : GetOutputExprs<MLIL_TAILCALL_UNTYPED>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_TAILCALL_UNTYPED>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_INTRINSIC:
+		for (const auto& expr : GetParameterExprs<MLIL_INTRINSIC>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_UNIMPL_MEM:
+		GetSourceExpr<MLIL_UNIMPL_MEM>().VisitExprs(func);
+		break;
+	case MLIL_FADD:
+		GetLeftExpr<MLIL_FADD>().VisitExprs(func);
+		GetRightExpr<MLIL_FADD>().VisitExprs(func);
+		break;
+	case MLIL_FSUB:
+		GetLeftExpr<MLIL_FSUB>().VisitExprs(func);
+		GetRightExpr<MLIL_FSUB>().VisitExprs(func);
+		break;
+	case MLIL_FMUL:
+		GetLeftExpr<MLIL_FMUL>().VisitExprs(func);
+		GetRightExpr<MLIL_FMUL>().VisitExprs(func);
+		break;
+	case MLIL_FDIV:
+		GetLeftExpr<MLIL_FDIV>().VisitExprs(func);
+		GetRightExpr<MLIL_FDIV>().VisitExprs(func);
+		break;
+	case MLIL_FSQRT:
+		GetSourceExpr<MLIL_FSQRT>().VisitExprs(func);
+		break;
+	case MLIL_FNEG:
+		GetSourceExpr<MLIL_FNEG>().VisitExprs(func);
+		break;
+	case MLIL_FABS:
+		GetSourceExpr<MLIL_FABS>().VisitExprs(func);
+		break;
+	case MLIL_FLOAT_TO_INT:
+		GetSourceExpr<MLIL_FLOAT_TO_INT>().VisitExprs(func);
+		break;
+	case MLIL_INT_TO_FLOAT:
+		GetSourceExpr<MLIL_INT_TO_FLOAT>().VisitExprs(func);
+		break;
+	case MLIL_FLOAT_CONV:
+		GetSourceExpr<MLIL_FLOAT_CONV>().VisitExprs(func);
+		break;
+	case MLIL_ROUND_TO_INT:
+		GetSourceExpr<MLIL_ROUND_TO_INT>().VisitExprs(func);
+		break;
+	case MLIL_FLOOR:
+		GetSourceExpr<MLIL_FLOOR>().VisitExprs(func);
+		break;
+	case MLIL_CEIL:
+		GetSourceExpr<MLIL_CEIL>().VisitExprs(func);
+		break;
+	case MLIL_FTRUNC:
+		GetSourceExpr<MLIL_FTRUNC>().VisitExprs(func);
+		break;
+	case MLIL_FCMP_E:
+		GetLeftExpr<MLIL_FCMP_E>().VisitExprs(func);
+		GetRightExpr<MLIL_FCMP_E>().VisitExprs(func);
+		break;
+	case MLIL_FCMP_NE:
+		GetLeftExpr<MLIL_FCMP_NE>().VisitExprs(func);
+		GetRightExpr<MLIL_FCMP_NE>().VisitExprs(func);
+		break;
+	case MLIL_FCMP_LT:
+		GetLeftExpr<MLIL_FCMP_LT>().VisitExprs(func);
+		GetRightExpr<MLIL_FCMP_LT>().VisitExprs(func);
+		break;
+	case MLIL_FCMP_LE:
+		GetLeftExpr<MLIL_FCMP_LE>().VisitExprs(func);
+		GetRightExpr<MLIL_FCMP_LE>().VisitExprs(func);
+		break;
+	case MLIL_FCMP_GE:
+		GetLeftExpr<MLIL_FCMP_GE>().VisitExprs(func);
+		GetRightExpr<MLIL_FCMP_GE>().VisitExprs(func);
+		break;
+	case MLIL_FCMP_GT:
+		GetLeftExpr<MLIL_FCMP_GT>().VisitExprs(func);
+		GetRightExpr<MLIL_FCMP_GT>().VisitExprs(func);
+		break;
+	case MLIL_FCMP_O:
+		GetLeftExpr<MLIL_FCMP_O>().VisitExprs(func);
+		GetRightExpr<MLIL_FCMP_O>().VisitExprs(func);
+		break;
+	case MLIL_FCMP_UO:
+		GetLeftExpr<MLIL_FCMP_UO>().VisitExprs(func);
+		GetRightExpr<MLIL_FCMP_UO>().VisitExprs(func);
+		break;
+	case MLIL_SET_VAR_SSA:
+		GetSourceExpr<MLIL_SET_VAR_SSA>().VisitExprs(func);
+		break;
+	case MLIL_SET_VAR_SSA_FIELD:
+		GetSourceExpr<MLIL_SET_VAR_SSA_FIELD>().VisitExprs(func);
+		break;
+	case MLIL_SET_VAR_SPLIT_SSA:
+		GetSourceExpr<MLIL_SET_VAR_SPLIT_SSA>().VisitExprs(func);
+		break;
+	case MLIL_SET_VAR_ALIASED:
+		GetSourceExpr<MLIL_SET_VAR_ALIASED>().VisitExprs(func);
+		break;
+	case MLIL_SET_VAR_ALIASED_FIELD:
+		GetSourceExpr<MLIL_SET_VAR_ALIASED_FIELD>().VisitExprs(func);
+		break;
+	case MLIL_CALL_SSA:
+		GetDestExpr<MLIL_CALL_SSA>().VisitExprs(func);
+		for (const auto& expr : GetOutputExprs<MLIL_CALL_SSA>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_CALL_SSA>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_CALL_UNTYPED_SSA:
+		GetDestExpr<MLIL_CALL_UNTYPED_SSA>().VisitExprs(func);
+		for (const auto& expr : GetOutputExprs<MLIL_CALL_UNTYPED_SSA>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_CALL_UNTYPED_SSA>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_SYSCALL_SSA:
+		for (const auto& expr : GetOutputExprs<MLIL_SYSCALL_SSA>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_SYSCALL_SSA>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_SYSCALL_UNTYPED_SSA:
+		for (const auto& expr : GetOutputExprs<MLIL_SYSCALL_UNTYPED_SSA>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_SYSCALL_UNTYPED_SSA>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_TAILCALL_SSA:
+		GetDestExpr<MLIL_TAILCALL_SSA>().VisitExprs(func);
+		for (const auto& expr : GetOutputExprs<MLIL_TAILCALL_SSA>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_TAILCALL_SSA>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_TAILCALL_UNTYPED_SSA:
+		GetDestExpr<MLIL_TAILCALL_UNTYPED_SSA>().VisitExprs(func);
+		for (const auto& expr : GetOutputExprs<MLIL_TAILCALL_UNTYPED_SSA>())
+			expr.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_TAILCALL_UNTYPED_SSA>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_LOAD_SSA:
+		GetSourceExpr<MLIL_LOAD_SSA>().VisitExprs(func);
+		break;
+	case MLIL_LOAD_STRUCT_SSA:
+		GetSourceExpr<MLIL_LOAD_STRUCT_SSA>().VisitExprs(func);
+		break;
 	case MLIL_STORE_SSA:
 		GetDestExpr<MLIL_STORE_SSA>().VisitExprs(func);
 		GetSourceExpr<MLIL_STORE_SSA>().VisitExprs(func);
@@ -1521,122 +1805,60 @@ void MediumLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const Medi
 		GetDestExpr<MLIL_STORE_STRUCT_SSA>().VisitExprs(func);
 		GetSourceExpr<MLIL_STORE_STRUCT_SSA>().VisitExprs(func);
 		break;
-	case MLIL_STORE_OUTPUT:
-		GetDestExpr<MLIL_STORE_OUTPUT>().VisitExprs(func);
-		break;
-	case MLIL_NEG:
-	case MLIL_NOT:
-	case MLIL_BSWAP:
-	case MLIL_POPCNT:
-	case MLIL_CLZ:
-	case MLIL_CTZ:
-	case MLIL_RBIT:
-	case MLIL_CLS:
-	case MLIL_ABS:
-	case MLIL_SX:
-	case MLIL_ZX:
-	case MLIL_LOW_PART:
-	case MLIL_BOOL_TO_INT:
-	case MLIL_JUMP:
-	case MLIL_JUMP_TO:
-	case MLIL_RET_HINT:
-	case MLIL_IF:
-	case MLIL_UNIMPL_MEM:
-	case MLIL_LOAD:
-	case MLIL_LOAD_STRUCT:
-	case MLIL_LOAD_SSA:
-	case MLIL_LOAD_STRUCT_SSA:
-	case MLIL_FSQRT:
-	case MLIL_FNEG:
-	case MLIL_FABS:
-	case MLIL_FLOAT_TO_INT:
-	case MLIL_INT_TO_FLOAT:
-	case MLIL_FLOAT_CONV:
-	case MLIL_ROUND_TO_INT:
-	case MLIL_FLOOR:
-	case MLIL_CEIL:
-	case MLIL_FTRUNC:
-	case MLIL_PASS_BY_REF:
-	case MLIL_RETURN_BY_REF:
-		AsOneOperand().GetSourceExpr().VisitExprs(func);
-		break;
-	case MLIL_ADD:
-	case MLIL_SUB:
-	case MLIL_AND:
-	case MLIL_OR:
-	case MLIL_XOR:
-	case MLIL_MINS:
-	case MLIL_MAXS:
-	case MLIL_MINU:
-	case MLIL_MAXU:
-	case MLIL_LSL:
-	case MLIL_LSR:
-	case MLIL_ASR:
-	case MLIL_ROL:
-	case MLIL_ROR:
-	case MLIL_MUL:
-	case MLIL_MULU_DP:
-	case MLIL_MULS_DP:
-	case MLIL_DIVU:
-	case MLIL_DIVS:
-	case MLIL_MODU:
-	case MLIL_MODS:
-	case MLIL_DIVU_DP:
-	case MLIL_DIVS_DP:
-	case MLIL_MODU_DP:
-	case MLIL_MODS_DP:
-	case MLIL_CMP_E:
-	case MLIL_CMP_NE:
-	case MLIL_CMP_SLT:
-	case MLIL_CMP_ULT:
-	case MLIL_CMP_SLE:
-	case MLIL_CMP_ULE:
-	case MLIL_CMP_SGE:
-	case MLIL_CMP_UGE:
-	case MLIL_CMP_SGT:
-	case MLIL_CMP_UGT:
-	case MLIL_TEST_BIT:
-	case MLIL_ADD_OVERFLOW:
-	case MLIL_FADD:
-	case MLIL_FSUB:
-	case MLIL_FMUL:
-	case MLIL_FDIV:
-	case MLIL_FCMP_E:
-	case MLIL_FCMP_NE:
-	case MLIL_FCMP_LT:
-	case MLIL_FCMP_LE:
-	case MLIL_FCMP_GE:
-	case MLIL_FCMP_GT:
-	case MLIL_FCMP_O:
-	case MLIL_FCMP_UO:
-		AsTwoOperand().GetLeftExpr().VisitExprs(func);
-		AsTwoOperand().GetRightExpr().VisitExprs(func);
-		break;
-	case MLIL_ADC:
-	case MLIL_SBB:
-	case MLIL_RLC:
-	case MLIL_RRC:
-		AsTwoOperandWithCarry().GetLeftExpr().VisitExprs(func);
-		AsTwoOperandWithCarry().GetRightExpr().VisitExprs(func);
-		AsTwoOperandWithCarry().GetCarryExpr().VisitExprs(func);
-		break;
-	case MLIL_INTRINSIC:
-		for (auto i : GetParameterExprs<MLIL_INTRINSIC>())
-			i.VisitExprs(func);
-		break;
 	case MLIL_INTRINSIC_SSA:
+		for (const auto& expr : GetParameterExprs<MLIL_INTRINSIC_SSA>())
+			expr.VisitExprs(func);
+		break;
 	case MLIL_MEMORY_INTRINSIC_SSA:
-		for (auto i : GetParameterExprs())
-			i.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<MLIL_MEMORY_INTRINSIC_SSA>())
+			expr.VisitExprs(func);
 		break;
 	case MLIL_BLOCK_TO_EXPAND:
-		for (auto i : GetSourceExprs<MLIL_BLOCK_TO_EXPAND>())
-			i.VisitExprs(func);
+		for (const auto& expr : GetSourceExprs<MLIL_BLOCK_TO_EXPAND>())
+			expr.VisitExprs(func);
+		break;
+	case MLIL_BSWAP:
+		GetSourceExpr<MLIL_BSWAP>().VisitExprs(func);
+		break;
+	case MLIL_POPCNT:
+		GetSourceExpr<MLIL_POPCNT>().VisitExprs(func);
+		break;
+	case MLIL_CLZ:
+		GetSourceExpr<MLIL_CLZ>().VisitExprs(func);
+		break;
+	case MLIL_CTZ:
+		GetSourceExpr<MLIL_CTZ>().VisitExprs(func);
+		break;
+	case MLIL_RBIT:
+		GetSourceExpr<MLIL_RBIT>().VisitExprs(func);
+		break;
+	case MLIL_CLS:
+		GetSourceExpr<MLIL_CLS>().VisitExprs(func);
+		break;
+	case MLIL_MINS:
+		GetLeftExpr<MLIL_MINS>().VisitExprs(func);
+		GetRightExpr<MLIL_MINS>().VisitExprs(func);
+		break;
+	case MLIL_MAXS:
+		GetLeftExpr<MLIL_MAXS>().VisitExprs(func);
+		GetRightExpr<MLIL_MAXS>().VisitExprs(func);
+		break;
+	case MLIL_MINU:
+		GetLeftExpr<MLIL_MINU>().VisitExprs(func);
+		GetRightExpr<MLIL_MINU>().VisitExprs(func);
+		break;
+	case MLIL_MAXU:
+		GetLeftExpr<MLIL_MAXU>().VisitExprs(func);
+		GetRightExpr<MLIL_MAXU>().VisitExprs(func);
+		break;
+	case MLIL_ABS:
+		GetSourceExpr<MLIL_ABS>().VisitExprs(func);
 		break;
 	default:
 		break;
 	}
 }
+// END GENERATED mlil-visit
 
 
 ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest, const ILSourceLocation& sourceLocation) const
@@ -1645,760 +1867,1254 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest, const ILSou
 }
 
 
-ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
-    bn::base::function_ref<ExprId(const MediumLevelILInstruction& subExpr)> subExprHandler,
-	const ILSourceLocation& sourceLocation) const
+// Rebuilds a branch so it targets `dest`'s labels, because its targets are instruction indices in the source
+// function.
+static ExprId CopyBranchTo(const MediumLevelILInstruction& instr, MediumLevelILFunction* dest,
+	bn::base::function_ref<ExprId(const MediumLevelILInstruction& subExpr)> subExprHandler, const ILSourceLocation& loc)
 {
-	vector<ExprId> output, params;
-	BNMediumLevelILLabel* labelA;
-	BNMediumLevelILLabel* labelB;
-
-	const auto& loc = sourceLocation.valid ? sourceLocation : ILSourceLocation{*this};
-
-	switch (operation)
+	switch (instr.operation)
 	{
-	case MLIL_NOP:
-		return dest->Nop(loc);
-	case MLIL_SET_VAR:
-		return dest->SetVar(
-		    size, GetDestVariable<MLIL_SET_VAR>(), subExprHandler(GetSourceExpr<MLIL_SET_VAR>()), loc);
-	case MLIL_SET_VAR_SSA:
-		return dest->SetVarSSA(
-		    size, GetDestSSAVariable<MLIL_SET_VAR_SSA>(), subExprHandler(GetSourceExpr<MLIL_SET_VAR_SSA>()), loc);
-	case MLIL_SET_VAR_ALIASED:
-		return dest->SetVarAliased(size, GetDestSSAVariable<MLIL_SET_VAR_ALIASED>().var,
-		    GetDestSSAVariable<MLIL_SET_VAR_ALIASED>().version, GetSourceSSAVariable<MLIL_SET_VAR_ALIASED>().version,
-		    subExprHandler(GetSourceExpr<MLIL_SET_VAR_ALIASED>()), loc);
-	case MLIL_SET_VAR_SPLIT:
-		return dest->SetVarSplit(size, GetHighVariable<MLIL_SET_VAR_SPLIT>(), GetLowVariable<MLIL_SET_VAR_SPLIT>(),
-		    subExprHandler(GetSourceExpr<MLIL_SET_VAR_SPLIT>()), loc);
-	case MLIL_SET_VAR_SPLIT_SSA:
-		return dest->SetVarSSASplit(size, GetHighSSAVariable<MLIL_SET_VAR_SPLIT_SSA>(),
-		    GetLowSSAVariable<MLIL_SET_VAR_SPLIT_SSA>(), subExprHandler(GetSourceExpr<MLIL_SET_VAR_SPLIT_SSA>()),
-		    loc);
-	case MLIL_SET_VAR_FIELD:
-		return dest->SetVarField(size, GetDestVariable<MLIL_SET_VAR_FIELD>(), GetOffset<MLIL_SET_VAR_FIELD>(),
-		    subExprHandler(GetSourceExpr<MLIL_SET_VAR_FIELD>()), loc);
-	case MLIL_SET_VAR_SSA_FIELD:
-		return dest->SetVarSSAField(size, GetDestSSAVariable<MLIL_SET_VAR_SSA_FIELD>().var,
-		    GetDestSSAVariable<MLIL_SET_VAR_SSA_FIELD>().version,
-		    GetSourceSSAVariable<MLIL_SET_VAR_SSA_FIELD>().version, GetOffset<MLIL_SET_VAR_SSA_FIELD>(),
-		    subExprHandler(GetSourceExpr<MLIL_SET_VAR_SSA_FIELD>()), loc);
-	case MLIL_SET_VAR_ALIASED_FIELD:
-		return dest->SetVarAliasedField(size, GetDestSSAVariable<MLIL_SET_VAR_ALIASED_FIELD>().var,
-		    GetDestSSAVariable<MLIL_SET_VAR_ALIASED_FIELD>().version,
-		    GetSourceSSAVariable<MLIL_SET_VAR_ALIASED_FIELD>().version, GetOffset<MLIL_SET_VAR_ALIASED_FIELD>(),
-		    subExprHandler(GetSourceExpr<MLIL_SET_VAR_ALIASED_FIELD>()), loc);
-	case MLIL_VAR:
-		return dest->Var(size, GetSourceVariable<MLIL_VAR>(), loc);
-	case MLIL_VAR_FIELD:
-		return dest->VarField(size, GetSourceVariable<MLIL_VAR_FIELD>(), GetOffset<MLIL_VAR_FIELD>(), loc);
-	case MLIL_VAR_SPLIT:
-		return dest->VarSplit(size, GetHighVariable<MLIL_VAR_SPLIT>(), GetLowVariable<MLIL_VAR_SPLIT>(), loc);
-	case MLIL_VAR_SSA:
-		return dest->VarSSA(size, GetSourceSSAVariable<MLIL_VAR_SSA>(), loc);
-	case MLIL_VAR_SSA_FIELD:
-		return dest->VarSSAField(
-		    size, GetSourceSSAVariable<MLIL_VAR_SSA_FIELD>(), GetOffset<MLIL_VAR_SSA_FIELD>(), loc);
-	case MLIL_VAR_ALIASED:
-		return dest->VarAliased(size, GetSourceSSAVariable<MLIL_VAR_ALIASED>().var,
-		    GetSourceSSAVariable<MLIL_VAR_ALIASED>().version, loc);
-	case MLIL_VAR_ALIASED_FIELD:
-		return dest->VarAliasedField(size, GetSourceSSAVariable<MLIL_VAR_ALIASED_FIELD>().var,
-		    GetSourceSSAVariable<MLIL_VAR_ALIASED_FIELD>().version, GetOffset<MLIL_VAR_ALIASED_FIELD>(), loc);
-	case MLIL_VAR_SPLIT_SSA:
-		return dest->VarSplitSSA(
-		    size, GetHighSSAVariable<MLIL_VAR_SPLIT_SSA>(), GetLowSSAVariable<MLIL_VAR_SPLIT_SSA>(), loc);
-	case MLIL_VAR_OUTPUT_SSA:
-		return dest->VarOutputSSA(size, GetDestSSAVariable<MLIL_VAR_OUTPUT_SSA>(), loc);
-	case MLIL_VAR_OUTPUT_SSA_FIELD:
-		return dest->VarOutputSSAField(size, GetDestSSAVariable<MLIL_VAR_OUTPUT_SSA_FIELD>().var,
-			GetDestSSAVariable<MLIL_VAR_OUTPUT_SSA_FIELD>().version,
-			GetSourceSSAVariable<MLIL_VAR_OUTPUT_SSA_FIELD>().version, GetOffset<MLIL_VAR_OUTPUT_SSA_FIELD>(), loc);
-	case MLIL_VAR_OUTPUT_ALIASED:
-		return dest->VarOutputAliased(size, GetDestSSAVariable<MLIL_VAR_OUTPUT_ALIASED>().var,
-			GetDestSSAVariable<MLIL_VAR_OUTPUT_ALIASED>().version,
-			GetSourceSSAVariable<MLIL_VAR_OUTPUT_ALIASED>().version, loc);
-	case MLIL_VAR_OUTPUT_ALIASED_FIELD:
-		return dest->VarOutputAliasedField(size, GetDestSSAVariable<MLIL_VAR_OUTPUT_ALIASED_FIELD>().var,
-			GetDestSSAVariable<MLIL_VAR_OUTPUT_ALIASED_FIELD>().version,
-			GetSourceSSAVariable<MLIL_VAR_OUTPUT_ALIASED_FIELD>().version,
-			GetOffset<MLIL_VAR_OUTPUT_ALIASED_FIELD>(), loc);
-	case MLIL_FORCE_VER:
-		return dest->ForceVer(size, GetDestVariable<MLIL_FORCE_VER>(), GetSourceVariable<MLIL_FORCE_VER>(),
-			GetForceVersionReason<MLIL_FORCE_VER>(), loc);
-	case MLIL_FORCE_VER_SSA:
-		return dest->ForceVerSSA(size, GetDestSSAVariable<MLIL_FORCE_VER_SSA>(), GetSourceSSAVariable<MLIL_FORCE_VER_SSA>(),
-			GetForceVersionReason<MLIL_FORCE_VER_SSA>(), loc);
-	case MLIL_ASSERT:
-		return dest->Assert(size, GetSourceVariable<MLIL_ASSERT>(), GetConstraint<MLIL_ASSERT>(), loc);
-	case MLIL_ASSERT_SSA:
-		return dest->AssertSSA(size, GetSourceSSAVariable<MLIL_ASSERT_SSA>(), GetConstraint<MLIL_ASSERT_SSA>(), loc);
-	case MLIL_ADDRESS_OF:
-		return dest->AddressOf(GetSourceVariable<MLIL_ADDRESS_OF>(), loc);
-	case MLIL_ADDRESS_OF_FIELD:
-		return dest->AddressOfField(
-		    GetSourceVariable<MLIL_ADDRESS_OF_FIELD>(), GetOffset<MLIL_ADDRESS_OF_FIELD>(), loc);
-	case MLIL_CALL:
-		for (auto i : GetOutputExprs<MLIL_CALL>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_CALL>())
-			params.push_back(subExprHandler(i));
-		return dest->Call(output, subExprHandler(GetDestExpr<MLIL_CALL>()), params, loc);
-	case MLIL_CALL_UNTYPED:
-		for (auto i : GetOutputExprs<MLIL_CALL_UNTYPED>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_CALL_UNTYPED>())
-			params.push_back(subExprHandler(i));
-		return dest->CallUntyped(output,
-		    subExprHandler(GetDestExpr<MLIL_CALL_UNTYPED>()), params,
-		    subExprHandler(GetStackExpr<MLIL_CALL_UNTYPED>()), loc);
-	case MLIL_CALL_SSA:
-		for (auto i : GetOutputExprs<MLIL_CALL_SSA>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_CALL_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->CallSSA(output, subExprHandler(GetDestExpr<MLIL_CALL_SSA>()),
-		    params, GetDestMemoryVersion<MLIL_CALL_SSA>(), GetSourceMemoryVersion<MLIL_CALL_SSA>(), loc);
-	case MLIL_CALL_UNTYPED_SSA:
-		for (auto i : GetOutputExprs<MLIL_CALL_UNTYPED_SSA>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_CALL_UNTYPED_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->CallUntypedSSA(output,
-		    subExprHandler(GetDestExpr<MLIL_CALL_UNTYPED_SSA>()), params,
-		    GetDestMemoryVersion<MLIL_CALL_UNTYPED_SSA>(), GetSourceMemoryVersion<MLIL_CALL_UNTYPED_SSA>(),
-		    subExprHandler(GetStackExpr<MLIL_CALL_UNTYPED_SSA>()), loc);
-	case MLIL_SYSCALL:
-		for (auto i : GetOutputExprs<MLIL_SYSCALL>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_SYSCALL>())
-			params.push_back(subExprHandler(i));
-		return dest->Syscall(output, params, loc);
-	case MLIL_SYSCALL_UNTYPED:
-		for (auto i : GetOutputExprs<MLIL_SYSCALL_UNTYPED>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_SYSCALL_UNTYPED>())
-			params.push_back(subExprHandler(i));
-		return dest->SyscallUntyped(output,
-		    params, subExprHandler(GetStackExpr<MLIL_SYSCALL_UNTYPED>()), loc);
-	case MLIL_SYSCALL_SSA:
-		for (auto i : GetOutputExprs<MLIL_SYSCALL_SSA>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_SYSCALL_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->SyscallSSA(output, params,
-		    GetDestMemoryVersion<MLIL_SYSCALL_SSA>(), GetSourceMemoryVersion<MLIL_SYSCALL_SSA>(), loc);
-	case MLIL_SYSCALL_UNTYPED_SSA:
-		for (auto i : GetOutputExprs<MLIL_SYSCALL_UNTYPED_SSA>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_SYSCALL_UNTYPED_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->SyscallUntypedSSA(output,
-		    params, GetDestMemoryVersion<MLIL_SYSCALL_UNTYPED_SSA>(),
-		    GetSourceMemoryVersion<MLIL_SYSCALL_UNTYPED_SSA>(),
-		    subExprHandler(GetStackExpr<MLIL_SYSCALL_UNTYPED_SSA>()), loc);
-	case MLIL_TAILCALL:
-		for (auto i : GetOutputExprs<MLIL_TAILCALL>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_TAILCALL>())
-			params.push_back(subExprHandler(i));
-		return dest->TailCall(
-		    output, subExprHandler(GetDestExpr<MLIL_TAILCALL>()), params, loc);
-	case MLIL_TAILCALL_UNTYPED:
-		for (auto i : GetOutputExprs<MLIL_TAILCALL_UNTYPED>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_TAILCALL_UNTYPED>())
-			params.push_back(subExprHandler(i));
-		return dest->TailCallUntyped(output,
-		    subExprHandler(GetDestExpr<MLIL_TAILCALL_UNTYPED>()), params,
-		    subExprHandler(GetStackExpr<MLIL_TAILCALL_UNTYPED>()), loc);
-	case MLIL_TAILCALL_SSA:
-		for (auto i : GetOutputExprs<MLIL_TAILCALL_SSA>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_TAILCALL_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->TailCallSSA(output,
-		    subExprHandler(GetDestExpr<MLIL_TAILCALL_SSA>()), params, GetDestMemoryVersion<MLIL_TAILCALL_SSA>(),
-		    GetSourceMemoryVersion<MLIL_TAILCALL_SSA>(), loc);
-	case MLIL_TAILCALL_UNTYPED_SSA:
-		for (auto i : GetOutputExprs<MLIL_TAILCALL_UNTYPED_SSA>())
-			output.push_back(subExprHandler(i));
-		for (auto i : GetParameterExprs<MLIL_TAILCALL_UNTYPED_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->TailCallUntypedSSA(output,
-		    subExprHandler(GetDestExpr<MLIL_TAILCALL_UNTYPED_SSA>()),
-		    params, GetDestMemoryVersion<MLIL_TAILCALL_UNTYPED_SSA>(),
-		    GetSourceMemoryVersion<MLIL_TAILCALL_UNTYPED_SSA>(),
-		    subExprHandler(GetStackExpr<MLIL_TAILCALL_UNTYPED_SSA>()), loc);
-	case MLIL_SEPARATE_PARAM_LIST:
-		for (auto i : GetParameterExprs<MLIL_SEPARATE_PARAM_LIST>())
-			params.push_back(subExprHandler(i));
-		return dest->SeparateParamList(params, loc);
-	case MLIL_SHARED_PARAM_SLOT:
-		for (auto i : GetParameterExprs<MLIL_SHARED_PARAM_SLOT>())
-			params.push_back(subExprHandler(i));
-		return dest->SharedParamSlot(params, loc);
-	case MLIL_VAR_OUTPUT:
-		return dest->VarOutput(size, GetDestVariable<MLIL_VAR_OUTPUT>(), loc);
-	case MLIL_VAR_OUTPUT_FIELD:
-		return dest->VarOutputField(
-			size, GetDestVariable<MLIL_VAR_OUTPUT_FIELD>(), GetOffset<MLIL_VAR_OUTPUT_FIELD>(), loc);
-	case MLIL_STORE_OUTPUT:
-		return dest->StoreOutput(size, subExprHandler(GetDestExpr<MLIL_STORE_OUTPUT>()), loc);
-	case MLIL_RET:
-		for (auto i : GetSourceExprs<MLIL_RET>())
-			params.push_back(subExprHandler(i));
-		return dest->Return(params, loc);
-	case MLIL_NORET:
-		return dest->NoReturn(loc);
-	case MLIL_STORE:
-		return dest->Store(
-		    size, subExprHandler(GetDestExpr<MLIL_STORE>()), subExprHandler(GetSourceExpr<MLIL_STORE>()), loc);
-	case MLIL_STORE_STRUCT:
-		return dest->StoreStruct(size, subExprHandler(GetDestExpr<MLIL_STORE_STRUCT>()), GetOffset<MLIL_STORE_STRUCT>(),
-		    subExprHandler(GetSourceExpr<MLIL_STORE_STRUCT>()), loc);
-	case MLIL_STORE_SSA:
-		return dest->StoreSSA(size, subExprHandler(GetDestExpr<MLIL_STORE_SSA>()),
-		    GetDestMemoryVersion<MLIL_STORE_SSA>(), GetSourceMemoryVersion<MLIL_STORE_SSA>(),
-		    subExprHandler(GetSourceExpr<MLIL_STORE_SSA>()), loc);
-	case MLIL_STORE_STRUCT_SSA:
-		return dest->StoreStructSSA(size, subExprHandler(GetDestExpr<MLIL_STORE_STRUCT_SSA>()),
-		    GetOffset<MLIL_STORE_STRUCT_SSA>(), GetDestMemoryVersion<MLIL_STORE_STRUCT_SSA>(),
-		    GetSourceMemoryVersion<MLIL_STORE_STRUCT_SSA>(), subExprHandler(GetSourceExpr<MLIL_STORE_STRUCT_SSA>()),
-		    loc);
-	case MLIL_LOAD:
-		return dest->Load(size, subExprHandler(GetSourceExpr<MLIL_LOAD>()), loc);
-	case MLIL_LOAD_STRUCT:
-		return dest->LoadStruct(
-		    size, subExprHandler(GetSourceExpr<MLIL_LOAD_STRUCT>()), GetOffset<MLIL_LOAD_STRUCT>(), loc);
-	case MLIL_LOAD_SSA:
-		return dest->LoadSSA(
-		    size, subExprHandler(GetSourceExpr<MLIL_LOAD_SSA>()), GetSourceMemoryVersion<MLIL_LOAD_SSA>(), loc);
-	case MLIL_LOAD_STRUCT_SSA:
-		return dest->LoadStructSSA(size, subExprHandler(GetSourceExpr<MLIL_LOAD_STRUCT_SSA>()),
-		    GetOffset<MLIL_LOAD_STRUCT_SSA>(), GetSourceMemoryVersion<MLIL_LOAD_STRUCT_SSA>(), loc);
-	case MLIL_NEG:
-	case MLIL_NOT:
-	case MLIL_BSWAP:
-	case MLIL_POPCNT:
-	case MLIL_CLZ:
-	case MLIL_CTZ:
-	case MLIL_RBIT:
-	case MLIL_CLS:
-	case MLIL_ABS:
-	case MLIL_SX:
-	case MLIL_ZX:
-	case MLIL_LOW_PART:
-	case MLIL_BOOL_TO_INT:
-	case MLIL_JUMP:
-	case MLIL_RET_HINT:
-	case MLIL_FSQRT:
-	case MLIL_FNEG:
-	case MLIL_FABS:
-	case MLIL_FLOAT_TO_INT:
-	case MLIL_INT_TO_FLOAT:
-	case MLIL_FLOAT_CONV:
-	case MLIL_ROUND_TO_INT:
-	case MLIL_FLOOR:
-	case MLIL_CEIL:
-	case MLIL_FTRUNC:
-	case MLIL_PASS_BY_REF:
-	case MLIL_RETURN_BY_REF:
-		return dest->AddExprWithLocation(operation, loc, size, subExprHandler(AsOneOperand().GetSourceExpr()));
-	case MLIL_UNIMPL_MEM:
-		return dest->AddExprWithLocation(operation, loc, size, subExprHandler(AsOneOperand().GetSourceExpr()), GetRawOperandAsInteger(1));
-	case MLIL_ADD:
-	case MLIL_SUB:
-	case MLIL_AND:
-	case MLIL_OR:
-	case MLIL_XOR:
-	case MLIL_MINS:
-	case MLIL_MAXS:
-	case MLIL_MINU:
-	case MLIL_MAXU:
-	case MLIL_LSL:
-	case MLIL_LSR:
-	case MLIL_ASR:
-	case MLIL_ROL:
-	case MLIL_ROR:
-	case MLIL_MUL:
-	case MLIL_MULU_DP:
-	case MLIL_MULS_DP:
-	case MLIL_DIVU:
-	case MLIL_DIVS:
-	case MLIL_MODU:
-	case MLIL_MODS:
-	case MLIL_DIVU_DP:
-	case MLIL_DIVS_DP:
-	case MLIL_MODU_DP:
-	case MLIL_MODS_DP:
-	case MLIL_CMP_E:
-	case MLIL_CMP_NE:
-	case MLIL_CMP_SLT:
-	case MLIL_CMP_ULT:
-	case MLIL_CMP_SLE:
-	case MLIL_CMP_ULE:
-	case MLIL_CMP_SGE:
-	case MLIL_CMP_UGE:
-	case MLIL_CMP_SGT:
-	case MLIL_CMP_UGT:
-	case MLIL_TEST_BIT:
-	case MLIL_ADD_OVERFLOW:
-	case MLIL_FADD:
-	case MLIL_FSUB:
-	case MLIL_FMUL:
-	case MLIL_FDIV:
-	case MLIL_FCMP_E:
-	case MLIL_FCMP_NE:
-	case MLIL_FCMP_LT:
-	case MLIL_FCMP_LE:
-	case MLIL_FCMP_GE:
-	case MLIL_FCMP_GT:
-	case MLIL_FCMP_O:
-	case MLIL_FCMP_UO:
-		return dest->AddExprWithLocation(operation, loc, size, subExprHandler(AsTwoOperand().GetLeftExpr()),
-		    subExprHandler(AsTwoOperand().GetRightExpr()));
-	case MLIL_ADC:
-	case MLIL_SBB:
-	case MLIL_RLC:
-	case MLIL_RRC:
-		return dest->AddExprWithLocation(operation, loc, size, subExprHandler(AsTwoOperandWithCarry().GetLeftExpr()),
-		    subExprHandler(AsTwoOperandWithCarry().GetRightExpr()),
-		    subExprHandler(AsTwoOperandWithCarry().GetCarryExpr()));
 	case MLIL_JUMP_TO:
 	{
-		map<uint64_t, BNMediumLevelILLabel*> labelList;
-		for (auto target : GetTargets<MLIL_JUMP_TO>())
+		map<uint64_t, BNMediumLevelILLabel*> labels;
+		for (auto target : instr.GetTargets<MLIL_JUMP_TO>())
 		{
-			labelA = dest->GetLabelForSourceInstruction(target.second);
-			if (!labelA)
-				return dest->Jump(subExprHandler(GetDestExpr<MLIL_JUMP_TO>()), loc);
-			labelList[target.first] = labelA;
+			BNMediumLevelILLabel* label = dest->GetLabelForSourceInstruction(target.second);
+			if (!label)
+				return dest->Jump(subExprHandler(instr.GetDestExpr<MLIL_JUMP_TO>()), loc);
+			labels[target.first] = label;
 		}
-		return dest->JumpTo(subExprHandler(GetDestExpr<MLIL_JUMP_TO>()), labelList, loc);
+		return dest->JumpTo(subExprHandler(instr.GetDestExpr<MLIL_JUMP_TO>()), labels, loc);
 	}
 	case MLIL_GOTO:
-		labelA = dest->GetLabelForSourceInstruction(GetTarget<MLIL_GOTO>());
-		if (!labelA)
+	{
+		BNMediumLevelILLabel* label = dest->GetLabelForSourceInstruction(instr.GetTarget<MLIL_GOTO>());
+		if (!label)
 		{
-			return dest->Jump(dest->ConstPointer(function->GetArchitecture()->GetAddressSize(),
-			                      function->GetInstruction(GetTarget<MLIL_GOTO>()).address),
-			    loc);
+			return dest->Jump(dest->ConstPointer(instr.function->GetArchitecture()->GetAddressSize(),
+				instr.function->GetInstruction(instr.GetTarget<MLIL_GOTO>()).address), loc);
 		}
-		return dest->Goto(*labelA, loc);
+		return dest->Goto(*label, loc);
+	}
 	case MLIL_IF:
-		labelA = dest->GetLabelForSourceInstruction(GetTrueTarget<MLIL_IF>());
-		labelB = dest->GetLabelForSourceInstruction(GetFalseTarget<MLIL_IF>());
-		if ((!labelA) || (!labelB))
+	{
+		BNMediumLevelILLabel* trueLabel = dest->GetLabelForSourceInstruction(instr.GetTrueTarget<MLIL_IF>());
+		BNMediumLevelILLabel* falseLabel = dest->GetLabelForSourceInstruction(instr.GetFalseTarget<MLIL_IF>());
+		if (!trueLabel || !falseLabel)
 			return dest->Undefined(loc);
-		return dest->If(subExprHandler(GetConditionExpr<MLIL_IF>()), *labelA, *labelB, loc);
-	case MLIL_CONST:
-		return dest->Const(size, GetConstant<MLIL_CONST>(), loc);
-	case MLIL_CONST_PTR:
-		return dest->ConstPointer(size, GetConstant<MLIL_CONST_PTR>(), loc);
-	case MLIL_EXTERN_PTR:
-		return dest->ExternPointer(size, GetConstant<MLIL_EXTERN_PTR>(), GetOffset<MLIL_EXTERN_PTR>(), loc);
-	case MLIL_FLOAT_CONST:
-		return dest->FloatConstRaw(size, GetConstant<MLIL_FLOAT_CONST>(), loc);
-	case MLIL_IMPORT:
-		return dest->ImportedAddress(size, GetConstant<MLIL_IMPORT>(), loc);
-	case MLIL_CONST_DATA:
-		return dest->ConstData(size, GetConstantData<MLIL_CONST_DATA>(), loc);
-	case MLIL_BP:
-		return dest->Breakpoint(loc);
-	case MLIL_TRAP:
-		return dest->Trap(GetVector<MLIL_TRAP>(), loc);
-	case MLIL_INTRINSIC:
-		for (auto i : GetParameterExprs<MLIL_INTRINSIC>())
-			params.push_back(subExprHandler(i));
-		return dest->Intrinsic(GetOutputVariables<MLIL_INTRINSIC>(), GetIntrinsic<MLIL_INTRINSIC>(), params, loc);
-	case MLIL_INTRINSIC_SSA:
-		for (auto i : GetParameterExprs<MLIL_INTRINSIC_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->IntrinsicSSA(
-		    GetOutputSSAVariables<MLIL_INTRINSIC_SSA>(), GetIntrinsic<MLIL_INTRINSIC_SSA>(), params, loc);
-	case MLIL_MEMORY_INTRINSIC_SSA:
-		for (auto i : GetParameterExprs<MLIL_MEMORY_INTRINSIC_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->MemoryIntrinsicSSA(GetOutputSSAVariables<MLIL_MEMORY_INTRINSIC_SSA>(),
-		    GetIntrinsic<MLIL_MEMORY_INTRINSIC_SSA>(), params, GetDestMemoryVersion<MLIL_MEMORY_INTRINSIC_SSA>(),
-		    GetSourceMemoryVersion<MLIL_MEMORY_INTRINSIC_SSA>(), loc);
-	case MLIL_FREE_VAR_SLOT:
-		return dest->FreeVarSlot(GetDestVariable<MLIL_FREE_VAR_SLOT>(), loc);
-	case MLIL_FREE_VAR_SLOT_SSA:
-		return dest->FreeVarSlotSSA(GetDestSSAVariable<MLIL_FREE_VAR_SLOT_SSA>().var,
-		    GetDestSSAVariable<MLIL_FREE_VAR_SLOT_SSA>().version,
-		    GetSourceSSAVariable<MLIL_FREE_VAR_SLOT_SSA>().version, loc);
-	case MLIL_VAR_PHI:
-	{
-		SSAVariable phiDest = GetDestSSAVariable<MLIL_VAR_PHI>();
-		vector<SSAVariable> sources = GetSourceSSAVariables<MLIL_VAR_PHI>();
-		return dest->AddExprWithLocation(MLIL_VAR_PHI, loc, size, phiDest.var.ToIdentifier(), phiDest.version,
-		    sources.size() * 2, dest->AddSSAVariableList(sources));
+		return dest->If(subExprHandler(instr.GetConditionExpr<MLIL_IF>()), *trueLabel, *falseLabel, loc);
 	}
-	case MLIL_MEM_PHI:
-	{
-		vector<size_t> sources = GetSourceMemoryVersions<MLIL_MEM_PHI>();
-		return dest->AddExprWithLocation(MLIL_MEM_PHI, loc, size, GetDestMemoryVersion<MLIL_MEM_PHI>(), sources.size(),
-		    dest->AddIndexList(sources));
-	}
-	case MLIL_UNDEF:
-		return dest->Undefined(loc);
-	case MLIL_UNIMPL:
-		return As<MLIL_UNIMPL>().IsUnknown() ? dest->Unknown(loc) : dest->Unimplemented(loc);
-	case MLIL_BLOCK_TO_EXPAND:
-		for (auto i : GetSourceExprs<MLIL_BLOCK_TO_EXPAND>())
-			params.push_back(subExprHandler(i));
-		return dest->BlockToExpand(params, loc);
 	default:
 		throw MediumLevelILInstructionAccessException();
 	}
 }
 
+// BEGIN GENERATED mlil-copy: from api/il, do not edit
+static ExprId CopyOperandList(MediumLevelILFunction* dest, const MediumLevelILInstruction& instr, size_t operand)
+{
+	vector<uint64_t> items = instr.function->GetOperandList(instr.exprIndex, operand);
+	return dest->AddIndexList(vector<size_t>(items.begin(), items.end()));
+}
+
+
+ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
+    bn::base::function_ref<ExprId(const MediumLevelILInstruction& subExpr)> subExprHandler,
+    const ILSourceLocation& sourceLocation) const
+{
+	const auto& loc = sourceLocation.valid ? sourceLocation : ILSourceLocation{*this};
+	switch (operation)
+	{
+	case MLIL_JUMP_TO:
+	case MLIL_IF:
+	case MLIL_GOTO:
+		return CopyBranchTo(*this, dest, subExprHandler, loc);
+	case MLIL_NOP:
+		return dest->AddExprWithLocation(MLIL_NOP, loc, size);
+	case MLIL_SET_VAR:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_SET_VAR, loc, size, GetRawOperandAsInteger(0), srcCopy);
+	}
+	case MLIL_SET_VAR_FIELD:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(
+		    MLIL_SET_VAR_FIELD, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1), srcCopy);
+	}
+	case MLIL_SET_VAR_SPLIT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(
+		    MLIL_SET_VAR_SPLIT, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1), srcCopy);
+	}
+	case MLIL_ASSERT:
+		return dest->AddExprWithLocation(MLIL_ASSERT, loc, size, GetRawOperandAsInteger(0),
+		    dest->CachePossibleValueSet(GetRawOperandAsPossibleValueSet(1)));
+	case MLIL_FORCE_VER:
+		return dest->AddExprWithLocation(
+		    MLIL_FORCE_VER, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1), GetRawOperandAsInteger(2));
+	case MLIL_LOAD:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_LOAD, loc, size, srcCopy);
+	}
+	case MLIL_LOAD_STRUCT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_LOAD_STRUCT, loc, size, srcCopy, GetRawOperandAsInteger(1));
+	}
+	case MLIL_STORE:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_STORE, loc, size, destCopy, srcCopy);
+	}
+	case MLIL_STORE_STRUCT:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(MLIL_STORE_STRUCT, loc, size, destCopy, GetRawOperandAsInteger(1), srcCopy);
+	}
+	case MLIL_VAR:
+		return dest->AddExprWithLocation(MLIL_VAR, loc, size, GetRawOperandAsInteger(0));
+	case MLIL_VAR_FIELD:
+		return dest->AddExprWithLocation(
+		    MLIL_VAR_FIELD, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case MLIL_VAR_SPLIT:
+		return dest->AddExprWithLocation(
+		    MLIL_VAR_SPLIT, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case MLIL_ADDRESS_OF:
+		return dest->AddExprWithLocation(MLIL_ADDRESS_OF, loc, size, GetRawOperandAsInteger(0));
+	case MLIL_ADDRESS_OF_FIELD:
+		return dest->AddExprWithLocation(
+		    MLIL_ADDRESS_OF_FIELD, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case MLIL_PASS_BY_REF:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_PASS_BY_REF, loc, size, srcCopy);
+	}
+	case MLIL_RETURN_BY_REF:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_RETURN_BY_REF, loc, size, srcCopy);
+	}
+	case MLIL_CONST:
+		return dest->AddExprWithLocation(MLIL_CONST, loc, size, GetRawOperandAsInteger(0));
+	case MLIL_CONST_DATA:
+		return dest->AddExprWithLocation(
+		    MLIL_CONST_DATA, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case MLIL_CONST_PTR:
+		return dest->AddExprWithLocation(MLIL_CONST_PTR, loc, size, GetRawOperandAsInteger(0));
+	case MLIL_EXTERN_PTR:
+		return dest->AddExprWithLocation(
+		    MLIL_EXTERN_PTR, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case MLIL_FLOAT_CONST:
+		return dest->AddExprWithLocation(MLIL_FLOAT_CONST, loc, size, GetRawOperandAsInteger(0));
+	case MLIL_IMPORT:
+		return dest->AddExprWithLocation(MLIL_IMPORT, loc, size, GetRawOperandAsInteger(0));
+	case MLIL_ADD:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_ADD, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_ADC:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		ExprId carryCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(MLIL_ADC, loc, size, leftCopy, rightCopy, carryCopy);
+	}
+	case MLIL_SUB:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_SUB, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_SBB:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		ExprId carryCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(MLIL_SBB, loc, size, leftCopy, rightCopy, carryCopy);
+	}
+	case MLIL_AND:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_AND, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_OR:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_OR, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_XOR:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_XOR, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_LSL:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_LSL, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_LSR:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_LSR, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_ASR:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_ASR, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_ROL:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_ROL, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_RLC:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		ExprId carryCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(MLIL_RLC, loc, size, leftCopy, rightCopy, carryCopy);
+	}
+	case MLIL_ROR:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_ROR, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_RRC:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		ExprId carryCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(MLIL_RRC, loc, size, leftCopy, rightCopy, carryCopy);
+	}
+	case MLIL_MUL:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_MUL, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_MULU_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_MULU_DP, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_MULS_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_MULS_DP, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_DIVU:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_DIVU, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_DIVU_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_DIVU_DP, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_DIVS:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_DIVS, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_DIVS_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_DIVS_DP, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_MODU:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_MODU, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_MODU_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_MODU_DP, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_MODS:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_MODS, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_MODS_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_MODS_DP, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_NEG:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_NEG, loc, size, srcCopy);
+	}
+	case MLIL_NOT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_NOT, loc, size, srcCopy);
+	}
+	case MLIL_SX:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_SX, loc, size, srcCopy);
+	}
+	case MLIL_ZX:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_ZX, loc, size, srcCopy);
+	}
+	case MLIL_LOW_PART:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_LOW_PART, loc, size, srcCopy);
+	}
+	case MLIL_JUMP:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_JUMP, loc, size, destCopy);
+	}
+	case MLIL_RET_HINT:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_RET_HINT, loc, size, destCopy);
+	}
+	case MLIL_CALL:
+	{
+		vector<ExprId> outputExprsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			outputExprsCopy.push_back(subExprHandler(expr));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(2));
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(3))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(MLIL_CALL, loc, size, outputExprsCopy.size(),
+		    dest->AddOperandList(outputExprsCopy), destCopy, paramsCopy.size(), dest->AddOperandList(paramsCopy));
+	}
+	case MLIL_CALL_UNTYPED:
+	{
+		vector<ExprId> outputExprsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			outputExprsCopy.push_back(subExprHandler(expr));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(2));
+		MediumLevelILInstruction param = GetRawOperandAsExpr(3);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(0))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(
+		    MLIL_CALL_PARAM, loc, param.size, paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		ExprId stackCopy = subExprHandler(GetRawOperandAsExpr(4));
+		return dest->AddExprWithLocation(MLIL_CALL_UNTYPED, loc, size, outputExprsCopy.size(),
+		    dest->AddOperandList(outputExprsCopy), destCopy, paramCopy, stackCopy);
+	}
+	case MLIL_SEPARATE_PARAM_LIST:
+	{
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(
+		    MLIL_SEPARATE_PARAM_LIST, loc, size, paramsCopy.size(), dest->AddOperandList(paramsCopy));
+	}
+	case MLIL_SHARED_PARAM_SLOT:
+	{
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(
+		    MLIL_SHARED_PARAM_SLOT, loc, size, paramsCopy.size(), dest->AddOperandList(paramsCopy));
+	}
+	case MLIL_VAR_OUTPUT:
+		return dest->AddExprWithLocation(MLIL_VAR_OUTPUT, loc, size, GetRawOperandAsInteger(0));
+	case MLIL_VAR_OUTPUT_FIELD:
+		return dest->AddExprWithLocation(
+		    MLIL_VAR_OUTPUT_FIELD, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case MLIL_STORE_OUTPUT:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_STORE_OUTPUT, loc, size, destCopy);
+	}
+	case MLIL_RET:
+	{
+		vector<ExprId> srcCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			srcCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(MLIL_RET, loc, size, srcCopy.size(), dest->AddOperandList(srcCopy));
+	}
+	case MLIL_NORET:
+		return dest->AddExprWithLocation(MLIL_NORET, loc, size);
+	case MLIL_CMP_E:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_CMP_E, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_CMP_NE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_CMP_NE, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_CMP_SLT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_CMP_SLT, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_CMP_ULT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_CMP_ULT, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_CMP_SLE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_CMP_SLE, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_CMP_ULE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_CMP_ULE, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_CMP_SGE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_CMP_SGE, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_CMP_UGE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_CMP_UGE, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_CMP_SGT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_CMP_SGT, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_CMP_UGT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_CMP_UGT, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_TEST_BIT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_TEST_BIT, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_BOOL_TO_INT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_BOOL_TO_INT, loc, size, srcCopy);
+	}
+	case MLIL_ADD_OVERFLOW:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_ADD_OVERFLOW, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_SYSCALL:
+	{
+		vector<ExprId> outputExprsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			outputExprsCopy.push_back(subExprHandler(expr));
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(2))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(MLIL_SYSCALL, loc, size, outputExprsCopy.size(),
+		    dest->AddOperandList(outputExprsCopy), paramsCopy.size(), dest->AddOperandList(paramsCopy));
+	}
+	case MLIL_SYSCALL_UNTYPED:
+	{
+		vector<ExprId> outputExprsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			outputExprsCopy.push_back(subExprHandler(expr));
+		MediumLevelILInstruction param = GetRawOperandAsExpr(2);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(0))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(
+		    MLIL_CALL_PARAM, loc, param.size, paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		ExprId stackCopy = subExprHandler(GetRawOperandAsExpr(3));
+		return dest->AddExprWithLocation(MLIL_SYSCALL_UNTYPED, loc, size, outputExprsCopy.size(),
+		    dest->AddOperandList(outputExprsCopy), paramCopy, stackCopy);
+	}
+	case MLIL_TAILCALL:
+	{
+		vector<ExprId> outputExprsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			outputExprsCopy.push_back(subExprHandler(expr));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(2));
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(3))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(MLIL_TAILCALL, loc, size, outputExprsCopy.size(),
+		    dest->AddOperandList(outputExprsCopy), destCopy, paramsCopy.size(), dest->AddOperandList(paramsCopy));
+	}
+	case MLIL_TAILCALL_UNTYPED:
+	{
+		vector<ExprId> outputExprsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			outputExprsCopy.push_back(subExprHandler(expr));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(2));
+		MediumLevelILInstruction param = GetRawOperandAsExpr(3);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(0))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(
+		    MLIL_CALL_PARAM, loc, param.size, paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		ExprId stackCopy = subExprHandler(GetRawOperandAsExpr(4));
+		return dest->AddExprWithLocation(MLIL_TAILCALL_UNTYPED, loc, size, outputExprsCopy.size(),
+		    dest->AddOperandList(outputExprsCopy), destCopy, paramCopy, stackCopy);
+	}
+	case MLIL_INTRINSIC:
+	{
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(3))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(MLIL_INTRINSIC, loc, size, GetRawOperandAsInteger(0),
+		    CopyOperandList(dest, *this, 0), GetRawOperandAsInteger(2), paramsCopy.size(),
+		    dest->AddOperandList(paramsCopy));
+	}
+	case MLIL_FREE_VAR_SLOT:
+		return dest->AddExprWithLocation(MLIL_FREE_VAR_SLOT, loc, size, GetRawOperandAsInteger(0));
+	case MLIL_BP:
+		return dest->AddExprWithLocation(MLIL_BP, loc, size);
+	case MLIL_TRAP:
+		return dest->AddExprWithLocation(MLIL_TRAP, loc, size, GetRawOperandAsInteger(0));
+	case MLIL_UNDEF:
+		return dest->AddExprWithLocation(MLIL_UNDEF, loc, size);
+	case MLIL_UNIMPL:
+		return dest->AddExprWithLocation(MLIL_UNIMPL, loc, size, GetRawOperandAsInteger(0));
+	case MLIL_UNIMPL_MEM:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_UNIMPL_MEM, loc, size, srcCopy, GetRawOperandAsInteger(1));
+	}
+	case MLIL_FADD:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FADD, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_FSUB:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FSUB, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_FMUL:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FMUL, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_FDIV:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FDIV, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_FSQRT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_FSQRT, loc, size, srcCopy);
+	}
+	case MLIL_FNEG:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_FNEG, loc, size, srcCopy);
+	}
+	case MLIL_FABS:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_FABS, loc, size, srcCopy);
+	}
+	case MLIL_FLOAT_TO_INT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_FLOAT_TO_INT, loc, size, srcCopy);
+	}
+	case MLIL_INT_TO_FLOAT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_INT_TO_FLOAT, loc, size, srcCopy);
+	}
+	case MLIL_FLOAT_CONV:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_FLOAT_CONV, loc, size, srcCopy);
+	}
+	case MLIL_ROUND_TO_INT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_ROUND_TO_INT, loc, size, srcCopy);
+	}
+	case MLIL_FLOOR:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_FLOOR, loc, size, srcCopy);
+	}
+	case MLIL_CEIL:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_CEIL, loc, size, srcCopy);
+	}
+	case MLIL_FTRUNC:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_FTRUNC, loc, size, srcCopy);
+	}
+	case MLIL_FCMP_E:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FCMP_E, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_FCMP_NE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FCMP_NE, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_FCMP_LT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FCMP_LT, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_FCMP_LE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FCMP_LE, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_FCMP_GE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FCMP_GE, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_FCMP_GT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FCMP_GT, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_FCMP_O:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FCMP_O, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_FCMP_UO:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_FCMP_UO, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_SET_VAR_SSA:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(
+		    MLIL_SET_VAR_SSA, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1), srcCopy);
+	}
+	case MLIL_SET_VAR_SSA_FIELD:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(4));
+		return dest->AddExprWithLocation(MLIL_SET_VAR_SSA_FIELD, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), GetRawOperandAsInteger(3), srcCopy);
+	}
+	case MLIL_SET_VAR_SPLIT_SSA:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(4));
+		return dest->AddExprWithLocation(MLIL_SET_VAR_SPLIT_SSA, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), GetRawOperandAsInteger(3), srcCopy);
+	}
+	case MLIL_SET_VAR_ALIASED:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(3));
+		return dest->AddExprWithLocation(MLIL_SET_VAR_ALIASED, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), srcCopy);
+	}
+	case MLIL_SET_VAR_ALIASED_FIELD:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(4));
+		return dest->AddExprWithLocation(MLIL_SET_VAR_ALIASED_FIELD, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), GetRawOperandAsInteger(3), srcCopy);
+	}
+	case MLIL_VAR_SSA:
+		return dest->AddExprWithLocation(MLIL_VAR_SSA, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case MLIL_VAR_SSA_FIELD:
+		return dest->AddExprWithLocation(MLIL_VAR_SSA_FIELD, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2));
+	case MLIL_VAR_ALIASED:
+		return dest->AddExprWithLocation(
+		    MLIL_VAR_ALIASED, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case MLIL_VAR_ALIASED_FIELD:
+		return dest->AddExprWithLocation(MLIL_VAR_ALIASED_FIELD, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2));
+	case MLIL_VAR_SPLIT_SSA:
+		return dest->AddExprWithLocation(MLIL_VAR_SPLIT_SSA, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), GetRawOperandAsInteger(3));
+	case MLIL_ASSERT_SSA:
+		return dest->AddExprWithLocation(MLIL_ASSERT_SSA, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), dest->CachePossibleValueSet(GetRawOperandAsPossibleValueSet(2)));
+	case MLIL_FORCE_VER_SSA:
+		return dest->AddExprWithLocation(MLIL_FORCE_VER_SSA, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), GetRawOperandAsInteger(3), GetRawOperandAsInteger(4));
+	case MLIL_CALL_SSA:
+	{
+		MediumLevelILInstruction outputExpr = GetRawOperandAsExpr(0);
+		vector<ExprId> outputExprOutputExprsCopy;
+		for (const auto& expr : outputExpr.GetRawOperandAsExprList(1))
+			outputExprOutputExprsCopy.push_back(subExprHandler(expr));
+		ExprId outputExprCopy =
+		    dest->AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, outputExpr.size, outputExpr.GetRawOperandAsInteger(0),
+		        outputExprOutputExprsCopy.size(), dest->AddOperandList(outputExprOutputExprsCopy));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(1));
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(2))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(MLIL_CALL_SSA, loc, size, outputExprCopy, destCopy, paramsCopy.size(),
+		    dest->AddOperandList(paramsCopy), GetRawOperandAsInteger(4));
+	}
+	case MLIL_CALL_UNTYPED_SSA:
+	{
+		MediumLevelILInstruction outputExpr = GetRawOperandAsExpr(0);
+		vector<ExprId> outputExprOutputExprsCopy;
+		for (const auto& expr : outputExpr.GetRawOperandAsExprList(1))
+			outputExprOutputExprsCopy.push_back(subExprHandler(expr));
+		ExprId outputExprCopy =
+		    dest->AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, outputExpr.size, outputExpr.GetRawOperandAsInteger(0),
+		        outputExprOutputExprsCopy.size(), dest->AddOperandList(outputExprOutputExprsCopy));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(1));
+		MediumLevelILInstruction param = GetRawOperandAsExpr(2);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(1))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, param.size,
+		    param.GetRawOperandAsInteger(0), paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		ExprId stackCopy = subExprHandler(GetRawOperandAsExpr(3));
+		return dest->AddExprWithLocation(
+		    MLIL_CALL_UNTYPED_SSA, loc, size, outputExprCopy, destCopy, paramCopy, stackCopy);
+	}
+	case MLIL_SYSCALL_SSA:
+	{
+		MediumLevelILInstruction outputExpr = GetRawOperandAsExpr(0);
+		vector<ExprId> outputExprOutputExprsCopy;
+		for (const auto& expr : outputExpr.GetRawOperandAsExprList(1))
+			outputExprOutputExprsCopy.push_back(subExprHandler(expr));
+		ExprId outputExprCopy =
+		    dest->AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, outputExpr.size, outputExpr.GetRawOperandAsInteger(0),
+		        outputExprOutputExprsCopy.size(), dest->AddOperandList(outputExprOutputExprsCopy));
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(1))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(MLIL_SYSCALL_SSA, loc, size, outputExprCopy, paramsCopy.size(),
+		    dest->AddOperandList(paramsCopy), GetRawOperandAsInteger(3));
+	}
+	case MLIL_SYSCALL_UNTYPED_SSA:
+	{
+		MediumLevelILInstruction outputExpr = GetRawOperandAsExpr(0);
+		vector<ExprId> outputExprOutputExprsCopy;
+		for (const auto& expr : outputExpr.GetRawOperandAsExprList(1))
+			outputExprOutputExprsCopy.push_back(subExprHandler(expr));
+		ExprId outputExprCopy =
+		    dest->AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, outputExpr.size, outputExpr.GetRawOperandAsInteger(0),
+		        outputExprOutputExprsCopy.size(), dest->AddOperandList(outputExprOutputExprsCopy));
+		MediumLevelILInstruction param = GetRawOperandAsExpr(1);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(1))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, param.size,
+		    param.GetRawOperandAsInteger(0), paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		ExprId stackCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(MLIL_SYSCALL_UNTYPED_SSA, loc, size, outputExprCopy, paramCopy, stackCopy);
+	}
+	case MLIL_TAILCALL_SSA:
+	{
+		MediumLevelILInstruction outputExpr = GetRawOperandAsExpr(0);
+		vector<ExprId> outputExprOutputExprsCopy;
+		for (const auto& expr : outputExpr.GetRawOperandAsExprList(1))
+			outputExprOutputExprsCopy.push_back(subExprHandler(expr));
+		ExprId outputExprCopy =
+		    dest->AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, outputExpr.size, outputExpr.GetRawOperandAsInteger(0),
+		        outputExprOutputExprsCopy.size(), dest->AddOperandList(outputExprOutputExprsCopy));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(1));
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(2))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(MLIL_TAILCALL_SSA, loc, size, outputExprCopy, destCopy, paramsCopy.size(),
+		    dest->AddOperandList(paramsCopy), GetRawOperandAsInteger(4));
+	}
+	case MLIL_TAILCALL_UNTYPED_SSA:
+	{
+		MediumLevelILInstruction outputExpr = GetRawOperandAsExpr(0);
+		vector<ExprId> outputExprOutputExprsCopy;
+		for (const auto& expr : outputExpr.GetRawOperandAsExprList(1))
+			outputExprOutputExprsCopy.push_back(subExprHandler(expr));
+		ExprId outputExprCopy =
+		    dest->AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, outputExpr.size, outputExpr.GetRawOperandAsInteger(0),
+		        outputExprOutputExprsCopy.size(), dest->AddOperandList(outputExprOutputExprsCopy));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(1));
+		MediumLevelILInstruction param = GetRawOperandAsExpr(2);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(1))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, param.size,
+		    param.GetRawOperandAsInteger(0), paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		ExprId stackCopy = subExprHandler(GetRawOperandAsExpr(3));
+		return dest->AddExprWithLocation(
+		    MLIL_TAILCALL_UNTYPED_SSA, loc, size, outputExprCopy, destCopy, paramCopy, stackCopy);
+	}
+	case MLIL_VAR_OUTPUT_SSA:
+		return dest->AddExprWithLocation(
+		    MLIL_VAR_OUTPUT_SSA, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case MLIL_VAR_OUTPUT_SSA_FIELD:
+		return dest->AddExprWithLocation(MLIL_VAR_OUTPUT_SSA_FIELD, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), GetRawOperandAsInteger(3));
+	case MLIL_VAR_OUTPUT_ALIASED:
+		return dest->AddExprWithLocation(MLIL_VAR_OUTPUT_ALIASED, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2));
+	case MLIL_VAR_OUTPUT_ALIASED_FIELD:
+		return dest->AddExprWithLocation(MLIL_VAR_OUTPUT_ALIASED_FIELD, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), GetRawOperandAsInteger(3));
+	case MLIL_LOAD_SSA:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_LOAD_SSA, loc, size, srcCopy, GetRawOperandAsInteger(1));
+	}
+	case MLIL_LOAD_STRUCT_SSA:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(
+		    MLIL_LOAD_STRUCT_SSA, loc, size, srcCopy, GetRawOperandAsInteger(1), GetRawOperandAsInteger(2));
+	}
+	case MLIL_STORE_SSA:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(3));
+		return dest->AddExprWithLocation(
+		    MLIL_STORE_SSA, loc, size, destCopy, GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), srcCopy);
+	}
+	case MLIL_STORE_STRUCT_SSA:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(4));
+		return dest->AddExprWithLocation(MLIL_STORE_STRUCT_SSA, loc, size, destCopy, GetRawOperandAsInteger(1),
+		    GetRawOperandAsInteger(2), GetRawOperandAsInteger(3), srcCopy);
+	}
+	case MLIL_INTRINSIC_SSA:
+	{
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(3))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(MLIL_INTRINSIC_SSA, loc, size, GetRawOperandAsInteger(0),
+		    CopyOperandList(dest, *this, 0), GetRawOperandAsInteger(2), paramsCopy.size(),
+		    dest->AddOperandList(paramsCopy));
+	}
+	case MLIL_MEMORY_INTRINSIC_SSA:
+	{
+		MediumLevelILInstruction outputExpr = GetRawOperandAsExpr(0);
+		ExprId outputExprCopy = dest->AddExprWithLocation(MLIL_MEMORY_INTRINSIC_OUTPUT_SSA, loc, outputExpr.size,
+		    outputExpr.GetRawOperandAsInteger(0), outputExpr.GetRawOperandAsInteger(1),
+		    CopyOperandList(dest, outputExpr, 1));
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(2))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(MLIL_MEMORY_INTRINSIC_SSA, loc, size, outputExprCopy,
+		    GetRawOperandAsInteger(1), paramsCopy.size(), dest->AddOperandList(paramsCopy), GetRawOperandAsInteger(4));
+	}
+	case MLIL_FREE_VAR_SLOT_SSA:
+		return dest->AddExprWithLocation(MLIL_FREE_VAR_SLOT_SSA, loc, size, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2));
+	case MLIL_VAR_PHI:
+		return dest->AddExprWithLocation(MLIL_VAR_PHI, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1),
+		    GetRawOperandAsInteger(2), CopyOperandList(dest, *this, 2));
+	case MLIL_MEM_PHI:
+		return dest->AddExprWithLocation(MLIL_MEM_PHI, loc, size, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1),
+		    CopyOperandList(dest, *this, 1));
+	case MLIL_BLOCK_TO_EXPAND:
+	{
+		vector<ExprId> srcCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			srcCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(
+		    MLIL_BLOCK_TO_EXPAND, loc, size, srcCopy.size(), dest->AddOperandList(srcCopy));
+	}
+	case MLIL_BSWAP:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_BSWAP, loc, size, srcCopy);
+	}
+	case MLIL_POPCNT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_POPCNT, loc, size, srcCopy);
+	}
+	case MLIL_CLZ:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_CLZ, loc, size, srcCopy);
+	}
+	case MLIL_CTZ:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_CTZ, loc, size, srcCopy);
+	}
+	case MLIL_RBIT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_RBIT, loc, size, srcCopy);
+	}
+	case MLIL_CLS:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_CLS, loc, size, srcCopy);
+	}
+	case MLIL_MINS:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_MINS, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_MAXS:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_MAXS, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_MINU:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_MINU, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_MAXU:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(MLIL_MAXU, loc, size, leftCopy, rightCopy);
+	}
+	case MLIL_ABS:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(MLIL_ABS, loc, size, srcCopy);
+	}
+	default:
+		throw MediumLevelILInstructionAccessException();
+	}
+}
+// END GENERATED mlil-copy
+
 
 bool MediumLevelILInstruction::GetOperandIndexForUsage(MediumLevelILOperandUsage usage, size_t& operandIndex) const
 {
-	if (operation >= s_instructionOperandUsage.size())
+	std::optional<MediumLevelILOperandLocation> location = OperandLocationForUsage(operation, usage);
+	if (!location)
 		return false;
-	
-	const auto& info = s_instructionOperandUsage[operation];
-	for (uint8_t i = 0; i < info.count; i++)
-	{
-		if (info.usages[i] == usage)
-		{
-			operandIndex = info.indices[i];
-			return true;
-		}
-	}
-	return false;
+
+	operandIndex = location->partial && !location->field ? location->slot + 2 : location->slot;
+	return true;
 }
 
 
-MediumLevelILInstruction MediumLevelILInstruction::GetSourceExpr() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceExprMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-Variable MediumLevelILInstruction::GetSourceVariable() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceVariableMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-SSAVariable MediumLevelILInstruction::GetSourceSSAVariable() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceSSAVariableMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSAVariable(operandIndex);
-	if (GetOperandIndexForUsage(PartialSSAVariableSourceMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsPartialSSAVariableSource(operandIndex - 2);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-MediumLevelILInstruction MediumLevelILInstruction::GetDestExpr() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestExprMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-Variable MediumLevelILInstruction::GetDestVariable() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestVariableMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-SSAVariable MediumLevelILInstruction::GetDestSSAVariable() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestSSAVariableMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSAVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-MediumLevelILInstruction MediumLevelILInstruction::GetLeftExpr() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(LeftExprMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-MediumLevelILInstruction MediumLevelILInstruction::GetRightExpr() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(RightExprMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
+// BEGIN GENERATED mlil-instruction-getters: from api/il, do not edit
 MediumLevelILInstruction MediumLevelILInstruction::GetCarryExpr() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(CarryExprMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-MediumLevelILInstruction MediumLevelILInstruction::GetStackExpr() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(StackExprMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	return OperandForUsages(*this, {CarryExprMediumLevelOperandUsage}).GetExpr();
 }
 
 
 MediumLevelILInstruction MediumLevelILInstruction::GetConditionExpr() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(ConditionExprMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-Variable MediumLevelILInstruction::GetHighVariable() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(HighVariableMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-Variable MediumLevelILInstruction::GetLowVariable() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(LowVariableMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-SSAVariable MediumLevelILInstruction::GetHighSSAVariable() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(HighSSAVariableMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSAVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-SSAVariable MediumLevelILInstruction::GetLowSSAVariable() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(LowSSAVariableMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSAVariable(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-uint64_t MediumLevelILInstruction::GetOffset() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(OffsetMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsInteger(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	return OperandForUsages(*this, {ConditionExprMediumLevelOperandUsage}).GetExpr();
 }
 
 
 int64_t MediumLevelILInstruction::GetConstant() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(ConstantMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsInteger(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	return OperandForUsages(*this, {ConstantMediumLevelOperandUsage}).GetInteger();
 }
 
 
 ConstantData MediumLevelILInstruction::GetConstantData() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(ConstantDataMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsConstantData(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	return OperandForUsages(*this, {ConstantDataMediumLevelOperandUsage}).GetConstantData();
 }
 
 
-int64_t MediumLevelILInstruction::GetVector() const
+PossibleValueSet MediumLevelILInstruction::GetConstraint() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(VectorMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsInteger(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	return OperandForUsages(*this, {ConstraintMediumLevelOperandUsage}).GetConstraint();
 }
 
 
-uint32_t MediumLevelILInstruction::GetIntrinsic() const
+MediumLevelILInstruction MediumLevelILInstruction::GetDestExpr() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(IntrinsicMediumLevelOperandUsage, operandIndex))
-		return (uint32_t)GetRawOperandAsInteger(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-size_t MediumLevelILInstruction::GetTarget() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(TargetMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-size_t MediumLevelILInstruction::GetTrueTarget() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(TrueTargetMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-size_t MediumLevelILInstruction::GetFalseTarget() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(FalseTargetMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	return OperandForUsages(*this, {DestExprMediumLevelOperandUsage}).GetExpr();
 }
 
 
 size_t MediumLevelILInstruction::GetDestMemoryVersion() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestMemoryVersionMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
-	if (GetOperandIndexForUsage(OutputSSAMemoryVersionMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsIndex(0);
-	throw MediumLevelILInstructionAccessException();
+	return OperandForUsages(
+	    *this, {OutputSSAMemoryVersionMediumLevelOperandUsage, DestMemoryVersionMediumLevelOperandUsage})
+	    .GetIndex();
 }
 
 
-size_t MediumLevelILInstruction::GetSourceMemoryVersion() const
+SSAVariable MediumLevelILInstruction::GetDestSSAVariable() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceMemoryVersionMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
-	if (GetOperandIndexForUsage(ParameterSSAMemoryVersionMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsIndex(0);
-	throw MediumLevelILInstructionAccessException();
+	return OperandForUsages(*this, {DestSSAVariableMediumLevelOperandUsage}).GetSSAVariable();
 }
 
 
-MediumLevelILIndexMap MediumLevelILInstruction::GetTargets() const
+Variable MediumLevelILInstruction::GetDestVariable() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(TargetsMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndexMap(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	return OperandForUsages(*this, {DestVariableMediumLevelOperandUsage}).GetVariable();
 }
 
 
-MediumLevelILIndexList MediumLevelILInstruction::GetSourceMemoryVersions() const
+size_t MediumLevelILInstruction::GetFalseTarget() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceMemoryVersionsMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndexList(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-vector<Variable> MediumLevelILInstruction::GetOutputVariables() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(OutputVariablesMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsVariableList(operandIndex);
-	if (GetOperandIndexForUsage(OutputVariablesSubExprMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsVariableList(0);
-	if (GetOperandIndexForUsage(OutputExprsMediumLevelOperandUsage, operandIndex))
-		return reinterpret_cast<const MediumLevelILCallInstruction*>(this)->GetOutputVariables();
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-vector<SSAVariable> MediumLevelILInstruction::GetOutputSSAVariables() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(OutputSSAVariablesMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSAVariableList(operandIndex);
-	if (GetOperandIndexForUsage(OutputSSAVariablesSubExprMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSAVariableList(1);
-	if (GetOperandIndexForUsage(OutputExprsSubExprMediumLevelOperandUsage, operandIndex))
-		return reinterpret_cast<const MediumLevelILCallSSAInstruction*>(this)->GetOutputSSAVariables();
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-MediumLevelILInstructionList MediumLevelILInstruction::GetOutputExprs() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(OutputExprsMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExprList(operandIndex);
-	if (GetOperandIndexForUsage(OutputExprsSubExprMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsExprList(1);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-MediumLevelILInstructionList MediumLevelILInstruction::GetParameterExprs() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(ParameterExprsMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExprList(operandIndex);
-	if (GetOperandIndexForUsage(UntypedParameterExprsMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsExprList(0);
-	if (GetOperandIndexForUsage(UntypedParameterSSAExprsMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsExprList(1);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-MediumLevelILInstructionList MediumLevelILInstruction::GetSourceExprs() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceExprsMediumLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExprList(operandIndex);
-	throw MediumLevelILInstructionAccessException();
-}
-
-
-MediumLevelILSSAVariableList MediumLevelILInstruction::GetSourceSSAVariables() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceSSAVariablesMediumLevelOperandUsages, operandIndex))
-		return GetRawOperandAsSSAVariableList(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	return OperandForUsages(*this, {FalseTargetMediumLevelOperandUsage}).GetIndex();
 }
 
 
 BNForceVersionReason MediumLevelILInstruction::GetForceVersionReason() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(ForceVersionReasonMediumLevelOperandUsage, operandIndex))
-		return (BNForceVersionReason)GetRawOperandAsInteger(operandIndex);
-	throw MediumLevelILInstructionAccessException();
+	return OperandForUsages(*this, {ForceVersionReasonMediumLevelOperandUsage}).GetForceVersionReason();
 }
+
+
+SSAVariable MediumLevelILInstruction::GetHighSSAVariable() const
+{
+	return OperandForUsages(*this, {HighSSAVariableMediumLevelOperandUsage}).GetSSAVariable();
+}
+
+
+Variable MediumLevelILInstruction::GetHighVariable() const
+{
+	return OperandForUsages(*this, {HighVariableMediumLevelOperandUsage}).GetVariable();
+}
+
+
+uint32_t MediumLevelILInstruction::GetIntrinsic() const
+{
+	return OperandForUsages(*this, {IntrinsicMediumLevelOperandUsage}).GetIntrinsic();
+}
+
+
+MediumLevelILInstruction MediumLevelILInstruction::GetLeftExpr() const
+{
+	return OperandForUsages(*this, {LeftExprMediumLevelOperandUsage}).GetExpr();
+}
+
+
+SSAVariable MediumLevelILInstruction::GetLowSSAVariable() const
+{
+	return OperandForUsages(*this, {LowSSAVariableMediumLevelOperandUsage}).GetSSAVariable();
+}
+
+
+Variable MediumLevelILInstruction::GetLowVariable() const
+{
+	return OperandForUsages(*this, {LowVariableMediumLevelOperandUsage}).GetVariable();
+}
+
+
+uint64_t MediumLevelILInstruction::GetOffset() const
+{
+	return OperandForUsages(*this, {OffsetMediumLevelOperandUsage}).GetInteger();
+}
+
+
+MediumLevelILInstructionList MediumLevelILInstruction::GetOutputExprs() const
+{
+	return OperandForUsages(*this, {OutputExprsMediumLevelOperandUsage, OutputExprsSubExprMediumLevelOperandUsage})
+	    .GetExprList();
+}
+
+
+vector<SSAVariable> MediumLevelILInstruction::GetOutputSSAVariables() const
+{
+	switch (operation)
+	{
+	case MLIL_CALL_SSA:
+		return GetOutputSSAVariables<MLIL_CALL_SSA>();
+	case MLIL_CALL_UNTYPED_SSA:
+		return GetOutputSSAVariables<MLIL_CALL_UNTYPED_SSA>();
+	case MLIL_SYSCALL_SSA:
+		return GetOutputSSAVariables<MLIL_SYSCALL_SSA>();
+	case MLIL_SYSCALL_UNTYPED_SSA:
+		return GetOutputSSAVariables<MLIL_SYSCALL_UNTYPED_SSA>();
+	case MLIL_TAILCALL_SSA:
+		return GetOutputSSAVariables<MLIL_TAILCALL_SSA>();
+	case MLIL_TAILCALL_UNTYPED_SSA:
+		return GetOutputSSAVariables<MLIL_TAILCALL_UNTYPED_SSA>();
+	default:
+		return OperandForUsages(
+		    *this, {OutputSSAVariablesMediumLevelOperandUsage, OutputSSAVariablesSubExprMediumLevelOperandUsage})
+		    .GetSSAVariableList();
+	}
+}
+
+
+vector<Variable> MediumLevelILInstruction::GetOutputVariables() const
+{
+	switch (operation)
+	{
+	case MLIL_CALL:
+		return GetOutputVariables<MLIL_CALL>();
+	case MLIL_CALL_UNTYPED:
+		return GetOutputVariables<MLIL_CALL_UNTYPED>();
+	case MLIL_SYSCALL:
+		return GetOutputVariables<MLIL_SYSCALL>();
+	case MLIL_SYSCALL_UNTYPED:
+		return GetOutputVariables<MLIL_SYSCALL_UNTYPED>();
+	case MLIL_TAILCALL:
+		return GetOutputVariables<MLIL_TAILCALL>();
+	case MLIL_TAILCALL_UNTYPED:
+		return GetOutputVariables<MLIL_TAILCALL_UNTYPED>();
+	default:
+		return OperandForUsages(*this, {OutputVariablesMediumLevelOperandUsage}).GetVariableList();
+	}
+}
+
+
+MediumLevelILInstructionList MediumLevelILInstruction::GetParameterExprs() const
+{
+	return OperandForUsages(*this, {ParameterExprsMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage,
+	                                   UntypedParameterSSAExprsMediumLevelOperandUsage})
+	    .GetExprList();
+}
+
+
+MediumLevelILInstruction MediumLevelILInstruction::GetRightExpr() const
+{
+	return OperandForUsages(*this, {RightExprMediumLevelOperandUsage}).GetExpr();
+}
+
+
+MediumLevelILInstruction MediumLevelILInstruction::GetSourceExpr() const
+{
+	return OperandForUsages(*this, {SourceExprMediumLevelOperandUsage}).GetExpr();
+}
+
+
+MediumLevelILInstructionList MediumLevelILInstruction::GetSourceExprs() const
+{
+	return OperandForUsages(*this, {SourceExprsMediumLevelOperandUsage}).GetExprList();
+}
+
+
+size_t MediumLevelILInstruction::GetSourceMemoryVersion() const
+{
+	return OperandForUsages(
+	    *this, {SourceMemoryVersionMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage})
+	    .GetIndex();
+}
+
+
+MediumLevelILIndexList MediumLevelILInstruction::GetSourceMemoryVersions() const
+{
+	return OperandForUsages(*this, {SourceMemoryVersionsMediumLevelOperandUsage}).GetIndexList();
+}
+
+
+SSAVariable MediumLevelILInstruction::GetSourceSSAVariable() const
+{
+	return OperandForUsages(
+	    *this, {PartialSSAVariableSourceMediumLevelOperandUsage, SourceSSAVariableMediumLevelOperandUsage})
+	    .GetSSAVariable();
+}
+
+
+MediumLevelILSSAVariableList MediumLevelILInstruction::GetSourceSSAVariables() const
+{
+	return OperandForUsages(*this, {SourceSSAVariablesMediumLevelOperandUsage}).GetSSAVariableList();
+}
+
+
+Variable MediumLevelILInstruction::GetSourceVariable() const
+{
+	return OperandForUsages(*this, {SourceVariableMediumLevelOperandUsage}).GetVariable();
+}
+
+
+MediumLevelILInstruction MediumLevelILInstruction::GetStackExpr() const
+{
+	return OperandForUsages(*this, {StackExprMediumLevelOperandUsage}).GetExpr();
+}
+
+
+size_t MediumLevelILInstruction::GetTarget() const
+{
+	return OperandForUsages(*this, {TargetMediumLevelOperandUsage}).GetIndex();
+}
+
+
+MediumLevelILIndexMap MediumLevelILInstruction::GetTargets() const
+{
+	return OperandForUsages(*this, {TargetsMediumLevelOperandUsage}).GetIndexMap();
+}
+
+
+size_t MediumLevelILInstruction::GetTrueTarget() const
+{
+	return OperandForUsages(*this, {TrueTargetMediumLevelOperandUsage}).GetIndex();
+}
+
+
+int64_t MediumLevelILInstruction::GetVector() const
+{
+	return OperandForUsages(*this, {VectorMediumLevelOperandUsage}).GetInteger();
+}
+
+
+bool MediumLevelILInstruction::IsUnknown() const
+{
+	switch (operation)
+	{
+	case MLIL_UNIMPL:
+		return IsUnknown<MLIL_UNIMPL>();
+	case MLIL_UNIMPL_MEM:
+		return IsUnknown<MLIL_UNIMPL_MEM>();
+	default:
+		throw MediumLevelILInstructionAccessException();
+	}
+}
+// END GENERATED mlil-instruction-getters
 
 
 vector<Variable> MediumLevelILCallInstruction::GetOutputVariables() const
@@ -2448,6 +3164,7 @@ vector<SSAVariable> MediumLevelILCallSSAInstruction::GetOutputSSAVariables() con
 }
 
 
+// BEGIN GENERATED mlil-builders: from api/il, do not edit
 ExprId MediumLevelILFunction::Nop(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_NOP, loc, 0);
@@ -2474,68 +3191,17 @@ ExprId MediumLevelILFunction::SetVarSplit(
 }
 
 
-ExprId MediumLevelILFunction::SetVarSSA(size_t size, const SSAVariable& dest, ExprId src, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::Assert(
+    size_t size, const Variable& src, const PossibleValueSet& constraint, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_SET_VAR_SSA, loc, size, dest.var.ToIdentifier(), dest.version, src);
+	return AddExprWithLocation(MLIL_ASSERT, loc, size, src.ToIdentifier(), CachePossibleValueSet(constraint));
 }
 
 
-ExprId MediumLevelILFunction::SetVarSSAField(size_t size, const Variable& dest, size_t newVersion, size_t prevVersion,
-    uint64_t offset, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(
-	    MLIL_SET_VAR_SSA_FIELD, loc, size, dest.ToIdentifier(), newVersion, prevVersion, offset, src);
-}
-
-
-ExprId MediumLevelILFunction::SetVarSSASplit(
-    size_t size, const SSAVariable& high, const SSAVariable& low, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_SET_VAR_SPLIT_SSA, loc, size, high.var.ToIdentifier(), high.version,
-	    low.var.ToIdentifier(), low.version, src);
-}
-
-
-ExprId MediumLevelILFunction::SetVarAliased(size_t size, const Variable& dest, size_t newMemVersion,
-    size_t prevMemVersion, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(
-	    MLIL_SET_VAR_ALIASED, loc, size, dest.ToIdentifier(), newMemVersion, prevMemVersion, src);
-}
-
-
-ExprId MediumLevelILFunction::SetVarAliasedField(size_t size, const Variable& dest, size_t newMemVersion,
-    size_t prevMemVersion, uint64_t offset, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(
-	    MLIL_SET_VAR_ALIASED_FIELD, loc, size, dest.ToIdentifier(), newMemVersion, prevMemVersion, offset, src);
-}
-
-
-ExprId MediumLevelILFunction::ForceVer(size_t size, const Variable& dest, const Variable& src,
-	BNForceVersionReason reason, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::ForceVer(
+    size_t size, const Variable& dest, const Variable& src, BNForceVersionReason reason, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_FORCE_VER, loc, size, dest.ToIdentifier(), src.ToIdentifier(), reason);
-}
-
-
-ExprId MediumLevelILFunction::ForceVerSSA(size_t size, const SSAVariable& dest, const SSAVariable& src,
-	BNForceVersionReason reason, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FORCE_VER_SSA, loc, size, dest.var.ToIdentifier(), dest.version,
-		src.var.ToIdentifier(), src.version, reason);
-}
-
-
-ExprId MediumLevelILFunction::Assert(size_t size, const Variable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_ASSERT, loc, size, src.ToIdentifier(), CachePossibleValueSet(pvs));
-}
-
-
-ExprId MediumLevelILFunction::AssertSSA(size_t size, const SSAVariable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_ASSERT_SSA, loc, size, src.var.ToIdentifier(), src.version, CachePossibleValueSet(pvs));
 }
 
 
@@ -2551,19 +3217,6 @@ ExprId MediumLevelILFunction::LoadStruct(size_t size, ExprId src, uint64_t offse
 }
 
 
-ExprId MediumLevelILFunction::LoadSSA(size_t size, ExprId src, size_t memVersion, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_LOAD_SSA, loc, size, src, memVersion);
-}
-
-
-ExprId MediumLevelILFunction::LoadStructSSA(
-    size_t size, ExprId src, uint64_t offset, size_t memVersion, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_LOAD_STRUCT_SSA, loc, size, src, offset, memVersion);
-}
-
-
 ExprId MediumLevelILFunction::Store(size_t size, ExprId dest, ExprId src, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_STORE, loc, size, dest, src);
@@ -2574,20 +3227,6 @@ ExprId MediumLevelILFunction::StoreStruct(
     size_t size, ExprId dest, uint64_t offset, ExprId src, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_STORE_STRUCT, loc, size, dest, offset, src);
-}
-
-
-ExprId MediumLevelILFunction::StoreSSA(
-    size_t size, ExprId dest, size_t newMemVersion, size_t prevMemVersion, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_STORE_SSA, loc, size, dest, newMemVersion, prevMemVersion, src);
-}
-
-
-ExprId MediumLevelILFunction::StoreStructSSA(size_t size, ExprId dest, uint64_t offset, size_t newMemVersion,
-    size_t prevMemVersion, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_STORE_STRUCT_SSA, loc, size, dest, offset, newMemVersion, prevMemVersion, src);
 }
 
 
@@ -2610,80 +3249,15 @@ ExprId MediumLevelILFunction::VarSplit(
 }
 
 
-ExprId MediumLevelILFunction::VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::AddressOf(const Variable& src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_VAR_SSA, loc, size, src.var.ToIdentifier(), src.version);
+	return AddExprWithLocation(MLIL_ADDRESS_OF, loc, 0, src.ToIdentifier());
 }
 
 
-ExprId MediumLevelILFunction::VarSSAField(
-    size_t size, const SSAVariable& src, uint64_t offset, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::AddressOfField(const Variable& src, uint64_t offset, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_VAR_SSA_FIELD, loc, size, src.var.ToIdentifier(), src.version, offset);
-}
-
-
-ExprId MediumLevelILFunction::VarAliased(
-    size_t size, const Variable& src, size_t memVersion, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_VAR_ALIASED, loc, size, src.ToIdentifier(), memVersion);
-}
-
-
-ExprId MediumLevelILFunction::VarAliasedField(
-    size_t size, const Variable& src, size_t memVersion, uint64_t offset, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_VAR_ALIASED_FIELD, loc, size, src.ToIdentifier(), memVersion, offset);
-}
-
-
-ExprId MediumLevelILFunction::VarSplitSSA(
-    size_t size, const SSAVariable& high, const SSAVariable& low, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(
-	    MLIL_VAR_SPLIT_SSA, loc, size, high.var.ToIdentifier(), high.version, low.var.ToIdentifier(), low.version);
-}
-
-
-ExprId MediumLevelILFunction::VarOutputSSA(size_t size, const SSAVariable& dest, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_VAR_OUTPUT_SSA, loc, size, dest.var.ToIdentifier(), dest.version);
-}
-
-
-ExprId MediumLevelILFunction::VarOutputSSAField(size_t size, const Variable& dest, size_t newVersion, size_t prevVersion,
-	uint64_t offset, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(
-		MLIL_VAR_OUTPUT_SSA_FIELD, loc, size, dest.ToIdentifier(), newVersion, prevVersion, offset);
-}
-
-
-ExprId MediumLevelILFunction::VarOutputAliased(size_t size, const Variable& dest, size_t newMemVersion,
-	size_t prevMemVersion, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(
-		MLIL_VAR_OUTPUT_ALIASED, loc, size, dest.ToIdentifier(), newMemVersion, prevMemVersion);
-}
-
-
-ExprId MediumLevelILFunction::VarOutputAliasedField(size_t size, const Variable& dest, size_t newMemVersion,
-	size_t prevMemVersion, uint64_t offset, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(
-		MLIL_VAR_OUTPUT_ALIASED_FIELD, loc, size, dest.ToIdentifier(), newMemVersion, prevMemVersion, offset);
-}
-
-
-ExprId MediumLevelILFunction::AddressOf(const Variable& var, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_ADDRESS_OF, loc, 0, var.ToIdentifier());
-}
-
-
-ExprId MediumLevelILFunction::AddressOfField(const Variable& var, uint64_t offset, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_ADDRESS_OF_FIELD, loc, 0, var.ToIdentifier(), offset);
+	return AddExprWithLocation(MLIL_ADDRESS_OF_FIELD, loc, 0, src.ToIdentifier(), offset);
 }
 
 
@@ -2699,63 +3273,40 @@ ExprId MediumLevelILFunction::ReturnByRef(size_t size, ExprId src, const ILSourc
 }
 
 
-ExprId MediumLevelILFunction::Const(size_t size, uint64_t val, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::Const(size_t size, uint64_t constant, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_CONST, loc, size, val);
+	return AddExprWithLocation(MLIL_CONST, loc, size, constant);
 }
 
 
-ExprId MediumLevelILFunction::ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::ConstData(size_t size, const ConstantData& constantData, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_CONST_PTR, loc, size, val);
+	return AddExprWithLocation(MLIL_CONST_DATA, loc, size, constantData.state, constantData.value);
 }
 
 
-ExprId MediumLevelILFunction::ExternPointer(size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::ConstPointer(size_t size, uint64_t constant, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_EXTERN_PTR, loc, size, val, offset);
+	return AddExprWithLocation(MLIL_CONST_PTR, loc, size, constant);
 }
 
 
-ExprId MediumLevelILFunction::FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::ExternPointer(
+    size_t size, uint64_t constant, uint64_t offset, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_FLOAT_CONST, loc, size, val);
+	return AddExprWithLocation(MLIL_EXTERN_PTR, loc, size, constant, offset);
 }
 
 
-ExprId MediumLevelILFunction::FloatConstSingle(float val, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::FloatConstRaw(size_t size, uint64_t constant, const ILSourceLocation& loc)
 {
-	union
-	{
-		float f;
-		uint32_t i;
-	} bits;
-	bits.f = val;
-	return AddExprWithLocation(MLIL_FLOAT_CONST, loc, 4, bits.i);
+	return AddExprWithLocation(MLIL_FLOAT_CONST, loc, size, constant);
 }
 
 
-ExprId MediumLevelILFunction::FloatConstDouble(double val, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::ImportedAddress(size_t size, uint64_t constant, const ILSourceLocation& loc)
 {
-	union
-	{
-		double f;
-		uint64_t i;
-	} bits;
-	bits.f = val;
-	return AddExprWithLocation(MLIL_FLOAT_CONST, loc, 8, bits.i);
-}
-
-
-ExprId MediumLevelILFunction::ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_IMPORT, loc, size, val);
-}
-
-
-ExprId MediumLevelILFunction::ConstData(size_t size, const ConstantData& data, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_CONST_DATA, loc, size, data.state, data.value);
+	return AddExprWithLocation(MLIL_IMPORT, loc, size, constant);
 }
 
 
@@ -2853,12 +3404,6 @@ ExprId MediumLevelILFunction::Mult(size_t size, ExprId left, ExprId right, const
 }
 
 
-ExprId MediumLevelILFunction::MultDoublePrecSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_MULS_DP, loc, size, left, right);
-}
-
-
 ExprId MediumLevelILFunction::MultDoublePrecUnsigned(
     size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
@@ -2866,9 +3411,9 @@ ExprId MediumLevelILFunction::MultDoublePrecUnsigned(
 }
 
 
-ExprId MediumLevelILFunction::DivSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::MultDoublePrecSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_DIVS, loc, size, left, right);
+	return AddExprWithLocation(MLIL_MULS_DP, loc, size, left, right);
 }
 
 
@@ -2878,21 +3423,21 @@ ExprId MediumLevelILFunction::DivUnsigned(size_t size, ExprId left, ExprId right
 }
 
 
-ExprId MediumLevelILFunction::DivDoublePrecSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_DIVS_DP, loc, size, left, right);
-}
-
-
 ExprId MediumLevelILFunction::DivDoublePrecUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_DIVU_DP, loc, size, left, right);
 }
 
 
-ExprId MediumLevelILFunction::ModSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::DivSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_MODS, loc, size, left, right);
+	return AddExprWithLocation(MLIL_DIVS, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::DivDoublePrecSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_DIVS_DP, loc, size, left, right);
 }
 
 
@@ -2902,15 +3447,21 @@ ExprId MediumLevelILFunction::ModUnsigned(size_t size, ExprId left, ExprId right
 }
 
 
-ExprId MediumLevelILFunction::ModDoublePrecSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_MODS_DP, loc, size, left, right);
-}
-
-
 ExprId MediumLevelILFunction::ModDoublePrecUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_MODU_DP, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::ModSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_MODS, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::ModDoublePrecSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_MODS_DP, loc, size, left, right);
 }
 
 
@@ -2923,72 +3474,6 @@ ExprId MediumLevelILFunction::Neg(size_t size, ExprId src, const ILSourceLocatio
 ExprId MediumLevelILFunction::Not(size_t size, ExprId src, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_NOT, loc, size, src);
-}
-
-
-ExprId MediumLevelILFunction::ByteSwap(size_t size, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_BSWAP, loc, size, src);
-}
-
-
-ExprId MediumLevelILFunction::PopulationCount(size_t size, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_POPCNT, loc, size, src);
-}
-
-
-ExprId MediumLevelILFunction::CountLeadingZeros(size_t size, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_CLZ, loc, size, src);
-}
-
-
-ExprId MediumLevelILFunction::CountTrailingZeros(size_t size, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_CTZ, loc, size, src);
-}
-
-
-ExprId MediumLevelILFunction::ReverseBits(size_t size, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_RBIT, loc, size, src);
-}
-
-
-ExprId MediumLevelILFunction::CountLeadingSigns(size_t size, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_CLS, loc, size, src);
-}
-
-
-ExprId MediumLevelILFunction::MinSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_MINS, loc, size, left, right);
-}
-
-
-ExprId MediumLevelILFunction::MaxSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_MAXS, loc, size, left, right);
-}
-
-
-ExprId MediumLevelILFunction::MinUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_MINU, loc, size, left, right);
-}
-
-
-ExprId MediumLevelILFunction::MaxUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_MAXU, loc, size, left, right);
-}
-
-
-ExprId MediumLevelILFunction::AbsoluteValue(size_t size, ExprId src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_ABS, loc, size, src);
 }
 
 
@@ -3030,114 +3515,18 @@ ExprId MediumLevelILFunction::ReturnHint(ExprId dest, const ILSourceLocation& lo
 
 
 ExprId MediumLevelILFunction::Call(
-    const vector<ExprId>& output, ExprId dest, const vector<ExprId>& params, const ILSourceLocation& loc)
+    const vector<ExprId>& outputExprs, ExprId dest, const vector<ExprId>& params, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(
-	    MLIL_CALL, loc, 0, output.size(), AddOperandList(output), dest, params.size(), AddOperandList(params));
+	return AddExprWithLocation(MLIL_CALL, loc, 0, outputExprs.size(), AddOperandList(outputExprs), dest, params.size(),
+	    AddOperandList(params));
 }
 
 
-ExprId MediumLevelILFunction::CallUntyped(const vector<ExprId>& output, ExprId dest, const vector<ExprId>& params,
+ExprId MediumLevelILFunction::CallUntyped(const vector<ExprId>& outputExprs, ExprId dest, const vector<ExprId>& params,
     ExprId stack, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_CALL_UNTYPED, loc, 0,
-	    output.size(), AddOperandList(output), dest,
+	return AddExprWithLocation(MLIL_CALL_UNTYPED, loc, 0, outputExprs.size(), AddOperandList(outputExprs), dest,
 	    AddExprWithLocation(MLIL_CALL_PARAM, loc, 0, params.size(), AddOperandList(params)), stack);
-}
-
-
-ExprId MediumLevelILFunction::Syscall(
-    const vector<ExprId>& output, const vector<ExprId>& params, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(
-	    MLIL_SYSCALL, loc, 0, output.size(), AddOperandList(output), params.size(), AddOperandList(params));
-}
-
-
-ExprId MediumLevelILFunction::SyscallUntyped(
-    const vector<ExprId>& output, const vector<ExprId>& params, ExprId stack, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_SYSCALL_UNTYPED, loc, 0,
-	    output.size(), AddOperandList(output),
-	    AddExprWithLocation(MLIL_CALL_PARAM, loc, 0, params.size(), AddOperandList(params)), stack);
-}
-
-
-ExprId MediumLevelILFunction::TailCall(
-    const vector<ExprId>& output, ExprId dest, const vector<ExprId>& params, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(
-	    MLIL_TAILCALL, loc, 0, output.size(), AddOperandList(output), dest, params.size(), AddOperandList(params));
-}
-
-
-ExprId MediumLevelILFunction::TailCallUntyped(const vector<ExprId>& output, ExprId dest,
-    const vector<ExprId>& params, ExprId stack, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_TAILCALL_UNTYPED, loc, 0,
-	    output.size(), AddOperandList(output), dest,
-	    AddExprWithLocation(MLIL_CALL_PARAM, loc, 0, params.size(), AddOperandList(params)), stack);
-}
-
-
-ExprId MediumLevelILFunction::CallSSA(const vector<ExprId>& output, ExprId dest, const vector<ExprId>& params,
-    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_CALL_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
-	    dest, params.size(), AddOperandList(params), prevMemVersion);
-}
-
-
-ExprId MediumLevelILFunction::CallUntypedSSA(const vector<ExprId>& output, ExprId dest,
-    const vector<ExprId>& params, size_t newMemVersion, size_t prevMemVersion, ExprId stack,
-    const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_CALL_UNTYPED_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
-	    dest,
-	    AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, 0, prevMemVersion, params.size(), AddOperandList(params)),
-	    stack);
-}
-
-
-ExprId MediumLevelILFunction::SyscallSSA(const vector<ExprId>& output, const vector<ExprId>& params,
-    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_SYSCALL_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
-	    params.size(), AddOperandList(params), prevMemVersion);
-}
-
-
-ExprId MediumLevelILFunction::SyscallUntypedSSA(const vector<ExprId>& output, const vector<ExprId>& params,
-    size_t newMemVersion, size_t prevMemVersion, ExprId stack, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_SYSCALL_UNTYPED_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
-	    AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, 0, prevMemVersion, params.size(), AddOperandList(params)),
-	    stack);
-}
-
-
-ExprId MediumLevelILFunction::TailCallSSA(const vector<ExprId>& output, ExprId dest, const vector<ExprId>& params,
-    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_TAILCALL_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
-	    dest, params.size(), AddOperandList(params), prevMemVersion);
-}
-
-
-ExprId MediumLevelILFunction::TailCallUntypedSSA(const vector<ExprId>& output, ExprId dest,
-    const vector<ExprId>& params, size_t newMemVersion, size_t prevMemVersion, ExprId stack,
-    const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_TAILCALL_UNTYPED_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
-	    dest,
-	    AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, 0, prevMemVersion, params.size(), AddOperandList(params)),
-	    stack);
 }
 
 
@@ -3153,14 +3542,14 @@ ExprId MediumLevelILFunction::SharedParamSlot(const vector<ExprId>& params, cons
 }
 
 
-ExprId MediumLevelILFunction::VarOutput(size_t size, const Variable& var, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::VarOutput(size_t size, const Variable& dest, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_VAR_OUTPUT, loc, size, var.ToIdentifier());
+	return AddExprWithLocation(MLIL_VAR_OUTPUT, loc, size, dest.ToIdentifier());
 }
 
 
 ExprId MediumLevelILFunction::VarOutputField(
-	size_t size, const Variable& dest, uint64_t offset, const ILSourceLocation& loc)
+    size_t size, const Variable& dest, uint64_t offset, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_VAR_OUTPUT_FIELD, loc, size, dest.ToIdentifier(), offset);
 }
@@ -3172,9 +3561,9 @@ ExprId MediumLevelILFunction::StoreOutput(size_t size, ExprId dest, const ILSour
 }
 
 
-ExprId MediumLevelILFunction::Return(const vector<ExprId>& sources, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::Return(const vector<ExprId>& src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_RET, loc, 0, sources.size(), AddOperandList(sources));
+	return AddExprWithLocation(MLIL_RET, loc, 0, src.size(), AddOperandList(src));
 }
 
 
@@ -3269,6 +3658,52 @@ ExprId MediumLevelILFunction::AddOverflow(size_t size, ExprId left, ExprId right
 }
 
 
+ExprId MediumLevelILFunction::Syscall(
+    const vector<ExprId>& outputExprs, const vector<ExprId>& params, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(
+	    MLIL_SYSCALL, loc, 0, outputExprs.size(), AddOperandList(outputExprs), params.size(), AddOperandList(params));
+}
+
+
+ExprId MediumLevelILFunction::SyscallUntyped(
+    const vector<ExprId>& outputExprs, const vector<ExprId>& params, ExprId stack, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_SYSCALL_UNTYPED, loc, 0, outputExprs.size(), AddOperandList(outputExprs),
+	    AddExprWithLocation(MLIL_CALL_PARAM, loc, 0, params.size(), AddOperandList(params)), stack);
+}
+
+
+ExprId MediumLevelILFunction::TailCall(
+    const vector<ExprId>& outputExprs, ExprId dest, const vector<ExprId>& params, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_TAILCALL, loc, 0, outputExprs.size(), AddOperandList(outputExprs), dest,
+	    params.size(), AddOperandList(params));
+}
+
+
+ExprId MediumLevelILFunction::TailCallUntyped(const vector<ExprId>& outputExprs, ExprId dest,
+    const vector<ExprId>& params, ExprId stack, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_TAILCALL_UNTYPED, loc, 0, outputExprs.size(), AddOperandList(outputExprs), dest,
+	    AddExprWithLocation(MLIL_CALL_PARAM, loc, 0, params.size(), AddOperandList(params)), stack);
+}
+
+
+ExprId MediumLevelILFunction::Intrinsic(
+    const vector<Variable>& output, uint32_t intrinsic, const vector<ExprId>& params, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_INTRINSIC, loc, 0, output.size(), AddVariableList(output), intrinsic, params.size(),
+	    AddOperandList(params));
+}
+
+
+ExprId MediumLevelILFunction::FreeVarSlot(const Variable& dest, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FREE_VAR_SLOT, loc, 0, dest.ToIdentifier());
+}
+
+
 ExprId MediumLevelILFunction::Breakpoint(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_BP, loc, 0);
@@ -3278,44 +3713,6 @@ ExprId MediumLevelILFunction::Breakpoint(const ILSourceLocation& loc)
 ExprId MediumLevelILFunction::Trap(int64_t vector, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_TRAP, loc, 0, vector);
-}
-
-
-ExprId MediumLevelILFunction::Intrinsic(
-    const vector<Variable>& outputs, uint32_t intrinsic, const vector<ExprId>& params, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_INTRINSIC, loc, 0, outputs.size(), AddVariableList(outputs), intrinsic,
-	    params.size(), AddOperandList(params));
-}
-
-
-ExprId MediumLevelILFunction::IntrinsicSSA(
-    const vector<SSAVariable>& outputs, uint32_t intrinsic, const vector<ExprId>& params, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_INTRINSIC_SSA, loc, 0, outputs.size() * 2, AddSSAVariableList(outputs), intrinsic,
-	    params.size(), AddOperandList(params));
-}
-
-
-ExprId MediumLevelILFunction::MemoryIntrinsicSSA(const vector<SSAVariable>& outputs, uint32_t intrinsic,
-    const vector<ExprId>& params, size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_MEMORY_INTRINSIC_SSA, loc, 0,
-		AddExprWithLocation(MLIL_MEMORY_INTRINSIC_OUTPUT_SSA, loc, 0, newMemVersion, outputs.size() * 2, AddSSAVariableList(outputs)), intrinsic,
-	    params.size(), AddOperandList(params), prevMemVersion);
-}
-
-
-ExprId MediumLevelILFunction::FreeVarSlot(const Variable& var, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FREE_VAR_SLOT, loc, 0, var.ToIdentifier());
-}
-
-
-ExprId MediumLevelILFunction::FreeVarSlotSSA(
-    const Variable& var, size_t newVersion, size_t prevVersion, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FREE_VAR_SLOT_SSA, loc, 0, var.ToIdentifier(), newVersion, prevVersion);
 }
 
 
@@ -3337,169 +3734,485 @@ ExprId MediumLevelILFunction::Unknown(const ILSourceLocation& loc)
 }
 
 
-ExprId MediumLevelILFunction::UnimplementedMemoryRef(size_t size, ExprId target, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::UnimplementedMemoryRef(size_t size, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_UNIMPL_MEM, loc, size, target, 0);
+	return AddExprWithLocation(MLIL_UNIMPL_MEM, loc, size, src, 0);
 }
 
 
-ExprId MediumLevelILFunction::UnknownMemoryRef(size_t size, ExprId target, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::UnknownMemoryRef(size_t size, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_UNIMPL_MEM, loc, size, target, 1);
+	return AddExprWithLocation(MLIL_UNIMPL_MEM, loc, size, src, 1);
+}
+
+
+ExprId MediumLevelILFunction::FloatAdd(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FADD, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::FloatSub(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FSUB, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::FloatMult(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FMUL, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::FloatDiv(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FDIV, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::FloatSqrt(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FSQRT, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::FloatNeg(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FNEG, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::FloatAbs(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FABS, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::FloatToInt(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FLOAT_TO_INT, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::IntToFloat(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_INT_TO_FLOAT, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::FloatConvert(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FLOAT_CONV, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::RoundToInt(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_ROUND_TO_INT, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::Floor(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FLOOR, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::Ceil(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_CEIL, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::FloatTrunc(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FTRUNC, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::FloatCompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FCMP_E, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::FloatCompareNotEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FCMP_NE, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::FloatCompareLessThan(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FCMP_LT, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::FloatCompareLessEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FCMP_LE, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::FloatCompareGreaterEqual(
+    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FCMP_GE, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::FloatCompareGreaterThan(
+    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FCMP_GT, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::FloatCompareOrdered(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FCMP_O, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::FloatCompareUnordered(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FCMP_UO, loc, size, left, right);
+}
+
+
+ExprId MediumLevelILFunction::SetVarSSA(size_t size, const SSAVariable& dest, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_SET_VAR_SSA, loc, size, dest.var.ToIdentifier(), dest.version, src);
+}
+
+
+ExprId MediumLevelILFunction::SetVarSSAField(size_t size, const Variable& var, size_t destVersion, size_t prevVersion,
+    uint64_t offset, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(
+	    MLIL_SET_VAR_SSA_FIELD, loc, size, var.ToIdentifier(), destVersion, prevVersion, offset, src);
+}
+
+
+ExprId MediumLevelILFunction::SetVarSSASplit(
+    size_t size, const SSAVariable& high, const SSAVariable& low, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_SET_VAR_SPLIT_SSA, loc, size, high.var.ToIdentifier(), high.version,
+	    low.var.ToIdentifier(), low.version, src);
+}
+
+
+ExprId MediumLevelILFunction::SetVarAliased(
+    size_t size, const Variable& var, size_t destMemory, size_t prevMemory, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_SET_VAR_ALIASED, loc, size, var.ToIdentifier(), destMemory, prevMemory, src);
+}
+
+
+ExprId MediumLevelILFunction::SetVarAliasedField(size_t size, const Variable& var, size_t destMemory, size_t prevMemory,
+    uint64_t offset, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(
+	    MLIL_SET_VAR_ALIASED_FIELD, loc, size, var.ToIdentifier(), destMemory, prevMemory, offset, src);
+}
+
+
+ExprId MediumLevelILFunction::VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_VAR_SSA, loc, size, src.var.ToIdentifier(), src.version);
+}
+
+
+ExprId MediumLevelILFunction::VarSSAField(
+    size_t size, const SSAVariable& src, uint64_t offset, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_VAR_SSA_FIELD, loc, size, src.var.ToIdentifier(), src.version, offset);
+}
+
+
+ExprId MediumLevelILFunction::VarAliased(
+    size_t size, const Variable& var, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_VAR_ALIASED, loc, size, var.ToIdentifier(), srcMemory);
+}
+
+
+ExprId MediumLevelILFunction::VarAliasedField(
+    size_t size, const Variable& var, size_t srcMemory, uint64_t offset, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_VAR_ALIASED_FIELD, loc, size, var.ToIdentifier(), srcMemory, offset);
+}
+
+
+ExprId MediumLevelILFunction::VarSplitSSA(
+    size_t size, const SSAVariable& high, const SSAVariable& low, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(
+	    MLIL_VAR_SPLIT_SSA, loc, size, high.var.ToIdentifier(), high.version, low.var.ToIdentifier(), low.version);
+}
+
+
+ExprId MediumLevelILFunction::AssertSSA(
+    size_t size, const SSAVariable& src, const PossibleValueSet& constraint, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(
+	    MLIL_ASSERT_SSA, loc, size, src.var.ToIdentifier(), src.version, CachePossibleValueSet(constraint));
+}
+
+
+ExprId MediumLevelILFunction::ForceVerSSA(size_t size, const SSAVariable& dest, const SSAVariable& src,
+    BNForceVersionReason reason, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FORCE_VER_SSA, loc, size, dest.var.ToIdentifier(), dest.version,
+	    src.var.ToIdentifier(), src.version, reason);
+}
+
+
+ExprId MediumLevelILFunction::CallSSA(const vector<ExprId>& outputExprs, ExprId dest, const vector<ExprId>& params,
+    size_t destMemory, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_CALL_SSA, loc, 0,
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, destMemory, outputExprs.size(), AddOperandList(outputExprs)),
+	    dest, params.size(), AddOperandList(params), srcMemory);
+}
+
+
+ExprId MediumLevelILFunction::CallUntypedSSA(const vector<ExprId>& outputExprs, ExprId dest,
+    const vector<ExprId>& params, size_t destMemory, size_t srcMemory, ExprId stack, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_CALL_UNTYPED_SSA, loc, 0,
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, destMemory, outputExprs.size(), AddOperandList(outputExprs)),
+	    dest, AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, 0, srcMemory, params.size(), AddOperandList(params)),
+	    stack);
+}
+
+
+ExprId MediumLevelILFunction::SyscallSSA(const vector<ExprId>& outputExprs, const vector<ExprId>& params,
+    size_t destMemory, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_SYSCALL_SSA, loc, 0,
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, destMemory, outputExprs.size(), AddOperandList(outputExprs)),
+	    params.size(), AddOperandList(params), srcMemory);
+}
+
+
+ExprId MediumLevelILFunction::SyscallUntypedSSA(const vector<ExprId>& outputExprs, const vector<ExprId>& params,
+    size_t destMemory, size_t srcMemory, ExprId stack, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_SYSCALL_UNTYPED_SSA, loc, 0,
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, destMemory, outputExprs.size(), AddOperandList(outputExprs)),
+	    AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, 0, srcMemory, params.size(), AddOperandList(params)), stack);
+}
+
+
+ExprId MediumLevelILFunction::TailCallSSA(const vector<ExprId>& outputExprs, ExprId dest, const vector<ExprId>& params,
+    size_t destMemory, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_TAILCALL_SSA, loc, 0,
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, destMemory, outputExprs.size(), AddOperandList(outputExprs)),
+	    dest, params.size(), AddOperandList(params), srcMemory);
+}
+
+
+ExprId MediumLevelILFunction::TailCallUntypedSSA(const vector<ExprId>& outputExprs, ExprId dest,
+    const vector<ExprId>& params, size_t destMemory, size_t srcMemory, ExprId stack, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_TAILCALL_UNTYPED_SSA, loc, 0,
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, destMemory, outputExprs.size(), AddOperandList(outputExprs)),
+	    dest, AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, 0, srcMemory, params.size(), AddOperandList(params)),
+	    stack);
+}
+
+
+ExprId MediumLevelILFunction::VarOutputSSA(size_t size, const SSAVariable& dest, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_VAR_OUTPUT_SSA, loc, size, dest.var.ToIdentifier(), dest.version);
+}
+
+
+ExprId MediumLevelILFunction::VarOutputSSAField(size_t size, const Variable& var, size_t destVersion,
+    size_t prevVersion, uint64_t offset, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(
+	    MLIL_VAR_OUTPUT_SSA_FIELD, loc, size, var.ToIdentifier(), destVersion, prevVersion, offset);
+}
+
+
+ExprId MediumLevelILFunction::VarOutputAliased(
+    size_t size, const Variable& var, size_t destMemory, size_t prevMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_VAR_OUTPUT_ALIASED, loc, size, var.ToIdentifier(), destMemory, prevMemory);
+}
+
+
+ExprId MediumLevelILFunction::VarOutputAliasedField(size_t size, const Variable& var, size_t destMemory,
+    size_t prevMemory, uint64_t offset, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(
+	    MLIL_VAR_OUTPUT_ALIASED_FIELD, loc, size, var.ToIdentifier(), destMemory, prevMemory, offset);
+}
+
+
+ExprId MediumLevelILFunction::LoadSSA(size_t size, ExprId src, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_LOAD_SSA, loc, size, src, srcMemory);
+}
+
+
+ExprId MediumLevelILFunction::LoadStructSSA(
+    size_t size, ExprId src, uint64_t offset, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_LOAD_STRUCT_SSA, loc, size, src, offset, srcMemory);
+}
+
+
+ExprId MediumLevelILFunction::StoreSSA(
+    size_t size, ExprId dest, size_t destMemory, size_t srcMemory, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_STORE_SSA, loc, size, dest, destMemory, srcMemory, src);
+}
+
+
+ExprId MediumLevelILFunction::StoreStructSSA(size_t size, ExprId dest, uint64_t offset, size_t destMemory,
+    size_t srcMemory, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_STORE_STRUCT_SSA, loc, size, dest, offset, destMemory, srcMemory, src);
+}
+
+
+ExprId MediumLevelILFunction::IntrinsicSSA(
+    const vector<SSAVariable>& output, uint32_t intrinsic, const vector<ExprId>& params, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_INTRINSIC_SSA, loc, 0, output.size() * 2, AddSSAVariableList(output), intrinsic,
+	    params.size(), AddOperandList(params));
+}
+
+
+ExprId MediumLevelILFunction::MemoryIntrinsicSSA(const vector<SSAVariable>& output, uint32_t intrinsic,
+    const vector<ExprId>& params, size_t destMemory, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_MEMORY_INTRINSIC_SSA, loc, 0,
+	    AddExprWithLocation(
+	        MLIL_MEMORY_INTRINSIC_OUTPUT_SSA, loc, 0, destMemory, output.size() * 2, AddSSAVariableList(output)),
+	    intrinsic, params.size(), AddOperandList(params), srcMemory);
+}
+
+
+ExprId MediumLevelILFunction::FreeVarSlotSSA(
+    const Variable& var, size_t destVersion, size_t prevVersion, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_FREE_VAR_SLOT_SSA, loc, 0, var.ToIdentifier(), destVersion, prevVersion);
 }
 
 
 ExprId MediumLevelILFunction::VarPhi(
-    const SSAVariable& dest, const vector<SSAVariable>& sources, const ILSourceLocation& loc)
+    const SSAVariable& dest, const vector<SSAVariable>& src, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(
-	    MLIL_VAR_PHI, loc, 0, dest.var.ToIdentifier(), dest.version, sources.size() * 2, AddSSAVariableList(sources));
+	    MLIL_VAR_PHI, loc, 0, dest.var.ToIdentifier(), dest.version, src.size() * 2, AddSSAVariableList(src));
 }
 
 
-ExprId MediumLevelILFunction::MemoryPhi(
-    size_t destMemVersion, const vector<size_t>& sourceMemVersions, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::MemoryPhi(size_t destMemory, const vector<size_t>& srcMemory, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(
-	    MLIL_MEM_PHI, loc, 0, destMemVersion, sourceMemVersions.size(), AddIndexList(sourceMemVersions));
+	return AddExprWithLocation(MLIL_MEM_PHI, loc, 0, destMemory, srcMemory.size(), AddIndexList(srcMemory));
 }
 
 
-ExprId MediumLevelILFunction::FloatAdd(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::BlockToExpand(const vector<ExprId>& src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_FADD, loc, size, a, b);
+	return AddExprWithLocation(MLIL_BLOCK_TO_EXPAND, loc, 0, src.size(), AddOperandList(src));
 }
 
 
-ExprId MediumLevelILFunction::FloatSub(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::ByteSwap(size_t size, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_FSUB, loc, size, a, b);
+	return AddExprWithLocation(MLIL_BSWAP, loc, size, src);
 }
 
 
-ExprId MediumLevelILFunction::FloatMult(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::PopulationCount(size_t size, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_FMUL, loc, size, a, b);
+	return AddExprWithLocation(MLIL_POPCNT, loc, size, src);
 }
 
 
-ExprId MediumLevelILFunction::FloatDiv(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::CountLeadingZeros(size_t size, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_FDIV, loc, size, a, b);
+	return AddExprWithLocation(MLIL_CLZ, loc, size, src);
 }
 
 
-ExprId MediumLevelILFunction::FloatSqrt(size_t size, ExprId a, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::CountTrailingZeros(size_t size, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_FSQRT, loc, size, a);
+	return AddExprWithLocation(MLIL_CTZ, loc, size, src);
 }
 
 
-ExprId MediumLevelILFunction::FloatNeg(size_t size, ExprId a, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::ReverseBits(size_t size, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_FNEG, loc, size, a);
+	return AddExprWithLocation(MLIL_RBIT, loc, size, src);
 }
 
 
-ExprId MediumLevelILFunction::FloatAbs(size_t size, ExprId a, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::CountLeadingSigns(size_t size, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_FABS, loc, size, a);
+	return AddExprWithLocation(MLIL_CLS, loc, size, src);
 }
 
 
-ExprId MediumLevelILFunction::FloatToInt(size_t size, ExprId a, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::MinSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_FLOAT_TO_INT, loc, size, a);
+	return AddExprWithLocation(MLIL_MINS, loc, size, left, right);
 }
 
 
-ExprId MediumLevelILFunction::IntToFloat(size_t size, ExprId a, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::MaxSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_INT_TO_FLOAT, loc, size, a);
+	return AddExprWithLocation(MLIL_MAXS, loc, size, left, right);
 }
 
 
-ExprId MediumLevelILFunction::FloatConvert(size_t size, ExprId a, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::MinUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_FLOAT_CONV, loc, size, a);
+	return AddExprWithLocation(MLIL_MINU, loc, size, left, right);
 }
 
 
-ExprId MediumLevelILFunction::RoundToInt(size_t size, ExprId a, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::MaxUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_ROUND_TO_INT, loc, size, a);
+	return AddExprWithLocation(MLIL_MAXU, loc, size, left, right);
 }
 
 
-ExprId MediumLevelILFunction::Floor(size_t size, ExprId a, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::AbsoluteValue(size_t size, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_FLOOR, loc, size, a);
+	return AddExprWithLocation(MLIL_ABS, loc, size, src);
+}
+// END GENERATED mlil-builders
+
+
+ExprId MediumLevelILFunction::FloatConstSingle(float val, const ILSourceLocation& loc)
+{
+	union
+	{
+		float f;
+		uint32_t i;
+	} bits;
+	bits.f = val;
+	return AddExprWithLocation(MLIL_FLOAT_CONST, loc, 4, bits.i);
 }
 
 
-ExprId MediumLevelILFunction::Ceil(size_t size, ExprId a, const ILSourceLocation& loc)
+ExprId MediumLevelILFunction::FloatConstDouble(double val, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(MLIL_CEIL, loc, size, a);
-}
-
-
-ExprId MediumLevelILFunction::FloatTrunc(size_t size, ExprId a, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FTRUNC, loc, size, a);
-}
-
-
-ExprId MediumLevelILFunction::FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FCMP_E, loc, size, a, b);
-}
-
-
-ExprId MediumLevelILFunction::FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FCMP_NE, loc, size, a, b);
-}
-
-
-ExprId MediumLevelILFunction::FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FCMP_LT, loc, size, a, b);
-}
-
-
-ExprId MediumLevelILFunction::FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FCMP_LE, loc, size, a, b);
-}
-
-
-ExprId MediumLevelILFunction::FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FCMP_GE, loc, size, a, b);
-}
-
-
-ExprId MediumLevelILFunction::FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FCMP_GT, loc, size, a, b);
-}
-
-
-ExprId MediumLevelILFunction::FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FCMP_O, loc, size, a, b);
-}
-
-
-ExprId MediumLevelILFunction::FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_FCMP_UO, loc, size, a, b);
-}
-
-
-ExprId MediumLevelILFunction::BlockToExpand(const vector<ExprId>& sources, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_BLOCK_TO_EXPAND, loc, 0, sources.size(), AddOperandList(sources));
+	union
+	{
+		double f;
+		uint64_t i;
+	} bits;
+	bits.f = val;
+	return AddExprWithLocation(MLIL_FLOAT_CONST, loc, 8, bits.i);
 }
 
 

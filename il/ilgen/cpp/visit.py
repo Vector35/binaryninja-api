@@ -1,4 +1,4 @@
-"""An IL level's VisitExprs, visiting each op's child expressions and expression lists in storage order."""
+"""An IL level's VisitExprs, visiting each op's child expressions and expression lists in its visit order."""
 
 from dataclasses import dataclass
 
@@ -10,15 +10,16 @@ from .naming import Names
 class Child:
 	getter: str
 	is_list: bool
+	visited: bool
 
 
 def children(names, op):
-	"""[Child] for the op's child expressions and expression lists, in storage order."""
+	"""[Child] for the op's child expressions and expression lists, in its visit order."""
 	result = []
-	for operand in op.operands:
+	for operand in op.visit_ordered():
 		for value in operand.accessors if operand.is_part else [operand]:
 			if value.kind.holds_expressions:
-				result.append(Child(names.getter(op, value), value.kind.is_list))
+				result.append(Child(names.getter(op, value), value.kind.is_list, operand.visited))
 
 	return result
 
@@ -31,7 +32,7 @@ def visit_exprs(schema):
 		if op.inline_part:
 			continue
 
-		found = children(names, op)
+		found = [child for child in children(names, op) if child.visited]
 		if not found:
 			continue
 

@@ -204,247 +204,274 @@ class MediumLevelILInstruction(BaseILInstruction):
 
 	# ILOperations is deprecated and will be removed in a future version once BNIL Graph no longer uses it
 	# Use the visit methods visit, visit_all, and visit_operands
-	ILOperations: ClassVar[Mapping[MediumLevelILOperation, List[Tuple[str, str]]]] = {
-	    MediumLevelILOperation.MLIL_NOP: [], MediumLevelILOperation.MLIL_SET_VAR: [("dest", "var"), ("src", "expr")],
-	    MediumLevelILOperation.MLIL_SET_VAR_FIELD: [("dest", "var"), ("offset", "int"),
-	                                                ("src", "expr")], MediumLevelILOperation.MLIL_SET_VAR_SPLIT: [
-	                                                    ("high", "var"), ("low", "var"), ("src", "expr")
-	                                                ], MediumLevelILOperation.MLIL_LOAD: [("src", "expr")],
-	    MediumLevelILOperation.MLIL_LOAD_STRUCT: [("src", "expr"),
-	                                              ("offset", "int")], MediumLevelILOperation.MLIL_STORE: [
-	                                                  ("dest", "expr"), ("src", "expr")
-	                                              ], MediumLevelILOperation.MLIL_STORE_STRUCT: [("dest", "expr"),
-	                                                                                            ("offset", "int"),
-	                                                                                            ("src", "expr")],
-	    MediumLevelILOperation.MLIL_VAR: [("var", "var")], MediumLevelILOperation.MLIL_VAR_FIELD: [
-	        ("src", "var"), ("offset", "int")
-	    ], MediumLevelILOperation.MLIL_VAR_SPLIT: [("high", "var"), ("low", "var")],
-	    MediumLevelILOperation.MLIL_ADDRESS_OF: [("src", "var")], MediumLevelILOperation.MLIL_PASS_BY_REF: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_RETURN_BY_REF: [
-			("src", "expr")
-		], MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD: [
-	        ("src", "var"), ("offset", "int")
-	    ], MediumLevelILOperation.MLIL_CONST: [("constant", "int")], MediumLevelILOperation.MLIL_CONST_PTR: [
-	        ("constant", "int")
-	    ], MediumLevelILOperation.MLIL_EXTERN_PTR: [
-	        ("constant", "int"), ("offset", "int")
-	    ], MediumLevelILOperation.MLIL_FLOAT_CONST: [("constant", "float")], MediumLevelILOperation.MLIL_IMPORT: [
-	        ("constant", "int")
-	    ], MediumLevelILOperation.MLIL_CONST_DATA: [
-	        ("constant", "ConstantData")
-	    ], MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_ADC: [
-	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
-	    ], MediumLevelILOperation.MLIL_SUB: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_SBB: [
-	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
-	    ], MediumLevelILOperation.MLIL_AND: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_OR: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_XOR: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_LSL: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_LSR: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_ASR: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_ROL: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_RLC: [
-	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
-	    ], MediumLevelILOperation.MLIL_ROR: [("left", "expr"),
-	                                         ("right", "expr")], MediumLevelILOperation.MLIL_RRC: [("left", "expr"),
-	                                                                                               ("right", "expr"),
-	                                                                                               ("carry", "expr")],
-	    MediumLevelILOperation.MLIL_MUL: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_MULU_DP: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_MULS_DP: [("left", "expr"),
-	                                             ("right", "expr")], MediumLevelILOperation.MLIL_DIVU: [
-	                                                 ("left", "expr"), ("right", "expr")
-	                                             ], MediumLevelILOperation.MLIL_DIVU_DP: [("left", "expr"),
-	                                                                                      ("right", "expr")],
-	    MediumLevelILOperation.MLIL_DIVS: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_DIVS_DP: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_MODU: [("left", "expr"),
-	                                          ("right", "expr")], MediumLevelILOperation.MLIL_MODU_DP: [
-	                                              ("left", "expr"), ("right", "expr")
-	                                          ], MediumLevelILOperation.MLIL_MODS: [("left", "expr"),
-	                                                                                ("right", "expr")],
-	    MediumLevelILOperation.MLIL_MODS_DP: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_NEG: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_NOT: [("src", "expr")], MediumLevelILOperation.MLIL_BSWAP: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_POPCNT: [("src", "expr")], MediumLevelILOperation.MLIL_CLZ: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_CTZ: [("src", "expr")], MediumLevelILOperation.MLIL_RBIT: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_CLS: [("src", "expr")], MediumLevelILOperation.MLIL_MINS: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_MAXS: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_MINU: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_MAXU: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_ABS: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_SX: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_ZX: [("src", "expr")], MediumLevelILOperation.MLIL_LOW_PART: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_JUMP: [("dest", "expr")], MediumLevelILOperation.MLIL_JUMP_TO: [
-	        ("dest", "expr"), ("targets", "target_map")
-	    ], MediumLevelILOperation.MLIL_RET_HINT: [("dest", "expr")], MediumLevelILOperation.MLIL_CALL: [
-	        ("output", "var_list"), ("dest", "expr"), ("params", "expr_list")
-	    ], MediumLevelILOperation.MLIL_CALL_UNTYPED: [
-	        ("output", "var_list"), ("dest", "expr"), ("params", "expr_list"), ("stack", "expr")
-	    ], MediumLevelILOperation.MLIL_CALL_PARAM: [
-	        ("src", "expr_list")
-	    ], MediumLevelILOperation.MLIL_SEPARATE_PARAM_LIST: [
-	        ("params", "expr_list")
-	    ], MediumLevelILOperation.MLIL_SHARED_PARAM_SLOT: [
-	        ("params", "expr_list")
-	    ], MediumLevelILOperation.MLIL_VAR_OUTPUT: [
-			("dest", "var")
-		], MediumLevelILOperation.MLIL_VAR_OUTPUT_FIELD: [
-			("dest", "var"), ("offset", "int")
-		], MediumLevelILOperation.MLIL_STORE_OUTPUT: [
-			("dest", "expr")
-		], MediumLevelILOperation.MLIL_RET: [
-	        ("src", "expr_list")
-	    ], MediumLevelILOperation.MLIL_BLOCK_TO_EXPAND: [
-			("exprs", "expr_list")
-		], MediumLevelILOperation.MLIL_NORET: [], MediumLevelILOperation.MLIL_IF: [
-	        ("condition", "expr"), ("true", "int"), ("false", "int")
-	    ], MediumLevelILOperation.MLIL_GOTO: [("dest", "int")], MediumLevelILOperation.MLIL_CMP_E: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_CMP_NE: [("left", "expr"),
-	                                            ("right", "expr")], MediumLevelILOperation.MLIL_CMP_SLT: [
-	                                                ("left", "expr"), ("right", "expr")
-	                                            ], MediumLevelILOperation.MLIL_CMP_ULT: [
-	                                                ("left", "expr"), ("right", "expr")
-	                                            ], MediumLevelILOperation.MLIL_CMP_SLE: [
-	                                                ("left", "expr"), ("right", "expr")
-	                                            ], MediumLevelILOperation.MLIL_CMP_ULE: [
-	                                                ("left", "expr"), ("right", "expr")
-	                                            ], MediumLevelILOperation.MLIL_CMP_SGE: [
-	                                                ("left", "expr"), ("right", "expr")
-	                                            ], MediumLevelILOperation.MLIL_CMP_UGE: [
-	                                                ("left", "expr"), ("right", "expr")
-	                                            ], MediumLevelILOperation.MLIL_CMP_SGT: [
-	                                                ("left", "expr"), ("right", "expr")
-	                                            ], MediumLevelILOperation.MLIL_CMP_UGT: [
-	                                                ("left", "expr"), ("right", "expr")
-	                                            ], MediumLevelILOperation.MLIL_TEST_BIT: [("left", "expr"),
-	                                                                                      ("right", "expr")],
-	    MediumLevelILOperation.MLIL_BOOL_TO_INT: [("src", "expr")], MediumLevelILOperation.MLIL_ADD_OVERFLOW: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_SYSCALL: [
-	        ("output", "var_list"), ("params", "expr_list")
-	    ], MediumLevelILOperation.MLIL_SYSCALL_UNTYPED: [
-	        ("output", "var_list"), ("params", "expr_list"), ("stack", "expr")
-	    ], MediumLevelILOperation.MLIL_TAILCALL: [
-	        ("output", "var_list"), ("dest", "expr"), ("params", "expr_list")
-	    ], MediumLevelILOperation.MLIL_TAILCALL_UNTYPED: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list"),
-	                                                      ("stack", "expr")], MediumLevelILOperation.MLIL_BP: [],
-	    MediumLevelILOperation.MLIL_TRAP: [("vector", "int")], MediumLevelILOperation.MLIL_INTRINSIC: [
-	        ("output", "var_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")
-	    ], MediumLevelILOperation.MLIL_INTRINSIC_SSA: [
-	        ("output", "var_ssa_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")
-	    ], MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_OUTPUT_SSA: [
-	        ("dest_memory", "int"), ("output", "var_ssa_list")
-	    ], MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_SSA: [
-	        ("output", "var_ssa_list"), ("dest_memory", "int"), ("intrinsic", "intrinsic"), ("params", "expr_list"),
-	        ("src_memory", "int")
-	    ], MediumLevelILOperation.MLIL_FREE_VAR_SLOT: [
-	        ("dest", "var")
-	    ], MediumLevelILOperation.MLIL_FREE_VAR_SLOT_SSA: [
-	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src")
-	    ], MediumLevelILOperation.MLIL_UNDEF: [], MediumLevelILOperation.MLIL_UNIMPL: [],
-	    MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")], MediumLevelILOperation.MLIL_FADD: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_FSUB: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_FMUL: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_FDIV: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_FSQRT: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_FNEG: [("src", "expr")], MediumLevelILOperation.MLIL_FABS: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_FLOAT_TO_INT: [("src", "expr")], MediumLevelILOperation.MLIL_INT_TO_FLOAT: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_FLOAT_CONV: [("src", "expr")], MediumLevelILOperation.MLIL_ROUND_TO_INT: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_FLOOR: [("src", "expr")], MediumLevelILOperation.MLIL_CEIL: [
-	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_FTRUNC: [("src", "expr")], MediumLevelILOperation.MLIL_FCMP_E: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_FCMP_NE: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_FCMP_LT: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_FCMP_LE: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_FCMP_GE: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_FCMP_GT: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_FCMP_O: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_FCMP_UO: [
-	        ("left", "expr"), ("right", "expr")
-	    ], MediumLevelILOperation.MLIL_SET_VAR_SSA: [
-	        ("dest", "var_ssa"), ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [
-	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [
-	        ("high", "var_ssa"), ("low", "var_ssa"), ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_SET_VAR_ALIASED: [
-	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: [
-	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_VAR_SSA: [("var", "var_ssa")], MediumLevelILOperation.MLIL_VAR_SSA_FIELD: [
-	        ("src", "var_ssa"), ("offset", "int")
-	    ], MediumLevelILOperation.MLIL_VAR_ALIASED: [
-	        ("src", "var_ssa")
-	    ], MediumLevelILOperation.MLIL_VAR_ALIASED_FIELD: [
-	        ("src", "var_ssa"), ("offset", "int")
-	    ], MediumLevelILOperation.MLIL_VAR_SPLIT_SSA: [
-	        ("high", "var_ssa"), ("low", "var_ssa")
-	    ], MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA: [
-			("var", "var_ssa")
-		], MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA_FIELD: [
-			("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("offset", "int")
-		], MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED: [
-			("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src")
-		], MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED_FIELD: [
-			("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("offset", "int")
-		], MediumLevelILOperation.MLIL_CALL_SSA: [
-	        ("output", "var_ssa_list"), ("output_dest_memory", "int"), ("dest", "expr"),
-	        ("params", "expr_list"), ("src_memory", "int")
-	    ], MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA: [
-	        ("output", "var_ssa_list"), ("output_dest_memory", "int"), ("dest", "expr"), ("params", "expr_list"),
-	        ("params_src_memory", "int"), ("stack", "expr")
-	    ], MediumLevelILOperation.MLIL_SYSCALL_SSA: [
-	        ("output", "var_ssa_list"), ("output_dest_memory", "int"), ("params", "expr_list"),
-	        ("src_memory", "int")
-	    ], MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA: [
-	        ("output", "var_ssa_list"), ("output_dest_memory", "int"), ("params", "expr_list"),
-	        ("params_src_memory", "int"), ("stack", "expr")
-	    ], MediumLevelILOperation.MLIL_TAILCALL_SSA: [
-	        ("output", "var_ssa_list"), ("output_dest_memory", "int"),
-	        ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")
-	    ], MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA: [
-	        ("output", "var_ssa_list"), ("output_dest_memory", "int"), ("dest", "expr"), ("params", "expr_list"),
-	        ("params_src_memory", "int"), ("stack", "expr")
-	    ], MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA: [
-	        ("dest_memory", "int"), ("dest", "var_ssa_list")
-	    ], MediumLevelILOperation.MLIL_CALL_PARAM_SSA: [
-	        ("src_memory", "int"), ("src", "expr_list")
-	    ], MediumLevelILOperation.MLIL_LOAD_SSA: [
-	        ("src", "expr"), ("src_memory", "int")
-	    ], MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA: [
-	        ("src", "expr"), ("offset", "int"), ("src_memory", "int")
-	    ], MediumLevelILOperation.MLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"),
-	                                               ("src", "expr")], MediumLevelILOperation.MLIL_STORE_STRUCT_SSA: [
-	                                                   ("dest", "expr"), ("offset", "int"), ("dest_memory", "int"),
-	                                                   ("src_memory", "int"), ("src", "expr")
-	                                               ], MediumLevelILOperation.MLIL_VAR_PHI: [
-	                                                   ("dest", "var_ssa"), ("src", "var_ssa_list")
-	                                               ], MediumLevelILOperation.MLIL_MEM_PHI: [("dest_memory", "int"),
-	                                                                                        ("src_memory", "int_list")],
-	    MediumLevelILOperation.MLIL_ASSERT: [("src", "var"), ("constraint", "constraint")],
-	    MediumLevelILOperation.MLIL_ASSERT_SSA: [("src", "var_ssa"), ("constraint", "constraint")],
-	    MediumLevelILOperation.MLIL_FORCE_VER: [("dest", "var"), ("src", "var"), ("reason", "int")],
-	    MediumLevelILOperation.MLIL_FORCE_VER_SSA: [("dest", "var_ssa"), ("src", "var_ssa"), ("reason", "int")]
+	# BEGIN GENERATED mlil-operations: from api/il, do not edit
+	ILOperations: ClassVar[Dict[MediumLevelILOperation, List[Tuple[str, str]]]] = {
+		MediumLevelILOperation.MLIL_NOP: [],
+		MediumLevelILOperation.MLIL_SET_VAR: [("dest", "var"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_FIELD: [("dest", "var"), ("offset", "int"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_SPLIT: [("high", "var"), ("low", "var"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_ASSERT: [("src", "var"), ("constraint", "constraint")],
+		MediumLevelILOperation.MLIL_FORCE_VER: [("dest", "var"), ("src", "var"), ("reason", "int")],
+		MediumLevelILOperation.MLIL_LOAD: [("src", "expr")],
+		MediumLevelILOperation.MLIL_LOAD_STRUCT: [("src", "expr"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_STORE: [("dest", "expr"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_STORE_STRUCT: [("dest", "expr"), ("offset", "int"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_VAR: [("var", "var")],
+		MediumLevelILOperation.MLIL_VAR_FIELD: [("src", "var"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_VAR_SPLIT: [("high", "var"), ("low", "var")],
+		MediumLevelILOperation.MLIL_ADDRESS_OF: [("src", "var")],
+		MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD: [("src", "var"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_PASS_BY_REF: [("src", "expr")],
+		MediumLevelILOperation.MLIL_RETURN_BY_REF: [("src", "expr")],
+		MediumLevelILOperation.MLIL_CONST: [("constant", "int")],
+		MediumLevelILOperation.MLIL_CONST_DATA: [("constant", "ConstantData")],
+		MediumLevelILOperation.MLIL_CONST_PTR: [("constant", "int")],
+		MediumLevelILOperation.MLIL_EXTERN_PTR: [("constant", "int"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_FLOAT_CONST: [("constant", "float")],
+		MediumLevelILOperation.MLIL_IMPORT: [("constant", "int")],
+		MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_ADC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		MediumLevelILOperation.MLIL_SUB: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_SBB: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		MediumLevelILOperation.MLIL_AND: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_OR: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_XOR: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_LSL: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_LSR: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_ASR: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_ROL: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_RLC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		MediumLevelILOperation.MLIL_ROR: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_RRC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		MediumLevelILOperation.MLIL_MUL: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_DIVU: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_DIVU_DP: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_DIVS: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_DIVS_DP: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MODU: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MODU_DP: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MODS: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MODS_DP: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_NEG: [("src", "expr")],
+		MediumLevelILOperation.MLIL_NOT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_SX: [("src", "expr")],
+		MediumLevelILOperation.MLIL_ZX: [("src", "expr")],
+		MediumLevelILOperation.MLIL_LOW_PART: [("src", "expr")],
+		MediumLevelILOperation.MLIL_JUMP: [("dest", "expr")],
+		MediumLevelILOperation.MLIL_JUMP_TO: [("dest", "expr"), ("targets", "target_map")],
+		MediumLevelILOperation.MLIL_RET_HINT: [("dest", "expr")],
+		MediumLevelILOperation.MLIL_CALL: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
+		MediumLevelILOperation.MLIL_CALL_UNTYPED: [
+			("output", "var_list"),
+			("dest", "expr"),
+			("params", "expr_list"),
+			("stack", "expr"),
+		],
+		MediumLevelILOperation.MLIL_CALL_PARAM: [("src", "expr_list")],
+		MediumLevelILOperation.MLIL_SEPARATE_PARAM_LIST: [("params", "expr_list")],
+		MediumLevelILOperation.MLIL_SHARED_PARAM_SLOT: [("params", "expr_list")],
+		MediumLevelILOperation.MLIL_VAR_OUTPUT: [("dest", "var")],
+		MediumLevelILOperation.MLIL_VAR_OUTPUT_FIELD: [("dest", "var"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_STORE_OUTPUT: [("dest", "expr")],
+		MediumLevelILOperation.MLIL_RET: [("src", "expr_list")],
+		MediumLevelILOperation.MLIL_NORET: [],
+		MediumLevelILOperation.MLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
+		MediumLevelILOperation.MLIL_GOTO: [("dest", "int")],
+		MediumLevelILOperation.MLIL_CMP_E: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_ULT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_SLE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_ULE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_SGE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_UGE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_SGT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_BOOL_TO_INT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_ADD_OVERFLOW: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_SYSCALL: [("output", "var_list"), ("params", "expr_list")],
+		MediumLevelILOperation.MLIL_SYSCALL_UNTYPED: [
+			("output", "var_list"),
+			("params", "expr_list"),
+			("stack", "expr"),
+		],
+		MediumLevelILOperation.MLIL_TAILCALL: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
+		MediumLevelILOperation.MLIL_TAILCALL_UNTYPED: [
+			("output", "var_list"),
+			("dest", "expr"),
+			("params", "expr_list"),
+			("stack", "expr"),
+		],
+		MediumLevelILOperation.MLIL_INTRINSIC: [
+			("output", "var_list"),
+			("intrinsic", "intrinsic"),
+			("params", "expr_list"),
+		],
+		MediumLevelILOperation.MLIL_FREE_VAR_SLOT: [("dest", "var")],
+		MediumLevelILOperation.MLIL_BP: [],
+		MediumLevelILOperation.MLIL_TRAP: [("vector", "int")],
+		MediumLevelILOperation.MLIL_UNDEF: [],
+		MediumLevelILOperation.MLIL_UNIMPL: [],
+		MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FADD: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FSUB: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FMUL: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FDIV: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FSQRT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FNEG: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FABS: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FLOAT_TO_INT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_INT_TO_FLOAT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FLOAT_CONV: [("src", "expr")],
+		MediumLevelILOperation.MLIL_ROUND_TO_INT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FLOOR: [("src", "expr")],
+		MediumLevelILOperation.MLIL_CEIL: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FTRUNC: [("src", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_E: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_NE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_LT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_LE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_GE: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_GT: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_O: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_FCMP_UO: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_SSA: [("dest", "var_ssa"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: [
+			("dest", "var_ssa_dest_and_src"),
+			("prev", "var_ssa_dest_and_src"),
+			("offset", "int"),
+			("src", "expr"),
+		],
+		MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: [("high", "var_ssa"), ("low", "var_ssa"), ("src", "expr")],
+		MediumLevelILOperation.MLIL_SET_VAR_ALIASED: [
+			("dest", "var_ssa_dest_and_src"),
+			("prev", "var_ssa_dest_and_src"),
+			("src", "expr"),
+		],
+		MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: [
+			("dest", "var_ssa_dest_and_src"),
+			("prev", "var_ssa_dest_and_src"),
+			("offset", "int"),
+			("src", "expr"),
+		],
+		MediumLevelILOperation.MLIL_VAR_SSA: [("var", "var_ssa")],
+		MediumLevelILOperation.MLIL_VAR_SSA_FIELD: [("src", "var_ssa"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_VAR_ALIASED: [("src", "var_ssa")],
+		MediumLevelILOperation.MLIL_VAR_ALIASED_FIELD: [("src", "var_ssa"), ("offset", "int")],
+		MediumLevelILOperation.MLIL_VAR_SPLIT_SSA: [("high", "var_ssa"), ("low", "var_ssa")],
+		MediumLevelILOperation.MLIL_ASSERT_SSA: [("src", "var_ssa"), ("constraint", "constraint")],
+		MediumLevelILOperation.MLIL_FORCE_VER_SSA: [("dest", "var_ssa"), ("src", "var_ssa"), ("reason", "int")],
+		MediumLevelILOperation.MLIL_CALL_SSA: [
+			("output", "var_ssa_list"),
+			("output_dest_memory", "int"),
+			("dest", "expr"),
+			("params", "expr_list"),
+			("src_memory", "int"),
+		],
+		MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA: [
+			("output", "var_ssa_list"),
+			("output_dest_memory", "int"),
+			("dest", "expr"),
+			("params", "expr_list"),
+			("params_src_memory", "int"),
+			("stack", "expr"),
+		],
+		MediumLevelILOperation.MLIL_SYSCALL_SSA: [
+			("output", "var_ssa_list"),
+			("output_dest_memory", "int"),
+			("params", "expr_list"),
+			("src_memory", "int"),
+		],
+		MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA: [
+			("output", "var_ssa_list"),
+			("output_dest_memory", "int"),
+			("params", "expr_list"),
+			("params_src_memory", "int"),
+			("stack", "expr"),
+		],
+		MediumLevelILOperation.MLIL_TAILCALL_SSA: [
+			("output", "var_ssa_list"),
+			("output_dest_memory", "int"),
+			("dest", "expr"),
+			("params", "expr_list"),
+			("src_memory", "int"),
+		],
+		MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA: [
+			("output", "var_ssa_list"),
+			("output_dest_memory", "int"),
+			("dest", "expr"),
+			("params", "expr_list"),
+			("params_src_memory", "int"),
+			("stack", "expr"),
+		],
+		MediumLevelILOperation.MLIL_CALL_PARAM_SSA: [("src_memory", "int"), ("src", "expr_list")],
+		MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "var_ssa_list")],
+		MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA: [("var", "var_ssa")],
+		MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA_FIELD: [
+			("dest", "var_ssa_dest_and_src"),
+			("prev", "var_ssa_dest_and_src"),
+			("offset", "int"),
+		],
+		MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED: [
+			("dest", "var_ssa_dest_and_src"),
+			("prev", "var_ssa_dest_and_src"),
+		],
+		MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED_FIELD: [
+			("dest", "var_ssa_dest_and_src"),
+			("prev", "var_ssa_dest_and_src"),
+			("offset", "int"),
+		],
+		MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_OUTPUT_SSA: [("dest_memory", "int"), ("output", "var_ssa_list")],
+		MediumLevelILOperation.MLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
+		MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA: [("src", "expr"), ("offset", "int"), ("src_memory", "int")],
+		MediumLevelILOperation.MLIL_STORE_SSA: [
+			("dest", "expr"),
+			("dest_memory", "int"),
+			("src_memory", "int"),
+			("src", "expr"),
+		],
+		MediumLevelILOperation.MLIL_STORE_STRUCT_SSA: [
+			("dest", "expr"),
+			("offset", "int"),
+			("dest_memory", "int"),
+			("src_memory", "int"),
+			("src", "expr"),
+		],
+		MediumLevelILOperation.MLIL_INTRINSIC_SSA: [
+			("output", "var_ssa_list"),
+			("intrinsic", "intrinsic"),
+			("params", "expr_list"),
+		],
+		MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_SSA: [
+			("output", "var_ssa_list"),
+			("dest_memory", "int"),
+			("intrinsic", "intrinsic"),
+			("params", "expr_list"),
+			("src_memory", "int"),
+		],
+		MediumLevelILOperation.MLIL_FREE_VAR_SLOT_SSA: [
+			("dest", "var_ssa_dest_and_src"),
+			("prev", "var_ssa_dest_and_src"),
+		],
+		MediumLevelILOperation.MLIL_VAR_PHI: [("dest", "var_ssa"), ("src", "var_ssa_list")],
+		MediumLevelILOperation.MLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")],
+		MediumLevelILOperation.MLIL_BLOCK_TO_EXPAND: [("exprs", "expr_list")],
+		MediumLevelILOperation.MLIL_BSWAP: [("src", "expr")],
+		MediumLevelILOperation.MLIL_POPCNT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_CLZ: [("src", "expr")],
+		MediumLevelILOperation.MLIL_CTZ: [("src", "expr")],
+		MediumLevelILOperation.MLIL_RBIT: [("src", "expr")],
+		MediumLevelILOperation.MLIL_CLS: [("src", "expr")],
+		MediumLevelILOperation.MLIL_MINS: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MAXS: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MINU: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_MAXU: [("left", "expr"), ("right", "expr")],
+		MediumLevelILOperation.MLIL_ABS: [("src", "expr")],
 	}
+	# END GENERATED mlil-operations
 
 	@staticmethod
 	def show_mlil_hierarchy():
@@ -1113,11 +1140,6 @@ class MediumLevelILInstruction(BaseILInstruction):
 		version = self.instr.operands[operand_index2]
 		return SSAVariable(var, version)
 
-	def _get_var_ssa_dest_and_src(self, operand_index1: int, operand_index2: int) -> SSAVariable:
-		var = variable.Variable.from_identifier(self.function, self.instr.operands[operand_index1])
-		dest_version = self.instr.operands[operand_index2]
-		return SSAVariable(var, dest_version)
-
 	def _get_int_list(self, operand_index: int) -> List[int]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNMediumLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
@@ -1305,315 +1327,109 @@ class MediumLevelILCarryBase(MediumLevelILInstruction, Carry):
 		]
 
 
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILNop(MediumLevelILInstruction):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILNoret(MediumLevelILInstruction, Terminal):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILBp(MediumLevelILInstruction, Terminal):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILUndef(MediumLevelILInstruction):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILUnimpl(MediumLevelILInstruction):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILLoad(MediumLevelILInstruction, Load):
+class _CallOutput:
 	@property
-	def src(self) -> MediumLevelILInstruction:
-		return self._get_expr(0)
+	def output(self) -> List[variable.Variable]:
+		result = []
+		for expr in self.output_exprs:
+			var = expr._var_written_for_function_call_output()
+			if var is not None:
+				result.append(var)
+		return result
+
+
+class _CallSsaOutput:
+	@property
+	def output(self) -> List[SSAVariable]:
+		return self.output_expr.dest
+
+
+class _CallOutputSsaVars:
+	@property
+	def dest(self) -> List[SSAVariable]:
+		result = []
+		for expr in self.dest_exprs:
+			var = expr._ssa_var_written_for_function_call_output()
+			if var is not None:
+				result.append(var)
+		return result
 
 	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("src", self.src, "MediumLevelILInstruction")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVar(MediumLevelILInstruction, VariableInstruction):
-	@property
-	def src(self) -> variable.Variable:
-		return self._get_var(0)
-
-	@property
-	def var(self) -> variable.Variable:
-		return self._get_var(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("var", self.var, "Variable")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILAddressOf(MediumLevelILInstruction):
-	@property
-	def src(self) -> variable.Variable:
-		return self._get_var(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("src", self.src, "Variable")]
-
-	@property
-	def vars_address_taken(self) -> List[variable.Variable]:
-		return [self.src]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILPassByRef(MediumLevelILUnaryBase):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILReturnByRef(MediumLevelILUnaryBase):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILConst(MediumLevelILConstBase):
-	@property
-	def constant(self) -> int:
-		return self._get_int(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("constant", self.constant, "int")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILConstPtr(MediumLevelILConstBase):
-	@property
-	def constant(self) -> int:
-		return self._get_int(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("constant", self.constant, "int")]
-
-	@property
-	def string(self) -> Optional[Tuple[str, StringType]]:
-		return self.function.view.check_for_string_annotation_type(self.constant, True, True, 0)
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFloatConst(MediumLevelILConstBase, FloatingPoint):
-	@property
-	def constant(self) -> float:
-		return self._get_float(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("constant", self.constant, "float")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILImport(MediumLevelILConstBase):
-	@property
-	def constant(self) -> int:
-		return self._get_int(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("constant", self.constant, "int")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILConstData(MediumLevelILConstBase):
-	@property
-	def constant(self) -> variable.ConstantData:
-		return self._get_constant_data(0, 1)
-
-	@property
-	def constant_data(self) -> variable.ConstantData:
-		return self._get_constant_data(0, 1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("constant", self.constant, "ConstantData")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILNeg(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILNot(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILBswap(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILPopcnt(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILClz(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCtz(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILRbit(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCls(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILMins(MediumLevelILBinaryBase, Arithmetic, Signed):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILMaxs(MediumLevelILBinaryBase, Arithmetic, Signed):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILMinu(MediumLevelILBinaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILMaxu(MediumLevelILBinaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILAbs(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSx(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILZx(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILLowPart(MediumLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILJump(MediumLevelILInstruction, Terminal):
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("dest", self.dest, "MediumLevelILInstruction")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILRetHint(MediumLevelILInstruction, ControlFlow):
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("dest", self.dest, "MediumLevelILInstruction")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCallOutput(MediumLevelILInstruction):
-	@property
-	def dest(self) -> List[variable.Variable]:
-		return self._get_var_list(0, 1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("dest", self.dest, "List[Variable]")]
-
-	@property
-	def vars_written(self) -> List[variable.Variable]:
+	def vars_written(self) -> List[SSAVariable]:
 		return self.dest
 
 
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCallParam(MediumLevelILInstruction):
-	def __repr__(self):
-		return f"<MediumLevelILCallParam: {self.src}>"
+class _SetVarVars:
+	@property
+	def vars_read(self) -> List[Union[variable.Variable, SSAVariable]]:
+		return self.src.vars_read
 
 	@property
-	def src(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(0, 1)
+	def vars_written(self) -> List[variable.Variable]:
+		return [self.dest]
+
+
+class _SetVarSsaVars:
+	@property
+	def vars_read(self) -> List[Union[variable.Variable, SSAVariable]]:
+		return self.src.vars_read
 
 	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("src", self.src, "List[MediumLevelILInstruction]")]
+	def vars_written(self) -> List[SSAVariable]:
+		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSeparateParamList(MediumLevelILInstruction):
-	def __repr__(self):
-		return f"<MediumLevelILSeparateParamList: {self.params}>"
+class _SetVarFieldVars:
+	@property
+	def vars_read(self) -> List[SSAVariable]:
+		return [self.prev, *self.src.vars_read]
 
 	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(0, 1)
+	def vars_written(self) -> List[SSAVariable]:
+		return [self.dest]
+
+
+class _SetVarSplitVars:
+	@property
+	def vars_read(self) -> List[variable.Variable]:
+		return self.src.vars_read
 
 	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("params", self.params, "List[MediumLevelILInstruction]")]
+	def vars_written(self) -> List[variable.Variable]:
+		return [self.high, self.low]
 
 
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSharedParamSlot(MediumLevelILInstruction):
-	def __repr__(self):
-		return f"<MediumLevelILSharedParamSlot: {self.params}>"
+class _SetVarSplitSsaVars:
+	@property
+	def vars_read(self) -> List[Union[variable.Variable, SSAVariable]]:
+		return self.src.vars_read
 
 	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(0, 1)
+	def vars_written(self) -> List[SSAVariable]:
+		return [self.high, self.low]
+
+
+class _ForceVerVars:
+	@property
+	def vars_read(self) -> List[variable.Variable]:
+		return [self.src]
 
 	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("params", self.params, "List[MediumLevelILInstruction]")]
+	def vars_written(self) -> List[variable.Variable]:
+		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarOutput(MediumLevelILInstruction, RegisterStack):
+class _ForceVerSsaVars:
 	@property
-	def dest(self) -> variable.Variable:
-		return self._get_var(0)
+	def vars_read(self) -> List[SSAVariable]:
+		return [self.src]
 
 	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("dest", self.dest, "Variable")]
+	def vars_written(self) -> List[SSAVariable]:
+		return [self.dest]
 
+
+class _VarOutputVars:
 	@property
 	def vars_read(self) -> List[variable.Variable]:
 		return []
@@ -1623,200 +1439,7 @@ class MediumLevelILVarOutput(MediumLevelILInstruction, RegisterStack):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarOutputField(MediumLevelILInstruction, SetVar):
-	@property
-	def dest(self) -> variable.Variable:
-		return self._get_var(0)
-
-	@property
-	def offset(self) -> int:
-		return self._get_int(1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('dest', self.dest, 'Variable'),
-			('offset', self.offset, 'int')
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILStoreOutput(MediumLevelILInstruction, Store):
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			("dest", self.dest, "MediumLevelILInstruction"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILRet(MediumLevelILInstruction, Return):
-	@property
-	def src(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(0, 1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("src", self.src, "List[MediumLevelILInstruction]")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILGoto(MediumLevelILInstruction, Terminal):
-	@property
-	def dest(self) -> InstructionIndex:
-		return InstructionIndex(self._get_int(0))
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("dest", self.dest, "InstructionIndex")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILBoolToInt(MediumLevelILInstruction):
-	@property
-	def src(self) -> MediumLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("src", self.src, "MediumLevelILInstruction")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFreeVarSlot(MediumLevelILInstruction, RegisterStack):
-	@property
-	def dest(self) -> variable.Variable:
-		return self._get_var(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("dest", self.dest, "Variable")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILTrap(MediumLevelILInstruction, Terminal):
-	@property
-	def vector(self) -> int:
-		return self._get_int(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("vector", self.vector, "int")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFreeVarSlotSsa(MediumLevelILInstruction, SSA, RegisterStack):
-	@property
-	def dest(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 1)
-
-	@property
-	def prev(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			("dest", self.dest, "SSAVariable"),
-			("prev", self.prev, "SSAVariable"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILUnimplMem(MediumLevelILInstruction, Memory):
-	@property
-	def src(self) -> MediumLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("src", self.src, "MediumLevelILInstruction")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFsqrt(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFneg(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFabs(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFloatToInt(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILIntToFloat(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFloatConv(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILRoundToInt(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFloor(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCeil(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFtrunc(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarSsa(MediumLevelILInstruction, SSAVariableInstruction):
-	@property
-	def src(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def var(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("var", self.var, "SSAVariable")]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarOutputSsa(MediumLevelILInstruction, SSAVariableInstruction):
-	@property
-	def dest(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def var(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("var", self.var, "SSAVariable")]
-
+class _VarOutputSsaVars:
 	@property
 	def vars_read(self) -> List[SSAVariable]:
 		return []
@@ -1826,107 +1449,87 @@ class MediumLevelILVarOutputSsa(MediumLevelILInstruction, SSAVariableInstruction
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarOutputSsaField(MediumLevelILInstruction, SetVar, SSA):
-	@property
-	def dest(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 1)
-
-	@property
-	def prev(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 2)
-
-	@property
-	def offset(self) -> int:
-		return self._get_int(3)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('dest', self.dest, 'SSAVariable'),
-			('prev', self.prev, 'SSAVariable'),
-			('offset', self.offset, 'int')
-		]
-
+class _VarOutputFieldVars:
 	@property
 	def vars_read(self) -> List[SSAVariable]:
-		return [self.prev]  # type: ignore # we're guaranteed not to return non-SSAVariables here
+		return [self.prev]
 
 	@property
 	def vars_written(self) -> List[SSAVariable]:
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarOutputAliased(MediumLevelILInstruction, SetVar, SSA):
-	@property
-	def dest(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 1)
-
-	@property
-	def prev(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('dest', self.dest, 'SSAVariable'),
-			('prev', self.prev, 'SSAVariable')
-		]
-
-	@property
-	def vars_read(self) -> List[Union[variable.Variable, SSAVariable]]:
-		return []
-
-	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return [self.dest]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarOutputAliasedField(MediumLevelILInstruction, SetVar, SSA):
-	@property
-	def dest(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 1)
-
-	@property
-	def prev(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 2)
-
-	@property
-	def offset(self) -> int:
-		return self._get_int(3)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('dest', self.dest, 'SSAVariable'),
-			('prev', self.prev, 'SSAVariable'),
-			('offset', self.offset, 'int')
-		]
-
+class _VarPhiVars:
 	@property
 	def vars_read(self) -> List[SSAVariable]:
-		return [self.prev]  # type: ignore # we're guaranteed not to return non-SSAVariables here
+		return self.src
 
 	@property
 	def vars_written(self) -> List[SSAVariable]:
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarAliased(MediumLevelILInstruction, SSA, AliasedVariableInstruction):
+class _IntrinsicVars:
 	@property
-	def src(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
+	def vars_read(self) -> List[variable.Variable]:
+		result: List[variable.Variable] = []
+		for param in self.params:
+			result.extend(param.vars_read)
+		return result
 
 	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("src", self.src, "SSAVariable")]
+	def vars_written(self) -> List[variable.Variable]:
+		return self.output
+
+
+class _IntrinsicSsaVars:
+	@property
+	def vars_read(self) -> List[SSAVariable]:
+		result: List[SSAVariable] = []
+		for param in self.params:
+			result.extend(param.vars_read)
+		return result
+
+	@property
+	def vars_written(self) -> List[SSAVariable]:
+		return self.output
+
+
+class _AddressOfVars:
+	@property
+	def vars_address_taken(self) -> List[variable.Variable]:
+		return [self.src]
+
+
+class _ConstPtrString:
+	@property
+	def string(self) -> Optional[Tuple[str, StringType]]:
+		return self.function.view.check_for_string_annotation_type(self.constant, True, True, 0)
+
+
+class _ParamListFormatting:
+	def __repr__(self):
+		return f"<{type(self).__name__}: {self.src}>"
+
+
+class _NestedParamListFormatting:
+	def __repr__(self):
+		return f"<{type(self).__name__}: {self.params}>"
+
+
+class _MemoryIntrinsicOutputSsaFormatting:
+	def __repr__(self):
+		return f"<MediumLevelILMemoryIntrinsicOutputSsa: {self.dest_memory} {self.output}>"
+
+
+# BEGIN GENERATED mlil-classes: from api/il, do not edit
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILNop(MediumLevelILInstruction):
+	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSetVar(MediumLevelILInstruction, SetVar):
+class MediumLevelILSetVar(_SetVarVars, MediumLevelILInstruction, SetVar):
 	@property
 	def dest(self) -> variable.Variable:
 		return self._get_var(0)
@@ -1942,13 +1545,97 @@ class MediumLevelILSetVar(MediumLevelILInstruction, SetVar):
 			("src", self.src, "MediumLevelILInstruction"),
 		]
 
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILSetVarField(MediumLevelILInstruction, SetVar):
 	@property
-	def vars_written(self) -> List[variable.Variable]:
-		return [self.dest]
+	def dest(self) -> variable.Variable:
+		return self._get_var(0)
 
 	@property
-	def vars_read(self) -> List[Union[variable.Variable, SSAVariable]]:
-		return self.src.vars_read
+	def offset(self) -> int:
+		return self._get_int(1)
+
+	@property
+	def src(self) -> MediumLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "Variable"),
+			("offset", self.offset, "int"),
+			("src", self.src, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILSetVarSplit(_SetVarSplitVars, MediumLevelILInstruction, SetVar):
+	@property
+	def high(self) -> variable.Variable:
+		return self._get_var(0)
+
+	@property
+	def low(self) -> variable.Variable:
+		return self._get_var(1)
+
+	@property
+	def src(self) -> MediumLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("high", self.high, "Variable"),
+			("low", self.low, "Variable"),
+			("src", self.src, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILAssert(MediumLevelILInstruction):
+	@property
+	def src(self) -> variable.Variable:
+		return self._get_var(0)
+
+	@property
+	def constraint(self) -> variable.PossibleValueSet:
+		return self._get_constraint(1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "Variable"),
+			("constraint", self.constraint, "PossibleValueSet"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILForceVer(_ForceVerVars, MediumLevelILInstruction):
+	@property
+	def dest(self) -> variable.Variable:
+		return self._get_var(0)
+
+	@property
+	def src(self) -> variable.Variable:
+		return self._get_var(1)
+
+	@property
+	def reason(self) -> ForceVersionReason:
+		return ForceVersionReason(self._get_int(2))
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "Variable"),
+			("src", self.src, "Variable"),
+			("reason", self.reason, "ForceVersionReason"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILLoad(MediumLevelILUnaryBase, Load):
+	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1984,6 +1671,46 @@ class MediumLevelILStore(MediumLevelILInstruction, Store):
 		return [
 			("dest", self.dest, "MediumLevelILInstruction"),
 			("src", self.src, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILStoreStruct(MediumLevelILInstruction, Store):
+	@property
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def offset(self) -> int:
+		return self._get_int(1)
+
+	@property
+	def src(self) -> MediumLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("offset", self.offset, "int"),
+			("src", self.src, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVar(MediumLevelILInstruction, VariableInstruction):
+	@property
+	def src(self) -> variable.Variable:
+		return self._get_var(0)
+
+	@property
+	def var(self) -> variable.Variable:
+		return self.src
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("var", self.var, "Variable"),
 		]
 
 
@@ -2024,7 +1751,20 @@ class MediumLevelILVarSplit(MediumLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILAddressOfField(MediumLevelILInstruction):
+class MediumLevelILAddressOf(_AddressOfVars, MediumLevelILInstruction):
+	@property
+	def src(self) -> variable.Variable:
+		return self._get_var(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "Variable"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILAddressOfField(_AddressOfVars, MediumLevelILInstruction):
 	@property
 	def src(self) -> variable.Variable:
 		return self._get_var(0)
@@ -2037,12 +1777,61 @@ class MediumLevelILAddressOfField(MediumLevelILInstruction):
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
 			("src", self.src, "Variable"),
-			("offset", self.offset, "int")
+			("offset", self.offset, "int"),
 		]
 
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILPassByRef(MediumLevelILUnaryBase):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILReturnByRef(MediumLevelILUnaryBase):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILConst(MediumLevelILConstBase):
 	@property
-	def vars_address_taken(self) -> List[variable.Variable]:
-		return [self.src]
+	def constant(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILConstData(MediumLevelILConstBase):
+	@property
+	def constant_data(self) -> variable.ConstantData:
+		return self._get_constant_data(0, 1)
+
+	@property
+	def constant(self) -> variable.ConstantData:
+		return self.constant_data
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "ConstantData"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILConstPtr(_ConstPtrString, MediumLevelILConstBase):
+	@property
+	def constant(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2064,12 +1853,48 @@ class MediumLevelILExternPtr(MediumLevelILConstBase):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFloatConst(MediumLevelILConstBase, FloatingPoint):
+	@property
+	def constant(self) -> float:
+		return self._get_float(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "float"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILImport(MediumLevelILConstBase):
+	@property
+	def constant(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILAdd(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILAdc(MediumLevelILCarryBase):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSub(MediumLevelILBinaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILSbb(MediumLevelILCarryBase):
 	pass
 
 
@@ -2109,7 +1934,17 @@ class MediumLevelILRol(MediumLevelILBinaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILRlc(MediumLevelILCarryBase):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILRor(MediumLevelILBinaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILRrc(MediumLevelILCarryBase):
 	pass
 
 
@@ -2169,6 +2004,269 @@ class MediumLevelILModsDp(MediumLevelILBinaryBase, DoublePrecision, Signed):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILNeg(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILNot(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILSx(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILZx(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILLowPart(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILJump(MediumLevelILInstruction, Terminal):
+	@property
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILJumpTo(MediumLevelILInstruction, Terminal):
+	@property
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def targets(self) -> Dict[int, int]:
+		return self._get_target_map(1, 2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("targets", self.targets, "Dict[int, int]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILRetHint(MediumLevelILInstruction, ControlFlow):
+	@property
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCall(_CallOutput, MediumLevelILCallBase, Localcall):
+	@property
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(3, 4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("output", self.output, "List[Variable]"),
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCallUntyped(_CallOutput, MediumLevelILCallBase, Localcall):
+	@property
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def param(self) -> 'MediumLevelILCallParam':
+		result = self._get_expr(3)
+		assert isinstance(result, MediumLevelILCallParam)
+		return result
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self.param.src
+
+	@property
+	def stack(self) -> MediumLevelILInstruction:
+		return self._get_expr(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("output", self.output, "List[Variable]"),
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+			("stack", self.stack, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCallParam(_ParamListFormatting, MediumLevelILInstruction):
+	@property
+	def src(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "List[MediumLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILSeparateParamList(_NestedParamListFormatting, MediumLevelILInstruction):
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("params", self.params, "List[MediumLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILSharedParamSlot(_NestedParamListFormatting, MediumLevelILInstruction):
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("params", self.params, "List[MediumLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarOutput(_VarOutputVars, MediumLevelILInstruction, RegisterStack):
+	@property
+	def dest(self) -> variable.Variable:
+		return self._get_var(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "Variable"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarOutputField(MediumLevelILInstruction, SetVar):
+	@property
+	def dest(self) -> variable.Variable:
+		return self._get_var(0)
+
+	@property
+	def offset(self) -> int:
+		return self._get_int(1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "Variable"),
+			("offset", self.offset, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILStoreOutput(MediumLevelILInstruction, Store):
+	@property
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILRet(MediumLevelILInstruction, Return):
+	@property
+	def src(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "List[MediumLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILNoret(MediumLevelILInstruction, Terminal):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILIf(MediumLevelILInstruction, Terminal):
+	@property
+	def condition(self) -> MediumLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def true(self) -> InstructionIndex:
+		return InstructionIndex(self._get_int(1))
+
+	@property
+	def false(self) -> InstructionIndex:
+		return InstructionIndex(self._get_int(2))
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("condition", self.condition, "MediumLevelILInstruction"),
+			("true", self.true, "InstructionIndex"),
+			("false", self.false, "InstructionIndex"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILGoto(MediumLevelILInstruction, Terminal):
+	@property
+	def dest(self) -> InstructionIndex:
+		return InstructionIndex(self._get_int(0))
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "InstructionIndex"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCmpE(MediumLevelILComparisonBase):
 	pass
 
@@ -2224,21 +2322,17 @@ class MediumLevelILTestBit(MediumLevelILComparisonBase):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILBoolToInt(MediumLevelILUnaryBase):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILAddOverflow(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSyscall(MediumLevelILCallBase, Syscall):
-	@property
-	def output(self) -> List[variable.Variable]:
-		result = []
-		for expr in self.output_exprs:
-			var = expr._var_written_for_function_call_output()
-			if var is not None:
-				result.append(var)
-		return result
-
+class MediumLevelILSyscall(_CallOutput, MediumLevelILCallBase, Syscall):
 	@property
 	def output_exprs(self) -> List[MediumLevelILInstruction]:
 		return self._get_expr_list(0, 1)
@@ -2250,203 +2344,238 @@ class MediumLevelILSyscall(MediumLevelILCallBase, Syscall):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('output', self.output, 'List[Variable]'),
-			('params', self.params, 'List[MediumLevelILInstruction]'),
+			("output", self.output, "List[Variable]"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
 		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarSsaField(MediumLevelILInstruction, SSA):
+class MediumLevelILSyscallUntyped(_CallOutput, MediumLevelILCallBase, Syscall):
 	@property
-	def src(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def offset(self) -> int:
-		return self._get_int(2)
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(0, 1)
 
 	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('src', self.src, 'SSAVariable'),
-			('offset', self.offset, 'int'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarAliasedField(MediumLevelILInstruction, SSA):
-	@property
-	def src(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def offset(self) -> int:
-		return self._get_int(2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('src', self.src, 'SSAVariable'),
-			('offset', self.offset, 'int'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarSplitSsa(MediumLevelILInstruction, SSA):
-	@property
-	def high(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def low(self) -> SSAVariable:
-		return self._get_var_ssa(2, 3)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('high', self.high, 'SSAVariable'),
-			('low', self.low, 'SSAVariable'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCallOutputSsa(MediumLevelILInstruction, SSA):
-	@property
-	def dest_memory(self) -> int:
-		return self._get_int(0)
-
-	@property
-	def dest(self) -> List[SSAVariable]:
-		result = []
-		for expr in self.dest_exprs:
-			var = expr._ssa_var_written_for_function_call_output()
-			if var is not None:
-				result.append(var)
+	def param(self) -> 'MediumLevelILCallParam':
+		result = self._get_expr(2)
+		assert isinstance(result, MediumLevelILCallParam)
 		return result
 
 	@property
-	def dest_exprs(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(1, 2)
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self.param.src
+
+	@property
+	def stack(self) -> MediumLevelILInstruction:
+		return self._get_expr(3)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('dest_memory', self.dest_memory, 'int'),
-			('dest', self.dest, 'List[SSAVariable]'),
-		]
-
-	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return self.dest
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCallParamSsa(MediumLevelILInstruction, SSA):
-	def __repr__(self):
-		return f"<MediumLevelILCallParamSsa: {self.src}>"
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(0)
-
-	@property
-	def src(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(1, 2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('src_memory', self.src_memory, 'int'),
-			('src', self.src, 'List[MediumLevelILInstruction]'),
+			("output", self.output, "List[Variable]"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+			("stack", self.stack, "MediumLevelILInstruction"),
 		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILLoadSsa(MediumLevelILInstruction, Load, SSA):
+class MediumLevelILTailcall(_CallOutput, MediumLevelILCallBase, Tailcall):
 	@property
-	def src(self) -> MediumLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(1)
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(0, 1)
 
 	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('src', self.src, 'MediumLevelILInstruction'),
-			('src_memory', self.src_memory, 'int'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarPhi(MediumLevelILInstruction, SetVar, Phi, SSA):
-	@property
-	def dest(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def src(self) -> List[SSAVariable]:
-		return self._get_var_ssa_list(2, 3)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('dest', self.dest, 'SSAVariable'),
-			('src', self.src, 'List[SSAVariable]'),
-		]
-
-	@property
-	def vars_read(self) -> List[SSAVariable]:
-		return self.src
-
-	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return [self.dest]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILMemPhi(MediumLevelILInstruction, Memory, Phi):
-	@property
-	def dest_memory(self) -> int:
-		return self._get_int(0)
-
-	@property
-	def src_memory(self) -> List[int]:
-		return self._get_int_list(1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('dest_memory', self.dest_memory, 'int'),
-			('src_memory', self.src_memory, 'List[int]'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSetVarSsa(MediumLevelILInstruction, SetVar, SSA):
-	@property
-	def dest(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def src(self) -> MediumLevelILInstruction:
+	def dest(self) -> MediumLevelILInstruction:
 		return self._get_expr(2)
 
 	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(3, 4)
+
+	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('dest', self.dest, 'SSAVariable'),
-			('src', self.src, 'MediumLevelILInstruction'),
+			("output", self.output, "List[Variable]"),
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
 		]
 
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILTailcallUntyped(_CallOutput, MediumLevelILCallBase, Tailcall):
 	@property
-	def vars_read(self) -> List[Union[variable.Variable, SSAVariable]]:
-		return self.src.vars_read
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(0, 1)
 
 	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return [self.dest]
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def param(self) -> 'MediumLevelILCallParam':
+		result = self._get_expr(3)
+		assert isinstance(result, MediumLevelILCallParam)
+		return result
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self.param.src
+
+	@property
+	def stack(self) -> MediumLevelILInstruction:
+		return self._get_expr(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("output", self.output, "List[Variable]"),
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+			("stack", self.stack, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILIntrinsic(_IntrinsicVars, MediumLevelILInstruction, Intrinsic):
+	@property
+	def output(self) -> List[variable.Variable]:
+		return self._get_var_list(0, 1)
+
+	@property
+	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
+		return self._get_intrinsic(2)
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(3, 4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("output", self.output, "List[Variable]"),
+			("intrinsic", self.intrinsic, "ILIntrinsic"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFreeVarSlot(MediumLevelILInstruction, RegisterStack):
+	@property
+	def dest(self) -> variable.Variable:
+		return self._get_var(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "Variable"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILBp(MediumLevelILInstruction, Terminal):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILTrap(MediumLevelILInstruction, Terminal):
+	@property
+	def vector(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("vector", self.vector, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILUndef(MediumLevelILInstruction):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILUnimpl(MediumLevelILInstruction):
+	@property
+	def unknown(self) -> bool:
+		return self._get_int(0) != 0
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILUnimplMem(MediumLevelILUnaryBase, Memory):
+	@property
+	def unknown(self) -> bool:
+		return self._get_int(1) != 0
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFadd(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFsub(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFmul(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFdiv(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFsqrt(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFneg(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFabs(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFloatToInt(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILIntToFloat(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFloatConv(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILRoundToInt(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFloor(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCeil(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILFtrunc(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2490,52 +2619,83 @@ class MediumLevelILFcmpUo(MediumLevelILComparisonBase, FloatingPoint):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFadd(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFsub(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFmul(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILFdiv(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILJumpTo(MediumLevelILInstruction, Terminal):
+class MediumLevelILSetVarSsa(_SetVarSsaVars, MediumLevelILInstruction, SetVar, SSA):
 	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(0)
+	def dest(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
 
 	@property
-	def targets(self) -> Dict[int, int]:
-		return self._get_target_map(1, 2)
+	def src(self) -> MediumLevelILInstruction:
+		return self._get_expr(2)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('targets', self.targets, 'Dict[int, int]'),
+			("dest", self.dest, "SSAVariable"),
+			("src", self.src, "MediumLevelILInstruction"),
 		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSetVarAliased(MediumLevelILInstruction, SetVar, SSA):
+class MediumLevelILSetVarSsaField(_SetVarFieldVars, MediumLevelILInstruction, SetVar, SSA):
 	@property
 	def dest(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 1)
+		return self._get_var_ssa(0, 1)
 
 	@property
 	def prev(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 2)
+		return self._get_var_ssa(0, 2)
+
+	@property
+	def offset(self) -> int:
+		return self._get_int(3)
+
+	@property
+	def src(self) -> MediumLevelILInstruction:
+		return self._get_expr(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("prev", self.prev, "SSAVariable"),
+			("offset", self.offset, "int"),
+			("src", self.src, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILSetVarSplitSsa(_SetVarSplitSsaVars, MediumLevelILInstruction, SetVar, SSA):
+	@property
+	def high(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def low(self) -> SSAVariable:
+		return self._get_var_ssa(2, 3)
+
+	@property
+	def src(self) -> MediumLevelILInstruction:
+		return self._get_expr(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("high", self.high, "SSAVariable"),
+			("low", self.low, "SSAVariable"),
+			("src", self.src, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILSetVarAliased(_SetVarSsaVars, MediumLevelILInstruction, SetVar, SSA):
+	@property
+	def dest(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def prev(self) -> SSAVariable:
+		return self._get_var_ssa(0, 2)
 
 	@property
 	def src(self) -> MediumLevelILInstruction:
@@ -2544,40 +2704,237 @@ class MediumLevelILSetVarAliased(MediumLevelILInstruction, SetVar, SSA):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('dest', self.dest, 'SSAVariable'),
-			('prev', self.prev, 'SSAVariable'),
-			('src', self.src, 'MediumLevelILInstruction'),
+			("dest", self.dest, "SSAVariable"),
+			("prev", self.prev, "SSAVariable"),
+			("src", self.src, "MediumLevelILInstruction"),
 		]
-
-	@property
-	def vars_read(self) -> List[Union[variable.Variable, SSAVariable]]:
-		return self.src.vars_read
-
-	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return [self.dest]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSyscallUntyped(MediumLevelILCallBase, Syscall):
+class MediumLevelILSetVarAliasedField(_SetVarFieldVars, MediumLevelILInstruction, SetVar, SSA):
 	@property
-	def output(self) -> List[variable.Variable]:
-		result = []
-		for expr in self.output_exprs:
-			var = expr._var_written_for_function_call_output()
-			if var is not None:
-				result.append(var)
+	def dest(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def prev(self) -> SSAVariable:
+		return self._get_var_ssa(0, 2)
+
+	@property
+	def offset(self) -> int:
+		return self._get_int(3)
+
+	@property
+	def src(self) -> MediumLevelILInstruction:
+		return self._get_expr(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("prev", self.prev, "SSAVariable"),
+			("offset", self.offset, "int"),
+			("src", self.src, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarSsa(MediumLevelILInstruction, SSAVariableInstruction):
+	@property
+	def src(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def var(self) -> SSAVariable:
+		return self.src
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("var", self.var, "SSAVariable"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarSsaField(MediumLevelILInstruction, SSA):
+	@property
+	def src(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def offset(self) -> int:
+		return self._get_int(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "SSAVariable"),
+			("offset", self.offset, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarAliased(MediumLevelILInstruction, SSA, AliasedVariableInstruction):
+	@property
+	def src(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "SSAVariable"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarAliasedField(MediumLevelILInstruction, SSA):
+	@property
+	def src(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def offset(self) -> int:
+		return self._get_int(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "SSAVariable"),
+			("offset", self.offset, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarSplitSsa(MediumLevelILInstruction, SSA):
+	@property
+	def high(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def low(self) -> SSAVariable:
+		return self._get_var_ssa(2, 3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("high", self.high, "SSAVariable"),
+			("low", self.low, "SSAVariable"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILAssertSsa(MediumLevelILInstruction, SSA):
+	@property
+	def src(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def constraint(self) -> variable.PossibleValueSet:
+		return self._get_constraint(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "SSAVariable"),
+			("constraint", self.constraint, "PossibleValueSet"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILForceVerSsa(_ForceVerSsaVars, MediumLevelILInstruction, SSA):
+	@property
+	def dest(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def src(self) -> SSAVariable:
+		return self._get_var_ssa(2, 3)
+
+	@property
+	def reason(self) -> ForceVersionReason:
+		return ForceVersionReason(self._get_int(4))
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("src", self.src, "SSAVariable"),
+			("reason", self.reason, "ForceVersionReason"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCallSsa(_CallSsaOutput, MediumLevelILCallBase, Localcall, SSA):
+	@property
+	def output_expr(self) -> 'MediumLevelILCallOutputSsa':
+		result = self._get_expr(0)
+		assert isinstance(result, MediumLevelILCallOutputSsa)
 		return result
 
 	@property
 	def output_exprs(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(0, 1)
+		return self.output_expr.dest_exprs
+
+	@property
+	def output_dest_memory(self) -> int:
+		return self.output_expr.dest_memory
+
+	@property
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(1)
 
 	@property
 	def params(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(2)
-		assert isinstance(inst, MediumLevelILCallParam), "MediumLevelILCallUntyped return bad type for 'params'"
-		return inst.src
+		return self._get_expr_list(2, 3)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("output", self.output, "List[SSAVariable]"),
+			("output_dest_memory", self.output_dest_memory, "int"),
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+			("src_memory", self.src_memory, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCallUntypedSsa(_CallSsaOutput, MediumLevelILCallBase, Localcall, SSA):
+	@property
+	def output_expr(self) -> 'MediumLevelILCallOutputSsa':
+		result = self._get_expr(0)
+		assert isinstance(result, MediumLevelILCallOutputSsa)
+		return result
+
+	@property
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self.output_expr.dest_exprs
+
+	@property
+	def output_dest_memory(self) -> int:
+		return self.output_expr.dest_memory
+
+	@property
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(1)
+
+	@property
+	def param(self) -> 'MediumLevelILCallParamSsa':
+		result = self._get_expr(2)
+		assert isinstance(result, MediumLevelILCallParamSsa)
+		return result
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self.param.src
+
+	@property
+	def params_src_memory(self) -> int:
+		return self.param.src_memory
 
 	@property
 	def stack(self) -> MediumLevelILInstruction:
@@ -2586,85 +2943,302 @@ class MediumLevelILSyscallUntyped(MediumLevelILCallBase, Syscall):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('output', self.output, 'List[Variable]'),
-			('params', self.params, 'List[MediumLevelILInstruction]'),
-			('stack', self.stack, 'MediumLevelILInstruction'),
+			("output", self.output, "List[SSAVariable]"),
+			("output_dest_memory", self.output_dest_memory, "int"),
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+			("params_src_memory", self.params_src_memory, "int"),
+			("stack", self.stack, "MediumLevelILInstruction"),
 		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILIntrinsic(MediumLevelILInstruction, Intrinsic):
+class MediumLevelILSyscallSsa(_CallSsaOutput, MediumLevelILCallBase, Syscall, SSA):
 	@property
-	def output(self) -> List[variable.Variable]:
-		return self._get_var_list(0, 1)
+	def output_expr(self) -> 'MediumLevelILCallOutputSsa':
+		result = self._get_expr(0)
+		assert isinstance(result, MediumLevelILCallOutputSsa)
+		return result
 
 	@property
-	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
-		return self._get_intrinsic(2)
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self.output_expr.dest_exprs
+
+	@property
+	def output_dest_memory(self) -> int:
+		return self.output_expr.dest_memory
 
 	@property
 	def params(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(3, 4)
+		return self._get_expr_list(1, 2)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(3)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('output', self.output, 'List[Variable]'),
-			('intrinsic', self.intrinsic, "ILIntrinsic"),
-			('params', self.params, 'List[MediumLevelILInstruction]'),
+			("output", self.output, "List[SSAVariable]"),
+			("output_dest_memory", self.output_dest_memory, "int"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+			("src_memory", self.src_memory, "int"),
 		]
-
-	@property
-	def vars_read(self) -> List[variable.Variable]:
-		result: List[variable.Variable] = []
-		for i in self.params:
-			result.extend(i.vars_read)  # type: ignore
-		return result
-
-	@property
-	def vars_written(self) -> List[variable.Variable]:
-		return self.output
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILIntrinsicSsa(MediumLevelILInstruction, SSA):
+class MediumLevelILSyscallUntypedSsa(_CallSsaOutput, MediumLevelILCallBase, Syscall, SSA):
 	@property
-	def output(self) -> List[SSAVariable]:
-		return self._get_var_ssa_list(0, 1)
+	def output_expr(self) -> 'MediumLevelILCallOutputSsa':
+		result = self._get_expr(0)
+		assert isinstance(result, MediumLevelILCallOutputSsa)
+		return result
 
 	@property
-	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
-		return self._get_intrinsic(2)
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self.output_expr.dest_exprs
+
+	@property
+	def output_dest_memory(self) -> int:
+		return self.output_expr.dest_memory
+
+	@property
+	def param(self) -> 'MediumLevelILCallParamSsa':
+		result = self._get_expr(1)
+		assert isinstance(result, MediumLevelILCallParamSsa)
+		return result
 
 	@property
 	def params(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(3, 4)
+		return self.param.src
+
+	@property
+	def params_src_memory(self) -> int:
+		return self.param.src_memory
+
+	@property
+	def stack(self) -> MediumLevelILInstruction:
+		return self._get_expr(2)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('output', self.output, 'List[SSAVariable]'),
-			('intrinsic', self.intrinsic, 'ILIntrinsic'),
-			('params', self.params, 'List[MediumLevelILInstruction]'),
+			("output", self.output, "List[SSAVariable]"),
+			("output_dest_memory", self.output_dest_memory, "int"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+			("params_src_memory", self.params_src_memory, "int"),
+			("stack", self.stack, "MediumLevelILInstruction"),
 		]
-
-	@property
-	def vars_read(self) -> List[SSAVariable]:
-		result: List[SSAVariable] = []
-		for i in self.params:
-			result.extend(i.vars_read)  # type: ignore
-		return result
-
-	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return self.output
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILMemoryIntrinsicOutputSsa(MediumLevelILInstruction, SSA):
-	def __repr__(self):
-		return f"<MediumLevelILMemoryIntrinsicOutputSsa: {self.dest_memory} {self.output}>"
+class MediumLevelILTailcallSsa(_CallSsaOutput, MediumLevelILCallBase, Tailcall, SSA):
+	@property
+	def output_expr(self) -> 'MediumLevelILCallOutputSsa':
+		result = self._get_expr(0)
+		assert isinstance(result, MediumLevelILCallOutputSsa)
+		return result
 
+	@property
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self.output_expr.dest_exprs
+
+	@property
+	def output_dest_memory(self) -> int:
+		return self.output_expr.dest_memory
+
+	@property
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(1)
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(2, 3)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("output", self.output, "List[SSAVariable]"),
+			("output_dest_memory", self.output_dest_memory, "int"),
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+			("src_memory", self.src_memory, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILTailcallUntypedSsa(_CallSsaOutput, MediumLevelILCallBase, Tailcall, SSA):
+	@property
+	def output_expr(self) -> 'MediumLevelILCallOutputSsa':
+		result = self._get_expr(0)
+		assert isinstance(result, MediumLevelILCallOutputSsa)
+		return result
+
+	@property
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self.output_expr.dest_exprs
+
+	@property
+	def output_dest_memory(self) -> int:
+		return self.output_expr.dest_memory
+
+	@property
+	def dest(self) -> MediumLevelILInstruction:
+		return self._get_expr(1)
+
+	@property
+	def param(self) -> 'MediumLevelILCallParamSsa':
+		result = self._get_expr(2)
+		assert isinstance(result, MediumLevelILCallParamSsa)
+		return result
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self.param.src
+
+	@property
+	def params_src_memory(self) -> int:
+		return self.param.src_memory
+
+	@property
+	def stack(self) -> MediumLevelILInstruction:
+		return self._get_expr(3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("output", self.output, "List[SSAVariable]"),
+			("output_dest_memory", self.output_dest_memory, "int"),
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+			("params_src_memory", self.params_src_memory, "int"),
+			("stack", self.stack, "MediumLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCallParamSsa(_ParamListFormatting, MediumLevelILInstruction, SSA):
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def src(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(1, 2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src_memory", self.src_memory, "int"),
+			("src", self.src, "List[MediumLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCallOutputSsa(_CallOutputSsaVars, MediumLevelILInstruction, SSA):
+	@property
+	def dest_memory(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def dest_exprs(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(1, 2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest_memory", self.dest_memory, "int"),
+			("dest", self.dest, "List[SSAVariable]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarOutputSsa(_VarOutputSsaVars, MediumLevelILInstruction, SSAVariableInstruction):
+	@property
+	def dest(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def var(self) -> SSAVariable:
+		return self.dest
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("var", self.var, "SSAVariable"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarOutputSsaField(_VarOutputFieldVars, MediumLevelILInstruction, SetVar, SSA):
+	@property
+	def dest(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def prev(self) -> SSAVariable:
+		return self._get_var_ssa(0, 2)
+
+	@property
+	def offset(self) -> int:
+		return self._get_int(3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("prev", self.prev, "SSAVariable"),
+			("offset", self.offset, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarOutputAliased(_VarOutputSsaVars, MediumLevelILInstruction, SetVar, SSA):
+	@property
+	def dest(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def prev(self) -> SSAVariable:
+		return self._get_var_ssa(0, 2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("prev", self.prev, "SSAVariable"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarOutputAliasedField(_VarOutputFieldVars, MediumLevelILInstruction, SetVar, SSA):
+	@property
+	def dest(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def prev(self) -> SSAVariable:
+		return self._get_var_ssa(0, 2)
+
+	@property
+	def offset(self) -> int:
+		return self._get_int(3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("prev", self.prev, "SSAVariable"),
+			("offset", self.offset, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILMemoryIntrinsicOutputSsa(_MemoryIntrinsicOutputSsaFormatting, MediumLevelILInstruction, SSA):
 	@property
 	def dest_memory(self) -> int:
 		return self._get_int(0)
@@ -2682,247 +3256,22 @@ class MediumLevelILMemoryIntrinsicOutputSsa(MediumLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILMemoryIntrinsicSsa(MediumLevelILInstruction, SSA):
+class MediumLevelILLoadSsa(MediumLevelILInstruction, Load, SSA):
 	@property
-	def output(self) -> List[SSAVariable]:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILMemoryIntrinsicOutputSsa), "MediumLevelILMemoryIntrinsicSsa expected MediumLevelILMemoryIntrinsicOutputSsa as first operand"
-		return inst.output
-
-	@property
-	def dest_memory(self) -> int:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILMemoryIntrinsicOutputSsa), "MediumLevelILMemoryIntrinsicSsa expected MediumLevelILMemoryIntrinsicOutputSsa as first operand"
-		return inst.dest_memory
-
-	@property
-	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
-		return self._get_intrinsic(1)
-
-	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(2, 3)
+	def src(self) -> MediumLevelILInstruction:
+		return self._get_expr(0)
 
 	@property
 	def src_memory(self) -> int:
-		return self._get_int(4)
+		return self._get_int(1)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			("output", self.output, "List[SSAVariable]"),
-			("dest_memory", self.dest_memory, "int"),
-			("intrinsic", self.intrinsic, "ILIntrinsic"),
-			("params", self.params, "List[MediumLevelILInstruction]"),
+			("src", self.src, "MediumLevelILInstruction"),
 			("src_memory", self.src_memory, "int"),
 		]
 
-	@property
-	def vars_read(self) -> List[SSAVariable]:
-		result: List[SSAVariable] = []
-		for i in self.params:
-			result.extend(i.vars_read)  # type: ignore
-		return result
-
-	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return self.output
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSetVarSsaField(MediumLevelILInstruction, SetVar, SSA):
-	@property
-	def dest(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 1)
-
-	@property
-	def prev(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 2)
-
-	@property
-	def offset(self) -> int:
-		return self._get_int(3)
-
-	@property
-	def src(self) -> MediumLevelILInstruction:
-		return self._get_expr(4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('dest', self.dest, 'SSAVariable'),
-			('prev', self.prev, 'SSAVariable'),
-			('offset', self.offset, 'int'),
-			('src', self.src, 'MediumLevelILInstruction'),
-		]
-
-	@property
-	def vars_read(self) -> List[SSAVariable]:
-		return [self.prev, *self.src.vars_read]  # type: ignore # we're guaranteed not to return non-SSAVariables here
-
-	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return [self.dest]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSetVarSplitSsa(MediumLevelILInstruction, SetVar, SSA):
-	@property
-	def high(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def low(self) -> SSAVariable:
-		return self._get_var_ssa(2, 3)
-
-	@property
-	def src(self) -> MediumLevelILInstruction:
-		return self._get_expr(4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('high', self.high, 'SSAVariable'),
-			('low', self.low, 'SSAVariable'),
-			('src', self.src, 'MediumLevelILInstruction'),
-		]
-
-	@property
-	def vars_read(self) -> List[Union[variable.Variable, SSAVariable]]:
-		return self.src.vars_read
-
-	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return [self.high, self.low]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSetVarAliasedField(MediumLevelILInstruction, SetVar, SSA):
-	@property
-	def dest(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 1)
-
-	@property
-	def prev(self) -> SSAVariable:
-		return self._get_var_ssa_dest_and_src(0, 2)
-
-	@property
-	def offset(self) -> int:
-		return self._get_int(3)
-
-	@property
-	def src(self) -> MediumLevelILInstruction:
-		return self._get_expr(4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('dest', self.dest, 'SSAVariable'),
-			('prev', self.prev, 'SSAVariable'),
-			('offset', self.offset, 'int'),
-			('src', self.src, 'MediumLevelILInstruction'),
-		]
-
-	@property
-	def vars_read(self) -> List[SSAVariable]:
-		return [self.prev, *self.src.vars_read]  # type: ignore # we're guaranteed not to return non-SSAVariables here
-
-	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return [self.dest]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSyscallSsa(MediumLevelILCallBase, Syscall, SSA):
-	@property
-	def output(self) -> List[SSAVariable]:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILSyscallSsa return bad type for output"
-		return inst.dest
-
-	@property
-	def output_exprs(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallSsa return bad type for output"
-		return inst.dest_exprs
-
-	@property
-	def output_dest_memory(self) -> int:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILSyscallSsa return bad type for output"
-		return inst.dest_memory
-
-	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(1, 2)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(3)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('output', self.output, 'List[SSAVariable]'),
-			('output_dest_memory', self.output_dest_memory, 'int'),
-			('params', self.params, 'List[MediumLevelILInstruction]'),
-			('src_memory', self.src_memory, 'int'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSyscallUntypedSsa(MediumLevelILCallBase, Syscall, SSA):
-	@property
-	def output(self) -> List[SSAVariable]:
-		inst = self._get_expr(0)
-		assert isinstance(
-		    inst, MediumLevelILCallOutputSsa
-		), "MediumLevelILSyscallUntypedSsa return bad type for 'output'"
-		return inst.dest
-
-	@property
-	def output_exprs(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallSsa return bad type for output"
-		return inst.dest_exprs
-
-	@property
-	def output_dest_memory(self) -> int:
-		inst = self._get_expr(0)
-		assert isinstance(
-		    inst, MediumLevelILCallOutputSsa
-		), "MediumLevelILSyscallUntypedSsa return bad type for 'output_dest_memory'"
-		return inst.dest_memory
-
-	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(1)
-		assert isinstance(
-		    inst, MediumLevelILCallParamSsa
-		), "MediumLevelILSyscallUntypedSsa return bad type for 'params'"
-		return inst.src
-
-	@property
-	def params_src_memory(self) -> int:
-		inst = self._get_expr(1)
-		assert isinstance(
-		    inst, MediumLevelILCallParamSsa
-		), "MediumLevelILSyscallUntypedSsa return bad type for 'params_src_memory'"
-		return inst.src_memory
-
-	@property
-	def stack(self) -> MediumLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('output', self.output, 'List[SSAVariable]'),
-			('output_dest_memory', self.output_dest_memory, 'int'),
-			('params', self.params, 'List[SSAVariable]'),
-			('params_src_memory', self.params_src_memory, 'int'),
-			('stack', self.stack, 'MediumLevelILInstruction'),
-		]
 
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILLoadStructSsa(MediumLevelILInstruction, Load, SSA):
@@ -2941,433 +3290,9 @@ class MediumLevelILLoadStructSsa(MediumLevelILInstruction, Load, SSA):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('src', self.src, 'MediumLevelILInstruction'),
-			('offset', self.offset, 'int'),
-			('src_memory', self.src_memory, 'int'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSetVarField(MediumLevelILInstruction, SetVar):
-	@property
-	def dest(self) -> variable.Variable:
-		return self._get_var(0)
-
-	@property
-	def offset(self) -> int:
-		return self._get_int(1)
-
-	@property
-	def src(self) -> MediumLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('dest', self.dest, 'Variable'),
-			('offset', self.offset, 'int'),
-			('src', self.src, 'MediumLevelILInstruction'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSetVarSplit(MediumLevelILInstruction, SetVar):
-	@property
-	def high(self) -> variable.Variable:
-		return self._get_var(0)
-
-	@property
-	def low(self) -> variable.Variable:
-		return self._get_var(1)
-
-	@property
-	def src(self) -> MediumLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('high', self.high, 'Variable'),
-			('low', self.low, 'Variable'),
-			('src', self.src, 'MediumLevelILInstruction'),
-		]
-
-	@property
-	def vars_read(self) -> List[variable.Variable]:
-		return self.src.vars_read  # type: ignore # we're guaranteed not to return non-Variables here
-
-	@property
-	def vars_written(self) -> List[variable.Variable]:
-		return [self.high, self.low]
-
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILStoreStruct(MediumLevelILInstruction, Store):
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def offset(self) -> int:
-		return self._get_int(1)
-
-	@property
-	def src(self) -> MediumLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('offset', self.offset, 'int'),
-			('src', self.src, 'MediumLevelILInstruction'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILAdc(MediumLevelILCarryBase):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSbb(MediumLevelILCarryBase):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILRlc(MediumLevelILCarryBase):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILRrc(MediumLevelILCarryBase):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCall(MediumLevelILCallBase, Localcall):
-	@property
-	def output(self) -> List[variable.Variable]:
-		result = []
-		for expr in self.output_exprs:
-			var = expr._var_written_for_function_call_output()
-			if var is not None:
-				result.append(var)
-		return result
-
-	@property
-	def output_exprs(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(0, 1)
-
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(3, 4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('output', self.output, 'List[Variable]'),
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[MediumLevelILInstruction]'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILIf(MediumLevelILInstruction, Terminal):
-	@property
-	def condition(self) -> MediumLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def true(self) -> InstructionIndex:
-		return self._get_int(1)
-
-	@property
-	def false(self) -> InstructionIndex:
-		return self._get_int(2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('condition', self.condition, 'MediumLevelILInstruction'),
-			('true', self.true, 'InstructionIndex'),
-			('false', self.false, 'InstructionIndex'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILTailcallUntyped(MediumLevelILCallBase, Tailcall):
-	@property
-	def output(self) -> List[variable.Variable]:
-		result = []
-		for expr in self.output_exprs:
-			var = expr._var_written_for_function_call_output()
-			if var is not None:
-				result.append(var)
-		return result
-
-	@property
-	def output_exprs(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(0, 1)
-
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(3)
-		assert isinstance(inst, MediumLevelILCallParam), "MediumLevelILTailcallUntyped return bad type for 'params'"
-		return inst.src
-
-	@property
-	def stack(self) -> MediumLevelILInstruction:
-		return self._get_expr(4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('output', self.output, 'List[Variable]'),
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[MediumLevelILInstruction]'),
-			('stack', self.stack, 'MediumLevelILInstruction'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCallSsa(MediumLevelILCallBase, Localcall, SSA):
-	@property
-	def output(self) -> List[SSAVariable]:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallSsa return bad type for output"
-		return inst.dest
-
-	@property
-	def output_exprs(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallSsa return bad type for output"
-		return inst.dest_exprs
-
-	@property
-	def output_dest_memory(self) -> int:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallSsa return bad type for output"
-		return inst.dest_memory
-
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(1)
-
-	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(2, 3)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('output', self.output, 'List[SSAVariable]'),
-			('output_dest_memory', self.output_dest_memory, 'int'),
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[MediumLevelILInstruction]'),
-			('src_memory', self.src_memory, 'int'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCallUntypedSsa(MediumLevelILCallBase, Localcall, SSA):
-	@property
-	def output(self) -> List[SSAVariable]:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallUntypedSsa return bad type for output"
-		return inst.dest
-
-	@property
-	def output_exprs(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallSsa return bad type for output"
-		return inst.dest_exprs
-
-	@property
-	def output_dest_memory(self) -> int:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallUntypedSsa return bad type for output"
-		return inst.dest_memory
-
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(1)
-
-	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(2)
-		assert isinstance(inst, MediumLevelILCallParamSsa), "MediumLevelILCallUntypedSsa return bad type for 'params'"
-		return inst.src
-
-	@property
-	def params_src_memory(self):
-		inst = self._get_expr(2)
-		assert isinstance(
-		    inst, MediumLevelILCallParamSsa
-		), "MediumLevelILCallUntypedSsa return bad type for 'params_src_memory'"
-		return inst.src_memory
-
-	@property
-	def stack(self) -> MediumLevelILInstruction:
-		return self._get_expr(3)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('output', self.output, 'List[SSAVariable]'),
-			('output_dest_memory', self.output_dest_memory, 'int'),
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[SSAVariable]'),
-			('params_src_memory', self.params_src_memory, 'int'),
-			('stack', self.stack, 'MediumLevelILInstruction'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILTailcall(MediumLevelILCallBase, Tailcall):
-	@property
-	def output(self) -> List[variable.Variable]:
-		result = []
-		for expr in self.output_exprs:
-			var = expr._var_written_for_function_call_output()
-			if var is not None:
-				result.append(var)
-		return result
-
-	@property
-	def output_exprs(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(0, 1)
-
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(3, 4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('output', self.output, 'List[Variable]'),
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[MediumLevelILInstruction]'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILTailcallSsa(MediumLevelILCallBase, Tailcall, SSA):
-	@property
-	def output(self) -> List[SSAVariable]:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILTailcallSsa return bad type for output"
-		return inst.dest
-
-	@property
-	def output_exprs(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallSsa return bad type for output"
-		return inst.dest_exprs
-
-	@property
-	def output_dest_memory(self) -> int:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILTailcallSsa return bad type for output"
-		return inst.dest_memory
-
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(1)
-
-	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(2, 3)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('output', self.output, 'List[SSAVariable]'),
-			('output_dest_memory', self.output_dest_memory, 'int'),
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[MediumLevelILInstruction]'),
-			('src_memory', self.src_memory, 'int'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILTailcallUntypedSsa(MediumLevelILCallBase, Tailcall, SSA):
-	@property
-	def output(self) -> List[SSAVariable]:
-		inst = self._get_expr(0)
-		assert isinstance(
-		    inst, MediumLevelILCallOutputSsa
-		), "MediumLevelILTailcallUntypedSsa return bad type for 'output'"
-		return inst.dest
-
-	@property
-	def output_exprs(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(0)
-		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallSsa return bad type for output"
-		return inst.dest_exprs
-
-	@property
-	def output_dest_memory(self) -> int:
-		inst = self._get_expr(0)
-		assert isinstance(
-		    inst, MediumLevelILCallOutputSsa
-		), "MediumLevelILTailcallUntypedSsa return bad type for 'output'"
-		return inst.dest_memory
-
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(1)
-
-	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(2)
-		assert isinstance(
-		    inst, MediumLevelILCallParamSsa
-		), "MediumLevelILTailcallUntypedSsa return bad type for 'params'"
-		return inst.src
-
-	@property
-	def params_src_memory(self):
-		inst = self._get_expr(2)
-		assert isinstance(
-		    inst, MediumLevelILCallParamSsa
-		), "MediumLevelILTailcallUntypedSsa return bad type for 'params_src_memory'"
-		return inst.src_memory
-
-	@property
-	def stack(self) -> MediumLevelILInstruction:
-		return self._get_expr(3)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('output', self.output, 'List[SSAVariable]'),
-			('output_dest_memory', self.output_dest_memory, 'int'),
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[SSAVariable]'),
-			('params_src_memory', self.params_src_memory, 'int'),
-			('stack', self.stack, 'MediumLevelILInstruction'),
+			("src", self.src, "MediumLevelILInstruction"),
+			("offset", self.offset, "int"),
+			("src_memory", self.src_memory, "int"),
 		]
 
 
@@ -3392,49 +3317,10 @@ class MediumLevelILStoreSsa(MediumLevelILInstruction, Store, SSA):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('dest_memory', self.dest_memory, 'int'),
-			('src_memory', self.src_memory, 'int'),
-			('src', self.src, 'MediumLevelILInstruction'),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCallUntyped(MediumLevelILCallBase, Localcall):
-	@property
-	def output(self) -> List[variable.Variable]:
-		result = []
-		for expr in self.output_exprs:
-			var = expr._var_written_for_function_call_output()
-			if var is not None:
-				result.append(var)
-		return result
-
-	@property
-	def output_exprs(self) -> List[MediumLevelILInstruction]:
-		return self._get_expr_list(0, 1)
-
-	@property
-	def dest(self) -> MediumLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def params(self) -> List[MediumLevelILInstruction]:
-		inst = self._get_expr(3)
-		assert isinstance(inst, MediumLevelILCallParam), "MediumLevelILCallUntyped return bad type for 'params'"
-		return inst.src
-
-	@property
-	def stack(self) -> MediumLevelILInstruction:
-		return self._get_expr(4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			('output', self.output, 'List[Variable]'),
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[MediumLevelILInstruction]'),
-			('stack', self.stack, 'MediumLevelILInstruction'),
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "int"),
+			("src", self.src, "MediumLevelILInstruction"),
 		]
 
 
@@ -3463,106 +3349,129 @@ class MediumLevelILStoreStructSsa(MediumLevelILInstruction, Store, SSA):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('dest', self.dest, 'MediumLevelILInstruction'),
-			('offset', self.offset, 'int'),
-			('dest_memory', self.dest_memory, 'int'),
-			('src_memory', self.src_memory, 'int'),
-			('src', self.src, 'MediumLevelILInstruction'),
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("offset", self.offset, "int"),
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "int"),
+			("src", self.src, "MediumLevelILInstruction"),
 		]
 
+
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILAssert(MediumLevelILInstruction):
+class MediumLevelILIntrinsicSsa(_IntrinsicSsaVars, MediumLevelILInstruction, SSA):
 	@property
-	def src(self) -> variable.Variable:
-		return self._get_var(0)
+	def output(self) -> List[SSAVariable]:
+		return self._get_var_ssa_list(0, 1)
 
 	@property
-	def constraint(self) -> variable.PossibleValueSet:
-		return self._get_constraint(1)
+	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
+		return self._get_intrinsic(2)
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(3, 4)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			("src", self.src, "Variable"),
-			("constraint", self.constraint, "PossibleValueSet"),
+			("output", self.output, "List[SSAVariable]"),
+			("intrinsic", self.intrinsic, "ILIntrinsic"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
 		]
 
+
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILAssertSsa(MediumLevelILInstruction, SSA):
+class MediumLevelILMemoryIntrinsicSsa(_IntrinsicSsaVars, MediumLevelILInstruction, SSA):
 	@property
-	def src(self) -> SSAVariable:
-		return self._get_var_ssa(0, 1)
+	def output_expr(self) -> 'MediumLevelILMemoryIntrinsicOutputSsa':
+		result = self._get_expr(0)
+		assert isinstance(result, MediumLevelILMemoryIntrinsicOutputSsa)
+		return result
 
 	@property
-	def constraint(self) -> variable.PossibleValueSet:
-		return self._get_constraint(2)
+	def output(self) -> List[SSAVariable]:
+		return self.output_expr.output
+
+	@property
+	def dest_memory(self) -> int:
+		return self.output_expr.dest_memory
+
+	@property
+	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
+		return self._get_intrinsic(1)
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(2, 3)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(4)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			("src", self.src, "SSAVariable"),
-			("constraint", self.constraint, "PossibleValueSet"),
+			("output", self.output, "List[SSAVariable]"),
+			("dest_memory", self.dest_memory, "int"),
+			("intrinsic", self.intrinsic, "ILIntrinsic"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+			("src_memory", self.src_memory, "int"),
 		]
 
-@dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILForceVer(MediumLevelILInstruction):
-	@property
-	def dest(self) -> variable.Variable:
-		return self._get_var(0)
-
-	@property
-	def src(self) -> variable.Variable:
-		return self._get_var(1)
-
-	@property
-	def reason(self) -> ForceVersionReason:
-		return ForceVersionReason(self._get_int(2))
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [
-			("dest", self.dest, "Variable"),
-			("src", self.src, "Variable"),
-			("reason", self.reason, "ForceVersionReason"),
-		]
-
-	@property
-	def vars_read(self) -> List[variable.Variable]:
-		return [self.src]
-
-	@property
-	def vars_written(self) -> List[variable.Variable]:
-		return [self.dest]
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILForceVerSsa(MediumLevelILInstruction, SSA):
+class MediumLevelILFreeVarSlotSsa(MediumLevelILInstruction, SSA, RegisterStack):
 	@property
 	def dest(self) -> SSAVariable:
 		return self._get_var_ssa(0, 1)
 
 	@property
-	def src(self) -> SSAVariable:
-		return self._get_var_ssa(2, 3)
-
-	@property
-	def reason(self) -> ForceVersionReason:
-		return ForceVersionReason(self._get_int(4))
+	def prev(self) -> SSAVariable:
+		return self._get_var_ssa(0, 2)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
 			("dest", self.dest, "SSAVariable"),
-			("src", self.src, "SSAVariable"),
-			("reason", self.reason, "ForceVersionReason"),
+			("prev", self.prev, "SSAVariable"),
 		]
 
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILVarPhi(_VarPhiVars, MediumLevelILInstruction, SetVar, Phi, SSA):
 	@property
-	def vars_read(self) -> List[SSAVariable]:
-		return [self.src]
+	def dest(self) -> SSAVariable:
+		return self._get_var_ssa(0, 1)
 
 	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return [self.dest]
+	def src(self) -> List[SSAVariable]:
+		return self._get_var_ssa_list(2, 3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("src", self.src, "List[SSAVariable]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILMemPhi(MediumLevelILInstruction, Memory, Phi):
+	@property
+	def dest_memory(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def src_memory(self) -> List[int]:
+		return self._get_int_list(1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "List[int]"),
+		]
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILBlockToExpand(MediumLevelILInstruction):
@@ -3572,199 +3481,838 @@ class MediumLevelILBlockToExpand(MediumLevelILInstruction):
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("exprs", self.exprs, "List[MediumLevelILInstruction]")]
+		return [
+			("exprs", self.exprs, "List[MediumLevelILInstruction]"),
+		]
 
 
-ILInstruction = {
-    MediumLevelILOperation.MLIL_NOP: MediumLevelILNop,  # [],
-    MediumLevelILOperation.MLIL_NORET: MediumLevelILNoret,  # [],
-    MediumLevelILOperation.MLIL_BP: MediumLevelILBp,  # [],
-    MediumLevelILOperation.MLIL_UNDEF: MediumLevelILUndef,  # [],
-    MediumLevelILOperation.MLIL_UNIMPL: MediumLevelILUnimpl,  # [],
-    MediumLevelILOperation.MLIL_LOAD: MediumLevelILLoad,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_VAR: MediumLevelILVar,  # [("src", "var")],
-    MediumLevelILOperation.MLIL_ADDRESS_OF: MediumLevelILAddressOf,  # [("src", "var")],
-    MediumLevelILOperation.MLIL_PASS_BY_REF: MediumLevelILPassByRef,  # [("src", "expr")],
-	MediumLevelILOperation.MLIL_RETURN_BY_REF: MediumLevelILReturnByRef,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_CONST: MediumLevelILConst,  # [("constant", "int")],
-    MediumLevelILOperation.MLIL_CONST_PTR: MediumLevelILConstPtr,  # [("constant", "int")],
-    MediumLevelILOperation.MLIL_FLOAT_CONST: MediumLevelILFloatConst,  # [("constant", "float")],
-    MediumLevelILOperation.MLIL_IMPORT: MediumLevelILImport,  # [("constant", "int")],
-    MediumLevelILOperation.MLIL_CONST_DATA: MediumLevelILConstData,  # [("constant", "ConstData")],
-    MediumLevelILOperation.MLIL_SET_VAR: MediumLevelILSetVar,  # [("dest", "var"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_LOAD_STRUCT: MediumLevelILLoadStruct,  # [("src", "expr"), ("offset", "int")],
-    MediumLevelILOperation.MLIL_STORE: MediumLevelILStore,  # [("dest", "expr"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_VAR_FIELD: MediumLevelILVarField,  # [("src", "var"), ("offset", "int")],
-    MediumLevelILOperation.MLIL_VAR_SPLIT: MediumLevelILVarSplit,  # [("high", "var"), ("low", "var")],
-    MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD: MediumLevelILAddressOfField,  # [("src", "var"), ("offset", "int")],
-    MediumLevelILOperation.MLIL_EXTERN_PTR: MediumLevelILExternPtr,  # [("constant", "int"), ("offset", "int")],
-    MediumLevelILOperation.MLIL_ADD: MediumLevelILAdd,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_SUB: MediumLevelILSub,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_AND: MediumLevelILAnd,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_OR: MediumLevelILOr,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_XOR: MediumLevelILXor,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_LSL: MediumLevelILLsl,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_LSR: MediumLevelILLsr,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_ASR: MediumLevelILAsr,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_ROL: MediumLevelILRol,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_ROR: MediumLevelILRor,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_MUL: MediumLevelILMul,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_MULU_DP: MediumLevelILMuluDp,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_MULS_DP: MediumLevelILMulsDp,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_DIVU: MediumLevelILDivu,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_DIVU_DP: MediumLevelILDivuDp,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_DIVS: MediumLevelILDivs,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_DIVS_DP: MediumLevelILDivsDp,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_MODU: MediumLevelILModu,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_MODU_DP: MediumLevelILModuDp,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_MODS: MediumLevelILMods,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_MODS_DP: MediumLevelILModsDp,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_NEG: MediumLevelILNeg,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_NOT: MediumLevelILNot,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_BSWAP: MediumLevelILBswap,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_POPCNT: MediumLevelILPopcnt,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_CLZ: MediumLevelILClz,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_CTZ: MediumLevelILCtz,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_RBIT: MediumLevelILRbit,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_CLS: MediumLevelILCls,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_MINS: MediumLevelILMins,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_MAXS: MediumLevelILMaxs,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_MINU: MediumLevelILMinu,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_MAXU: MediumLevelILMaxu,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_ABS: MediumLevelILAbs,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_SX: MediumLevelILSx,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_ZX: MediumLevelILZx,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_LOW_PART: MediumLevelILLowPart,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_JUMP: MediumLevelILJump,  # [("dest", "expr")],
-    MediumLevelILOperation.MLIL_RET_HINT: MediumLevelILRetHint,  # [("dest", "expr")],
-    MediumLevelILOperation.MLIL_CALL_PARAM: MediumLevelILCallParam,  # [("src", "expr_list")],
-    MediumLevelILOperation.MLIL_SEPARATE_PARAM_LIST: MediumLevelILSeparateParamList,  # [("src", "expr_list")],
-    MediumLevelILOperation.MLIL_SHARED_PARAM_SLOT: MediumLevelILSharedParamSlot,  # [("src", "expr_list")],
-	MediumLevelILOperation.MLIL_VAR_OUTPUT: MediumLevelILVarOutput,  # [("dest", "var")],
-	MediumLevelILOperation.MLIL_VAR_OUTPUT_FIELD: MediumLevelILVarOutputField,  # [("dest", "var"), ("offset", "int")],
-	MediumLevelILOperation.MLIL_STORE_OUTPUT: MediumLevelILStoreOutput,  # [("dest", "expr")],
-    MediumLevelILOperation.MLIL_RET: MediumLevelILRet,  # [("src", "expr_list")],
-    MediumLevelILOperation.MLIL_GOTO: MediumLevelILGoto,  # [("dest", "int")],
-    MediumLevelILOperation.MLIL_BOOL_TO_INT: MediumLevelILBoolToInt,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_FREE_VAR_SLOT: MediumLevelILFreeVarSlot,  # [("dest", "var")],
-    MediumLevelILOperation.MLIL_TRAP: MediumLevelILTrap,  # [("vector", "int")],
-    MediumLevelILOperation.MLIL_FREE_VAR_SLOT_SSA: MediumLevelILFreeVarSlotSsa,  # [("prev", "var_ssa_dest_and_src")],
-    MediumLevelILOperation.MLIL_UNIMPL_MEM: MediumLevelILUnimplMem,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_FSQRT: MediumLevelILFsqrt,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_FNEG: MediumLevelILFneg,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_FABS: MediumLevelILFabs,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_FLOAT_TO_INT: MediumLevelILFloatToInt,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_INT_TO_FLOAT: MediumLevelILIntToFloat,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_FLOAT_CONV: MediumLevelILFloatConv,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_ROUND_TO_INT: MediumLevelILRoundToInt,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_FLOOR: MediumLevelILFloor,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_CEIL: MediumLevelILCeil,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_FTRUNC: MediumLevelILFtrunc,  # [("src", "expr")],
-    MediumLevelILOperation.MLIL_VAR_SSA: MediumLevelILVarSsa,  # [("src", "var_ssa")],
-    MediumLevelILOperation.MLIL_VAR_ALIASED: MediumLevelILVarAliased,  # [("src", "var_ssa")],
-	MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA: MediumLevelILVarOutputSsa,  # [("dest", "var_ssa")],
-	MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA_FIELD:
-		MediumLevelILVarOutputSsaField,  # [("prev", "var_ssa_dest_and_src"), ("offset", "int")],
-	MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED:
-		MediumLevelILVarOutputAliased,  # [("prev", "var_ssa_dest_and_src")],
-	MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED_FIELD:
-		MediumLevelILVarOutputAliasedField,  # [("prev", "var_ssa_dest_and_src"), ("offset", "int")],
-    MediumLevelILOperation.MLIL_CMP_E: MediumLevelILCmpE,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_CMP_NE: MediumLevelILCmpNe,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_CMP_SLT: MediumLevelILCmpSlt,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_CMP_ULT: MediumLevelILCmpUlt,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_CMP_SLE: MediumLevelILCmpSle,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_CMP_ULE: MediumLevelILCmpUle,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_CMP_SGE: MediumLevelILCmpSge,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_CMP_UGE: MediumLevelILCmpUge,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_CMP_SGT: MediumLevelILCmpSgt,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_CMP_UGT: MediumLevelILCmpUgt,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_TEST_BIT: MediumLevelILTestBit,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_ADD_OVERFLOW: MediumLevelILAddOverflow,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_SYSCALL: MediumLevelILSyscall,  # [("output", "expr_list"), ("params", "expr_list")],
-    MediumLevelILOperation.MLIL_VAR_SSA_FIELD: MediumLevelILVarSsaField,  # [("src", "var_ssa"), ("offset", "int")],
-    MediumLevelILOperation.MLIL_VAR_ALIASED_FIELD:
-        MediumLevelILVarAliasedField,  # [("src", "var_ssa"), ("offset", "int")],
-    MediumLevelILOperation.MLIL_VAR_SPLIT_SSA: MediumLevelILVarSplitSsa,  # [("high", "var_ssa"), ("low", "var_ssa")],
-    MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA:
-        MediumLevelILCallOutputSsa,  # [("dest_memory", "int"), ("dest", "var_ssa_list")],
-    MediumLevelILOperation.MLIL_CALL_PARAM_SSA:
-        MediumLevelILCallParamSsa,  # [("src_memory", "int"), ("src", "expr_list")],
-    MediumLevelILOperation.MLIL_LOAD_SSA: MediumLevelILLoadSsa,  # [("src", "expr"), ("src_memory", "int")],
-    MediumLevelILOperation.MLIL_VAR_PHI: MediumLevelILVarPhi,  # [("dest", "var_ssa"), ("src", "var_ssa_list")],
-    MediumLevelILOperation.MLIL_MEM_PHI: MediumLevelILMemPhi,  # [("dest_memory", "int"), ("src_memory", "int_list")],
-    MediumLevelILOperation.MLIL_SET_VAR_SSA: MediumLevelILSetVarSsa,  # [("dest", "var_ssa"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_FCMP_E: MediumLevelILFcmpE,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_FCMP_NE: MediumLevelILFcmpNe,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_FCMP_LT: MediumLevelILFcmpLt,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_FCMP_LE: MediumLevelILFcmpLe,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_FCMP_GE: MediumLevelILFcmpGe,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_FCMP_GT: MediumLevelILFcmpGt,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_FCMP_O: MediumLevelILFcmpO,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_FCMP_UO: MediumLevelILFcmpUo,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_FADD: MediumLevelILFadd,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_FSUB: MediumLevelILFsub,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_FMUL: MediumLevelILFmul,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_FDIV: MediumLevelILFdiv,  # [("left", "expr"), ("right", "expr")],
-    MediumLevelILOperation.MLIL_JUMP_TO: MediumLevelILJumpTo,  # [("dest", "expr"), ("targets", "target_map")],
-    MediumLevelILOperation.MLIL_SET_VAR_ALIASED:
-        MediumLevelILSetVarAliased,  # [("prev", "var_ssa_dest_and_src"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_SYSCALL_UNTYPED:
-        MediumLevelILSyscallUntyped,  # [("output", "expr_list"), ("params", "expr"), ("stack", "expr")],
-    MediumLevelILOperation.MLIL_TAILCALL:
-        MediumLevelILTailcall,  # [("output", "expr_list"), ("dest", "expr"), ("params", "expr_list")],
-    MediumLevelILOperation.MLIL_INTRINSIC:
-        MediumLevelILIntrinsic,  # [("output", "var_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
-    MediumLevelILOperation.MLIL_INTRINSIC_SSA: MediumLevelILIntrinsicSsa,  # [("output", "var_ssa_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
-    MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_OUTPUT_SSA: MediumLevelILMemoryIntrinsicOutputSsa,    # [("dest_memory", "int"), ("output", "var_ssa_list")],
-    MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_SSA: MediumLevelILMemoryIntrinsicSsa,    # [("output", "expr"), ("intrinsic", "intrinsic"), ("params", "expr_list"), ("src_memory", "int")],
-    MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD:
-        MediumLevelILSetVarSsaField,  # [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA:
-        MediumLevelILSetVarSplitSsa,  # [("high", "var_ssa"), ("low", "var_ssa"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD:
-        MediumLevelILSetVarAliasedField,  # [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_SYSCALL_SSA:
-        MediumLevelILSyscallSsa,  # [("output", "expr"), ("params", "expr_list"), ("src_memory", "int")],
-    MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA:
-        MediumLevelILSyscallUntypedSsa,  # [("output", "expr"), ("params", "expr"), ("stack", "expr")],
-    MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA:
-        MediumLevelILLoadStructSsa,  # [("src", "expr"), ("offset", "int"), ("src_memory", "int")],
-    MediumLevelILOperation.MLIL_SET_VAR_FIELD:
-        MediumLevelILSetVarField,  # [("dest", "var"), ("offset", "int"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_SET_VAR_SPLIT:
-        MediumLevelILSetVarSplit,  # [("high", "var"), ("low", "var"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_STORE_STRUCT:
-        MediumLevelILStoreStruct,  # [("dest", "expr"), ("offset", "int"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_ADC: MediumLevelILAdc,  # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-    MediumLevelILOperation.MLIL_SBB: MediumLevelILSbb,  # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-    MediumLevelILOperation.MLIL_RLC: MediumLevelILRlc,  # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-    MediumLevelILOperation.MLIL_RRC: MediumLevelILRrc,  # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-    MediumLevelILOperation.MLIL_TAILCALL_UNTYPED:
-        MediumLevelILTailcallUntyped,  # [("output", "expr_list"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
-    MediumLevelILOperation.MLIL_CALL_SSA:
-        MediumLevelILCallSsa,  # [("output", "expr"), ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")],
-    MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA:
-        MediumLevelILCallUntypedSsa,  # [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
-    MediumLevelILOperation.MLIL_TAILCALL_SSA:
-        MediumLevelILTailcallSsa,  # [("output", "expr"), ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")],
-    MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA:
-        MediumLevelILTailcallUntypedSsa,  # [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
-    MediumLevelILOperation.MLIL_CALL:
-        MediumLevelILCall,  # [("output", "expr_list"), ("dest", "expr"), ("params", "expr_list")],
-    MediumLevelILOperation.MLIL_IF: MediumLevelILIf,  # [("condition", "expr"), ("true", "int"), ("false", "int")],
-    MediumLevelILOperation.MLIL_STORE_SSA:
-        MediumLevelILStoreSsa,  # [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_CALL_UNTYPED:
-        MediumLevelILCallUntyped,  # [("output", "expr_list"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
-    MediumLevelILOperation.MLIL_STORE_STRUCT_SSA:
-        MediumLevelILStoreStructSsa,  # [("dest", "expr"), ("offset", "int"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
-    MediumLevelILOperation.MLIL_ASSERT: MediumLevelILAssert,
-    MediumLevelILOperation.MLIL_ASSERT_SSA: MediumLevelILAssertSsa,
-    MediumLevelILOperation.MLIL_FORCE_VER: MediumLevelILForceVer,
-    MediumLevelILOperation.MLIL_FORCE_VER_SSA: MediumLevelILForceVerSsa,
-	MediumLevelILOperation.MLIL_BLOCK_TO_EXPAND: MediumLevelILBlockToExpand,  # [("exprs", "expr_list")],
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILBswap(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILPopcnt(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILClz(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCtz(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILRbit(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCls(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILMins(MediumLevelILBinaryBase, Arithmetic, Signed):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILMaxs(MediumLevelILBinaryBase, Arithmetic, Signed):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILMinu(MediumLevelILBinaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILMaxu(MediumLevelILBinaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILAbs(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+ILInstruction: Dict[MediumLevelILOperation, type[MediumLevelILInstruction]] = {
+	MediumLevelILOperation.MLIL_NOP: MediumLevelILNop,
+	MediumLevelILOperation.MLIL_SET_VAR: MediumLevelILSetVar,
+	MediumLevelILOperation.MLIL_SET_VAR_FIELD: MediumLevelILSetVarField,
+	MediumLevelILOperation.MLIL_SET_VAR_SPLIT: MediumLevelILSetVarSplit,
+	MediumLevelILOperation.MLIL_ASSERT: MediumLevelILAssert,
+	MediumLevelILOperation.MLIL_FORCE_VER: MediumLevelILForceVer,
+	MediumLevelILOperation.MLIL_LOAD: MediumLevelILLoad,
+	MediumLevelILOperation.MLIL_LOAD_STRUCT: MediumLevelILLoadStruct,
+	MediumLevelILOperation.MLIL_STORE: MediumLevelILStore,
+	MediumLevelILOperation.MLIL_STORE_STRUCT: MediumLevelILStoreStruct,
+	MediumLevelILOperation.MLIL_VAR: MediumLevelILVar,
+	MediumLevelILOperation.MLIL_VAR_FIELD: MediumLevelILVarField,
+	MediumLevelILOperation.MLIL_VAR_SPLIT: MediumLevelILVarSplit,
+	MediumLevelILOperation.MLIL_ADDRESS_OF: MediumLevelILAddressOf,
+	MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD: MediumLevelILAddressOfField,
+	MediumLevelILOperation.MLIL_PASS_BY_REF: MediumLevelILPassByRef,
+	MediumLevelILOperation.MLIL_RETURN_BY_REF: MediumLevelILReturnByRef,
+	MediumLevelILOperation.MLIL_CONST: MediumLevelILConst,
+	MediumLevelILOperation.MLIL_CONST_DATA: MediumLevelILConstData,
+	MediumLevelILOperation.MLIL_CONST_PTR: MediumLevelILConstPtr,
+	MediumLevelILOperation.MLIL_EXTERN_PTR: MediumLevelILExternPtr,
+	MediumLevelILOperation.MLIL_FLOAT_CONST: MediumLevelILFloatConst,
+	MediumLevelILOperation.MLIL_IMPORT: MediumLevelILImport,
+	MediumLevelILOperation.MLIL_ADD: MediumLevelILAdd,
+	MediumLevelILOperation.MLIL_ADC: MediumLevelILAdc,
+	MediumLevelILOperation.MLIL_SUB: MediumLevelILSub,
+	MediumLevelILOperation.MLIL_SBB: MediumLevelILSbb,
+	MediumLevelILOperation.MLIL_AND: MediumLevelILAnd,
+	MediumLevelILOperation.MLIL_OR: MediumLevelILOr,
+	MediumLevelILOperation.MLIL_XOR: MediumLevelILXor,
+	MediumLevelILOperation.MLIL_LSL: MediumLevelILLsl,
+	MediumLevelILOperation.MLIL_LSR: MediumLevelILLsr,
+	MediumLevelILOperation.MLIL_ASR: MediumLevelILAsr,
+	MediumLevelILOperation.MLIL_ROL: MediumLevelILRol,
+	MediumLevelILOperation.MLIL_RLC: MediumLevelILRlc,
+	MediumLevelILOperation.MLIL_ROR: MediumLevelILRor,
+	MediumLevelILOperation.MLIL_RRC: MediumLevelILRrc,
+	MediumLevelILOperation.MLIL_MUL: MediumLevelILMul,
+	MediumLevelILOperation.MLIL_MULU_DP: MediumLevelILMuluDp,
+	MediumLevelILOperation.MLIL_MULS_DP: MediumLevelILMulsDp,
+	MediumLevelILOperation.MLIL_DIVU: MediumLevelILDivu,
+	MediumLevelILOperation.MLIL_DIVU_DP: MediumLevelILDivuDp,
+	MediumLevelILOperation.MLIL_DIVS: MediumLevelILDivs,
+	MediumLevelILOperation.MLIL_DIVS_DP: MediumLevelILDivsDp,
+	MediumLevelILOperation.MLIL_MODU: MediumLevelILModu,
+	MediumLevelILOperation.MLIL_MODU_DP: MediumLevelILModuDp,
+	MediumLevelILOperation.MLIL_MODS: MediumLevelILMods,
+	MediumLevelILOperation.MLIL_MODS_DP: MediumLevelILModsDp,
+	MediumLevelILOperation.MLIL_NEG: MediumLevelILNeg,
+	MediumLevelILOperation.MLIL_NOT: MediumLevelILNot,
+	MediumLevelILOperation.MLIL_SX: MediumLevelILSx,
+	MediumLevelILOperation.MLIL_ZX: MediumLevelILZx,
+	MediumLevelILOperation.MLIL_LOW_PART: MediumLevelILLowPart,
+	MediumLevelILOperation.MLIL_JUMP: MediumLevelILJump,
+	MediumLevelILOperation.MLIL_JUMP_TO: MediumLevelILJumpTo,
+	MediumLevelILOperation.MLIL_RET_HINT: MediumLevelILRetHint,
+	MediumLevelILOperation.MLIL_CALL: MediumLevelILCall,
+	MediumLevelILOperation.MLIL_CALL_UNTYPED: MediumLevelILCallUntyped,
+	MediumLevelILOperation.MLIL_CALL_PARAM: MediumLevelILCallParam,
+	MediumLevelILOperation.MLIL_SEPARATE_PARAM_LIST: MediumLevelILSeparateParamList,
+	MediumLevelILOperation.MLIL_SHARED_PARAM_SLOT: MediumLevelILSharedParamSlot,
+	MediumLevelILOperation.MLIL_VAR_OUTPUT: MediumLevelILVarOutput,
+	MediumLevelILOperation.MLIL_VAR_OUTPUT_FIELD: MediumLevelILVarOutputField,
+	MediumLevelILOperation.MLIL_STORE_OUTPUT: MediumLevelILStoreOutput,
+	MediumLevelILOperation.MLIL_RET: MediumLevelILRet,
+	MediumLevelILOperation.MLIL_NORET: MediumLevelILNoret,
+	MediumLevelILOperation.MLIL_IF: MediumLevelILIf,
+	MediumLevelILOperation.MLIL_GOTO: MediumLevelILGoto,
+	MediumLevelILOperation.MLIL_CMP_E: MediumLevelILCmpE,
+	MediumLevelILOperation.MLIL_CMP_NE: MediumLevelILCmpNe,
+	MediumLevelILOperation.MLIL_CMP_SLT: MediumLevelILCmpSlt,
+	MediumLevelILOperation.MLIL_CMP_ULT: MediumLevelILCmpUlt,
+	MediumLevelILOperation.MLIL_CMP_SLE: MediumLevelILCmpSle,
+	MediumLevelILOperation.MLIL_CMP_ULE: MediumLevelILCmpUle,
+	MediumLevelILOperation.MLIL_CMP_SGE: MediumLevelILCmpSge,
+	MediumLevelILOperation.MLIL_CMP_UGE: MediumLevelILCmpUge,
+	MediumLevelILOperation.MLIL_CMP_SGT: MediumLevelILCmpSgt,
+	MediumLevelILOperation.MLIL_CMP_UGT: MediumLevelILCmpUgt,
+	MediumLevelILOperation.MLIL_TEST_BIT: MediumLevelILTestBit,
+	MediumLevelILOperation.MLIL_BOOL_TO_INT: MediumLevelILBoolToInt,
+	MediumLevelILOperation.MLIL_ADD_OVERFLOW: MediumLevelILAddOverflow,
+	MediumLevelILOperation.MLIL_SYSCALL: MediumLevelILSyscall,
+	MediumLevelILOperation.MLIL_SYSCALL_UNTYPED: MediumLevelILSyscallUntyped,
+	MediumLevelILOperation.MLIL_TAILCALL: MediumLevelILTailcall,
+	MediumLevelILOperation.MLIL_TAILCALL_UNTYPED: MediumLevelILTailcallUntyped,
+	MediumLevelILOperation.MLIL_INTRINSIC: MediumLevelILIntrinsic,
+	MediumLevelILOperation.MLIL_FREE_VAR_SLOT: MediumLevelILFreeVarSlot,
+	MediumLevelILOperation.MLIL_BP: MediumLevelILBp,
+	MediumLevelILOperation.MLIL_TRAP: MediumLevelILTrap,
+	MediumLevelILOperation.MLIL_UNDEF: MediumLevelILUndef,
+	MediumLevelILOperation.MLIL_UNIMPL: MediumLevelILUnimpl,
+	MediumLevelILOperation.MLIL_UNIMPL_MEM: MediumLevelILUnimplMem,
+	MediumLevelILOperation.MLIL_FADD: MediumLevelILFadd,
+	MediumLevelILOperation.MLIL_FSUB: MediumLevelILFsub,
+	MediumLevelILOperation.MLIL_FMUL: MediumLevelILFmul,
+	MediumLevelILOperation.MLIL_FDIV: MediumLevelILFdiv,
+	MediumLevelILOperation.MLIL_FSQRT: MediumLevelILFsqrt,
+	MediumLevelILOperation.MLIL_FNEG: MediumLevelILFneg,
+	MediumLevelILOperation.MLIL_FABS: MediumLevelILFabs,
+	MediumLevelILOperation.MLIL_FLOAT_TO_INT: MediumLevelILFloatToInt,
+	MediumLevelILOperation.MLIL_INT_TO_FLOAT: MediumLevelILIntToFloat,
+	MediumLevelILOperation.MLIL_FLOAT_CONV: MediumLevelILFloatConv,
+	MediumLevelILOperation.MLIL_ROUND_TO_INT: MediumLevelILRoundToInt,
+	MediumLevelILOperation.MLIL_FLOOR: MediumLevelILFloor,
+	MediumLevelILOperation.MLIL_CEIL: MediumLevelILCeil,
+	MediumLevelILOperation.MLIL_FTRUNC: MediumLevelILFtrunc,
+	MediumLevelILOperation.MLIL_FCMP_E: MediumLevelILFcmpE,
+	MediumLevelILOperation.MLIL_FCMP_NE: MediumLevelILFcmpNe,
+	MediumLevelILOperation.MLIL_FCMP_LT: MediumLevelILFcmpLt,
+	MediumLevelILOperation.MLIL_FCMP_LE: MediumLevelILFcmpLe,
+	MediumLevelILOperation.MLIL_FCMP_GE: MediumLevelILFcmpGe,
+	MediumLevelILOperation.MLIL_FCMP_GT: MediumLevelILFcmpGt,
+	MediumLevelILOperation.MLIL_FCMP_O: MediumLevelILFcmpO,
+	MediumLevelILOperation.MLIL_FCMP_UO: MediumLevelILFcmpUo,
+	MediumLevelILOperation.MLIL_SET_VAR_SSA: MediumLevelILSetVarSsa,
+	MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: MediumLevelILSetVarSsaField,
+	MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: MediumLevelILSetVarSplitSsa,
+	MediumLevelILOperation.MLIL_SET_VAR_ALIASED: MediumLevelILSetVarAliased,
+	MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: MediumLevelILSetVarAliasedField,
+	MediumLevelILOperation.MLIL_VAR_SSA: MediumLevelILVarSsa,
+	MediumLevelILOperation.MLIL_VAR_SSA_FIELD: MediumLevelILVarSsaField,
+	MediumLevelILOperation.MLIL_VAR_ALIASED: MediumLevelILVarAliased,
+	MediumLevelILOperation.MLIL_VAR_ALIASED_FIELD: MediumLevelILVarAliasedField,
+	MediumLevelILOperation.MLIL_VAR_SPLIT_SSA: MediumLevelILVarSplitSsa,
+	MediumLevelILOperation.MLIL_ASSERT_SSA: MediumLevelILAssertSsa,
+	MediumLevelILOperation.MLIL_FORCE_VER_SSA: MediumLevelILForceVerSsa,
+	MediumLevelILOperation.MLIL_CALL_SSA: MediumLevelILCallSsa,
+	MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA: MediumLevelILCallUntypedSsa,
+	MediumLevelILOperation.MLIL_SYSCALL_SSA: MediumLevelILSyscallSsa,
+	MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA: MediumLevelILSyscallUntypedSsa,
+	MediumLevelILOperation.MLIL_TAILCALL_SSA: MediumLevelILTailcallSsa,
+	MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA: MediumLevelILTailcallUntypedSsa,
+	MediumLevelILOperation.MLIL_CALL_PARAM_SSA: MediumLevelILCallParamSsa,
+	MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA: MediumLevelILCallOutputSsa,
+	MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA: MediumLevelILVarOutputSsa,
+	MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA_FIELD: MediumLevelILVarOutputSsaField,
+	MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED: MediumLevelILVarOutputAliased,
+	MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED_FIELD: MediumLevelILVarOutputAliasedField,
+	MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_OUTPUT_SSA: MediumLevelILMemoryIntrinsicOutputSsa,
+	MediumLevelILOperation.MLIL_LOAD_SSA: MediumLevelILLoadSsa,
+	MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA: MediumLevelILLoadStructSsa,
+	MediumLevelILOperation.MLIL_STORE_SSA: MediumLevelILStoreSsa,
+	MediumLevelILOperation.MLIL_STORE_STRUCT_SSA: MediumLevelILStoreStructSsa,
+	MediumLevelILOperation.MLIL_INTRINSIC_SSA: MediumLevelILIntrinsicSsa,
+	MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_SSA: MediumLevelILMemoryIntrinsicSsa,
+	MediumLevelILOperation.MLIL_FREE_VAR_SLOT_SSA: MediumLevelILFreeVarSlotSsa,
+	MediumLevelILOperation.MLIL_VAR_PHI: MediumLevelILVarPhi,
+	MediumLevelILOperation.MLIL_MEM_PHI: MediumLevelILMemPhi,
+	MediumLevelILOperation.MLIL_BLOCK_TO_EXPAND: MediumLevelILBlockToExpand,
+	MediumLevelILOperation.MLIL_BSWAP: MediumLevelILBswap,
+	MediumLevelILOperation.MLIL_POPCNT: MediumLevelILPopcnt,
+	MediumLevelILOperation.MLIL_CLZ: MediumLevelILClz,
+	MediumLevelILOperation.MLIL_CTZ: MediumLevelILCtz,
+	MediumLevelILOperation.MLIL_RBIT: MediumLevelILRbit,
+	MediumLevelILOperation.MLIL_CLS: MediumLevelILCls,
+	MediumLevelILOperation.MLIL_MINS: MediumLevelILMins,
+	MediumLevelILOperation.MLIL_MAXS: MediumLevelILMaxs,
+	MediumLevelILOperation.MLIL_MINU: MediumLevelILMinu,
+	MediumLevelILOperation.MLIL_MAXU: MediumLevelILMaxu,
+	MediumLevelILOperation.MLIL_ABS: MediumLevelILAbs,
 }
+
+
+# Lists the slots `copy_expr_to` copies for each op. Ops that hold labels aren't listed because
+# `copy_expr_to` copies them itself.
+_COPY_LAYOUTS: Dict[MediumLevelILOperation, Tuple] = {
+	MediumLevelILOperation.MLIL_NOP: (),
+	MediumLevelILOperation.MLIL_SET_VAR: (
+		"value",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SET_VAR_FIELD: (
+		"value",
+		"value",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SET_VAR_SPLIT: (
+		"value",
+		"value",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_ASSERT: (
+		"value",
+		"constraint",
+	),
+	MediumLevelILOperation.MLIL_FORCE_VER: (
+		"value",
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_LOAD: ("expr",),
+	MediumLevelILOperation.MLIL_LOAD_STRUCT: (
+		"expr",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_STORE: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_STORE_STRUCT: (
+		"expr",
+		"value",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_VAR: ("value",),
+	MediumLevelILOperation.MLIL_VAR_FIELD: (
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_VAR_SPLIT: (
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_ADDRESS_OF: ("value",),
+	MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD: (
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_PASS_BY_REF: ("expr",),
+	MediumLevelILOperation.MLIL_RETURN_BY_REF: ("expr",),
+	MediumLevelILOperation.MLIL_CONST: ("value",),
+	MediumLevelILOperation.MLIL_CONST_DATA: (
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_CONST_PTR: ("value",),
+	MediumLevelILOperation.MLIL_EXTERN_PTR: (
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_FLOAT_CONST: ("value",),
+	MediumLevelILOperation.MLIL_IMPORT: ("value",),
+	MediumLevelILOperation.MLIL_ADD: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_ADC: (
+		"expr",
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SUB: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SBB: (
+		"expr",
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_AND: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_OR: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_XOR: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_LSL: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_LSR: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_ASR: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_ROL: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_RLC: (
+		"expr",
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_ROR: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_RRC: (
+		"expr",
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_MUL: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_MULU_DP: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_MULS_DP: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_DIVU: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_DIVU_DP: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_DIVS: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_DIVS_DP: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_MODU: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_MODU_DP: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_MODS: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_MODS_DP: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_NEG: ("expr",),
+	MediumLevelILOperation.MLIL_NOT: ("expr",),
+	MediumLevelILOperation.MLIL_SX: ("expr",),
+	MediumLevelILOperation.MLIL_ZX: ("expr",),
+	MediumLevelILOperation.MLIL_LOW_PART: ("expr",),
+	MediumLevelILOperation.MLIL_JUMP: ("expr",),
+	MediumLevelILOperation.MLIL_RET_HINT: ("expr",),
+	MediumLevelILOperation.MLIL_CALL: (
+		"expr_list",
+		"expr",
+		"expr_list",
+	),
+	MediumLevelILOperation.MLIL_CALL_UNTYPED: (
+		"expr_list",
+		"expr",
+		("part", MediumLevelILOperation.MLIL_CALL_PARAM, ("expr_list",)),
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SEPARATE_PARAM_LIST: ("expr_list",),
+	MediumLevelILOperation.MLIL_SHARED_PARAM_SLOT: ("expr_list",),
+	MediumLevelILOperation.MLIL_VAR_OUTPUT: ("value",),
+	MediumLevelILOperation.MLIL_VAR_OUTPUT_FIELD: (
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_STORE_OUTPUT: ("expr",),
+	MediumLevelILOperation.MLIL_RET: ("expr_list",),
+	MediumLevelILOperation.MLIL_NORET: (),
+	MediumLevelILOperation.MLIL_CMP_E: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_CMP_NE: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_CMP_SLT: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_CMP_ULT: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_CMP_SLE: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_CMP_ULE: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_CMP_SGE: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_CMP_UGE: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_CMP_SGT: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_CMP_UGT: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_TEST_BIT: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_BOOL_TO_INT: ("expr",),
+	MediumLevelILOperation.MLIL_ADD_OVERFLOW: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SYSCALL: (
+		"expr_list",
+		"expr_list",
+	),
+	MediumLevelILOperation.MLIL_SYSCALL_UNTYPED: (
+		"expr_list",
+		("part", MediumLevelILOperation.MLIL_CALL_PARAM, ("expr_list",)),
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_TAILCALL: (
+		"expr_list",
+		"expr",
+		"expr_list",
+	),
+	MediumLevelILOperation.MLIL_TAILCALL_UNTYPED: (
+		"expr_list",
+		"expr",
+		("part", MediumLevelILOperation.MLIL_CALL_PARAM, ("expr_list",)),
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_INTRINSIC: (
+		"list",
+		"value",
+		"expr_list",
+	),
+	MediumLevelILOperation.MLIL_FREE_VAR_SLOT: ("value",),
+	MediumLevelILOperation.MLIL_BP: (),
+	MediumLevelILOperation.MLIL_TRAP: ("value",),
+	MediumLevelILOperation.MLIL_UNDEF: (),
+	MediumLevelILOperation.MLIL_UNIMPL: ("value",),
+	MediumLevelILOperation.MLIL_UNIMPL_MEM: (
+		"expr",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_FADD: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_FSUB: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_FMUL: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_FDIV: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_FSQRT: ("expr",),
+	MediumLevelILOperation.MLIL_FNEG: ("expr",),
+	MediumLevelILOperation.MLIL_FABS: ("expr",),
+	MediumLevelILOperation.MLIL_FLOAT_TO_INT: ("expr",),
+	MediumLevelILOperation.MLIL_INT_TO_FLOAT: ("expr",),
+	MediumLevelILOperation.MLIL_FLOAT_CONV: ("expr",),
+	MediumLevelILOperation.MLIL_ROUND_TO_INT: ("expr",),
+	MediumLevelILOperation.MLIL_FLOOR: ("expr",),
+	MediumLevelILOperation.MLIL_CEIL: ("expr",),
+	MediumLevelILOperation.MLIL_FTRUNC: ("expr",),
+	MediumLevelILOperation.MLIL_FCMP_E: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_FCMP_NE: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_FCMP_LT: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_FCMP_LE: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_FCMP_GE: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_FCMP_GT: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_FCMP_O: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_FCMP_UO: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SET_VAR_SSA: (
+		"value",
+		"value",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD: (
+		"value",
+		"value",
+		"value",
+		"value",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA: (
+		"value",
+		"value",
+		"value",
+		"value",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SET_VAR_ALIASED: (
+		"value",
+		"value",
+		"value",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: (
+		"value",
+		"value",
+		"value",
+		"value",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_VAR_SSA: (
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_VAR_SSA_FIELD: (
+		"value",
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_VAR_ALIASED: (
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_VAR_ALIASED_FIELD: (
+		"value",
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_VAR_SPLIT_SSA: (
+		"value",
+		"value",
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_ASSERT_SSA: (
+		"value",
+		"value",
+		"constraint",
+	),
+	MediumLevelILOperation.MLIL_FORCE_VER_SSA: (
+		"value",
+		"value",
+		"value",
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_CALL_SSA: (
+		(
+			"part",
+			MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA,
+			(
+				"value",
+				"expr_list",
+			),
+		),
+		"expr",
+		"expr_list",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA: (
+		(
+			"part",
+			MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA,
+			(
+				"value",
+				"expr_list",
+			),
+		),
+		"expr",
+		(
+			"part",
+			MediumLevelILOperation.MLIL_CALL_PARAM_SSA,
+			(
+				"value",
+				"expr_list",
+			),
+		),
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_SYSCALL_SSA: (
+		(
+			"part",
+			MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA,
+			(
+				"value",
+				"expr_list",
+			),
+		),
+		"expr_list",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA: (
+		(
+			"part",
+			MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA,
+			(
+				"value",
+				"expr_list",
+			),
+		),
+		(
+			"part",
+			MediumLevelILOperation.MLIL_CALL_PARAM_SSA,
+			(
+				"value",
+				"expr_list",
+			),
+		),
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_TAILCALL_SSA: (
+		(
+			"part",
+			MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA,
+			(
+				"value",
+				"expr_list",
+			),
+		),
+		"expr",
+		"expr_list",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA: (
+		(
+			"part",
+			MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA,
+			(
+				"value",
+				"expr_list",
+			),
+		),
+		"expr",
+		(
+			"part",
+			MediumLevelILOperation.MLIL_CALL_PARAM_SSA,
+			(
+				"value",
+				"expr_list",
+			),
+		),
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA: (
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA_FIELD: (
+		"value",
+		"value",
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED: (
+		"value",
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED_FIELD: (
+		"value",
+		"value",
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_LOAD_SSA: (
+		"expr",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA: (
+		"expr",
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_STORE_SSA: (
+		"expr",
+		"value",
+		"value",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_STORE_STRUCT_SSA: (
+		"expr",
+		"value",
+		"value",
+		"value",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_INTRINSIC_SSA: (
+		"list",
+		"value",
+		"expr_list",
+	),
+	MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_SSA: (
+		(
+			"part",
+			MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_OUTPUT_SSA,
+			(
+				"value",
+				"list",
+			),
+		),
+		"value",
+		"expr_list",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_FREE_VAR_SLOT_SSA: (
+		"value",
+		"value",
+		"value",
+	),
+	MediumLevelILOperation.MLIL_VAR_PHI: (
+		"value",
+		"value",
+		"list",
+	),
+	MediumLevelILOperation.MLIL_MEM_PHI: (
+		"value",
+		"list",
+	),
+	MediumLevelILOperation.MLIL_BLOCK_TO_EXPAND: ("expr_list",),
+	MediumLevelILOperation.MLIL_BSWAP: ("expr",),
+	MediumLevelILOperation.MLIL_POPCNT: ("expr",),
+	MediumLevelILOperation.MLIL_CLZ: ("expr",),
+	MediumLevelILOperation.MLIL_CTZ: ("expr",),
+	MediumLevelILOperation.MLIL_RBIT: ("expr",),
+	MediumLevelILOperation.MLIL_CLS: ("expr",),
+	MediumLevelILOperation.MLIL_MINS: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_MAXS: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_MINU: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_MAXU: (
+		"expr",
+		"expr",
+	),
+	MediumLevelILOperation.MLIL_ABS: ("expr",),
+}
+# END GENERATED mlil-classes
 
 
 class MediumLevelILExpr:
@@ -4191,306 +4739,79 @@ class MediumLevelILFunction:
 
 		if sub_expr_handler is None:
 			sub_expr_handler = lambda sub_expr: self.copy_expr_to(sub_expr, dest)
-
-		def do_copy(
-			expr: MediumLevelILInstruction,
-			dest: 'MediumLevelILFunction',
-			sub_expr_handler: Optional[Callable[[MediumLevelILInstruction], ExpressionIndex]] = None
-		) -> ExpressionIndex:
-			loc = ILSourceLocation.from_instruction(expr)
-			if expr.operation == MediumLevelILOperation.MLIL_NOP:
-				expr: MediumLevelILNop
-				return dest.nop(loc)
-			if expr.operation == MediumLevelILOperation.MLIL_SET_VAR:
-				expr: MediumLevelILSetVar
-				return dest.set_var(expr.size, expr.dest, sub_expr_handler(expr.src), loc)
-			if expr.operation == MediumLevelILOperation.MLIL_SET_VAR_SPLIT:
-				expr: MediumLevelILSetVarSplit
-				return dest.set_var_split(expr.size, expr.high, expr.low, sub_expr_handler(expr.src), loc)
-			if expr.operation == MediumLevelILOperation.MLIL_SET_VAR_FIELD:
-				expr: MediumLevelILSetVarField
-				return dest.set_var_field(expr.size, expr.dest, expr.offset, sub_expr_handler(expr.src), loc)
-			if expr.operation == MediumLevelILOperation.MLIL_VAR:
-				expr: MediumLevelILVar
-				return dest.var(expr.size, expr.src, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_VAR_FIELD:
-				expr: MediumLevelILVarField
-				return dest.var_field(expr.size, expr.src, expr.offset, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_VAR_SPLIT:
-				expr: MediumLevelILVarSplit
-				return dest.var_split(expr.size, expr.high, expr.low, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_VAR_OUTPUT:
-				expr: MediumLevelILVarOutput
-				return dest.var_output(expr.size, expr.dest, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_VAR_OUTPUT_FIELD:
-				expr: MediumLevelILVarOutputField
-				return dest.var_output_field(expr.size, expr.dest, expr.offset, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_FORCE_VER:
-				expr: MediumLevelILForceVer
-				return dest.force_ver(expr.size, expr.dest, expr.src, expr.reason, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_ASSERT:
-				expr: MediumLevelILAssert
-				return dest.assert_expr(expr.size, expr.src, expr.constraint, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_ADDRESS_OF:
-				expr: MediumLevelILAddressOf
-				return dest.address_of(expr.src, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD:
-				expr: MediumLevelILAddressOfField
-				return dest.address_of_field(expr.src, expr.offset, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_CALL:
-				expr: MediumLevelILCall
-				output = [sub_expr_handler(output) for output in expr.output_exprs]
-				params = [sub_expr_handler(param) for param in expr.params]
-				return dest.call(output, sub_expr_handler(expr.dest), params, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_CALL_UNTYPED:
-				expr: MediumLevelILCallUntyped
-				output = [sub_expr_handler(output) for output in expr.output_exprs]
-				params = [sub_expr_handler(param) for param in expr.params]
-				return dest.call_untyped(
-					output,
-					sub_expr_handler(expr.dest),
-					params,
-					sub_expr_handler(expr.stack),
-					loc
-				)
-			if expr.operation == MediumLevelILOperation.MLIL_SYSCALL:
-				expr: MediumLevelILSyscall
-				output = [sub_expr_handler(output) for output in expr.output_exprs]
-				params = [sub_expr_handler(param) for param in expr.params]
-				return dest.system_call(output, params, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_SYSCALL_UNTYPED:
-				expr: MediumLevelILSyscallUntyped
-				output = [sub_expr_handler(output) for output in expr.output_exprs]
-				params = [sub_expr_handler(param) for param in expr.params]
-				return dest.system_call_untyped(
-					output,
-					params,
-					sub_expr_handler(expr.stack),
-					loc
-				)
-			if expr.operation == MediumLevelILOperation.MLIL_TAILCALL:
-				expr: MediumLevelILTailcall
-				output = [sub_expr_handler(output) for output in expr.output_exprs]
-				params = [sub_expr_handler(param) for param in expr.params]
-				return dest.tailcall(output, sub_expr_handler(expr.dest), params, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_TAILCALL_UNTYPED:
-				expr: MediumLevelILTailcallUntyped
-				output = [sub_expr_handler(output) for output in expr.output_exprs]
-				params = [sub_expr_handler(param) for param in expr.params]
-				return dest.tailcall_untyped(
-					output,
-					sub_expr_handler(expr.dest),
-					params,
-					sub_expr_handler(expr.stack),
-					loc
-				)
-			if expr.operation == MediumLevelILOperation.MLIL_SEPARATE_PARAM_LIST:
-				expr: MediumLevelILSeparateParamList
-				params = [sub_expr_handler(param) for param in expr.params]
-				return dest.separate_param_list(params, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_SHARED_PARAM_SLOT:
-				expr: MediumLevelILSharedParamSlot
-				params = [sub_expr_handler(param) for param in expr.params]
-				return dest.shared_param_slot(params, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_RET:
-				expr: MediumLevelILRet
-				params = [sub_expr_handler(src) for src in expr.src]
-				return dest.ret(params, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_NORET:
-				expr: MediumLevelILNoret
-				return dest.no_ret(loc)
-			if expr.operation == MediumLevelILOperation.MLIL_STORE:
-				expr: MediumLevelILStore
-				return dest.store(expr.size, sub_expr_handler(expr.dest), sub_expr_handler(expr.src), loc)
-			if expr.operation == MediumLevelILOperation.MLIL_STORE_STRUCT:
-				expr: MediumLevelILStoreStruct
-				return dest.store_struct(expr.size, sub_expr_handler(expr.dest), expr.offset, sub_expr_handler(expr.src), loc)
-			if expr.operation == MediumLevelILOperation.MLIL_STORE_OUTPUT:
-				expr: MediumLevelILStoreOutput
-				return dest.store_output(expr.size, sub_expr_handler(expr.dest), loc)
-			if expr.operation == MediumLevelILOperation.MLIL_LOAD:
-				expr: MediumLevelILLoad
-				return dest.load(expr.size, sub_expr_handler(expr.src), loc)
-			if expr.operation == MediumLevelILOperation.MLIL_LOAD_STRUCT:
-				expr: MediumLevelILLoadStruct
-				return dest.load_struct(expr.size, sub_expr_handler(expr.src), expr.offset, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_JUMP:
-				expr: MediumLevelILJump
-				return dest.jump(sub_expr_handler(expr.dest), loc)
-			if expr.operation in [
-				MediumLevelILOperation.MLIL_NEG,
-				MediumLevelILOperation.MLIL_NOT,
-				MediumLevelILOperation.MLIL_BSWAP,
-				MediumLevelILOperation.MLIL_POPCNT,
-				MediumLevelILOperation.MLIL_CLZ,
-				MediumLevelILOperation.MLIL_CTZ,
-				MediumLevelILOperation.MLIL_RBIT,
-				MediumLevelILOperation.MLIL_CLS,
-				MediumLevelILOperation.MLIL_ABS,
-				MediumLevelILOperation.MLIL_SX,
-				MediumLevelILOperation.MLIL_ZX,
-				MediumLevelILOperation.MLIL_LOW_PART,
-				MediumLevelILOperation.MLIL_BOOL_TO_INT,
-				MediumLevelILOperation.MLIL_RET_HINT,
-				MediumLevelILOperation.MLIL_UNIMPL_MEM,
-				MediumLevelILOperation.MLIL_FSQRT,
-				MediumLevelILOperation.MLIL_FNEG,
-				MediumLevelILOperation.MLIL_FABS,
-				MediumLevelILOperation.MLIL_FLOAT_TO_INT,
-				MediumLevelILOperation.MLIL_INT_TO_FLOAT,
-				MediumLevelILOperation.MLIL_FLOAT_CONV,
-				MediumLevelILOperation.MLIL_ROUND_TO_INT,
-				MediumLevelILOperation.MLIL_FLOOR,
-				MediumLevelILOperation.MLIL_CEIL,
-				MediumLevelILOperation.MLIL_FTRUNC,
-				MediumLevelILOperation.MLIL_PASS_BY_REF,
-				MediumLevelILOperation.MLIL_RETURN_BY_REF
-			]:
-				expr: MediumLevelILUnaryBase
-				return dest.expr(expr.operation, sub_expr_handler(expr.src), size=expr.size, source_location=loc)
-			if expr.operation in [
-				MediumLevelILOperation.MLIL_ADD,
-				MediumLevelILOperation.MLIL_SUB,
-				MediumLevelILOperation.MLIL_AND,
-				MediumLevelILOperation.MLIL_OR,
-				MediumLevelILOperation.MLIL_XOR,
-				MediumLevelILOperation.MLIL_LSL,
-				MediumLevelILOperation.MLIL_LSR,
-				MediumLevelILOperation.MLIL_ASR,
-				MediumLevelILOperation.MLIL_ROL,
-				MediumLevelILOperation.MLIL_ROR,
-				MediumLevelILOperation.MLIL_MUL,
-				MediumLevelILOperation.MLIL_MINS,
-				MediumLevelILOperation.MLIL_MAXS,
-				MediumLevelILOperation.MLIL_MINU,
-				MediumLevelILOperation.MLIL_MAXU,
-				MediumLevelILOperation.MLIL_MULU_DP,
-				MediumLevelILOperation.MLIL_MULS_DP,
-				MediumLevelILOperation.MLIL_DIVU,
-				MediumLevelILOperation.MLIL_DIVS,
-				MediumLevelILOperation.MLIL_MODU,
-				MediumLevelILOperation.MLIL_MODS,
-				MediumLevelILOperation.MLIL_DIVU_DP,
-				MediumLevelILOperation.MLIL_DIVS_DP,
-				MediumLevelILOperation.MLIL_MODU_DP,
-				MediumLevelILOperation.MLIL_MODS_DP,
-				MediumLevelILOperation.MLIL_CMP_E,
-				MediumLevelILOperation.MLIL_CMP_NE,
-				MediumLevelILOperation.MLIL_CMP_SLT,
-				MediumLevelILOperation.MLIL_CMP_ULT,
-				MediumLevelILOperation.MLIL_CMP_SLE,
-				MediumLevelILOperation.MLIL_CMP_ULE,
-				MediumLevelILOperation.MLIL_CMP_SGE,
-				MediumLevelILOperation.MLIL_CMP_UGE,
-				MediumLevelILOperation.MLIL_CMP_SGT,
-				MediumLevelILOperation.MLIL_CMP_UGT,
-				MediumLevelILOperation.MLIL_TEST_BIT,
-				MediumLevelILOperation.MLIL_ADD_OVERFLOW,
-				MediumLevelILOperation.MLIL_FADD,
-				MediumLevelILOperation.MLIL_FSUB,
-				MediumLevelILOperation.MLIL_FMUL,
-				MediumLevelILOperation.MLIL_FDIV,
-				MediumLevelILOperation.MLIL_FCMP_E,
-				MediumLevelILOperation.MLIL_FCMP_NE,
-				MediumLevelILOperation.MLIL_FCMP_LT,
-				MediumLevelILOperation.MLIL_FCMP_LE,
-				MediumLevelILOperation.MLIL_FCMP_GE,
-				MediumLevelILOperation.MLIL_FCMP_GT,
-				MediumLevelILOperation.MLIL_FCMP_O,
-				MediumLevelILOperation.MLIL_FCMP_UO
-			]:
-				expr: MediumLevelILBinaryBase
-				return dest.expr(
-					expr.operation,
-					sub_expr_handler(expr.left),
-					sub_expr_handler(expr.right),
-					size=expr.size,
-					source_location=loc
-				)
-			if expr.operation in [
-				MediumLevelILOperation.MLIL_ADC,
-				MediumLevelILOperation.MLIL_SBB,
-				MediumLevelILOperation.MLIL_RLC,
-				MediumLevelILOperation.MLIL_RRC
-			]:
-				expr: MediumLevelILCarryBase
-				return dest.expr(
-					expr.operation,
-					sub_expr_handler(expr.left),
-					sub_expr_handler(expr.right),
-					sub_expr_handler(expr.carry),
-					size=expr.size,
-					source_location=loc
-				)
-			if expr.operation == MediumLevelILOperation.MLIL_JUMP_TO:
-				expr: MediumLevelILJumpTo
-				label_list = {}
-				for a, b in expr.targets.items():
-					label_a = dest.get_label_for_source_instruction(b)
-					if label_a is None:
-						return dest.jump(sub_expr_handler(expr.dest), loc)
-					label_list[a] = label_a
-				return dest.jump_to(sub_expr_handler(expr.dest), label_list, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_GOTO:
-				expr: MediumLevelILGoto
-				label_a = dest.get_label_for_source_instruction(expr.dest)
-				if label_a is None:
-					return dest.jump(dest.const_pointer(expr.function.arch.address_size, expr.function[expr.dest].address), loc)
-				return dest.goto(label_a, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_IF:
-				expr: MediumLevelILIf
-				label_a = dest.get_label_for_source_instruction(expr.true)
-				label_b = dest.get_label_for_source_instruction(expr.false)
-				if label_a is None or label_b is None:
-					return dest.undefined(loc)
-				return dest.if_expr(sub_expr_handler(expr.condition), label_a, label_b, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_CONST:
-				expr: MediumLevelILConst
-				return dest.const(expr.size, expr.constant, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_CONST_PTR:
-				expr: MediumLevelILConstPtr
-				return dest.const_pointer(expr.size, expr.constant, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_EXTERN_PTR:
-				expr: MediumLevelILExternPtr
-				return dest.extern_pointer(expr.size, expr.constant, expr.offset, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_FLOAT_CONST:
-				expr: MediumLevelILFloatConst
-				return dest.float_const_raw(expr.size, expr.raw_operands[0], loc)
-			if expr.operation == MediumLevelILOperation.MLIL_IMPORT:
-				expr: MediumLevelILImport
-				return dest.imported_address(expr.size, expr.constant, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_CONST_DATA:
-				expr: MediumLevelILConstData
-				return dest.const_data(expr.size, expr.constant_data, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_BP:
-				expr: MediumLevelILBp
-				return dest.breakpoint(loc)
-			if expr.operation == MediumLevelILOperation.MLIL_TRAP:
-				expr: MediumLevelILTrap
-				return dest.trap(expr.vector, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_INTRINSIC:
-				expr: MediumLevelILIntrinsic
-				params = [sub_expr_handler(param) for param in expr.params]
-				return dest.intrinsic(expr.output, expr.intrinsic, params, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_FREE_VAR_SLOT:
-				expr: MediumLevelILFreeVarSlot
-				return dest.free_var_slot(expr.dest, loc)
-			if expr.operation == MediumLevelILOperation.MLIL_UNDEF:
-				expr: MediumLevelILUndef
-				return dest.undefined(loc)
-			if expr.operation == MediumLevelILOperation.MLIL_UNIMPL:
-				expr: MediumLevelILUnimpl
-				return dest.unimplemented(loc)
-			if expr.operation == MediumLevelILOperation.MLIL_BLOCK_TO_EXPAND:
-				expr: MediumLevelILBlockToExpand
-				params = [sub_expr_handler(src) for src in expr.src]
-				return dest.block_to_expand(params, loc)
-			raise NotImplementedError(f"unknown expr operation {expr.operation} in copy_expr_to")
-
-		new_index = do_copy(expr, dest, sub_expr_handler)
+		new_index = self._copy_expr(expr, dest, sub_expr_handler)
 		# Copy expression metadata as well
 		dest.set_expr_attributes(new_index, expr.attributes)
 		return new_index
+
+	def _copy_expr(
+		self, expr: MediumLevelILInstruction, dest: 'MediumLevelILFunction',
+		sub_expr_handler: Callable[[MediumLevelILInstruction], ExpressionIndex]
+	) -> ExpressionIndex:
+		loc = ILSourceLocation.from_instruction(expr)
+
+		# Rebuild branches so they target `dest`'s labels, because their targets are instruction indices in this
+		# function.
+		if expr.operation == MediumLevelILOperation.MLIL_JUMP_TO:
+			expr: MediumLevelILJumpTo
+			label_list = {}
+			for a, b in expr.targets.items():
+				label_a = dest.get_label_for_source_instruction(b)
+				if label_a is None:
+					return dest.jump(sub_expr_handler(expr.dest), loc)
+				label_list[a] = label_a
+			return dest.jump_to(sub_expr_handler(expr.dest), label_list, loc)
+		if expr.operation == MediumLevelILOperation.MLIL_GOTO:
+			expr: MediumLevelILGoto
+			label_a = dest.get_label_for_source_instruction(expr.dest)
+			if label_a is None:
+				return dest.jump(dest.const_pointer(expr.function.arch.address_size, expr.function[expr.dest].address), loc)
+			return dest.goto(label_a, loc)
+		if expr.operation == MediumLevelILOperation.MLIL_IF:
+			expr: MediumLevelILIf
+			label_a = dest.get_label_for_source_instruction(expr.true)
+			label_b = dest.get_label_for_source_instruction(expr.false)
+			if label_a is None or label_b is None:
+				return dest.undefined(loc)
+			return dest.if_expr(sub_expr_handler(expr.condition), label_a, label_b, loc)
+
+		layout = _COPY_LAYOUTS.get(expr.operation)
+		if layout is None:
+			raise NotImplementedError(f"unknown expr operation {expr.operation} in copy_expr_to")
+		operands = self._copy_operands(expr, layout, dest, sub_expr_handler, loc)
+		return dest.expr(expr.operation, *operands, size=expr.size, source_location=loc)
+
+	def _copy_operands(
+		self, expr: MediumLevelILInstruction, layout: Tuple, dest: 'MediumLevelILFunction',
+		sub_expr_handler: Callable[[MediumLevelILInstruction], ExpressionIndex], loc: 'ILSourceLocation'
+	) -> List[int]:
+		operands: List[int] = []
+		slot = 0
+		for entry in layout:
+			if entry == "value":
+				operands.append(expr.instr.operands[slot])
+				slot += 1
+			elif entry == "expr":
+				operands.append(sub_expr_handler(expr._get_expr(slot)))
+				slot += 1
+			elif entry == "expr_list":
+				exprs = [sub_expr_handler(sub_expr) for sub_expr in expr._get_expr_list(slot, slot + 1)]
+				operands += [len(exprs), dest.add_operand_list(exprs)]
+				slot += 2
+			elif entry == "list":
+				items = expr._get_int_list(slot)
+				operands += [len(items), dest.add_operand_list(items)]
+				slot += 2
+			elif entry == "constraint":
+				operands.append(dest.cache_possible_value_set(expr._get_constraint(slot)))
+				slot += 1
+			else:
+				_, operation, part_layout = entry
+				part = expr._get_expr(slot)
+				part_operands = self._copy_operands(part, part_layout, dest, sub_expr_handler, loc)
+				operands.append(dest.expr(operation, *part_operands, size=part.size, source_location=loc))
+				slot += 1
+		return operands
 
 	def translate(
 		self, expr_handler: Callable[['MediumLevelILFunction', 'MediumLevelILBasicBlock', 'MediumLevelILInstruction'], ExpressionIndex]
@@ -4697,75 +5018,142 @@ class MediumLevelILFunction:
 				result.append(output)
 		return result
 
+	# BEGIN GENERATED mlil-builders: from api/il, do not edit
 	def nop(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``nop`` no operation, this instruction does nothing
+		Does nothing.
 
-		:param loc: Location of expression
-		:return: The no operation expression
+		:param loc: The IL location this expression was added from
+		:return: The expression ``nop``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_NOP, source_location=loc)
 
 	def set_var(
-		self, size: int, dest: 'variable.CoreVariable', src: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
+		self, size: int, dest: 'variable.CoreVariable', src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``set_var`` sets the variable ``dest`` of size ``size`` to the expression ``src``
+		Sets variable ``dest`` to ``src``.
 
-		:param int size: the size of the variable in bytes
-		:param Variable dest: the variable being set
-		:param ExpressionIndex src: expression with the value to set the variable to
-		:param ILSourceLocation loc: location of returned expression
+		:param size: The size of ``src`` in bytes
+		:param dest: The variable to set
+		:param src: The value to set it to
+		:param loc: The IL location this expression was added from
 		:return: The expression ``dest = src``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_SET_VAR, dest.identifier, src, size=size, source_location=loc)
 
 	def set_var_field(
-		self, size: int, dest: 'variable.CoreVariable', offset: int, src: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
+		self,
+		size: int,
+		dest: 'variable.CoreVariable',
+		offset: int,
+		src: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
 	) -> ExpressionIndex:
 		"""
-		``set_var_field`` sets the field ``offset`` of variable ``dest`` of size ``size`` to the expression ``src``
+		Sets the ``size`` bytes at offset ``offset`` within variable ``dest`` to ``src``, leaving the rest
+		of the variable as it was.
 
-		:param int size: the size of the field in bytes
-		:param Variable dest: the variable being set
-		:param int offset: offset of field in the variable
-		:param ExpressionIndex src: expression with the value to set the field to
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``dest:offset = src``
+		:param size: The size of ``src`` in bytes
+		:param dest: The variable to set part of
+		:param offset: The offset of the part within the variable, in bytes
+		:param src: The value to set the part to
+		:param loc: The IL location this expression was added from
+		:return: The expression ``dest:offset.<size> = src``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(MediumLevelILOperation.MLIL_SET_VAR_FIELD, dest.identifier, offset, src, size=size, source_location=loc)
+		return self.expr(
+			MediumLevelILOperation.MLIL_SET_VAR_FIELD, dest.identifier, offset, src, size=size, source_location=loc
+		)
 
 	def set_var_split(
-		self, size: int, hi: 'variable.CoreVariable', lo: 'variable.CoreVariable', src: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
+		self,
+		size: int,
+		hi: 'variable.CoreVariable',
+		lo: 'variable.CoreVariable',
+		src: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
 	) -> ExpressionIndex:
 		"""
-		``set_var_split`` uses ``hi`` and ``lo`` as a single extended variable of size ``2*size``
-		setting ``hi:lo`` to the expression ``src``
+		Sets the pair of variables ``hi`` and ``lo``, as one value of ``2 * size`` bytes, to ``src``.
 
-		:param int size: the size of each variable in bytes
-		:param Variable hi: the high variable being set
-		:param Variable lo: the low variable being set
-		:param ExpressionIndex src: expression with the value to set the variables to
-		:param ILSourceLocation loc: location of returned expression
+		:param size: The size of each variable in bytes
+		:param hi: The variable that receives the high half
+		:param lo: The variable that receives the low half
+		:param src: The value to set them to
+		:param loc: The IL location this expression was added from
 		:return: The expression ``hi:lo = src``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(MediumLevelILOperation.MLIL_SET_VAR_SPLIT, hi.identifier, lo.identifier, src, size=size, source_location=loc)
+		return self.expr(
+			MediumLevelILOperation.MLIL_SET_VAR_SPLIT, hi.identifier, lo.identifier, src, size=size, source_location=loc
+		)
+
+	def assert_expr(
+		self,
+		size: int,
+		src: 'variable.CoreVariable',
+		constraint: 'variable.PossibleValueSet',
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Asserts that variable ``src`` holds one of the values ``constraint`` allows. Core inserts it where a
+		user has set possible values for ``src``.
+
+		:param size: The size of the variable in bytes
+		:param src: The variable to constrain
+		:param constraint: The values the variable may hold
+		:param loc: The IL location this expression was added from
+		:return: The expression ``ASSERT(src, constraint)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			MediumLevelILOperation.MLIL_ASSERT,
+			src.identifier,
+			self.cache_possible_value_set(constraint),
+			size=size,
+			source_location=loc,
+		)
+
+	def force_ver(
+		self,
+		size: int,
+		dest: 'variable.CoreVariable',
+		src: 'variable.CoreVariable',
+		reason: ForceVersionReason = ForceVersionReason.UserForceVersionReason,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Gives variable ``dest`` a new SSA version holding the value of ``src``. Analysis can then use this
+		as a new variable definition site.
+
+		:param size: The size of the variable in bytes
+		:param dest: The variable to give a new version
+		:param src: The variable whose value it takes
+		:param reason: Why the new version is needed
+		:param loc: The IL location this expression was added from
+		:return: The expression ``FORCE_VER(dest = src)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			MediumLevelILOperation.MLIL_FORCE_VER,
+			dest.identifier,
+			src.identifier,
+			int(reason),
+			size=size,
+			source_location=loc,
+		)
 
 	def load(self, size: int, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``load`` Reads ``size`` bytes from the expression ``src``
+		Reads ``size`` bytes from memory at ``src``.
 
-		:param int size: number of bytes to read
-		:param ExpressionIndex src: the expression to read memory from
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``[addr].size``
+		:param size: The size of the result in bytes
+		:param src: The address to read from
+		:param loc: The IL location this expression was added from
+		:return: The expression ``[src].<size>``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_LOAD, src, size=size, source_location=loc)
@@ -4774,13 +5162,14 @@ class MediumLevelILFunction:
 		self, size: int, src: ExpressionIndex, offset: int, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``load_struct`` Reads ``size`` bytes at the offset ``offset`` from the expression ``src``
+		Reads ``size`` bytes from memory ``offset`` bytes past ``src``, such as a member of the structure it
+		points to. Shows the member's name when the type of ``src`` has a member at ``offset``.
 
-		:param int size: number of bytes to read
-		:param ExpressionIndex src: the expression to read memory from
-		:param int offset: offset of field in the memory
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``[(src + offset)].size`` (often rendered ``src->offset.size``)
+		:param size: The size of the result in bytes
+		:param src: The base address
+		:param offset: The offset from ``src``, in bytes
+		:param loc: The IL location this expression was added from
+		:return: The expression ``[src + offset].<size>``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_LOAD_STRUCT, src, offset, size=size, source_location=loc)
@@ -4789,55 +5178,48 @@ class MediumLevelILFunction:
 		self, size: int, dest: ExpressionIndex, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``store`` Writes ``size`` bytes to expression ``dest`` read from expression ``src``
+		Writes the ``size`` bytes of ``src`` to memory at ``dest``.
 
-		:param int size: number of bytes to write
-		:param ExpressionIndex dest: the expression to write to
-		:param ExpressionIndex src: the expression to be written
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``[dest].size = src``
+		:param size: The size of ``src`` in bytes
+		:param dest: The address to write to
+		:param src: The value to write
+		:param loc: The IL location this expression was added from
+		:return: The expression ``[dest].<size> = src``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_STORE, dest, src, size=size, source_location=loc)
 
 	def store_struct(
-		self, size: int, dest: ExpressionIndex, offset: int, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+		self,
+		size: int,
+		dest: ExpressionIndex,
+		offset: int,
+		src: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
 	) -> ExpressionIndex:
 		"""
-		``store_struct`` Writes ``size`` bytes to expression ``dest`` at the offset ``offset`` read from expression ``src``
+		Writes the ``size`` bytes of ``src`` to memory ``offset`` bytes past ``dest``, such as a member of
+		the structure it points to. Shows the member's name when the type of ``dest`` has a member at
+		``offset``.
 
-		:param int size: number of bytes to write
-		:param ExpressionIndex dest: the expression to write to
-		:param int offset: offset of field in the memory
-		:param ExpressionIndex src: the expression to be written
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``[(dest + offset)].size = src`` (often rendered ``dest->offset.size``)
+		:param size: The size of ``src`` in bytes
+		:param dest: The base address
+		:param offset: The offset from ``dest``, in bytes
+		:param src: The value to write
+		:param loc: The IL location this expression was added from
+		:return: The expression ``[dest + offset].<size> = src``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_STORE_STRUCT, dest, offset, src, size=size, source_location=loc)
 
-	def store_output(
-			self, size: int, dest: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``store_output`` Outputs ``size`` bytes to expression ``dest`` as the result of a call
-
-		:param int size: number of bytes to write
-		:param ExpressionIndex dest: the expression to write to
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``[dest].size``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_STORE_OUTPUT, dest, size=size, source_location=loc)
-
 	def var(self, size: int, src: 'variable.CoreVariable', loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``var`` returns the variable ``src`` of size ``size``
+		Reads variable ``src``.
 
-		:param int size: the size of the variable in bytes
-		:param Variable src: the variable being read
-		:param ILSourceLocation loc: location of returned expression
-		:return: An expression for the given variable
+		:param size: The size of the result in bytes
+		:param src: The variable to read
+		:param loc: The IL location this expression was added from
+		:return: The expression ``src``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_VAR, src.identifier, size=size, source_location=loc)
@@ -4846,169 +5228,127 @@ class MediumLevelILFunction:
 		self, size: int, src: 'variable.CoreVariable', offset: int, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``var_field`` returns the field at offset ``offset`` from variable ``src`` of size ``size``
+		Reads the ``size`` bytes at offset ``offset`` within variable ``src``.
 
-		:param int size: the size of the field in bytes
-		:param Variable src: the variable being read
-		:param int offset: offset of field in the variable
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``var:offset.size``
+		:param size: The size of the result in bytes
+		:param src: The variable to read part of
+		:param offset: The offset of the part within the variable, in bytes
+		:param loc: The IL location this expression was added from
+		:return: The expression ``src:offset.<size>``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_VAR_FIELD, src.identifier, offset, size=size, source_location=loc)
 
 	def var_split(
-		self, size: int, hi: 'variable.CoreVariable', lo: 'variable.CoreVariable', loc: Optional['ILSourceLocation'] = None
+		self,
+		size: int,
+		hi: 'variable.CoreVariable',
+		lo: 'variable.CoreVariable',
+		loc: Optional['ILSourceLocation'] = None,
 	) -> ExpressionIndex:
 		"""
-		``var_split`` combines variables ``hi`` and ``lo`` of size ``size`` into an expression of size ``2*size``
+		Reads the pair of variables ``hi`` and ``lo`` as one value of ``2 * size`` bytes.
 
-		:param int size: the size of each variable in bytes
-		:param Variable hi: the variable holding high part of value
-		:param Variable lo: the variable holding low part of value
-		:param ILSourceLocation loc: location of returned expression
+		:param size: The size of each variable in bytes
+		:param hi: The variable that holds the high half
+		:param lo: The variable that holds the low half
+		:param loc: The IL location this expression was added from
 		:return: The expression ``hi:lo``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(MediumLevelILOperation.MLIL_VAR_SPLIT, hi.identifier, lo.identifier, size=size, source_location=loc)
-
-	def var_output(self, size: int, dest: 'variable.CoreVariable', loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``var_output`` returns the output variable ``dest`` of size ``size``
-
-		:param int size: the size of the variable in bytes
-		:param Variable dest: the variable being written
-		:param ILSourceLocation loc: location of returned expression
-		:return: An expression for the given variable
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_VAR_OUTPUT, dest.identifier, size=size, source_location=loc)
-
-	def var_output_field(
-			self, size: int, dest: 'variable.CoreVariable', offset: int, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``var_output_field`` returns the output field at offset ``offset`` from variable ``dest`` of size ``size``
-
-		:param int size: the size of the field in bytes
-		:param Variable dest: the variable being written
-		:param int offset: offset of field in the variable
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``var:offset.size``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_VAR_OUTPUT_FIELD, dest.identifier, offset, size=size, source_location=loc)
-
-	def assert_expr(
-		self,
-		size: int,
-		src: 'variable.CoreVariable',
-		constraint: 'variable.PossibleValueSet',
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``assert_expr`` assert ``constraint`` is the value of the given variable ``src``.
-		Used when setting user variable values.
-
-		:param int size: size of value in the constraint
-		:param Variable src: variable to constrain
-		:param variable.PossibleValueSet constraint: asserted value of variable
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``ASSERT(src, constraint)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_ASSERT, src.identifier, ExpressionIndex(self.cache_possible_value_set(constraint)), size=size, source_location=loc)
-
-	def force_ver(
-		self,
-		size: int,
-		dest: 'variable.CoreVariable',
-		src: 'variable.CoreVariable',
-		reason: ForceVersionReason = ForceVersionReason.UserForceVersionReason,
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``force_ver`` creates a new version of the variable ``dest`` in ``src``
-		Effectively, this is like saying src = dest, which analysis can then use as a new
-		variable definition site.
-
-		:param int size: size of the variable
-		:param Variable dest: the variable to force a new version of
-		:param Variable src: the variable created with the new version
-		:param ForceVersionReason reason: reason for forcing the version
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``FORCE_VER(reg)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FORCE_VER, dest.identifier, src.identifier, int(reason), size=size, source_location=loc)
+		return self.expr(
+			MediumLevelILOperation.MLIL_VAR_SPLIT, hi.identifier, lo.identifier, size=size, source_location=loc
+		)
 
 	def address_of(self, var: 'variable.CoreVariable', loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``address_of`` takes the address of ``var``
+		The address of variable ``var``.
 
-		:param Variable var: the variable having its address taken
-		:param ILSourceLocation loc: location of returned expression
+		:param var: The variable to take the address of
+		:param loc: The IL location this expression was added from
 		:return: The expression ``&var``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(MediumLevelILOperation.MLIL_ADDRESS_OF, var.identifier, size=0, source_location=loc)
+		return self.expr(MediumLevelILOperation.MLIL_ADDRESS_OF, var.identifier, source_location=loc)
 
-	def pass_by_ref(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+	def address_of_field(
+		self, var: 'variable.CoreVariable', offset: int, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
 		"""
-		``pass_by_ref`` indicates that ``value`` is being passed by reference to a call with a pointer size of  ``size``
+		The address of the byte at offset ``offset`` within variable ``var``.
 
-		:param int size: the size of the pointer in bytes
-		:param ExpressionIndex value: the expression containing the reference being passed
-		:param ILSourceLocation loc: location of returned expression
+		:param var: The variable that holds the byte
+		:param offset: The offset into the variable, in bytes
+		:param loc: The IL location this expression was added from
+		:return: The expression ``&var:offset``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD, var.identifier, offset, source_location=loc)
+
+	def pass_by_ref(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Passes ``value`` to a call by reference, as the calling convention requires. ``value`` is a pointer
+		to the value. Only appears as a call's parameter.
+
+		:param size: The size of the pointer in bytes
+		:param value: The address of the value being passed
+		:param loc: The IL location this expression was added from
 		:return: The expression ``ref *value``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_PASS_BY_REF, value, size=size, source_location=loc)
 
-	def return_by_ref(self, size: int, dest: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+	def return_by_ref(
+		self, size: int, dest: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
 		"""
-		``return_by_ref`` indicates that ``dest`` is being returned by passing a reference to a call
+		Receives a call's result in ``dest`` through a pointer the caller supplies. Only appears among a
+		call's outputs.
 
-		:param int size: the size of the value in bytes
-		:param ExpressionIndex dest: the expression containing the target of the return value
-		:param ILSourceLocation loc: location of returned expression
+		:param size: The size of the result in bytes
+		:param dest: Where the result goes
+		:param loc: The IL location this expression was added from
 		:return: The expression ``ref dest``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_RETURN_BY_REF, dest, size=size, source_location=loc)
 
-	def address_of_field(self, var: 'variable.CoreVariable', offset: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``address_of_field`` takes the address of ``var`` at the offset ``offset``
-
-		:param Variable var: the variable having its address taken
-		:param int offset: the offset of the taken address
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``&var:offset``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD, var.identifier, offset, size=0, source_location=loc)
-
 	def const(self, size: int, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``const`` returns an expression for the constant integer ``value`` of size ``size``
+		An integer constant.
 
-		:param int size: the size of the constant in bytes
-		:param int value: integer value of the constant
-		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size
+		:param size: The size of the result in bytes
+		:param value: The value
+		:param loc: The IL location this expression was added from
+		:return: The expression ``value``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_CONST, value, size=size, source_location=loc)
 
+	def const_data(
+		self, size: int, data: 'variable.ConstantData', loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Constant data that isn't a plain integer, such as a string or a value with known extension.
+
+		:param size: The size of the result in bytes
+		:param data: The constant data
+		:param loc: The IL location this expression was added from
+		:return: The expression ``data``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CONST_DATA, data.type, data.value, size=size, source_location=loc)
+
 	def const_pointer(self, size: int, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``const_pointer`` returns an expression for the constant pointer ``value`` of size ``size``
+		A constant pointer to address ``value``.
 
-		:param int size: the size of the pointer in bytes
-		:param int value: address referenced by the pointer
-		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size
+		:param size: The size of the result in bytes
+		:param value: The value
+		:param loc: The IL location this expression was added from
+		:return: The expression ``value``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_CONST_PTR, value, size=size, source_location=loc)
@@ -5017,29 +5357,1622 @@ class MediumLevelILFunction:
 		self, size: int, value: int, offset: int, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``extern_pointer`` returns an expression for the external pointer ``value`` at offset ``offset`` of size ``size``
+		A constant pointer ``offset`` bytes from the relocated external address ``value``.
 
-		:param int size: the size of the pointer in bytes
-		:param int value: address referenced by the pointer
-		:param int offset: offset applied to the address
-		:param loc: location of returned expression
-		:return: A constant expression of given value and size
+		:param size: The size of the result in bytes
+		:param value: The external address
+		:param offset: The offset from the external address, in bytes
+		:param loc: The IL location this expression was added from
+		:return: The expression ``(value + offset)``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_EXTERN_PTR, value, offset, size=size, source_location=loc)
 
 	def float_const_raw(self, size: int, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``float_const_raw`` returns an expression for the constant raw binary floating point
-		value ``value`` with size ``size``
+		A floating point constant. ``value`` holds the bits of its representation as an integer. The single
+		and double precision builders take a floating point value and convert it themselves.
 
-		:param int size: the size of the constant in bytes
-		:param int value: integer value for the raw binary representation of the constant
-		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size
+		:param size: The size of the result in bytes
+		:param value: The bits of the constant's representation, read as an integer
+		:param loc: The IL location this expression was added from
+		:return: The expression ``value``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_FLOAT_CONST, value, size=size, source_location=loc)
+
+	def imported_address(self, size: int, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		The constant address ``value`` of an imported symbol. Renders as the symbol's name where one is
+		known.
+
+		:param size: The size of the result in bytes
+		:param value: The value
+		:param loc: The IL location this expression was added from
+		:return: The expression ``[value]``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_IMPORT, value, size=size, source_location=loc)
+
+	def add(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Adds ``a`` and ``b``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a + b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_ADD, a, b, size=size, source_location=loc)
+
+	def add_carry(
+		self,
+		size: int,
+		a: ExpressionIndex,
+		b: ExpressionIndex,
+		carry: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Adds ``a``, ``b`` and the carry ``carry``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param carry: The carry in
+		:param loc: The IL location this expression was added from
+		:return: The expression ``adc.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_ADC, a, b, carry, size=size, source_location=loc)
+
+	def sub(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Subtracts ``b`` from ``a``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a - b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_SUB, a, b, size=size, source_location=loc)
+
+	def sub_borrow(
+		self,
+		size: int,
+		a: ExpressionIndex,
+		b: ExpressionIndex,
+		carry: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Subtracts ``b`` and the borrow ``carry`` from ``a``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param carry: The carry in
+		:param loc: The IL location this expression was added from
+		:return: The expression ``sbb.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_SBB, a, b, carry, size=size, source_location=loc)
+
+	def and_expr(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The bitwise and of ``a`` and ``b``. Renders as ``a && b`` when ``size`` is 0.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a & b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_AND, a, b, size=size, source_location=loc)
+
+	def or_expr(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The bitwise or of ``a`` and ``b``. Renders as ``a || b`` when ``size`` is 0.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a | b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_OR, a, b, size=size, source_location=loc)
+
+	def xor_expr(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The bitwise exclusive or of ``a`` and ``b``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a ^ b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_XOR, a, b, size=size, source_location=loc)
+
+	def shift_left(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Shifts ``a`` left by ``b`` bits.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a << b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_LSL, a, b, size=size, source_location=loc)
+
+	def logical_shift_right(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Shifts ``a`` logically right by ``b`` bits.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u>> b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_LSR, a, b, size=size, source_location=loc)
+
+	def arith_shift_right(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Shifts ``a`` arithmetically right by ``b`` bits.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s>> b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_ASR, a, b, size=size, source_location=loc)
+
+	def rotate_left(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Rotates ``a`` left by ``b`` bits.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``rol.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_ROL, a, b, size=size, source_location=loc)
+
+	def rotate_left_carry(
+		self,
+		size: int,
+		a: ExpressionIndex,
+		b: ExpressionIndex,
+		carry: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Rotates ``a`` left by ``b`` bits through the carry ``carry``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param carry: The carry in
+		:param loc: The IL location this expression was added from
+		:return: The expression ``rlc.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_RLC, a, b, carry, size=size, source_location=loc)
+
+	def rotate_right(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Rotates ``a`` right by ``b`` bits.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``ror.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_ROR, a, b, size=size, source_location=loc)
+
+	def rotate_right_carry(
+		self,
+		size: int,
+		a: ExpressionIndex,
+		b: ExpressionIndex,
+		carry: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Rotates ``a`` right by ``b`` bits through the carry ``carry``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param carry: The carry in
+		:param loc: The IL location this expression was added from
+		:return: The expression ``rrc.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_RRC, a, b, carry, size=size, source_location=loc)
+
+	def mult(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Multiplies ``a`` by ``b``. The operands and the result are all ``size`` bytes, so the upper half of
+		the product is discarded.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a * b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_MUL, a, b, size=size, source_location=loc)
+
+	def mult_double_prec_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Multiplies ``a`` by ``b`` as unsigned integers. The operands are ``size`` bytes and the result is
+		``2 * size`` bytes. The expression's size, which it renders with, is still ``size``.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``mulu.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_MULU_DP, a, b, size=size, source_location=loc)
+
+	def mult_double_prec_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Multiplies ``a`` by ``b`` as signed integers. The operands are ``size`` bytes and the result is
+		``2 * size`` bytes. The expression's size, which it renders with, is still ``size``.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``muls.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_MULS_DP, a, b, size=size, source_location=loc)
+
+	def div_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Divides ``a`` by ``b`` as unsigned integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``divu.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_DIVU, a, b, size=size, source_location=loc)
+
+	def div_double_prec_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Divides ``a`` by ``b`` as unsigned integers. ``a`` is ``2 * size`` bytes, and ``b`` and the result
+		are ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``divu.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_DIVU_DP, a, b, size=size, source_location=loc)
+
+	def div_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Divides ``a`` by ``b`` as signed integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``divs.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_DIVS, a, b, size=size, source_location=loc)
+
+	def div_double_prec_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Divides ``a`` by ``b`` as signed integers. ``a`` is ``2 * size`` bytes, and ``b`` and the result are
+		``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``divs.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_DIVS_DP, a, b, size=size, source_location=loc)
+
+	def mod_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The remainder of dividing ``a`` by ``b`` as unsigned integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``modu.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_MODU, a, b, size=size, source_location=loc)
+
+	def mod_double_prec_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The remainder of dividing ``a`` by ``b`` as unsigned integers. ``a`` is ``2 * size`` bytes, and
+		``b`` and the result are ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``modu.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_MODU_DP, a, b, size=size, source_location=loc)
+
+	def mod_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The remainder of dividing ``a`` by ``b`` as signed integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``mods.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_MODS, a, b, size=size, source_location=loc)
+
+	def mod_double_prec_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The remainder of dividing ``a`` by ``b`` as signed integers. ``a`` is ``2 * size`` bytes, and ``b``
+		and the result are ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``mods.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_MODS_DP, a, b, size=size, source_location=loc)
+
+	def neg_expr(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Negates ``value`` as a two's complement integer.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``neg.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_NEG, value, size=size, source_location=loc)
+
+	def not_expr(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Inverts the bits of ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``not.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_NOT, value, size=size, source_location=loc)
+
+	def sign_extend(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Sign-extends ``value`` to ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``sx.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_SX, value, size=size, source_location=loc)
+
+	def zero_extend(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Zero-extends ``value`` to ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``zx.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_ZX, value, size=size, source_location=loc)
+
+	def low_part(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Truncates ``value`` to its low ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``(value).<size>``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_LOW_PART, value, size=size, source_location=loc)
+
+	def jump(self, dest: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Jumps to ``dest``.
+
+		:param dest: The address to jump to
+		:param loc: The IL location this expression was added from
+		:return: The expression ``jump(dest)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_JUMP, dest, source_location=loc)
+
+	def jump_to(
+		self, dest: ExpressionIndex, targets: Mapping[int, MediumLevelILLabel], loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Jumps to the target in ``targets`` chosen by the value of ``dest``.
+
+		:param dest: The value that chooses the target
+		:param targets: The labels to jump to, keyed by the value of the destination that chooses each
+		:param loc: The IL location this expression was added from
+		:return: The expression ``jump(dest => targets)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			MediumLevelILOperation.MLIL_JUMP_TO,
+			dest,
+			len(targets) * 2,
+			self.add_label_map(targets),
+			source_location=loc,
+		)
+
+	def call(
+		self,
+		output: CallOutputList,
+		dest: ExpressionIndex,
+		params: List[ExpressionIndex],
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Calls ``dest`` with ``params``. Its results go to ``output``.
+
+		:param output: Where the call's results go
+		:param dest: The address to call
+		:param params: The parameters
+		:param loc: The IL location this expression was added from
+		:return: The expression ``output = dest(params)``
+		:rtype: ExpressionIndex
+		"""
+		_output = self._call_output_list(output)
+		return self.expr(
+			MediumLevelILOperation.MLIL_CALL,
+			len(_output),
+			self.add_operand_list(_output),
+			dest,
+			len(params),
+			self.add_operand_list(params),
+			source_location=loc,
+		)
+
+	def call_untyped(
+		self,
+		output: CallOutputList,
+		dest: ExpressionIndex,
+		params: List[ExpressionIndex],
+		stack: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Calls ``dest`` with ``params`` where analysis couldn't resolve the call's stack usage. Its results
+		go to ``output``. Both lists hold only what analysis could find.
+
+		:param output: Where the call's results go
+		:param dest: The address to call
+		:param params: The parameters
+		:param stack: The top of the stack at the call
+		:param loc: The IL location this expression was added from
+		:return: The expression ``output = call(dest, params, stack = stack)``
+		:rtype: ExpressionIndex
+		"""
+		_output = self._call_output_list(output)
+		return self.expr(
+			MediumLevelILOperation.MLIL_CALL_UNTYPED,
+			len(_output),
+			self.add_operand_list(_output),
+			dest,
+			self.expr(
+				MediumLevelILOperation.MLIL_CALL_PARAM,
+				len(params),
+				self.add_operand_list(params),
+				size=0,
+				source_location=loc,
+			),
+			stack,
+			source_location=loc,
+		)
+
+	def separate_param_list(
+		self, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Parameters of an untyped call that the calling convention passes separately from the others, such as
+		floating point parameters in their own registers.
+
+		:param params: The parameters
+		:param loc: The IL location this expression was added from
+		:return: The expression ``(params)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			MediumLevelILOperation.MLIL_SEPARATE_PARAM_LIST,
+			len(params),
+			self.add_operand_list(params),
+			source_location=loc,
+		)
+
+	def shared_param_slot(
+		self, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Alternative values for one parameter slot of an untyped call, such as an integer and a floating
+		point register that the calling convention assigns to the same slot.
+
+		:param params: The alternatives
+		:param loc: The IL location this expression was added from
+		:return: The expression ``params``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			MediumLevelILOperation.MLIL_SHARED_PARAM_SLOT,
+			len(params),
+			self.add_operand_list(params),
+			source_location=loc,
+		)
+
+	def var_output(
+		self, size: int, dest: 'variable.CoreVariable', loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		A call output that writes variable ``dest``.
+
+		:param size: The size of the result in bytes
+		:param dest: The variable the result goes to
+		:param loc: The IL location this expression was added from
+		:return: The expression ``dest``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_VAR_OUTPUT, dest.identifier, size=size, source_location=loc)
+
+	def var_output_field(
+		self, size: int, dest: 'variable.CoreVariable', offset: int, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		A call output that writes the ``size`` bytes at offset ``offset`` within variable ``dest``, such as
+		a result placed in part of a structure.
+
+		:param size: The size of the result in bytes
+		:param dest: The variable to write part of
+		:param offset: The offset of the part within the variable, in bytes
+		:param loc: The IL location this expression was added from
+		:return: The expression ``dest:offset.<size>``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			MediumLevelILOperation.MLIL_VAR_OUTPUT_FIELD, dest.identifier, offset, size=size, source_location=loc
+		)
+
+	def store_output(
+		self, size: int, dest: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		A call output that writes ``size`` bytes to memory at ``dest``, for a result that doesn't go to a
+		local variable.
+
+		:param size: The size of the result in bytes
+		:param dest: The address the result goes to
+		:param loc: The IL location this expression was added from
+		:return: The expression ``[dest].<size>``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_STORE_OUTPUT, dest, size=size, source_location=loc)
+
+	def ret(self, sources: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Returns ``sources`` from the function.
+
+		:param sources: The values to return
+		:param loc: The IL location this expression was added from
+		:return: The expression ``return sources``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			MediumLevelILOperation.MLIL_RET, len(sources), self.add_operand_list(sources), source_location=loc
+		)
+
+	def no_ret(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Marks a point that execution doesn't pass, such as after a call that doesn't return.
+
+		:param loc: The IL location this expression was added from
+		:return: The expression ``noreturn``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_NORET, source_location=loc)
+
+	def compare_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` equals ``b``.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a == b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CMP_E, a, b, size=size, source_location=loc)
+
+	def compare_not_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` doesn't equal ``b``.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a != b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CMP_NE, a, b, size=size, source_location=loc)
+
+	def compare_signed_less_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than ``b`` as signed integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s< b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CMP_SLT, a, b, size=size, source_location=loc)
+
+	def compare_unsigned_less_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than ``b`` as unsigned integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u< b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CMP_ULT, a, b, size=size, source_location=loc)
+
+	def compare_signed_less_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than or equal to ``b`` as signed integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s<= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CMP_SLE, a, b, size=size, source_location=loc)
+
+	def compare_unsigned_less_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than or equal to ``b`` as unsigned integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u<= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CMP_ULE, a, b, size=size, source_location=loc)
+
+	def compare_signed_greater_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than or equal to ``b`` as signed integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s>= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CMP_SGE, a, b, size=size, source_location=loc)
+
+	def compare_unsigned_greater_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than or equal to ``b`` as unsigned integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u>= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CMP_UGE, a, b, size=size, source_location=loc)
+
+	def compare_signed_greater_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than ``b`` as signed integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s> b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CMP_SGT, a, b, size=size, source_location=loc)
+
+	def compare_unsigned_greater_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than ``b`` as unsigned integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u> b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CMP_UGT, a, b, size=size, source_location=loc)
+
+	def test_bit(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether bit ``b`` of ``a`` is set.
+
+		:param size: The size of ``a`` in bytes
+		:param a: The left operand
+		:param b: The index of the bit to test
+		:param loc: The IL location this expression was added from
+		:return: The expression ``test_bit(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_TEST_BIT, a, b, size=size, source_location=loc)
+
+	def bool_to_int(self, size: int, a: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Converts ``a`` to the integer 1 if it's true, or 0 if it's false.
+
+		:param size: The size of the result in bytes
+		:param a: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a ? 1 : 0``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_BOOL_TO_INT, a, size=size, source_location=loc)
+
+	def system_call(
+		self, output: CallOutputList, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Makes a system call with ``params``. Its results go to ``output``.
+
+		:param output: Where the call's results go
+		:param params: The parameters
+		:param loc: The IL location this expression was added from
+		:return: The expression ``output = syscall(params)``
+		:rtype: ExpressionIndex
+		"""
+		_output = self._call_output_list(output)
+		return self.expr(
+			MediumLevelILOperation.MLIL_SYSCALL,
+			len(_output),
+			self.add_operand_list(_output),
+			len(params),
+			self.add_operand_list(params),
+			source_location=loc,
+		)
+
+	def system_call_untyped(
+		self,
+		output: CallOutputList,
+		params: List[ExpressionIndex],
+		stack: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Makes a system call with ``params`` where analysis couldn't resolve the call's stack usage. Its
+		results go to ``output``. Both lists hold only what analysis could find.
+
+		:param output: Where the call's results go
+		:param params: The parameters
+		:param stack: The top of the stack at the call
+		:param loc: The IL location this expression was added from
+		:return: The expression ``output = syscall(params, stack = stack)``
+		:rtype: ExpressionIndex
+		"""
+		_output = self._call_output_list(output)
+		return self.expr(
+			MediumLevelILOperation.MLIL_SYSCALL_UNTYPED,
+			len(_output),
+			self.add_operand_list(_output),
+			self.expr(
+				MediumLevelILOperation.MLIL_CALL_PARAM,
+				len(params),
+				self.add_operand_list(params),
+				size=0,
+				source_location=loc,
+			),
+			stack,
+			source_location=loc,
+		)
+
+	def tailcall(
+		self,
+		output: CallOutputList,
+		dest: ExpressionIndex,
+		params: List[ExpressionIndex],
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Jumps to ``dest`` with ``params`` as a tail call. Its results go to ``output``.
+
+		:param output: Where the call's results go
+		:param dest: The address to jump to
+		:param params: The parameters
+		:param loc: The IL location this expression was added from
+		:return: The expression ``return dest(params) __tailcall``
+		:rtype: ExpressionIndex
+		"""
+		_output = self._call_output_list(output)
+		return self.expr(
+			MediumLevelILOperation.MLIL_TAILCALL,
+			len(_output),
+			self.add_operand_list(_output),
+			dest,
+			len(params),
+			self.add_operand_list(params),
+			source_location=loc,
+		)
+
+	def tailcall_untyped(
+		self,
+		output: CallOutputList,
+		dest: ExpressionIndex,
+		params: List[ExpressionIndex],
+		stack: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Jumps to ``dest`` with ``params`` as a tail call where analysis couldn't resolve the call's stack
+		usage. Its results go to ``output``. Both lists hold only what analysis could find.
+
+		:param output: Where the call's results go
+		:param dest: The address to jump to
+		:param params: The parameters
+		:param stack: The top of the stack at the call
+		:param loc: The IL location this expression was added from
+		:return: The expression ``output = tailcall(dest, params, stack = stack)``
+		:rtype: ExpressionIndex
+		"""
+		_output = self._call_output_list(output)
+		return self.expr(
+			MediumLevelILOperation.MLIL_TAILCALL_UNTYPED,
+			len(_output),
+			self.add_operand_list(_output),
+			dest,
+			self.expr(
+				MediumLevelILOperation.MLIL_CALL_PARAM,
+				len(params),
+				self.add_operand_list(params),
+				size=0,
+				source_location=loc,
+			),
+			stack,
+			source_location=loc,
+		)
+
+	def intrinsic(
+		self,
+		outputs: List['variable.CoreVariable'],
+		intrinsic: 'architecture.IntrinsicType',
+		params: List[ExpressionIndex],
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Calls intrinsic ``intrinsic`` with ``params``. An intrinsic is an architecture operation lifted as a
+		call to a built-in function that doesn't exist in the binary. Its results go to the variables
+		``outputs``.
+
+		:param outputs: The variables the intrinsic writes
+		:param intrinsic: The architecture intrinsic to call
+		:param params: The parameters
+		:param loc: The IL location this expression was added from
+		:return: The expression ``outputs = intrinsic(params)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			MediumLevelILOperation.MLIL_INTRINSIC,
+			len(outputs),
+			self.add_variable_list(outputs),
+			self.arch.get_intrinsic_index(intrinsic),
+			len(params),
+			self.add_operand_list(params),
+			source_location=loc,
+		)
+
+	def free_var_slot(self, var: 'variable.CoreVariable', loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Frees the slot of variable ``var`` on its register stack.
+
+		:param var: The register stack variable whose slot to free
+		:param loc: The IL location this expression was added from
+		:return: The expression ``__free_slot(var)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FREE_VAR_SLOT, var.identifier, source_location=loc)
+
+	def breakpoint(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		A processor breakpoint.
+
+		:param loc: The IL location this expression was added from
+		:return: The expression ``breakpoint``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_BP, source_location=loc)
+
+	def trap(self, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		A processor trap, or interrupt, with number ``value``.
+
+		:param value: The trap number
+		:param loc: The IL location this expression was added from
+		:return: The expression ``trap(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_TRAP, value, source_location=loc)
+
+	def undefined(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		An undefined value or operation.
+
+		:param loc: The IL location this expression was added from
+		:return: The expression ``undefined``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_UNDEF, source_location=loc)
+
+	def unimplemented(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		An unimplemented instruction or value.
+
+		:param loc: The IL location this expression was added from
+		:return: The expression ``unimplemented``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_UNIMPL, 0, source_location=loc)
+
+	def unknown(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		A value that can't be known at analysis time. It doesn't produce the warning an unimplemented
+		expression does.
+
+		:param loc: The IL location this expression was added from
+		:return: The expression ``unknown``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_UNIMPL, 1, source_location=loc)
+
+	def unimplemented_memory_ref(
+		self, size: int, addr: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		A reference to ``size`` bytes of memory at ``addr``, for an unimplemented operation.
+
+		:param size: The size of the result in bytes
+		:param addr: The address referenced
+		:param loc: The IL location this expression was added from
+		:return: The expression ``unimplemented([addr].<size>)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_UNIMPL_MEM, addr, 0, size=size, source_location=loc)
+
+	def unknown_memory_ref(
+		self, size: int, addr: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		A reference to ``size`` bytes of memory at ``addr``, whose value can't be known at analysis time. It
+		doesn't produce the warning an unimplemented expression does.
+
+		:param size: The size of the result in bytes
+		:param addr: The address referenced
+		:param loc: The IL location this expression was added from
+		:return: The expression ``unknown([addr].<size>)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_UNIMPL_MEM, addr, 1, size=size, source_location=loc)
+
+	def float_add(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Adds ``a`` and ``b`` as floating point values.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f+ b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FADD, a, b, size=size, source_location=loc)
+
+	def float_sub(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Subtracts ``b`` from ``a`` as floating point values.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f- b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FSUB, a, b, size=size, source_location=loc)
+
+	def float_mult(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Multiplies ``a`` by ``b`` as floating point values.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f* b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FMUL, a, b, size=size, source_location=loc)
+
+	def float_div(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Divides ``a`` by ``b`` as floating point values.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f/ b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FDIV, a, b, size=size, source_location=loc)
+
+	def float_sqrt(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The square root of the floating point value ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``sqrt(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FSQRT, value, size=size, source_location=loc)
+
+	def float_neg(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Negates the floating point value ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``fneg(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FNEG, value, size=size, source_location=loc)
+
+	def float_abs(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		The absolute value of the floating point value ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``fabs(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FABS, value, size=size, source_location=loc)
+
+	def float_to_int(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Converts the floating point value ``value`` to an integer.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``int.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FLOAT_TO_INT, value, size=size, source_location=loc)
+
+	def int_to_float(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Converts the integer ``value`` to a floating point value.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``float.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_INT_TO_FLOAT, value, size=size, source_location=loc)
+
+	def float_convert(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Converts the floating point value ``value`` to a floating point value of ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``fconvert.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FLOAT_CONV, value, size=size, source_location=loc)
+
+	def round_to_int(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Rounds the floating point value ``value`` to the nearest integral value.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``roundint.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_ROUND_TO_INT, value, size=size, source_location=loc)
+
+	def floor(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Rounds the floating point value ``value`` to an integral value, towards negative infinity.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``floor.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FLOOR, value, size=size, source_location=loc)
+
+	def ceil(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Rounds the floating point value ``value`` to an integral value, towards positive infinity.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``ceil.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CEIL, value, size=size, source_location=loc)
+
+	def float_trunc(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Rounds the floating point value ``value`` to an integral value, towards zero.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``ftrunc.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FTRUNC, value, size=size, source_location=loc)
+
+	def float_compare_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` equals ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f== b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FCMP_E, a, b, size=size, source_location=loc)
+
+	def float_compare_not_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` doesn't equal ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f!= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FCMP_NE, a, b, size=size, source_location=loc)
+
+	def float_compare_less_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f< b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FCMP_LT, a, b, size=size, source_location=loc)
+
+	def float_compare_less_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than or equal to ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f<= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FCMP_LE, a, b, size=size, source_location=loc)
+
+	def float_compare_greater_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than or equal to ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f>= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FCMP_GE, a, b, size=size, source_location=loc)
+
+	def float_compare_greater_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f> b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FCMP_GT, a, b, size=size, source_location=loc)
+
+	def float_compare_ordered(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` and ``b`` are ordered, which they are when neither is NaN.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``is_ordered.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FCMP_O, a, b, size=size, source_location=loc)
+
+	def float_compare_unordered(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` and ``b`` are unordered, which they are when either is NaN.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``is_unordered.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_FCMP_UO, a, b, size=size, source_location=loc)
+
+	def block_to_expand(
+		self, exprs: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Holds the statements ``exprs`` until a later analysis step expands them in place of this
+		instruction.
+
+		:param exprs: The statements
+		:param loc: The IL location this expression was added from
+		:return: The expression ``{ exprs }``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			MediumLevelILOperation.MLIL_BLOCK_TO_EXPAND, len(exprs), self.add_operand_list(exprs), source_location=loc
+		)
+
+	def byte_swap(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Reverses the byte order of ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``bswap.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_BSWAP, value, size=size, source_location=loc)
+
+	def population_count(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Counts the set bits in ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``popcnt.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_POPCNT, value, size=size, source_location=loc)
+
+	def count_leading_zeros(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Counts the leading zero bits in ``value``. The result is ``8 * size`` when ``value`` is zero.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``clz.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CLZ, value, size=size, source_location=loc)
+
+	def count_trailing_zeros(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Counts the trailing zero bits in ``value``. The result is ``8 * size`` when ``value`` is zero.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``ctz.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CTZ, value, size=size, source_location=loc)
+
+	def reverse_bits(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Reverses the bit order of ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``rbit.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_RBIT, value, size=size, source_location=loc)
+
+	def count_leading_signs(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Counts the bits below the sign bit of ``value`` that match it.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``cls.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_CLS, value, size=size, source_location=loc)
+
+	def min_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The smaller of ``a`` and ``b`` as signed integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``mins.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_MINS, a, b, size=size, source_location=loc)
+
+	def max_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The larger of ``a`` and ``b`` as signed integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``maxs.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_MAXS, a, b, size=size, source_location=loc)
+
+	def min_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The smaller of ``a`` and ``b`` as unsigned integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``minu.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_MINU, a, b, size=size, source_location=loc)
+
+	def max_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The larger of ``a`` and ``b`` as unsigned integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``maxu.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_MAXU, a, b, size=size, source_location=loc)
+
+	def absolute_value(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The absolute value of ``value`` as a signed integer. The most negative value is its own absolute
+		value.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``abs.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(MediumLevelILOperation.MLIL_ABS, value, size=size, source_location=loc)
+
+	# END GENERATED mlil-builders
 
 	def float_const_single(self, value: float, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
@@ -5062,1519 +6995,6 @@ class MediumLevelILFunction:
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_FLOAT_CONST, struct.unpack("Q", struct.pack("d", value))[0], size=8, source_location=loc)
-
-	def imported_address(self, size: int, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``imported_address`` returns an expression for an imported value with address ``value`` and size ``size``
-
-		:param int size: size of the imported value
-		:param int value: address of the imported value
-		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_IMPORT, value, size=size, source_location=loc)
-
-	def const_data(self, size: int, data: 'variable.ConstantData', loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``const_data`` returns an expression for the constant data ``data``
-
-		:param int size: size of the data
-		:param ConstantData data: value of the data
-		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CONST_DATA, data.type, data.value, size=size, source_location=loc)
-
-	def add(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``add`` adds expression ``a`` to expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``add.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_ADD, a, b, size=size, source_location=loc)
-
-	def add_carry(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``add_carry`` adds expression ``a`` to expression ``b`` with carry from ``carry`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ExpressionIndex carry: Carried value expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``adc.<size>(a, b, carry)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_ADC, a, b, carry, size=size, source_location=loc)
-
-	def sub(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``sub`` subtracts expression ``a`` to expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``sub.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_SUB, a, b, size=size, source_location=loc)
-
-	def sub_borrow(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``sub_borrow`` subtracts expression ``a`` to expression ``b`` with borrow from ``carry`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ExpressionIndex carry: Carried value expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``sbb.<size>(a, b, carry)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_SBB, a, b, carry, size=size, source_location=loc)
-
-	def and_expr(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``and_expr`` bitwise and's expression ``a`` and expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``and.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_AND, a, b, size=size, source_location=loc)
-
-	def or_expr(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``or_expr`` bitwise or's expression ``a`` and expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``or.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_OR, a, b, size=size, source_location=loc)
-
-	def xor_expr(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``xor_expr`` xor's expression ``a`` and expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``xor.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_XOR, a, b, size=size, source_location=loc)
-
-	def shift_left(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``shift_left`` left shifts expression ``a`` by expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``lsl.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_LSL, a, b, size=size, source_location=loc)
-
-	def logical_shift_right(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``logical_shift_right`` logically right shifts expression ``a`` by expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``lsr.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_LSR, a, b, size=size, source_location=loc)
-
-	def arith_shift_right(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``arith_shift_right`` arithmetically right shifts expression ``a`` by expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``asr.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_ASR, a, b, size=size, source_location=loc)
-
-	def rotate_left(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``rotate_left`` bitwise rotates left expression ``a`` by expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``rol.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_ROL, a, b, size=size, source_location=loc)
-
-	def rotate_left_carry(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``rotate_left_carry`` bitwise rotates left expression ``a`` by expression ``b`` with carry from ``carry`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ExpressionIndex carry: Carried value expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``rlc.<size>(a, b, carry)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_RLC, a, b, carry, size=size, source_location=loc)
-
-	def rotate_right(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``rotate_right`` bitwise rotates right expression ``a`` by expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``ror.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_ROR, a, b, size=size, source_location=loc)
-
-	def rotate_right_carry(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``rotate_right_carry`` bitwise rotates right expression ``a`` by expression ``b`` with carry from ``carry`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ExpressionIndex carry: Carried value expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``rrc.<size>(a, b, carry)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_RRC, a, b, carry, size=size, source_location=loc)
-
-	def mult(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mult`` multiplies expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands and return value are ``size`` bytes as the product's upper half is discarded.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``mult.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_MUL, a, b, size=size, source_location=loc)
-
-	def mult_double_prec_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mult_double_prec_signed`` signed multiplies expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands are ``size`` bytes and the returned expression is of size ``2*size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``muls.dp.<2*size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_MULS_DP, a, b, size=size, source_location=loc)
-
-	def mult_double_prec_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mult_double_prec_unsigned`` unsigned multiplies expression ``a`` by expression ``b`` and returnisan expression.
-		Both the operands are ``size`` bytes and the returned expression is of size ``2*size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``mulu.dp.<2*size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_MULU_DP, a, b, size=size, source_location=loc)
-
-	def min_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``min_signed`` signed minimum of expressions ``a`` and ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``mins.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_MINS, a, b, size=size, source_location=loc)
-
-	def max_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``max_signed`` signed maximum of expressions ``a`` and ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``maxs.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_MAXS, a, b, size=size, source_location=loc)
-
-	def min_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``min_unsigned`` unsigned minimum of expressions ``a`` and ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``minu.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_MINU, a, b, size=size, source_location=loc)
-
-	def max_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``max_unsigned`` unsigned maximum of expressions ``a`` and ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``maxu.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_MAXU, a, b, size=size, source_location=loc)
-
-	def div_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``div_signed`` signed divides expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands and return value are ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``divs.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_DIVS, a, b, size=size, source_location=loc)
-
-	def div_double_prec_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``div_double_prec_signed`` signed divides double precision expression ``a`` by expression ``b`` and returns an expression.
-		The first operand is of size ``2*size`` bytes and the other operand and return value are of size ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``divs.dp.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_DIVS_DP, a, b, size=size, source_location=loc)
-
-	def div_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``div_unsigned`` unsigned divides expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands and return value are ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``divu.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_DIVU, a, b, size=size, source_location=loc)
-
-	def div_double_prec_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``div_double_prec_unsigned`` unsigned divides double precision expression ``a`` by expression ``b`` and returns an expression.
-		The first operand is of size ``2*size`` bytes and the other operand and return value are of size ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``divu.dp.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_DIVU_DP, a, b, size=size, source_location=loc)
-
-	def mod_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mod_signed`` signed modulus expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands and return value are ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``mods.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_MODS, a, b, size=size, source_location=loc)
-
-	def mod_double_prec_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mod_double_prec_signed`` signed modulus double precision expression ``a`` by expression ``b`` and returns an expression.
-		The first operand is of size ``2*size`` bytes and the other operand and return value are of size ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``mods.dp.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_MODS_DP, a, b, size=size, source_location=loc)
-
-	def mod_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mod_unsigned`` unsigned modulus expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands and return value are ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``modu.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_MODU, a, b, size=size, source_location=loc)
-
-	def mod_double_prec_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mod_double_prec_unsigned`` unsigned modulus double precision expression ``a`` by expression ``b`` and returns an expression.
-		The first operand is of size ``2*size`` bytes and the other operand and return value are of size ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``modu.dp.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_MODU_DP, a, b, size=size, source_location=loc)
-
-	def neg_expr(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``neg_expr`` two's complement sign negation of expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``neg.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_NEG, value, size=size, source_location=loc)
-
-	def not_expr(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``not_expr`` bitwise inversion of expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to bitwise invert
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``not.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_NOT, value, size=size, source_location=loc)
-
-	def byte_swap(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``byte_swap`` reverses the byte order of expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to byte swap
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``bswap.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_BSWAP, value, size=size, source_location=loc)
-
-	def population_count(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``population_count`` counts the number of set bits in expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to count set bits in
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``popcnt.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_POPCNT, value, size=size, source_location=loc)
-
-	def count_leading_zeros(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``count_leading_zeros`` counts the leading zero bits in expression ``value`` of size ``size``. The result is
-		``8 * size`` when ``value`` is zero.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to count leading zero bits in
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``clz.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CLZ, value, size=size, source_location=loc)
-
-	def count_trailing_zeros(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``count_trailing_zeros`` counts the trailing zero bits in expression ``value`` of size ``size``. The result is
-		``8 * size`` when ``value`` is zero.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to count trailing zero bits in
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``ctz.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CTZ, value, size=size, source_location=loc)
-
-	def reverse_bits(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``reverse_bits`` reverses the bit order of expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to reverse the bits of
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``rbit.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_RBIT, value, size=size, source_location=loc)
-
-	def count_leading_signs(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``count_leading_signs`` counts the leading sign bits in expression ``value`` of size ``size`` (the number of bits
-		below the sign bit that match it)
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to count leading sign bits in
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``cls.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CLS, value, size=size, source_location=loc)
-
-	def absolute_value(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``absolute_value`` signed absolute value of expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to take the absolute value of
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``abs.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_ABS, value, size=size, source_location=loc)
-
-	def sign_extend(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``sign_extend`` two's complement sign-extends the expression in ``value`` to ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to sign extend
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``sx.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_SX, value, size=size, source_location=loc)
-
-	def zero_extend(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``zero_extend`` zero-extends the expression in ``value`` to ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to zero extend
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``zx.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_ZX, value, size=size, source_location=loc)
-
-	def low_part(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``low_part`` truncates the expression in ``value`` to ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to zero extend
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``(value).<size>``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_LOW_PART, value, size=size, source_location=loc)
-
-	def jump(self, dest: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``jump`` returns an expression which jumps (branches) to the expression ``dest``
-
-		:param ExpressionIndex dest: the expression to jump to
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``jump(dest)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_JUMP, dest, size=0, source_location=loc)
-
-	def jump_to(
-		self, dest: ExpressionIndex, targets: Mapping[int, MediumLevelILLabel],
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``jump_to`` returns an expression which jumps (branches) various targets in ``targets``
-		choosing the target in ``targets`` based on the value calculated by ``dest``
-
-		:param ExpressionIndex dest: the expression choosing which jump target to use
-		:param Mapping[int, MediumLevelILLabel] targets: the list of targets for jump locations
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``jump(dest)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_JUMP_TO, dest, len(targets) * 2, self.add_label_map(targets), size=0, source_location=loc)
-
-	def call(
-		self, output: CallOutputList, dest: ExpressionIndex, params: List[ExpressionIndex],
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``call`` returns an expression which calls the function in the expression ``dest``
-		with the parameters defined in ``params`` returning values in the variables in ``output``.
-
-		:param CallOutputList output: output variables or expressions
-		:param ExpressionIndex dest: the expression to call
-		:param List[ExpressionIndex] params: parameter variables
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``output = call(dest, params...)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			MediumLevelILOperation.MLIL_CALL,
-			len(output),
-			self.add_operand_list(self._call_output_list(output)),
-			dest,
-			len(params),
-			self.add_operand_list(params),
-			size=0,
-			source_location=loc
-		)
-
-	def call_untyped(
-		self, output: CallOutputList, dest: ExpressionIndex, params: List[ExpressionIndex],
-		stack: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``call_untyped`` returns an expression which calls the function in the expression ``dest``
-		with the parameters defined in ``params`` returning values in the variables in ``output``
-		where stack resolution could not be determined and the top of the stack has to be specified in ``stack``
-
-		:param CallOutputList output: output variables or expressions
-		:param ExpressionIndex dest: the expression to call
-		:param List[ExpressionIndex] params: parameter variables
-		:param ExpressionIndex stack: expression of top of stack
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``output = call(dest, params..., stack = stack)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			MediumLevelILOperation.MLIL_CALL_UNTYPED,
-			len(output),
-			self.add_operand_list(self._call_output_list(output)),
-			dest,
-			self.expr(
-				MediumLevelILOperation.MLIL_CALL_PARAM,
-				len(params),
-				self.add_operand_list(params),
-				size=0,
-				source_location=loc
-			),
-			stack,
-			size=0,
-			source_location=loc
-		)
-
-	def system_call(
-		self, output: CallOutputList, params: List[ExpressionIndex],
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``system_call`` returns an expression which performs a system call
-		with the parameters defined in ``params`` returning values in the variables in ``output``.
-
-		:param CallOutputList output: output variables or expressions
-		:param List[ExpressionIndex] params: parameter variables
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``output = syscall(dest, params...)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			MediumLevelILOperation.MLIL_SYSCALL,
-			len(output),
-			self.add_operand_list(self._call_output_list(output)),
-			len(params),
-			self.add_operand_list(params),
-			size=0,
-			source_location=loc
-		)
-
-	def system_call_untyped(
-		self, output: CallOutputList, params: List[ExpressionIndex],
-		stack: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``system_call_untyped`` returns an expression which performs a system call
-		with the parameters defined in ``params`` returning values in the variables in ``output``
-		where stack resolution could not be determined and the top of the stack has to be specified in ``stack``
-
-		:param CallOutputList output: output variables or expressions
-		:param List[ExpressionIndex] params: parameter variables
-		:param ExpressionIndex stack: expression of top of stack
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``output = syscall(dest, params..., stack = stack)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			MediumLevelILOperation.MLIL_SYSCALL_UNTYPED,
-			len(output),
-			self.add_operand_list(self._call_output_list(output)),
-			self.expr(
-				MediumLevelILOperation.MLIL_CALL_PARAM,
-				len(params),
-				self.add_operand_list(params),
-				size=0,
-				source_location=loc
-			),
-			stack,
-			size=0,
-			source_location=loc
-		)
-
-	def tailcall(
-		self, output: CallOutputList, dest: ExpressionIndex, params: List[ExpressionIndex],
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``tailcall`` returns an expression which tailcalls the function in the expression ``dest``
-		with the parameters defined in ``params`` returning values in the variables in ``output``.
-
-		:param CallOutputList output: output variables or expressions
-		:param ExpressionIndex dest: the expression to call
-		:param List[ExpressionIndex] params: parameter variables
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``output = tailcall(dest, params...)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			MediumLevelILOperation.MLIL_TAILCALL,
-			len(output),
-			self.add_operand_list(self._call_output_list(output)),
-			dest,
-			len(params),
-			self.add_operand_list(params),
-			size=0,
-			source_location=loc
-		)
-
-	def tailcall_untyped(
-		self, output: CallOutputList, dest: ExpressionIndex, params: List[ExpressionIndex],
-		stack: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``tailcall_untyped`` returns an expression which tailcalls the function in the expression ``dest``
-		with the parameters defined in ``params`` returning values in the variables in ``output``
-		where stack resolution could not be determined and the top of the stack has to be specified in ``stack``
-
-		:param CallOutputList output: output variables or expressions
-		:param ExpressionIndex dest: the expression to call
-		:param List[ExpressionIndex] params: parameter variables
-		:param ExpressionIndex stack: expression of top of stack
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``output = tailcall(dest, params..., stack = stack)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			MediumLevelILOperation.MLIL_TAILCALL_UNTYPED,
-			len(output),
-			self.add_operand_list(self._call_output_list(output)),
-			dest,
-			self.expr(
-				MediumLevelILOperation.MLIL_CALL_PARAM,
-				len(params),
-				self.add_operand_list(params),
-				size=0,
-				source_location=loc
-			),
-			stack,
-			size=0,
-			source_location=loc
-		)
-
-	def separate_param_list(
-		self, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``separate_param_list`` returns an expression which holds a list of parameters in ``params``
-
-		:param List[ExpressionIndex] params: parameter expressions
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``separate_param_list(params...)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			MediumLevelILOperation.MLIL_SEPARATE_PARAM_LIST,
-			len(params),
-			self.add_operand_list(params),
-			size=0,
-			source_location=loc
-		)
-
-	def shared_param_slot(
-		self, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``shared_param_slot`` returns an expression which holds a list of parameters in ``params``
-		that are stored in a shared parameter slot
-
-		:param List[ExpressionIndex] params: parameter expressions
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``shared_param_slot(params...)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			MediumLevelILOperation.MLIL_SHARED_PARAM_SLOT,
-			len(params),
-			self.add_operand_list(params),
-			size=0,
-			source_location=loc
-		)
-
-	def ret(self, sources: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``ret`` returns an expression which jumps (branches) to the calling function,
-		returning a result specified by the expressions in ``sources``.
-
-		:param List[ExpressionIndex] sources: list of returned expressions
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``return sources...``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_RET, len(sources), self.add_operand_list(sources), size=0, source_location=loc)
-
-	def no_ret(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``no_ret`` returns an expression that halts execution
-
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``noreturn``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_NORET, size=0, source_location=loc)
-
-	def compare_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is equal to
-		expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CMP_E, a, b, size=size, source_location=loc)
-
-	def compare_not_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_not_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is not equal to
-		expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CMP_NE, a, b, size=size, source_location=loc)
-
-	def compare_signed_less_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_signed_less_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		signed less than expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CMP_SLT, a, b, size=size, source_location=loc)
-
-	def compare_unsigned_less_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_unsigned_less_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		unsigned less than expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CMP_ULT, a, b, size=size, source_location=loc)
-
-	def compare_signed_less_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_signed_less_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		signed less than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CMP_SLE, a, b, size=size, source_location=loc)
-
-	def compare_unsigned_less_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_unsigned_less_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		unsigned less than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CMP_ULE, a, b, size=size, source_location=loc)
-
-	def compare_signed_greater_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_signed_greater_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		signed greater than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CMP_SGE, a, b, size=size, source_location=loc)
-
-	def compare_unsigned_greater_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_unsigned_greater_equal`` returns comparison expression of size ``size`` checking if expression ``a``
-		is unsigned greater than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CMP_UGE, a, b, size=size, source_location=loc)
-
-	def compare_signed_greater_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_signed_greater_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		signed greater than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CMP_SGT, a, b, size=size, source_location=loc)
-
-	def compare_unsigned_greater_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_unsigned_greater_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		unsigned greater than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CMP_UGT, a, b, size=size, source_location=loc)
-
-	def test_bit(self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``test_bit`` returns an expression of size ``size`` that tells whether expression ``a`` has its bit with an
-		index of the expression ``b`` is set
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: an expression to be tested
-		:param ExpressionIndex b: an expression for the index of the big
-		:param ILSourceLocation loc: location of returned expression
-		:return: the result expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_TEST_BIT, a, b, size=size, source_location=loc)
-
-	def bool_to_int(self, size: int, a: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``bool_to_int`` returns an expression of size ``size`` converting the boolean expression ``a`` to an integer
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: boolean expression to be converted
-		:param ILSourceLocation loc: location of returned expression
-		:return: the converted integer expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_BOOL_TO_INT, a, size=size, source_location=loc)
-
-	def breakpoint(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``breakpoint`` returns a processor breakpoint expression.
-
-		:param ILSourceLocation loc: location of returned expression
-		:return: a breakpoint expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_BP, source_location=loc)
-
-	def trap(self, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``trap`` returns a processor trap (interrupt) expression of the given integer ``value``.
-
-		:param int value: trap (interrupt) number
-		:param ILSourceLocation loc: location of returned expression
-		:return: a trap expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_TRAP, value, source_location=loc)
-
-	def intrinsic(
-		self, outputs: List['variable.Variable'], intrinsic: 'architecture.IntrinsicType',
-		params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
-	):
-		"""
-		``intrinsic`` return an intrinsic expression.
-
-		:param List[Variable] outputs: list of output variables
-		:param IntrinsicType intrinsic: which intrinsic to call
-		:param List[ExpressionIndex] params: parameters to intrinsic
-		:param ILSourceLocation loc: location of returned expression
-		:return: an intrinsic expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			MediumLevelILOperation.MLIL_INTRINSIC,
-			len(outputs),
-			self.add_variable_list(outputs),
-			self.arch.get_intrinsic_index(intrinsic),
-			len(params),
-			self.add_operand_list(params),
-			size=0,
-			source_location=loc
-		)
-
-	def free_var_slot(
-		self,
-		var: 'variable.Variable',
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``free_var_slot`` return an expression that clears the slot of the variable ``var`` which is in a register stack
-
-		:param Variable var: variable to free
-		:param ILSourceLocation loc: location of returned expression
-		:return: the expression ``free_var_slot(var)``
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FREE_VAR_SLOT, var.identifier, source_location=loc)
-
-	def undefined(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``undefined`` returns the undefined expression. This should be used for instructions which perform functions but
-		aren't important for dataflow or partial emulation purposes.
-
-		:param ILSourceLocation loc: location of returned expression
-		:return: the undefined expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_UNDEF, source_location=loc)
-
-	def unimplemented(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``unimplemented`` returns the unimplemented expression. This should be used for all instructions which aren't
-		implemented.
-
-		:param ILSourceLocation loc: location of returned expression
-		:return: the unimplemented expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_UNIMPL, source_location=loc)
-
-	def unimplemented_memory_ref(self, size: int, addr: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``unimplemented_memory_ref`` a memory reference to expression ``addr`` of size ``size`` with unimplemented operation.
-
-		:param int size: size in bytes of the memory reference
-		:param ExpressionIndex addr: expression to reference memory
-		:param ILSourceLocation loc: location of returned expression
-		:return: the unimplemented memory reference expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_UNIMPL_MEM, addr, size=size, source_location=loc)
-
-	def float_add(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_add`` adds floating point expression ``a`` to expression ``b``
-		and returning an expression of ``size`` bytes.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fadd.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FADD, a, b, size=size, source_location=loc)
-
-	def float_sub(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_sub`` subtracts floating point expression ``b`` from expression ``a``
-		and returning an expression of ``size`` bytes.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fsub.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FSUB, a, b, size=size, source_location=loc)
-
-	def float_mult(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_mult`` multiplies floating point expression ``a`` by expression ``b``
-		and returning an expression of ``size`` bytes.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fmul.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FMUL, a, b, size=size, source_location=loc)
-
-	def float_div(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_div`` divides floating point expression ``a`` by expression ``b``
-		and returning an expression of ``size`` bytes.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fdiv.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FDIV, a, b, size=size, source_location=loc)
-
-	def float_sqrt(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_sqrt`` returns square root of floating point expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to calculate the square root of
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``sqrt.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FSQRT, value, size=size, source_location=loc)
-
-	def float_neg(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_neg`` returns sign negation of floating point expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fneg.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FNEG, value, size=size, source_location=loc)
-
-	def float_abs(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_abs`` returns absolute value of floating point expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to get the absolute value of
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fabs.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FABS, value, size=size, source_location=loc)
-
-	def float_to_int(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_to_int`` returns integer value of floating point expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to convert to an int
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``int.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FLOAT_TO_INT, value, size=size, source_location=loc)
-
-	def int_to_float(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``int_to_float`` returns floating point value of integer expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to convert to a float
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``float.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_INT_TO_FLOAT, value, size=size, source_location=loc)
-
-	def float_convert(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``int_to_float`` converts floating point value of expression ``value`` to size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fconvert.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FLOAT_CONV, value, size=size, source_location=loc)
-
-	def round_to_int(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``round_to_int`` rounds a floating point value to the nearest integer
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to round to the nearest integer
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``roundint.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_ROUND_TO_INT, value, size=size, source_location=loc)
-
-	def floor(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``floor`` rounds a floating point value to an integer towards negative infinity
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to round down
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``roundint.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FLOOR, value, size=size, source_location=loc)
-
-	def ceil(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``ceil`` rounds a floating point value to an integer towards positive infinity
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to round up
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``roundint.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_CEIL, value, size=size, source_location=loc)
-
-	def float_trunc(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_trunc`` rounds a floating point value to an integer towards zero
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to truncate
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``roundint.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FTRUNC, value, size=size, source_location=loc)
-
-	def float_compare_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_equal`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is equal to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f== b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FCMP_E, a, b, size=size, source_location=loc)
-
-	def float_compare_not_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_not_equal`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is not equal to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f!= b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FCMP_NE, a, b, size=size, source_location=loc)
-
-	def float_compare_less_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_less_than`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is less than expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f< b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FCMP_LT, a, b, size=size, source_location=loc)
-
-	def float_compare_less_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_less_equal`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is less than or equal to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f<= b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FCMP_LE, a, b, size=size, source_location=loc)
-
-	def float_compare_greater_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_greater_equal`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is greater than or equal to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f>= b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FCMP_GE, a, b, size=size, source_location=loc)
-
-	def float_compare_greater_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_greater_than`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is greater than expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f> b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FCMP_GT, a, b, size=size, source_location=loc)
-
-	def float_compare_ordered(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_ordered`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is ordered relative to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``is_ordered(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FCMP_O, a, b, size=size, source_location=loc)
-
-	def float_compare_unordered(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_unordered`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is unordered relative to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``is_unordered(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_FCMP_UO, a, b, size=size, source_location=loc)
-
-	def block_to_expand(self, exprs: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``block_to_expand`` returns an expression to expand into multiple expressions. This expression must
-		be expanded by a future workflow step and is used temporarily to insert instructions.
-
-		:param List[ExpressionIndex] exprs: list of expressions
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``{ exprs... }``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(MediumLevelILOperation.MLIL_BLOCK_TO_EXPAND, len(exprs), self.add_operand_list(exprs), size=0, source_location=loc)
 
 	def goto(
 		self, label: MediumLevelILLabel, loc: Optional['ILSourceLocation'] = None

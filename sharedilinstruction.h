@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <algorithm>
+#include <optional>
 
 #ifdef BINARYNINJACORE_LIBRARY
 #define BINARYNINJA_NAMESPACE BinaryNinjaCore
@@ -61,6 +62,37 @@ struct ILInstructionOperandUsage
 			indices[i] = index;
 			index += Traits::GetOperandIndexAdvance(ops[i], i);
 		}
+	}
+};
+
+
+// Lists the operands an operation reports and where it stores each one.
+template <typename ILOperation, typename Location, size_t MaxOperands>
+struct ILInstructionOperandLocations
+{
+	ILOperation op;
+	uint8_t count = 0;
+	Location locations[MaxOperands] = {};
+
+	explicit constexpr ILInstructionOperandLocations(ILOperation op) : op(op) {}
+
+	template <size_t N>
+	constexpr ILInstructionOperandLocations(ILOperation op, const Location (&operands)[N]) : op(op), count(N)
+	{
+		static_assert(N <= MaxOperands, "Too many operands for instruction");
+		std::copy(operands, operands + N, locations);
+	}
+
+	// Returns where the operation stores the operand it reports under `usage`, or std::nullopt if it doesn't
+	// report one.
+	constexpr std::optional<Location> Find(decltype(Location::usage) usage) const
+	{
+		for (uint8_t i = 0; i < count; i++)
+		{
+			if (locations[i].usage == usage)
+				return locations[i];
+		}
+		return std::nullopt;
 	}
 };
 

@@ -13,6 +13,7 @@ from .model import (
 	Arg,
 	Builder,
 	CppKind,
+	Derived,
 	Kind,
 	Name,
 	Op,
@@ -20,6 +21,7 @@ from .model import (
 	Pair,
 	PartAccessor,
 	PyKind,
+	PyParam,
 	PyShape,
 	RustKind,
 	RustMarker,
@@ -35,6 +37,10 @@ BINDINGS = {'cpp': CppKind, 'py': PyKind, 'rust': RustKind}
 SORTS = ('integer', 'float', 'bits', 'boolean')
 # The kind element's attributes that say what a value of the kind is.
 KIND_FACTS = ('expression', 'label', 'version', 'cached')
+# The rust element's attributes and children that only a level whose Rust API holds operation structs reads, and those
+# that only LLIL's operation markers and lifters read.
+RUST_STRUCT_FACTS = ('struct', 'lifted', 'list')
+RUST_MARKER_FACTS = ('marker', 'lifter', 'lift')
 
 
 def words(value):
@@ -59,8 +65,25 @@ def children(element, path):
 
 
 @dataclasses.dataclass(frozen=True)
+class KindElement:
+	"""A kind's element for one language."""
+
+	attributes: dict
+	# (the levels a level element names, the attributes it replaces at those levels) for each level element.
+	levels: tuple
+
+	def at(self, level):
+		result = dict(self.attributes)
+		for named, attributes in self.levels:
+			if level in named:
+				result.update(attributes)
+
+		return result
+
+
+@dataclasses.dataclass(frozen=True)
 class KindDeclaration:
-	"""A kind, as declared in kinds.xml."""
+	"""A kind, as declared in kinds.xml for every level."""
 
 	name: str
 	slots: int
@@ -70,8 +93,8 @@ class KindDeclaration:
 	ssa_of: str | None
 	# What a value of the kind is, as {Kind field: bool}, such as expression.
 	facts: dict
-	# Each language's attributes.
-	attributes: dict
+	# Each language's KindElement.
+	elements: dict
 
 
 @functools.cache
@@ -80,10 +103,14 @@ def kind_declarations():
 	root = ET.parse(os.path.join(DATA, 'kinds.xml')).getroot()
 	declarations = {}
 	for element in root.findall('kind'):
-		attributes = {}
+		elements = {}
 		for language in LANGUAGES:
 			child = element.find(language)
-			attributes[language] = dict(child.attrib) if child is not None else {}
+			named = tuple(
+				(frozenset(words(e.get('name'))), {a: v for a, v in e.attrib.items() if a != 'name'})
+				for e in children(child, 'level')
+			)
+			elements[language] = KindElement(dict(child.attrib) if child is not None else {}, named)
 
 		name = element.get('name')
 		declarations[name] = KindDeclaration(
@@ -92,7 +119,7 @@ def kind_declarations():
 			element.get('list'),
 			element.get('ssa-of'),
 			{fact: flag(element, fact) for fact in KIND_FACTS},
-			attributes,
+			elements,
 		)
 
 	return declarations
@@ -109,6 +136,7 @@ def names():
 			element.get('role', element.get('name')),
 			cpp.get('type') if cpp is not None else None,
 			rust.get('role') if rust is not None else None,
+			rust.get('item') if rust is not None else None,
 		)
 
 	return result
@@ -122,6 +150,17 @@ def check_kinds(problems):
 
 		if declaration.ssa_of is not None and declaration.ssa_of not in declarations:
 			problems.append(f'kind {name}: the SSA form of unknown kind {declaration.ssa_of}')
+
+		for language, element in declaration.elements.items():
+			seen = set()
+			for named, _ in element.levels:
+				for level in sorted(named):
+					if level not in levels.LEVELS:
+						problems.append(f"kind {name}: {language} level {level} isn't a level")
+					elif level in seen:
+						problems.append(f'kind {name}: two {language} level elements name {level}')
+
+					seen.add(level)
 
 
 def typed(binding, kind, attributes, problems):
@@ -138,21 +177,25 @@ def typed(binding, kind, attributes, problems):
 			values[attribute] = text == 'true'
 		elif types[attribute] in (int, int | None):
 			values[attribute] = int(text)
+		elif types[attribute] == frozenset | None:
+			values[attribute] = frozenset(words(text))
 		else:
 			values[attribute] = text
 
 	return binding(**values)
 
 
-def resolve_kinds(problems):
-	"""{name: Kind}."""
+def resolve_kinds(level, problems):
+	"""{name: Kind} at the level."""
 	kinds = {}
 	for name, declaration in kind_declarations().items():
 		bindings = {
-			language: typed(BINDINGS[language], name, attributes, problems)
-			for language, attributes in declaration.attributes.items()
+			language: typed(BINDINGS[language], name, element.at(level), problems)
+			for language, element in declaration.elements.items()
 		}
 		kinds[name] = Kind(name, declaration.slots, **bindings, **declaration.facts)
+		if kinds[name].cpp.settable and kinds[name].cpp.writer is None:
+			problems.append(f'kind {name}: settable, but C++ has no writer for it')
 
 	for name, declaration in kind_declarations().items():
 		kinds[name].item = kinds.get(declaration.item)
@@ -175,6 +218,60 @@ def op_elements(root):
 	return [e for child in root for e in ([child] if child.tag == 'op' else children(child, 'op'))]
 
 
+@functools.cache
+def common_elements():
+	"""{(tag, name): element} for the shapes and ops common.xml gives the levels that share them."""
+	root = ET.parse(os.path.join(DATA, 'common.xml')).getroot()
+	return {(element.tag, element.get('name')): element for element in root}
+
+
+def binding_key(child):
+	"""What a binding element's child is about, as its tag and the value, name or builder it names."""
+	return child.tag, child.get('operand', child.get('name', child.get('builder')))
+
+
+def refined_binding(shared, own):
+	"""A binding element with `own`'s attributes over `shared`'s, and `own`'s children in place of `shared`'s about the
+	same thing."""
+	result = ET.Element(own.tag, {**shared.attrib, **own.attrib})
+	keys = {binding_key(child) for child in own}
+	result.extend(child for child in shared if binding_key(child) not in keys)
+	result.extend(own)
+	return result
+
+
+def refined_operand(shared, own):
+	"""An operand with `own`'s attributes over `shared`'s, and `own`'s value sort, description and accessors in place
+	of `shared`'s where it gives them."""
+	result = ET.Element('operand', {**shared.attrib, **own.attrib})
+	sort = [c for c in own if c.tag in SORTS + ('statement',)] or [c for c in shared if c.tag in SORTS + ('statement',)]
+	description = own.find('description')
+	description = shared.find('description') if description is None else description
+	result.extend(sort + ([description] if description is not None else []))
+	result.extend(own.findall('accessor') or shared.findall('accessor'))
+	return result
+
+
+def refined(shared, own):
+	"""Merges a level's shape or op over common.xml's. il.xsd's il element gives the rules."""
+	result = ET.Element(own.tag, {**shared.attrib, **own.attrib})
+	for tag in dict.fromkeys(child.tag for child in [*shared, *own]):
+		mine, theirs = own.findall(tag), shared.findall(tag)
+		if tag == 'operand':
+			refinements = {child.get('name'): child for child in mine}
+			for child in theirs:
+				refinement = refinements.pop(child.get('name'), None)
+				result.append(child if refinement is None else refined_operand(child, refinement))
+
+			result.extend(refinements.values())
+		elif tag in LANGUAGES and mine and theirs:
+			result.append(refined_binding(theirs[0], mine[0]))
+		else:
+			result.extend(mine or theirs)
+
+	return result
+
+
 def groups(root, ops):
 	"""[(title or None, [Op])] in schema order. Ops outside any group join the run before them if it has no title."""
 	runs = []
@@ -195,16 +292,24 @@ class Loader:
 	def __init__(self, level, problems):
 		self.level = level
 		self.problems = problems
-		self.kinds = resolve_kinds(problems)
+		self.kinds = resolve_kinds(level.name, problems)
 		self.root = ET.parse(os.path.join(DATA, f'{level.name}.xml')).getroot()
-		self.op_elements = {e.get('name'): e for e in op_elements(self.root)}
-		self.shape_elements = {e.get('name'): e for e in self.root.findall('shape')}
+		# Each op's element in schema order, refining common.xml's.
+		self.op_list = [self.refined(e) for e in op_elements(self.root)]
+		self.op_elements = {e.get('name'): e for e in self.op_list}
+		self.shape_elements = {e.get('name'): self.refined(e) for e in self.root.findall('shape')}
 		self.shapes = {name: self.shape(e) for name, e in self.shape_elements.items()}
 		# {Op or Operand: its element}, for the methods that read attributes the model doesn't keep.
 		self.elements = {}
 
 	def problem(self, where, message):
 		self.problems.append(f'{self.level.name} {where}: {message}')
+
+	@staticmethod
+	def refined(element):
+		"""The level's shape or op element, refining common.xml's of its name where there is one."""
+		shared = common_elements().get((element.tag, element.get('name')))
+		return element if shared is None else refined(shared, element)
 
 	def kind(self, where, name):
 		if name not in self.kinds:
@@ -226,19 +331,34 @@ class Loader:
 	def shape(self, element):
 		where = f"shape {element.get('name')}"
 		operands = [
-			ShapeOperand(e.get('name'), self.kind(where, e.get('kind', 'expr'))) for e in element.findall('operand')
+			ShapeOperand(
+				e.get('name'),
+				self.kind(where, e.get('kind', 'expr')),
+				tuple(name for name, _, _ in self.exposed(e)),
+			)
+			for e in element.findall('operand')
 		]
 		cpp, py = element.find('cpp'), element.find('py')
 		cpp_base = cpp.get('base') if cpp is not None else None
 		py_facts = py.attrib if py is not None else {}
-		py_shape = PyShape(py_facts.get('base'), py_facts.get('trait'), tuple(words(py_facts.get('decodes'))))
+		py_shape = PyShape(
+			py_facts.get('base'), py_facts.get('trait'), tuple(words(py_facts.get('decodes'))), py_facts.get('mixin')
+		)
+		if not operands:
+			self.problem(where, 'no operands')
+
 		if cpp_base is None:
 			self.problem(where, 'no C++ base class')
 
 		if py_shape.base is None:
 			self.problem(where, 'no Python base class')
 
-		return Shape(element.get('name'), operands, cpp_base, py_shape)
+		derived = [a.get('name') for a in element.findall('accessor')]
+		shape = Shape(element.get('name'), operands, derived, cpp_base, py_shape, listed(cpp, 'implements'))
+		for name in sorted(set(shape.cpp_implements or ()) - set(shape.stored_values)):
+			self.problem(where, f"the C++ base class implements {name}, which isn't a stored value of the shape")
+
+		return shape
 
 	def shape_element(self, op, tag=None):
 		"""The op's shape's element, or its child with `tag`, or None."""
@@ -270,10 +390,13 @@ class Loader:
 			element.get('name'),
 			self.kind(where, element.get('kind', 'expr')),
 			slot=slot,
+			items=tuple(words(element.get('items'))),
 			sort=sort_of(element),
+			statement=element.find('statement') is not None,
 			is_written=flag(element, 'written'),
 			signed=flag(element, 'signed'),
 			is_listed=flag(element, 'listed', True),
+			visited=flag(element, 'visited', True),
 			description=fallback if description is None else description,
 		)
 
@@ -287,6 +410,7 @@ class Loader:
 			flag(element, 'flags'),
 			self.shapes.get(element.get('shape')),
 			tuple(words(element.get('ssa-form'))),
+			tuple(words(element.get('visit-order'))),
 			[line.strip() for line in doc.text.strip().split('\n')] if doc is not None and doc.text else [],
 			element.find('description'),
 			element.find('size'),
@@ -318,6 +442,10 @@ class Loader:
 			pair.of.pairs.append(pair)
 			pair.version.pairs.append(pair)
 
+		op.derived = [
+			Derived(e.get('name'), self.kind(where, e.get('kind')))
+			for e in children(self.shape_element(op), 'accessor')
+		]
 		result = element.find('result')
 		if result is None and op.produces:
 			result = self.shape_element(op, 'result')
@@ -334,6 +462,10 @@ class Loader:
 					operand.part = ops.get(part)
 					if operand.part is None:
 						self.problem(op.name, f"refers to {part}, which isn't an op")
+
+				for item in operand.items:
+					if item not in ops:
+						self.problem(op.name, f"refers to {item}, which isn't an op")
 
 		readable = {op: self.readable(op) for op in ops.values()}
 		for op in ops.values():
@@ -375,6 +507,7 @@ class Loader:
 				for value in operand.pairs or [operand]:
 					result.setdefault(value.name, value)
 
+		result.update((value.name, value) for value in op.derived)
 		return result
 
 	@staticmethod
@@ -509,8 +642,18 @@ class Loader:
 
 	def cpp(self, op, known):
 		own = self.elements[op].find('cpp')
+		shared = self.shape_element(op, 'cpp')
 		facts = op.cpp
 		facts.renames = {child.get('operand'): child.get('to') for child in children(own, 'rename')}
+		for child in children(own, 'setter') + children(shared, 'setter'):
+			value = op.values.get(child.get('operand'))
+			if value is None:
+				self.problem(op.name, f"a C++ setter for unknown {child.get('operand')}")
+			elif not value.kind.cpp.settable:
+				self.problem(op.name, f'a C++ setter for {value.name}, whose kind {value.kind.name} is not settable')
+			else:
+				facts.setters.append(value.name)
+
 		for path in ('rename', 'usage', 'parent-usage', 'type'):
 			self.check_references(op, known, own, path)
 
@@ -526,14 +669,26 @@ class Loader:
 		own = self.elements[op].find('py')
 		shared = self.shape_element(op, 'py')
 		facts = op.py
-		facts.renames = {e.get('operand'): e.get('to') for e in children(own, 'rename')}
-		self.check_references(op, known, own, 'rename')
+		# The op's own renames override its shape's.
+		facts.renames = {e.get('operand'): e.get('to') for e in children(shared, 'rename') + children(own, 'rename')}
+		for source in (own, shared):
+			self.check_references(op, known, source, 'rename')
+
+		facts.aliases = {e.get('name'): e.get('of') for e in children(own, 'alias')}
+		for alias, of in facts.aliases.items():
+			if of not in known:
+				self.problem(op.name, f'Python alias {alias} of unknown {of}')
+
+		facts.accessors = {e.get('name'): self.kind(op.name, e.get('kind')) for e in children(own, 'accessor')}
 		facts.mixin = own.get('mixin') if own is not None else None
 		# The op's own params override its shape's.
 		for source in (own, shared):
 			self.check_references(op, known, source, 'param')
 			for child in children(source, 'param'):
-				facts.params.setdefault(child.get('operand'), child.get('name'))
+				param = PyParam(
+					child.get('name'), child.get('annotation'), child.get('conversion'), child.get('default')
+				)
+				facts.params.setdefault(child.get('operand'), param)
 
 		facts.builder = own.get('builder') if own is not None else None
 		if facts.builder is not None and len(op.builders) != 1:
@@ -548,7 +703,7 @@ class Loader:
 		if shape_trait in facts.traits:
 			self.problem(op.name, f'Python trait {shape_trait}, which its shape base class already carries')
 
-		facts.operands = self.operand_list(op, own, 'py', known)
+		facts.operands = self.operand_list(op, own, 'py', known | set(facts.aliases) | set(facts.accessors))
 
 	def rust_renames(self, where, elements):
 		"""({value name: Rust name}, {the names of values whose accessors drop their suffix}) from rename elements."""
@@ -569,19 +724,34 @@ class Loader:
 		own = self.elements[op].find('rust')
 		shared = self.shape_element(op, 'rust')
 		facts = op.rust
-		for path in ('rename', 'type', 'lift'):
-			self.check_references(op, known, own, path)
+		misplaced = RUST_MARKER_FACTS if self.level.rust_structs else RUST_STRUCT_FACTS
+		# The op's own facts override its shape's.
+		for source in (own, shared):
+			if source is None:
+				continue
 
-		self.check_references(op, known, shared, 'lift')
-		# The op's own marker overrides its shape's.
-		facts.marker = own.get('marker') if own is not None else None
-		if facts.marker is None and shared is not None:
-			facts.marker = shared.get('marker')
+			for fact in misplaced:
+				if source.get(fact) is not None or source.find(fact) is not None:
+					self.problem(op.name, f"a Rust {fact}, which the {self.level.name} Rust API doesn't have")
+
+			facts.marker = facts.marker or source.get('marker')
+			facts.struct = facts.struct or source.get('struct')
+			for path in ('rename', 'list', 'type', 'lift'):
+				self.check_references(op, known, source, path)
+
+			renames, unsuffixed = self.rust_renames(op.name, source.findall('rename'))
+			for name, to in renames.items():
+				facts.renames.setdefault(name, to)
+
+			facts.unsuffixed |= unsuffixed
+			for child in source.findall('list'):
+				facts.lists.setdefault(child.get('operand'), child.get('item'))
+
+			for child in source.findall('lift'):
+				facts.lifts.setdefault(child.get('operand'), child.get('width'))
 
 		facts.variant = own.get('variant') if own is not None else None
-		facts.renames, facts.unsuffixed = self.rust_renames(op.name, children(own, 'rename'))
-		# The op's own lifts override its shape's.
-		facts.lifts = {e.get('operand'): e.get('width') for e in children(shared, 'lift') + children(own, 'lift')}
+		facts.lifted = own.get('lifted') if own is not None else None
 		facts.types = {e.get('operand'): e.get('is') for e in children(own, 'type')}
 		builder_names = [builder.name for builder in op.builders]
 		if own is not None and own.get('lifter') is not None:
@@ -595,6 +765,8 @@ class Loader:
 				self.problem(op.name, f"a Rust lifter for {child.get('builder')}, which isn't one of its builder names")
 
 			facts.lifters[child.get('builder')] = child.get('name')
+
+		facts.operands = self.operand_list(op, own, 'rust', known)
 
 	def check(self, op, ops, slots):
 		element = self.elements[op]
@@ -619,11 +791,15 @@ class Loader:
 
 		for operand in op.operands:
 			where = f'{op.name}.{operand.name}'
-			holds_expressions = operand.kind.holds_expressions and not operand.is_part
-			if holds_expressions and operand.sort is None:
+			holds_expressions = operand.kind.holds_expressions and not operand.is_part and not operand.items
+			described = operand.sort is not None or operand.statement
+			if operand.items and not operand.kind.holds_expressions:
+				self.problem(where, "items on an operand that doesn't hold expressions")
+
+			if holds_expressions and not described:
 				self.problem(where, "doesn't say what sort of value it holds")
-			elif operand.sort is not None and not holds_expressions:
-				self.problem(where, "a value sort on an operand that isn't an expression")
+			elif described and not holds_expressions:
+				self.problem(where, "a value sort or statement on an operand that isn't an expression")
 
 		if op.produces and op.result is None:
 			self.problem(op.name, 'an expression without a result')
@@ -647,11 +823,21 @@ class Loader:
 					where, f"version={pair.version.name} doesn't follow of={pair.of.name} and its earlier versions"
 				)
 
+		if op.visit_order:
+			expressions = [o.name for o in op.operands if o.kind.holds_expressions]
+			if sorted(op.visit_order) != sorted(expressions):
+				self.problem(
+					op.name, f"visit-order {list(op.visit_order)} isn't an order of its child expressions {expressions}"
+				)
+
 	def parents(self, ops):
-		"""Gives each op the ops that contain it. These are the ops with a part operand naming it, and those its part-of
-		names."""
+		"""Gives each op the ops that contain it. These are the ops with a part operand or items naming it, and those
+		its part-of names."""
 		for op in ops.values():
-			for name in {o.part.name for o in op.operands if o.is_part}:
+			contained = {o.part.name for o in op.operands if o.is_part} | {
+				item for o in op.operands for item in o.items
+			}
+			for name in contained & ops.keys():
 				ops[name].parents.append(op)
 
 		for op in ops.values():
@@ -665,7 +851,7 @@ class Loader:
 
 	def load(self):
 		ops = {}
-		for element in op_elements(self.root):
+		for element in self.op_list:
 			op = self.op(element)
 			if op.name in ops:
 				self.problem(op.name, 'defined twice')
@@ -694,6 +880,9 @@ class Loader:
 			self.check(op, ops, slots)
 
 		markers = {}
+		if self.level.rust_structs and self.root.find('rust-marker') is not None:
+			self.problem('rust-marker', f"the {self.level.name} Rust API has no operation markers")
+
 		for e in self.root.findall('rust-marker'):
 			renames, unsuffixed = self.rust_renames(f"rust-marker {e.get('name')}", e.findall('rename'))
 			markers[e.get('name')] = RustMarker(

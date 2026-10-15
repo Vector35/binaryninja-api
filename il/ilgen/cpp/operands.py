@@ -49,7 +49,11 @@ class Operands:
 		return self.names.accessor(op, value).rest
 
 	def entries(self, op):
-		result = [Entry(self.usage(op, value), value, self.names.getter(op, value)) for value in reported(op)]
+		result = [
+			Entry(self.usage(op, value), value, self.names.getter(op, value))
+			for value in reported(op)
+			if not value.derived
+		]
 		if len({entry.usage for entry in result}) != len(result):
 			raise SchemaError(f'{op.name}: two operands report the same usage')
 
@@ -122,7 +126,8 @@ class Operands:
 			'',
 			'',
 			f'static constexpr size_t MaxOperands = {max_operands};',
-			'using OperandLocations = InstructionOperandLocations<MaxOperands>;',
+			'using OperandLocations = '
+			f'detail::ILInstructionOperandLocations<BN{il}Operation, {il}OperandLocation, MaxOperands>;',
 			'',
 			'static constexpr std::array s_operandLocations = {',
 		]

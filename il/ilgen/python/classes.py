@@ -4,7 +4,7 @@ maps, and copy_expr_to's slot layouts.
 The shape base classes, such as LowLevelILBinaryBase, and the mixins that ops name are hand-written in the level's
 Python module, such as lowlevelil.py."""
 
-from ..model import PyShape
+from ..model import Pair, PyShape
 from .kinds import Kinds
 from .naming import Names
 
@@ -24,6 +24,14 @@ def python_property(name, annotation, body):
 	return ['', '\t@property', f'\tdef {name}(self) -> {annotation}:', *[f'\t\t{line}' for line in body]]
 
 
+def kind(op, name):
+	"""The kind of a value, an alias of one, or a value only Python has."""
+	if name in op.py.accessors:
+		return op.py.accessors[name]
+
+	return op.values[op.py.aliases.get(name, name)].kind
+
+
 class Classes:
 	def __init__(self, schema):
 		self.schema = schema
@@ -32,13 +40,16 @@ class Classes:
 		self.names = Names(schema)
 
 	def bases(self, op):
-		"""The op's mixin, its shape's base class or the instruction class, then a mixin for each of its traits."""
+		"""The op's mixin, its shape's mixin, its shape's base class or the instruction class, then a mixin for each of
+		its traits."""
 		base = op.shape.py if op.shape is not None else NO_SHAPE
 		traits = [self.names.mixin(trait) for trait in op.py.traits]
-		return ', '.join(([op.py.mixin] if op.py.mixin else []) + [self.level.stem + base.base] + traits)
+		mixins = [mixin for mixin in (op.py.mixin, base.mixin) if mixin]
+		return ', '.join(mixins + [self.level.stem + base.base] + traits)
 
 	def inherited(self, op):
-		"""The names of the values the op's shape base class already decodes the same way."""
+		"""The names of the values the op's shape base class already decodes the same way, and the shape's derived
+		values, which its base or a mixin implements by hand."""
 		if op.shape is None:
 			return set()
 
@@ -49,7 +60,7 @@ class Classes:
 			if shaped.name in decodes and own is not None and own.kind.name == shaped.kind.name:
 				names.add(shaped.name)
 
-		return names
+		return names | set(op.shape.derived)
 
 	def decode(self, op, value):
 		if value.location.in_part:
@@ -59,7 +70,8 @@ class Classes:
 		return self.kinds.read(value.kind, value.location)
 
 	def properties(self, op, skip):
-		"""Properties for part operands and for values the op's bases don't decode, in storage order."""
+		"""Properties for part operands and for stored values the op's bases don't decode, in storage order, then for
+		aliases."""
 		order = [member for member in op.members if member.is_part or member in op.default_values]
 		order += [value for value in op.default_values if value not in order]
 		lines = []
@@ -69,8 +81,13 @@ class Classes:
 				part = self.names.class_name(value.part)
 				body = [f'result = self._get_expr({value.slot})', f'assert isinstance(result, {part})', 'return result']
 				lines += python_property(name, f"'{part}'", body)
-			elif value.name not in skip:
+			elif value.name not in skip and not value.derived:
 				lines += python_property(name, self.kinds.type(value.kind), [f'return {self.decode(op, value)}'])
+
+		for alias, of in op.py.aliases.items():
+			lines += python_property(
+				alias, self.kinds.type(kind(op, of)), [f'return self.{self.names.property(op, of)}']
+			)
 
 		return lines
 
@@ -78,7 +95,7 @@ class Classes:
 		entries = []
 		for name in listed(op):
 			prop = self.names.property(op, name)
-			entries.append(f'\t("{prop}", self.{prop}, "{self.kinds.detailed_type(op.values[name].kind)}"),')
+			entries.append(f'\t("{prop}", self.{prop}, "{self.kinds.detailed_type(kind(op, name))}"),')
 
 		annotation = f'List[Tuple[str, {self.level.stem}OperandType, str]]'
 		return python_property('detailed_operands', annotation, ['return [', *entries, ']'])
@@ -100,12 +117,15 @@ class Classes:
 		lines += [f'\t{self.names.operation(op)}: {self.names.class_name(op)},' for op in self.schema.ops.values()]
 		return '\n'.join(lines + ['}'])
 
+	def tag(self, op, name):
+		value = op.values.get(name)
+		shared = isinstance(value, Pair) and sum(pair.of is value.of for pair in op.pairs) > 1
+		return self.kinds.tag(kind(op, name), shared)
+
 	def il_operations(self):
 		lines = [f'ILOperations: ClassVar[Dict[{self.level.stem}Operation, List[Tuple[str, str]]]] = {{']
 		for op in self.schema.ops.values():
-			entries = ', '.join(
-				f'("{self.names.property(op, name)}", "{self.kinds.tag(op.values[name].kind)}")' for name in listed(op)
-			)
+			entries = ', '.join(f'("{self.names.property(op, name)}", "{self.tag(op, name)}")' for name in listed(op))
 			lines.append(f'\t{self.names.operation(op)}: [{entries}],')
 
 		return '\n'.join(lines + ['}'])

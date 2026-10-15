@@ -62,21 +62,37 @@ class Accessors:
 
 		return self.generic_type(value)
 
+	def derived_type(self, value):
+		"""The type a shape base class's hand-written accessor returns. A list kind's is a vector of its items, because
+		the value is computed rather than read from a stored list."""
+		if value.kind.is_list:
+			return self.kinds.vector(self.kinds.type(value.kind.item))
+
+		return self.kinds.type(value.kind)
+
 	def getter(self, op, value):
 		return f'{self.value_type(op, value)} {self.names.getter(op, value)}() const {{ return {self.read(value)}; }}'
 
 	def setters(self, op, value):
-		"""[Setter] for the version a value holds, and a written SSA list."""
+		"""[Setter] for the version a value holds, a list the op's setters name, and a written list whose kind has a
+		writer."""
 		location = value.location
+		if location is None:
+			return []
+
 		kind = value.kind
 		accessor = self.names.accessor(op, value)
 		# Version setters are named after the role, so a value whose rename gives its whole name has none.
 		role = accessor.role
 		prefix = f'GetRawOperandAsExpr({location.slot}).' if location.in_part else ''
+		setter_name = 'Set' + accessor.rest
 
 		def setter(name, param_type, param, update, slot=location.first):
 			"""A setter whose body calls UpdateRawOperand{`update`} on `slot`."""
 			return Setter(name, param_type, param, f'{prefix}UpdateRawOperand{update}({slot}, {param});')
+
+		def items(item):
+			return f'const {self.kinds.vector(item)}&'
 
 		def version_setter(version_kind, slot):
 			if version_kind.cpp.version_setter is None:
@@ -85,11 +101,16 @@ class Accessors:
 			return [setter(f'Set{role}{version_kind.cpp.version_setter}', 'size_t', 'version', '', slot)]
 
 		if kind.ssa_of is not None and role is not None:
+			# A pair sets its version, which can be a memory version, as an aliased variable's is.
 			return version_setter(value.version.kind if isinstance(value, Pair) else kind, location.second)
 
-		if kind.cpp.writer is not None and value.written:
-			items = f'const {self.kinds.vector(self.kinds.type(kind.item))}&'
-			return [setter('Set' + accessor.rest, items, 'values', 'As' + kind.cpp.writer)]
+		if value.name in op.cpp.setters or value.written and kind.cpp.writer is not None:
+			update = 'As' + kind.cpp.writer
+			if kind.holds_expressions:
+				lists = (f'{self.level.stem}Instruction', 'ExprId')
+				return [setter(setter_name, items(item), 'exprs', update) for item in lists]
+
+			return [setter(setter_name, items(self.kinds.type(kind.item)), 'values', update)]
 
 		if kind.version and role is not None:
 			return version_setter(kind, location.first)
@@ -98,7 +119,7 @@ class Accessors:
 
 	def inherited(self, op):
 		"""The names of the values the op's shape base class reads, unless the op gives one its own C++ type."""
-		return set(op.shape.values) - set(op.cpp.types) if op.shape is not None else set()
+		return set(op.shape.cpp_values) - set(op.cpp.types) if op.shape is not None else set()
 
 	def accessible(self):
 		"""The ops with a specialization. That's all but the parts with no values or read through their parents."""
@@ -110,6 +131,9 @@ class Accessors:
 		for op in self.accessible():
 			inherited = self.inherited(op)
 			values = [value for value in op.default_values if value.name not in inherited]
+			if any(value.derived for value in values):
+				raise SchemaError(f'{op.name}: a derived accessor that no shape base class implements')
+
 			members = [self.getter(op, value) for value in values]
 			members += [setter.definition() for value in values for setter in self.setters(op, value)]
 			lines = [
@@ -123,17 +147,23 @@ class Accessors:
 
 	def generic(self):
 		"""({getter: C++ type}, {getter: [Op]}, {setter declaration: Setter})."""
-		types, getter_ops, setters = defaultdict(set), defaultdict(list), {}
+		stored, derived, getter_ops, setters = defaultdict(set), defaultdict(set), defaultdict(list), {}
 		for op in self.accessible():
 			for value in op.default_values:
 				getter = self.names.getter(op, value)
-				types[getter].add(self.generic_type(value))
+				if value.derived:
+					derived[getter].add(self.derived_type(value))
+				else:
+					stored[getter].add(self.generic_type(value))
+
 				getter_ops[getter].append(op)
 				for setter in self.setters(op, value):
 					setters[setter.declaration()] = setter
 
 		getters = {}
-		for getter, found in types.items():
+		for getter in getter_ops:
+			# Where a value is stored on some ops and derived on others, the stored form converts to the derived one.
+			found = derived[getter] or stored[getter]
 			if len(found) > 1:
 				raise SchemaError(f'{getter}: {sorted(found)} on different ops')
 

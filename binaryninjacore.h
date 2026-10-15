@@ -1436,23 +1436,25 @@ extern "C"
 
 	BN_ENUM(uint8_t, BNMediumLevelILOperation)
 	{
+		// BEGIN GENERATED mlil-operations: from api/il, do not edit
 		MLIL_NOP,
 		MLIL_SET_VAR,        // Not valid in SSA form (see MLIL_SET_VAR_SSA)
-		MLIL_SET_VAR_FIELD,  // Not valid in SSA form (see MLIL_SET_VAR_FIELD)
+		MLIL_SET_VAR_FIELD,  // Not valid in SSA form (see MLIL_SET_VAR_SSA_FIELD)
 		MLIL_SET_VAR_SPLIT,  // Not valid in SSA form (see MLIL_SET_VAR_SPLIT_SSA)
 		MLIL_ASSERT,
 		MLIL_FORCE_VER,
-		MLIL_LOAD,           // Not valid in SSA form (see MLIL_LOAD_SSA)
-		MLIL_LOAD_STRUCT,    // Not valid in SSA form (see MLIL_LOAD_STRUCT_SSA)
-		MLIL_STORE,          // Not valid in SSA form (see MLIL_STORE_SSA)
-		MLIL_STORE_STRUCT,   // Not valid in SSA form (see MLIL_STORE_STRUCT_SSA)
-		MLIL_VAR,            // Not valid in SSA form (see MLIL_VAR_SSA)
-		MLIL_VAR_FIELD,      // Not valid in SSA form (see MLIL_VAR_SSA_FIELD)
-		MLIL_VAR_SPLIT,      // Not valid in SSA form (see MLIL_VAR_SPLIT_SSA)
+		MLIL_LOAD,          // Not valid in SSA form (see MLIL_LOAD_SSA)
+		MLIL_LOAD_STRUCT,   // Not valid in SSA form (see MLIL_LOAD_STRUCT_SSA)
+		MLIL_STORE,         // Not valid in SSA form (see MLIL_STORE_SSA)
+		MLIL_STORE_STRUCT,  // Not valid in SSA form (see MLIL_STORE_STRUCT_SSA)
+		MLIL_VAR,           // Not valid in SSA form (see MLIL_VAR_SSA)
+		MLIL_VAR_FIELD,     // Not valid in SSA form (see MLIL_VAR_SSA_FIELD)
+		MLIL_VAR_SPLIT,     // Not valid in SSA form (see MLIL_VAR_SPLIT_SSA)
 		MLIL_ADDRESS_OF,
 		MLIL_ADDRESS_OF_FIELD,
 		MLIL_PASS_BY_REF,
-		MLIL_RETURN_BY_REF,
+		MLIL_RETURN_BY_REF,  // Only valid within MLIL_CALL, MLIL_CALL_UNTYPED, MLIL_SYSCALL, MLIL_SYSCALL_UNTYPED,
+		                     // MLIL_TAILCALL, MLIL_TAILCALL_UNTYPED or MLIL_CALL_OUTPUT_SSA
 		MLIL_CONST,
 		MLIL_CONST_DATA,
 		MLIL_CONST_PTR,
@@ -1491,17 +1493,18 @@ extern "C"
 		MLIL_LOW_PART,
 		MLIL_JUMP,
 		MLIL_JUMP_TO,
-		MLIL_RET_HINT,             // Intermediate stages, does not appear in final forms
+		MLIL_RET_HINT,             // Appears only in intermediate forms
 		MLIL_CALL,                 // Not valid in SSA form (see MLIL_CALL_SSA)
 		MLIL_CALL_UNTYPED,         // Not valid in SSA form (see MLIL_CALL_UNTYPED_SSA)
-		MLIL_CALL_PARAM,           // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
-		MLIL_SEPARATE_PARAM_LIST,  // Only valid within the MLIL_CALL_PARAM or MLIL_CALL_PARAM_SSA instructions inside
-		                           // untyped call variants
-		MLIL_SHARED_PARAM_SLOT,    // Only valid within the MLIL_CALL_PARAM, MLIL_CALL_PARAM_SSA, or
-		                           // MLIL_SEPARATE_PARAM_LIST instructions inside untyped call variants
-		MLIL_VAR_OUTPUT,           // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
-		MLIL_VAR_OUTPUT_FIELD,     // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
-		MLIL_STORE_OUTPUT,         // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
+		MLIL_CALL_PARAM,           // Only valid within MLIL_CALL_UNTYPED, MLIL_SYSCALL_UNTYPED or MLIL_TAILCALL_UNTYPED
+		MLIL_SEPARATE_PARAM_LIST,  // Only valid within MLIL_CALL_PARAM or MLIL_CALL_PARAM_SSA
+		MLIL_SHARED_PARAM_SLOT,    // Only valid within MLIL_SEPARATE_PARAM_LIST
+		MLIL_VAR_OUTPUT,           // Only valid within MLIL_RETURN_BY_REF, MLIL_CALL, MLIL_CALL_UNTYPED, MLIL_SYSCALL,
+		                           // MLIL_SYSCALL_UNTYPED, MLIL_TAILCALL or MLIL_TAILCALL_UNTYPED
+		MLIL_VAR_OUTPUT_FIELD,     // Only valid within MLIL_RETURN_BY_REF, MLIL_CALL, MLIL_CALL_UNTYPED, MLIL_SYSCALL,
+		                           // MLIL_SYSCALL_UNTYPED, MLIL_TAILCALL or MLIL_TAILCALL_UNTYPED
+		MLIL_STORE_OUTPUT,         // Only valid within MLIL_RETURN_BY_REF, MLIL_CALL, MLIL_CALL_UNTYPED, MLIL_SYSCALL,
+		                           // MLIL_SYSCALL_UNTYPED, MLIL_TAILCALL, MLIL_TAILCALL_UNTYPED or MLIL_CALL_OUTPUT_SSA
 		MLIL_RET,
 		MLIL_NORET,
 		MLIL_IF,
@@ -1524,7 +1527,7 @@ extern "C"
 		MLIL_TAILCALL,          // Not valid in SSA form (see MLIL_TAILCALL_SSA)
 		MLIL_TAILCALL_UNTYPED,  // Not valid in SSA form (see MLIL_TAILCALL_UNTYPED_SSA)
 		MLIL_INTRINSIC,         // Not valid in SSA form (see MLIL_INTRINSIC_SSA)
-		MLIL_FREE_VAR_SLOT,     // Not valid in SSA from (see MLIL_FREE_VAR_SLOT_SSA)
+		MLIL_FREE_VAR_SLOT,     // Not valid in SSA form (see MLIL_FREE_VAR_SLOT_SSA)
 		MLIL_BP,
 		MLIL_TRAP,
 		MLIL_UNDEF,
@@ -1574,15 +1577,15 @@ extern "C"
 		MLIL_SYSCALL_UNTYPED_SSA,
 		MLIL_TAILCALL_SSA,
 		MLIL_TAILCALL_UNTYPED_SSA,
-		MLIL_CALL_PARAM_SSA,   // Only valid within the MLIL_CALL_SSA, MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA, MLIL_INTRINSIC_SSA family
-		                       // instructions
-		MLIL_CALL_OUTPUT_SSA,  // Only valid within the MLIL_CALL_SSA or MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA family
-		                       // instructions
-		MLIL_VAR_OUTPUT_SSA,  // Only valid within the MLIL_CALL_OUTPUT_SSA instruction
-		MLIL_VAR_OUTPUT_SSA_FIELD,  // Only valid within the MLIL_CALL_OUTPUT_SSA instruction
-		MLIL_VAR_OUTPUT_ALIASED,  // Only valid within the MLIL_CALL_OUTPUT_SSA instruction
-		MLIL_VAR_OUTPUT_ALIASED_FIELD,  // Only valid within the MLIL_CALL_OUTPUT_SSA instruction
-		MLIL_MEMORY_INTRINSIC_OUTPUT_SSA,  // Only valid within the MLIL_MEMORY_INTRINSIC_SSA instruction
+		MLIL_CALL_PARAM_SSA,               // Only valid within MLIL_CALL_UNTYPED_SSA, MLIL_SYSCALL_UNTYPED_SSA or
+		                                   // MLIL_TAILCALL_UNTYPED_SSA
+		MLIL_CALL_OUTPUT_SSA,              // Only valid within MLIL_CALL_SSA, MLIL_CALL_UNTYPED_SSA, MLIL_SYSCALL_SSA,
+		                                   // MLIL_SYSCALL_UNTYPED_SSA, MLIL_TAILCALL_SSA or MLIL_TAILCALL_UNTYPED_SSA
+		MLIL_VAR_OUTPUT_SSA,               // Only valid within MLIL_RETURN_BY_REF or MLIL_CALL_OUTPUT_SSA
+		MLIL_VAR_OUTPUT_SSA_FIELD,         // Only valid within MLIL_RETURN_BY_REF or MLIL_CALL_OUTPUT_SSA
+		MLIL_VAR_OUTPUT_ALIASED,           // Only valid within MLIL_RETURN_BY_REF or MLIL_CALL_OUTPUT_SSA
+		MLIL_VAR_OUTPUT_ALIASED_FIELD,     // Only valid within MLIL_RETURN_BY_REF or MLIL_CALL_OUTPUT_SSA
+		MLIL_MEMORY_INTRINSIC_OUTPUT_SSA,  // Only valid within MLIL_MEMORY_INTRINSIC_SSA
 		MLIL_LOAD_SSA,
 		MLIL_LOAD_STRUCT_SSA,
 		MLIL_STORE_SSA,
@@ -1593,22 +1596,23 @@ extern "C"
 		MLIL_VAR_PHI,
 		MLIL_MEM_PHI,
 
-		MLIL_BLOCK_TO_EXPAND,  // Must be expanded by a future workflow step, used temporarily to insert instructions
+		MLIL_BLOCK_TO_EXPAND,  // Holds instructions that a later workflow step expands in its place
 
 		// Bit manipulation
 		MLIL_BSWAP,   // Reverse byte order of the whole value
 		MLIL_POPCNT,  // Population count (number of set bits)
-		MLIL_CLZ,     // Count leading zero bits; clz(0) == 8 * size
-		MLIL_CTZ,     // Count trailing zero bits; ctz(0) == 8 * size
+		MLIL_CLZ,     // Count leading zero bits, where clz(0) == 8 * size
+		MLIL_CTZ,     // Count trailing zero bits, where ctz(0) == 8 * size
 		MLIL_RBIT,    // Reverse bit order of the whole value
-		MLIL_CLS,     // Count leading sign bits; number of bits below the sign bit that match it
+		MLIL_CLS,     // Count the bits below the sign bit that match it
 
 		// Integer minimum, maximum and absolute value
-		MLIL_MINS,    // Signed minimum of left and right
-		MLIL_MAXS,    // Signed maximum of left and right
-		MLIL_MINU,    // Unsigned minimum of left and right
-		MLIL_MAXU,    // Unsigned maximum of left and right
-		MLIL_ABS      // Signed absolute value of src; abs(INT_MIN) == INT_MIN
+		MLIL_MINS,  // Signed minimum of left and right
+		MLIL_MAXS,  // Signed maximum of left and right
+		MLIL_MINU,  // Unsigned minimum of left and right
+		MLIL_MAXU,  // Unsigned maximum of left and right
+		MLIL_ABS    // Signed absolute value of src, where abs(INT_MIN) == INT_MIN
+		// END GENERATED mlil-operations
 	};
 
 	typedef struct BNMediumLevelILInstruction

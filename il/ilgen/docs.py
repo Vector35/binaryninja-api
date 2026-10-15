@@ -103,9 +103,9 @@ def builder_doc(op, builder):
 	return BuilderDoc(op, builder) if builder.description is not None else None
 
 
-def text(element, style, names, in_code=False):
+def text(element, style, names, in_code=False, flags=False):
 	"""An element's text with each ref and code rendered in a binding's style, whitespace collapsed. Inside code, a
-	ref is the bare parameter name."""
+	ref is the bare parameter name. A form's flags placeholder renders only for an op that takes flags."""
 
 	def name(ref):
 		value = ref.get('name')
@@ -123,7 +123,7 @@ def text(element, style, names, in_code=False):
 				out.append(style.code(inline(child, True)))
 			elif child.tag == 'size':
 				out.append('.' + style.placeholder('size'))
-			elif child.tag == 'flags':
+			elif child.tag == 'flags' and flags:
 				out.append('{' + style.placeholder('flags') + '}')
 
 			out.append(style.escape(child.tail or ''))
@@ -135,7 +135,7 @@ def text(element, style, names, in_code=False):
 
 def form(doc, style, names):
 	"""The return line's text."""
-	return f'The expression {style.code(text(doc.form, style, names, in_code=True))}'
+	return f'The expression {style.code(text(doc.form, style, names, in_code=True, flags=doc.op.flags))}'
 
 
 def wrap(line, indent=''):
@@ -170,7 +170,8 @@ def rust_doc(doc, params):
 	"""A Rust doc comment's lines, for parameters [(name, Rust name)]."""
 	names = dict(params)
 	lines = wrap(text(doc.description, RUST, names))
-	lines += [''] + wrap(f'Returns the expression {RUST.code(text(doc.form, RUST, names, in_code=True))}.')
+	returned = text(doc.form, RUST, names, in_code=True, flags=doc.op.flags)
+	lines += [''] + wrap(f'Returns the expression {RUST.code(returned)}.')
 	if doc.op.flags:
 		lines += [''] + wrap('Set its flag write type with [`ExpressionBuilder::with_flag_write`].')
 

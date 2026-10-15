@@ -12,6 +12,7 @@ from .. import docs
 from ..model import SchemaError
 from ..patch import Region
 from .naming import Names
+from .shared import cached_value_set
 
 EXPR = "LowLevelILExpression<'func, M, F, ValueExpr>"
 REG = 'LowLevelILRegisterKind::from_raw(&self.function.arch(), RegisterId({0} as u32)).expect("Bad register ID")'
@@ -34,8 +35,7 @@ DECODERS = {
 	'flag_group': 'self.function.arch().flag_group_from_id(FlagGroupId({0} as u32)).expect("Bad flag group ID")',
 	# Core only stores valid conditions.
 	'flag_condition': 'unsafe {{ mem::transmute::<u8, FlagCondition>({0} as u8) }}',
-	'cached_value_set': 'PossibleValueSet::from_owned_core_raw(unsafe {{ '
-	'BNGetCachedLowLevelILPossibleValueSet(self.function.handle, {0} as usize) }})',
+	'cached_value_set': cached_value_set('LowLevel', '{0} as usize'),
 	'ssa_register': 'LowLevelILSSARegisterKind::new_full(' + REG + ', {1} as u32)',
 	'ssa_flag': 'LowLevelILSSAFlag::new(' + FLAG + ', {1} as u32)',
 	'ssa_register_stack': 'LowLevelILSSARegisterStack::new(' + REG_STACK + ', {1} as u32)',
@@ -185,9 +185,9 @@ class Decoder:
 		return variants
 
 	def children(self, op):
-		"""[Child] for an op's part operands, child expressions and expression lists, in storage order."""
+		"""[Child] for an op's part operands, child expressions and expression lists, in visiting order."""
 		result = []
-		for operand in op.operands:
+		for operand in op.visit_ordered():
 			if operand.is_part or operand.kind.holds_expressions:
 				result.append(Child(self.names.accessor(op, operand), not operand.is_part and operand.kind.is_list))
 

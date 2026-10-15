@@ -55,25 +55,6 @@ struct OperandUsageType
 	}
 };
 
-// Lists the operands an operation reports and where it stores each one.
-template <size_t MaxOperands>
-struct InstructionOperandLocations
-{
-	BNLowLevelILOperation op;
-	uint8_t count = 0;
-	LowLevelILOperandLocation locations[MaxOperands] = {};
-
-	explicit constexpr InstructionOperandLocations(BNLowLevelILOperation op) : op(op) {}
-
-	template <size_t N>
-	constexpr InstructionOperandLocations(BNLowLevelILOperation op, const LowLevelILOperandLocation (&operands)[N]) :
-	    op(op), count(N)
-	{
-		static_assert(N <= MaxOperands, "Too many operands for instruction");
-		std::copy(operands, operands + N, locations);
-	}
-};
-
 // BEGIN GENERATED llil-operand-tables: from api/il, do not edit
 static constexpr std::array s_operandTypeForUsage = {
 	OperandUsageType{DestRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
@@ -146,7 +127,7 @@ constexpr inline LowLevelILOperandType OperandTypeForUsage(LowLevelILOperandUsag
 
 
 static constexpr size_t MaxOperands = 6;
-using OperandLocations = InstructionOperandLocations<MaxOperands>;
+using OperandLocations = detail::ILInstructionOperandLocations<BNLowLevelILOperation, LowLevelILOperandLocation, MaxOperands>;
 
 static constexpr std::array s_operandLocations = {
 	OperandLocations{LLIL_NOP},
@@ -315,13 +296,7 @@ std::optional<LowLevelILOperandLocation> OperandLocationForUsage(
 {
 	if (operation >= s_operandLocations.size())
 		return std::nullopt;
-	const auto& info = s_operandLocations[operation];
-	for (uint8_t i = 0; i < info.count; i++)
-	{
-		if (info.locations[i].usage == usage)
-			return info.locations[i];
-	}
-	return std::nullopt;
+	return s_operandLocations[operation].Find(usage);
 }
 
 

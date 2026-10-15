@@ -1,4 +1,4 @@
-"""Each IL level's names and the files its code is patched into."""
+"""Each IL level's names, the files its code is patched into, and how its Rust API holds operations."""
 
 from dataclasses import dataclass
 
@@ -10,6 +10,9 @@ class Level:
 	camel_name: str
 	# The Rust API's module for the level, under rust/src.
 	rust_module: str
+	# Whether the Rust API holds the level's operations in structs that it lifts. LLIL's operation markers instead
+	# decode each value as it's read.
+	rust_structs: bool = False
 
 	@property
 	def prefix(self):
@@ -46,4 +49,5 @@ class Level:
 
 LEVELS = {
 	'llil': Level('llil', 'LowLevel', 'low_level_il'),
+	'mlil': Level('mlil', 'MediumLevel', 'medium_level_il', rust_structs=True),
 }

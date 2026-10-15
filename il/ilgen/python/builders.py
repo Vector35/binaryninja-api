@@ -15,27 +15,51 @@ class Builders:
 		self.kinds = Kinds(schema)
 		self.names = Names(schema)
 
-	def signature(self, op, builder, names, required, optional):
-		"""The method's parameters, in declaration order."""
+	def annotation(self, op, arg):
+		"""(the parameter's type annotation, whether it already takes None)."""
+		param = op.py.params.get(arg.name)
+		if param is not None and param.annotation is not None:
+			return param.annotation, False
+
+		return self.kinds.param(arg.kind), arg.kind.py.param_optional
+
+	def signature(self, op, builder, names, required, optional, own):
+		"""The method's parameters, in declaration order. `own` maps optional args to defaults that aren't their
+		kind's."""
 		signature = ['self'] + (['size: int'] if op.sized and builder.size is None else [])
-		signature += [f'{names[arg]}: {self.kinds.param(arg.kind)}' for arg in required]
+		signature += [f'{names[arg]}: {self.annotation(op, arg)[0]}' for arg in required]
 		signature += [FLAGS] if op.flags else []
 		for arg in optional:
-			hint = self.kinds.param(arg.kind)
+			hint, takes_none = self.annotation(op, arg)
+			if arg in own:
+				signature.append(f'{names[arg]}: {hint} = {own[arg]}')
+				continue
+
 			default = arg.kind.py.default
-			if default is None and not arg.kind.py.param_optional:
+			if default is None and not takes_none:
 				hint = f'Optional[{hint}]'
 
 			signature.append(f"{names[arg]}: {hint} = {'None' if default is None else default}")
 
 		return signature + [LOC]
 
-	def converted(self, arg, names):
+	def converts(self, op, arg):
+		"""Whether the method converts the arg's parameter before storing it."""
+		param = op.py.params.get(arg.name)
+		return param is not None and param.conversion is not None or self.kinds.converts(arg.kind)
+
+	def converted(self, op, arg, names):
 		"""The expression for each slot the arg's value takes."""
-		return [conversion.format(p=names[arg]) for conversion in self.kinds.conversions(arg.kind)]
+		expr = names[arg]
+		param = op.py.params.get(arg.name)
+		if param is not None and param.conversion is not None:
+			expr = param.conversion.format(p=expr)
+
+		return [conversion.format(p=expr) for conversion in self.kinds.conversions(arg.kind)]
 
 	def slots(self, op, slots, names, prelude):
-		"""The expressions that store each of the [Slot] of the built op `op`."""
+		"""The expressions that store each of the [Slot] of the built op `op`, which also gives the params of the args
+		stored through its parts."""
 		out = []
 		for slot in slots:
 			operand = slot.operand
@@ -50,7 +74,7 @@ class Builders:
 				continue
 
 			arg = slot.arg
-			value = self.converted(arg, names)
+			value = self.converted(op, arg, names)
 			if not operand.kind.is_list:
 				if len(value) != operand.kind.width:
 					raise SchemaError(
@@ -62,7 +86,7 @@ class Builders:
 				continue
 
 			local = names[arg]
-			if self.kinds.converts(arg.kind):
+			if self.converts(op, arg):
 				local = f'_{names[arg]}'
 				prelude.append(f'{local} = {value[0]}')
 
@@ -73,9 +97,16 @@ class Builders:
 
 	def method(self, op, name, builder):
 		names = {arg: self.names.param(op, arg) for arg in builder.args}
-		required = [arg for arg in builder.args if arg.name not in builder.defaults]
-		optional = [arg for arg in builder.args if arg.name in builder.defaults]
-		signature = self.signature(op, builder, names, required, optional)
+		# The op's py params can give args defaults that aren't their kind's.
+		own = {}
+		for arg in builder.args:
+			param = op.py.params.get(arg.name)
+			if param is not None and param.default is not None:
+				own[arg] = param.default
+
+		required = [arg for arg in builder.args if arg.name not in builder.defaults and arg not in own]
+		optional = [arg for arg in builder.args if arg.name in builder.defaults or arg in own]
+		signature = self.signature(op, builder, names, required, optional, own)
 
 		prelude = []
 		slots = self.slots(op, builder.slots(op), names, prelude)

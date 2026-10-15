@@ -117,17 +117,25 @@ impl MediumLevelILInstruction {
         use BNMediumLevelILOperation::*;
         use MediumLevelILInstructionKind as Op;
         let kind = match op.operation {
+            // BEGIN GENERATED mlil-decode: from api/il, do not edit
             MLIL_NOP => Op::Nop,
-            MLIL_NORET => Op::Noret,
-            MLIL_BP => Op::Bp,
-            MLIL_UNDEF => Op::Undef,
+            MLIL_SET_VAR => Op::SetVar(SetVar {
+                dest: get_var(op.operands[0]),
+                src: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_SET_VAR_FIELD => Op::SetVarField(SetVarField {
+                dest: get_var(op.operands[0]),
+                offset: op.operands[1],
+                src: MediumLevelExpressionIndex::from(op.operands[2]),
+            }),
+            MLIL_SET_VAR_SPLIT => Op::SetVarSplit(SetVarSplit {
+                high: get_var(op.operands[0]),
+                low: get_var(op.operands[1]),
+                src: MediumLevelExpressionIndex::from(op.operands[2]),
+            }),
             MLIL_ASSERT => Op::Assert(Assert {
                 src: get_var(op.operands[0]),
                 constraint_index: op.operands[1] as usize,
-            }),
-            MLIL_ASSERT_SSA => Op::AssertSsa(AssertSsa {
-                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                constraint_index: op.operands[2] as usize,
             }),
             MLIL_FORCE_VER => Op::ForceVer(ForceVer {
                 dest: get_var(op.operands[0]),
@@ -136,148 +144,84 @@ impl MediumLevelILInstruction {
                     std::mem::transmute::<u8, ForceVersionReason>(op.operands[2] as u8)
                 },
             }),
-            MLIL_FORCE_VER_SSA => Op::ForceVerSsa(ForceVerSsa {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                src: get_var_ssa(op.operands[2], op.operands[3] as usize),
-                reason: unsafe {
-                    std::mem::transmute::<u8, ForceVersionReason>(op.operands[4] as u8)
-                },
+            MLIL_LOAD => Op::Load(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
             }),
-            MLIL_UNIMPL => Op::Unimpl,
-            MLIL_IF => Op::If(MediumLevelILOperationIf {
-                condition: MediumLevelExpressionIndex::from(op.operands[0]),
-                dest_true: MediumLevelInstructionIndex(op.operands[1] as usize),
-                dest_false: MediumLevelInstructionIndex(op.operands[2] as usize),
-            }),
-            MLIL_FLOAT_CONST => Op::FloatConst(FloatConst {
-                constant: get_float(op.operands[0], op.size),
-            }),
-            MLIL_CONST => Op::Const(Constant {
-                constant: op.operands[0],
-            }),
-            MLIL_CONST_PTR => Op::ConstPtr(Constant {
-                constant: op.operands[0],
-            }),
-            MLIL_IMPORT => Op::Import(Constant {
-                constant: op.operands[0],
-            }),
-            MLIL_EXTERN_PTR => Op::ExternPtr(ExternPtr {
-                constant: op.operands[0],
+            MLIL_LOAD_STRUCT => Op::LoadStruct(LoadStruct {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
                 offset: op.operands[1],
             }),
-            MLIL_CONST_DATA => Op::ConstData(ConstData {
-                constant_data_kind: op.operands[0] as u32,
-                constant_data_value: op.operands[1] as i64,
-                size: op.size,
-            }),
-            MLIL_JUMP => Op::Jump(Jump {
+            MLIL_STORE => Op::Store(Store {
                 dest: MediumLevelExpressionIndex::from(op.operands[0]),
-            }),
-            MLIL_RET_HINT => Op::RetHint(Jump {
-                dest: MediumLevelExpressionIndex::from(op.operands[0]),
-            }),
-            MLIL_STORE_SSA => Op::StoreSsa(StoreSsa {
-                dest: MediumLevelExpressionIndex::from(op.operands[0]),
-                dest_memory: op.operands[1],
-                src_memory: op.operands[2],
-                src: MediumLevelExpressionIndex::from(op.operands[3]),
-            }),
-            MLIL_STORE_STRUCT_SSA => Op::StoreStructSsa(StoreStructSsa {
-                dest: MediumLevelExpressionIndex::from(op.operands[0]),
-                offset: op.operands[1],
-                dest_memory: op.operands[2],
-                src_memory: op.operands[3],
-                src: MediumLevelExpressionIndex::from(op.operands[4]),
+                src: MediumLevelExpressionIndex::from(op.operands[1]),
             }),
             MLIL_STORE_STRUCT => Op::StoreStruct(StoreStruct {
                 dest: MediumLevelExpressionIndex::from(op.operands[0]),
                 offset: op.operands[1],
                 src: MediumLevelExpressionIndex::from(op.operands[2]),
             }),
-            MLIL_STORE => Op::Store(Store {
-                dest: MediumLevelExpressionIndex::from(op.operands[0]),
-                src: MediumLevelExpressionIndex::from(op.operands[1]),
+            MLIL_VAR => Op::Var(Var {
+                src: get_var(op.operands[0]),
             }),
-            MLIL_JUMP_TO => Op::JumpTo(JumpTo {
-                dest: MediumLevelExpressionIndex::from(op.operands[0]),
-                num_operands: op.operands[1] as usize,
-                first_operand: op.operands[2] as usize,
-            }),
-            MLIL_GOTO => Op::Goto(Goto {
-                dest: MediumLevelInstructionIndex(op.operands[0] as usize),
-            }),
-            MLIL_FREE_VAR_SLOT => Op::FreeVarSlot(FreeVarSlot {
-                dest: get_var(op.operands[0]),
-            }),
-            MLIL_SET_VAR_FIELD => Op::SetVarField(SetVarField {
-                dest: get_var(op.operands[0]),
+            MLIL_VAR_FIELD => Op::VarField(Field {
+                src: get_var(op.operands[0]),
                 offset: op.operands[1],
-                src: MediumLevelExpressionIndex::from(op.operands[2]),
-            }),
-            MLIL_SET_VAR => Op::SetVar(SetVar {
-                dest: get_var(op.operands[0]),
-                src: MediumLevelExpressionIndex::from(op.operands[1]),
-            }),
-            MLIL_FREE_VAR_SLOT_SSA => Op::FreeVarSlotSsa(FreeVarSlotSsa {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
-            }),
-            MLIL_SET_VAR_SSA_FIELD => Op::SetVarSsaField(SetVarSsaField {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
-                offset: op.operands[3],
-                src: MediumLevelExpressionIndex::from(op.operands[4]),
-            }),
-            MLIL_SET_VAR_ALIASED_FIELD => Op::SetVarAliasedField(SetVarSsaField {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
-                offset: op.operands[3],
-                src: MediumLevelExpressionIndex::from(op.operands[4]),
-            }),
-            MLIL_SET_VAR_ALIASED => Op::SetVarAliased(SetVarAliased {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
-                src: MediumLevelExpressionIndex::from(op.operands[3]),
-            }),
-            MLIL_SET_VAR_SSA => Op::SetVarSsa(SetVarSsa {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                src: MediumLevelExpressionIndex::from(op.operands[2]),
-            }),
-            MLIL_VAR_PHI => Op::VarPhi(VarPhi {
-                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                num_operands: op.operands[2] as usize,
-                first_operand: op.operands[3] as usize,
-            }),
-            MLIL_MEM_PHI => Op::MemPhi(MemPhi {
-                dest_memory: op.operands[0],
-                num_operands: op.operands[1] as usize,
-                first_operand: op.operands[2] as usize,
             }),
             MLIL_VAR_SPLIT => Op::VarSplit(VarSplit {
                 high: get_var(op.operands[0]),
                 low: get_var(op.operands[1]),
             }),
-            MLIL_SET_VAR_SPLIT => Op::SetVarSplit(SetVarSplit {
-                high: get_var(op.operands[0]),
-                low: get_var(op.operands[1]),
-                src: MediumLevelExpressionIndex::from(op.operands[2]),
+            MLIL_ADDRESS_OF => Op::AddressOf(Var {
+                src: get_var(op.operands[0]),
             }),
-            MLIL_VAR_SPLIT_SSA => Op::VarSplitSsa(VarSplitSsa {
-                high: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                low: get_var_ssa(op.operands[2], op.operands[3] as usize),
+            MLIL_ADDRESS_OF_FIELD => Op::AddressOfField(Field {
+                src: get_var(op.operands[0]),
+                offset: op.operands[1],
             }),
-            MLIL_SET_VAR_SPLIT_SSA => Op::SetVarSplitSsa(SetVarSplitSsa {
-                high: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                low: get_var_ssa(op.operands[2], op.operands[3] as usize),
-                src: MediumLevelExpressionIndex::from(op.operands[4]),
+            MLIL_PASS_BY_REF => Op::PassByRef(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_RETURN_BY_REF => Op::ReturnByRef(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_CONST => Op::Const(Constant {
+                constant: op.operands[0],
+            }),
+            MLIL_CONST_DATA => Op::ConstData(ConstData {
+                constant_data_kind: op.operands[0] as u32,
+                constant_data_value: op.operands[1] as i64,
+                size: op.size,
+            }),
+            MLIL_CONST_PTR => Op::ConstPtr(Constant {
+                constant: op.operands[0],
+            }),
+            MLIL_EXTERN_PTR => Op::ExternPtr(ExternPtr {
+                constant: op.operands[0],
+                offset: op.operands[1],
+            }),
+            MLIL_FLOAT_CONST => Op::FloatConst(FloatConst {
+                constant: get_float(op.operands[0], op.size),
+            }),
+            MLIL_IMPORT => Op::Import(Constant {
+                constant: op.operands[0],
             }),
             MLIL_ADD => Op::Add(BinaryOp {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
                 right: MediumLevelExpressionIndex::from(op.operands[1]),
             }),
+            MLIL_ADC => Op::Adc(BinaryOpCarry {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+                carry: MediumLevelExpressionIndex::from(op.operands[2]),
+            }),
             MLIL_SUB => Op::Sub(BinaryOp {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
                 right: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_SBB => Op::Sbb(BinaryOpCarry {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+                carry: MediumLevelExpressionIndex::from(op.operands[2]),
             }),
             MLIL_AND => Op::And(BinaryOp {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
@@ -307,9 +251,19 @@ impl MediumLevelILInstruction {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
                 right: MediumLevelExpressionIndex::from(op.operands[1]),
             }),
+            MLIL_RLC => Op::Rlc(BinaryOpCarry {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+                carry: MediumLevelExpressionIndex::from(op.operands[2]),
+            }),
             MLIL_ROR => Op::Ror(BinaryOp {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
                 right: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_RRC => Op::Rrc(BinaryOpCarry {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+                carry: MediumLevelExpressionIndex::from(op.operands[2]),
             }),
             MLIL_MUL => Op::Mul(BinaryOp {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
@@ -355,21 +309,80 @@ impl MediumLevelILInstruction {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
                 right: MediumLevelExpressionIndex::from(op.operands[1]),
             }),
-            MLIL_MINS => Op::MinSigned(BinaryOp {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            MLIL_NEG => Op::Neg(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
             }),
-            MLIL_MAXS => Op::MaxSigned(BinaryOp {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            MLIL_NOT => Op::Not(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
             }),
-            MLIL_MINU => Op::MinUnsigned(BinaryOp {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            MLIL_SX => Op::Sx(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
             }),
-            MLIL_MAXU => Op::MaxUnsigned(BinaryOp {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            MLIL_ZX => Op::Zx(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_LOW_PART => Op::LowPart(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_JUMP => Op::Jump(Jump {
+                dest: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_JUMP_TO => Op::JumpTo(JumpTo {
+                dest: MediumLevelExpressionIndex::from(op.operands[0]),
+                first_operand: op.operands[2] as usize,
+                num_operands: op.operands[1] as usize,
+            }),
+            MLIL_RET_HINT => Op::RetHint(Jump {
+                dest: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_CALL => Op::Call(Call {
+                first_output: op.operands[1] as usize,
+                num_outputs: op.operands[0] as usize,
+                dest: MediumLevelExpressionIndex::from(op.operands[2]),
+                first_param: op.operands[4] as usize,
+                num_params: op.operands[3] as usize,
+            }),
+            MLIL_CALL_UNTYPED => Op::CallUntyped(CallUntyped {
+                first_output: op.operands[1] as usize,
+                num_outputs: op.operands[0] as usize,
+                dest: MediumLevelExpressionIndex::from(op.operands[2]),
+                params: MediumLevelExpressionIndex::from(op.operands[3]),
+                stack: MediumLevelExpressionIndex::from(op.operands[4]),
+            }),
+            MLIL_CALL_PARAM => Op::CallParam(CallParam {
+                first_param: op.operands[1] as usize,
+                num_params: op.operands[0] as usize,
+            }),
+            MLIL_SEPARATE_PARAM_LIST => Op::SeparateParamList(SeparateParamList {
+                first_param: op.operands[1] as usize,
+                num_params: op.operands[0] as usize,
+            }),
+            MLIL_SHARED_PARAM_SLOT => Op::SharedParamSlot(SharedParamSlot {
+                first_param: op.operands[1] as usize,
+                num_params: op.operands[0] as usize,
+            }),
+            MLIL_VAR_OUTPUT => Op::VarOutput(VarOutput {
+                dest: get_var(op.operands[0]),
+            }),
+            MLIL_VAR_OUTPUT_FIELD => Op::VarOutputField(VarOutputField {
+                dest: get_var(op.operands[0]),
+                offset: op.operands[1],
+            }),
+            MLIL_STORE_OUTPUT => Op::StoreOutput(StoreOutput {
+                dest: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_RET => Op::Ret(Ret {
+                first_operand: op.operands[1] as usize,
+                num_operands: op.operands[0] as usize,
+            }),
+            MLIL_NORET => Op::Noret,
+            MLIL_IF => Op::If(MediumLevelILOperationIf {
+                condition: MediumLevelExpressionIndex::from(op.operands[0]),
+                dest_true: MediumLevelInstructionIndex(op.operands[1] as usize),
+                dest_false: MediumLevelInstructionIndex(op.operands[2] as usize),
+            }),
+            MLIL_GOTO => Op::Goto(Goto {
+                dest: MediumLevelInstructionIndex(op.operands[0] as usize),
             }),
             MLIL_CMP_E => Op::CmpE(BinaryOp {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
@@ -415,9 +428,103 @@ impl MediumLevelILInstruction {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
                 right: MediumLevelExpressionIndex::from(op.operands[1]),
             }),
+            MLIL_BOOL_TO_INT => Op::BoolToInt(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
             MLIL_ADD_OVERFLOW => Op::AddOverflow(BinaryOp {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
                 right: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_SYSCALL => Op::Syscall(Syscall {
+                first_output: op.operands[1] as usize,
+                num_outputs: op.operands[0] as usize,
+                first_param: op.operands[3] as usize,
+                num_params: op.operands[2] as usize,
+            }),
+            MLIL_SYSCALL_UNTYPED => Op::SyscallUntyped(SyscallUntyped {
+                first_output: op.operands[1] as usize,
+                num_outputs: op.operands[0] as usize,
+                params: MediumLevelExpressionIndex::from(op.operands[2]),
+                stack: MediumLevelExpressionIndex::from(op.operands[3]),
+            }),
+            MLIL_TAILCALL => Op::Tailcall(Call {
+                first_output: op.operands[1] as usize,
+                num_outputs: op.operands[0] as usize,
+                dest: MediumLevelExpressionIndex::from(op.operands[2]),
+                first_param: op.operands[4] as usize,
+                num_params: op.operands[3] as usize,
+            }),
+            MLIL_TAILCALL_UNTYPED => Op::TailcallUntyped(CallUntyped {
+                first_output: op.operands[1] as usize,
+                num_outputs: op.operands[0] as usize,
+                dest: MediumLevelExpressionIndex::from(op.operands[2]),
+                params: MediumLevelExpressionIndex::from(op.operands[3]),
+                stack: MediumLevelExpressionIndex::from(op.operands[4]),
+            }),
+            MLIL_INTRINSIC => Op::Intrinsic(Intrinsic {
+                first_output: op.operands[1] as usize,
+                num_outputs: op.operands[0] as usize,
+                intrinsic: op.operands[2] as u32,
+                first_param: op.operands[4] as usize,
+                num_params: op.operands[3] as usize,
+            }),
+            MLIL_FREE_VAR_SLOT => Op::FreeVarSlot(FreeVarSlot {
+                dest: get_var(op.operands[0]),
+            }),
+            MLIL_BP => Op::Bp,
+            MLIL_TRAP => Op::Trap(Trap {
+                vector: op.operands[0],
+            }),
+            MLIL_UNDEF => Op::Undef,
+            MLIL_UNIMPL => Op::Unimpl,
+            MLIL_UNIMPL_MEM => Op::UnimplMem(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_FADD => Op::Fadd(BinaryOp {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_FSUB => Op::Fsub(BinaryOp {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_FMUL => Op::Fmul(BinaryOp {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_FDIV => Op::Fdiv(BinaryOp {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_FSQRT => Op::Fsqrt(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_FNEG => Op::Fneg(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_FABS => Op::Fabs(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_FLOAT_TO_INT => Op::FloatToInt(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_INT_TO_FLOAT => Op::IntToFloat(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_FLOAT_CONV => Op::FloatConv(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_ROUND_TO_INT => Op::RoundToInt(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_FLOOR => Op::Floor(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_CEIL => Op::Ceil(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_FTRUNC => Op::Ftrunc(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
             }),
             MLIL_FCMP_E => Op::FcmpE(BinaryOp {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
@@ -451,116 +558,66 @@ impl MediumLevelILInstruction {
                 left: MediumLevelExpressionIndex::from(op.operands[0]),
                 right: MediumLevelExpressionIndex::from(op.operands[1]),
             }),
-            MLIL_FADD => Op::Fadd(BinaryOp {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            MLIL_SET_VAR_SSA => Op::SetVarSsa(SetVarSsa {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                src: MediumLevelExpressionIndex::from(op.operands[2]),
             }),
-            MLIL_FSUB => Op::Fsub(BinaryOp {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            MLIL_SET_VAR_SSA_FIELD => Op::SetVarSsaField(SetVarSsaField {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
+                offset: op.operands[3],
+                src: MediumLevelExpressionIndex::from(op.operands[4]),
             }),
-            MLIL_FMUL => Op::Fmul(BinaryOp {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            MLIL_SET_VAR_SPLIT_SSA => Op::SetVarSplitSsa(SetVarSplitSsa {
+                high: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                low: get_var_ssa(op.operands[2], op.operands[3] as usize),
+                src: MediumLevelExpressionIndex::from(op.operands[4]),
             }),
-            MLIL_FDIV => Op::Fdiv(BinaryOp {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            MLIL_SET_VAR_ALIASED => Op::SetVarAliased(SetVarAliased {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
+                src: MediumLevelExpressionIndex::from(op.operands[3]),
             }),
-            MLIL_ADC => Op::Adc(BinaryOpCarry {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
-                carry: MediumLevelExpressionIndex::from(op.operands[2]),
+            MLIL_SET_VAR_ALIASED_FIELD => Op::SetVarAliasedField(SetVarSsaField {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
+                offset: op.operands[3],
+                src: MediumLevelExpressionIndex::from(op.operands[4]),
             }),
-            MLIL_SBB => Op::Sbb(BinaryOpCarry {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
-                carry: MediumLevelExpressionIndex::from(op.operands[2]),
+            MLIL_VAR_SSA => Op::VarSsa(VarSsa {
+                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
             }),
-            MLIL_RLC => Op::Rlc(BinaryOpCarry {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
-                carry: MediumLevelExpressionIndex::from(op.operands[2]),
+            MLIL_VAR_SSA_FIELD => Op::VarSsaField(VarSsaField {
+                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                offset: op.operands[2],
             }),
-            MLIL_RRC => Op::Rrc(BinaryOpCarry {
-                left: MediumLevelExpressionIndex::from(op.operands[0]),
-                right: MediumLevelExpressionIndex::from(op.operands[1]),
-                carry: MediumLevelExpressionIndex::from(op.operands[2]),
+            MLIL_VAR_ALIASED => Op::VarAliased(VarSsa {
+                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
             }),
-            MLIL_CALL => Op::Call(Call {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                dest: MediumLevelExpressionIndex::from(op.operands[2]),
-                num_params: op.operands[3] as usize,
-                first_param: op.operands[4] as usize,
+            MLIL_VAR_ALIASED_FIELD => Op::VarAliasedField(VarSsaField {
+                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                offset: op.operands[2],
             }),
-            MLIL_CALL_PARAM => Op::CallParam(CallParam {
-                num_params: op.operands[0] as usize,
-                first_param: op.operands[1] as usize,
+            MLIL_VAR_SPLIT_SSA => Op::VarSplitSsa(VarSplitSsa {
+                high: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                low: get_var_ssa(op.operands[2], op.operands[3] as usize),
             }),
-            MLIL_CALL_OUTPUT_SSA => Op::CallOutputSsa(CallOutputSsa {
-                dest_memory: op.operands[0],
-                num_outputs: op.operands[1] as usize,
-                first_output: op.operands[2] as usize,
+            MLIL_ASSERT_SSA => Op::AssertSsa(AssertSsa {
+                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                constraint_index: op.operands[2] as usize,
             }),
-            MLIL_CALL_PARAM_SSA => Op::CallParamSsa(CallParamSsa {
-                src_memory: op.operands[0],
-                num_params: op.operands[1] as usize,
-                first_param: op.operands[2] as usize,
+            MLIL_FORCE_VER_SSA => Op::ForceVerSsa(ForceVerSsa {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                src: get_var_ssa(op.operands[2], op.operands[3] as usize),
+                reason: unsafe {
+                    std::mem::transmute::<u8, ForceVersionReason>(op.operands[4] as u8)
+                },
             }),
-            MLIL_TAILCALL => Op::Tailcall(Call {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                dest: MediumLevelExpressionIndex::from(op.operands[2]),
-                num_params: op.operands[3] as usize,
-                first_param: op.operands[4] as usize,
-            }),
-            MLIL_SYSCALL => Op::Syscall(Syscall {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                num_params: op.operands[2] as usize,
-                first_param: op.operands[3] as usize,
-            }),
-            MLIL_INTRINSIC => Op::Intrinsic(Intrinsic {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                intrinsic: op.operands[2] as u32,
-                num_params: op.operands[3] as usize,
-                first_param: op.operands[4] as usize,
-            }),
-            MLIL_INTRINSIC_SSA => Op::IntrinsicSsa(IntrinsicSsa {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                intrinsic: op.operands[2] as u32,
-                num_params: op.operands[3] as usize,
-                first_param: op.operands[4] as usize,
-            }),
-            MLIL_MEMORY_INTRINSIC_SSA => Op::MemoryIntrinsicSsa(MemoryIntrinsicSsa {
-                output: MediumLevelExpressionIndex::from(op.operands[0]),
-                intrinsic: op.operands[1] as u32,
-                num_params: op.operands[2] as usize,
-                first_param: op.operands[3] as usize,
-                src_memory: op.operands[4],
-            }),
-            MLIL_MEMORY_INTRINSIC_OUTPUT_SSA => {
-                Op::MemoryIntrinsicOutputSsa(MemoryIntrinsicOutputSsa {
-                    dest_memory: op.operands[0],
-                    num_outputs: op.operands[1] as usize,
-                    first_output: op.operands[2] as usize,
-                })
-            }
             MLIL_CALL_SSA => Op::CallSsa(CallSsa {
                 output: MediumLevelExpressionIndex::from(op.operands[0]),
                 dest: MediumLevelExpressionIndex::from(op.operands[1]),
-                num_params: op.operands[2] as usize,
                 first_param: op.operands[3] as usize,
-                src_memory: op.operands[4],
-            }),
-            MLIL_TAILCALL_SSA => Op::TailcallSsa(CallSsa {
-                output: MediumLevelExpressionIndex::from(op.operands[0]),
-                dest: MediumLevelExpressionIndex::from(op.operands[1]),
                 num_params: op.operands[2] as usize,
-                first_param: op.operands[3] as usize,
                 src_memory: op.operands[4],
             }),
             MLIL_CALL_UNTYPED_SSA => Op::CallUntypedSsa(CallUntypedSsa {
@@ -569,16 +626,10 @@ impl MediumLevelILInstruction {
                 params: MediumLevelExpressionIndex::from(op.operands[2]),
                 stack: MediumLevelExpressionIndex::from(op.operands[3]),
             }),
-            MLIL_TAILCALL_UNTYPED_SSA => Op::TailcallUntypedSsa(CallUntypedSsa {
-                output: MediumLevelExpressionIndex::from(op.operands[0]),
-                dest: MediumLevelExpressionIndex::from(op.operands[1]),
-                params: MediumLevelExpressionIndex::from(op.operands[2]),
-                stack: MediumLevelExpressionIndex::from(op.operands[3]),
-            }),
             MLIL_SYSCALL_SSA => Op::SyscallSsa(SyscallSsa {
                 output: MediumLevelExpressionIndex::from(op.operands[0]),
-                num_params: op.operands[1] as usize,
                 first_param: op.operands[2] as usize,
+                num_params: op.operands[1] as usize,
                 src_memory: op.operands[3],
             }),
             MLIL_SYSCALL_UNTYPED_SSA => Op::SyscallUntypedSsa(SyscallUntypedSsa {
@@ -586,169 +637,28 @@ impl MediumLevelILInstruction {
                 params: MediumLevelExpressionIndex::from(op.operands[1]),
                 stack: MediumLevelExpressionIndex::from(op.operands[2]),
             }),
-            MLIL_CALL_UNTYPED => Op::CallUntyped(CallUntyped {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                dest: MediumLevelExpressionIndex::from(op.operands[2]),
-                params: MediumLevelExpressionIndex::from(op.operands[3]),
-                stack: MediumLevelExpressionIndex::from(op.operands[4]),
+            MLIL_TAILCALL_SSA => Op::TailcallSsa(CallSsa {
+                output: MediumLevelExpressionIndex::from(op.operands[0]),
+                dest: MediumLevelExpressionIndex::from(op.operands[1]),
+                first_param: op.operands[3] as usize,
+                num_params: op.operands[2] as usize,
+                src_memory: op.operands[4],
             }),
-            MLIL_TAILCALL_UNTYPED => Op::TailcallUntyped(CallUntyped {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
-                dest: MediumLevelExpressionIndex::from(op.operands[2]),
-                params: MediumLevelExpressionIndex::from(op.operands[3]),
-                stack: MediumLevelExpressionIndex::from(op.operands[4]),
-            }),
-            MLIL_SYSCALL_UNTYPED => Op::SyscallUntyped(SyscallUntyped {
-                num_outputs: op.operands[0] as usize,
-                first_output: op.operands[1] as usize,
+            MLIL_TAILCALL_UNTYPED_SSA => Op::TailcallUntypedSsa(CallUntypedSsa {
+                output: MediumLevelExpressionIndex::from(op.operands[0]),
+                dest: MediumLevelExpressionIndex::from(op.operands[1]),
                 params: MediumLevelExpressionIndex::from(op.operands[2]),
                 stack: MediumLevelExpressionIndex::from(op.operands[3]),
             }),
-            MLIL_NEG => Op::Neg(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
+            MLIL_CALL_PARAM_SSA => Op::CallParamSsa(CallParamSsa {
+                src_memory: op.operands[0],
+                first_param: op.operands[2] as usize,
+                num_params: op.operands[1] as usize,
             }),
-            MLIL_NOT => Op::Not(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_BSWAP => Op::Bswap(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_POPCNT => Op::Popcnt(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_CLZ => Op::Clz(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_CTZ => Op::Ctz(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_RBIT => Op::Rbit(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_CLS => Op::Cls(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_ABS => Op::Abs(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_SX => Op::Sx(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_ZX => Op::Zx(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_LOW_PART => Op::LowPart(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_BOOL_TO_INT => Op::BoolToInt(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_UNIMPL_MEM => Op::UnimplMem(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_FSQRT => Op::Fsqrt(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_FNEG => Op::Fneg(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_FABS => Op::Fabs(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_FLOAT_TO_INT => Op::FloatToInt(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_INT_TO_FLOAT => Op::IntToFloat(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_FLOAT_CONV => Op::FloatConv(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_ROUND_TO_INT => Op::RoundToInt(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_FLOOR => Op::Floor(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_CEIL => Op::Ceil(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_FTRUNC => Op::Ftrunc(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_LOAD => Op::Load(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_LOAD_STRUCT => Op::LoadStruct(LoadStruct {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-                offset: op.operands[1],
-            }),
-            MLIL_LOAD_STRUCT_SSA => Op::LoadStructSsa(LoadStructSsa {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-                offset: op.operands[1],
-                src_memory: op.operands[2],
-            }),
-            MLIL_LOAD_SSA => Op::LoadSsa(LoadSsa {
-                src: MediumLevelExpressionIndex::from(op.operands[0]),
-                src_memory: op.operands[1],
-            }),
-            MLIL_RET => Op::Ret(Ret {
-                num_operands: op.operands[0] as usize,
-                first_operand: op.operands[1] as usize,
-            }),
-            MLIL_SEPARATE_PARAM_LIST => Op::SeparateParamList(SeparateParamList {
-                num_params: op.operands[0] as usize,
-                first_param: op.operands[1] as usize,
-            }),
-            MLIL_SHARED_PARAM_SLOT => Op::SharedParamSlot(SharedParamSlot {
-                num_params: op.operands[0] as usize,
-                first_param: op.operands[1] as usize,
-            }),
-            MLIL_VAR => Op::Var(Var {
-                src: get_var(op.operands[0]),
-            }),
-            MLIL_VAR_OUTPUT => Op::VarOutput(VarOutput {
-                dest: get_var(op.operands[0]),
-            }),
-            MLIL_VAR_OUTPUT_FIELD => Op::VarOutputField(VarOutputField {
-                dest: get_var(op.operands[0]),
-                offset: op.operands[1],
-            }),
-            MLIL_STORE_OUTPUT => Op::StoreOutput(StoreOutput {
-                dest: MediumLevelExpressionIndex::from(op.operands[0]),
-            }),
-            MLIL_ADDRESS_OF => Op::AddressOf(Var {
-                src: get_var(op.operands[0]),
-            }),
-            MLIL_PASS_BY_REF => Op::PassByRef(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_RETURN_BY_REF => Op::ReturnByRef(UnaryOp {
-                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
-            }),
-            MLIL_VAR_FIELD => Op::VarField(Field {
-                src: get_var(op.operands[0]),
-                offset: op.operands[1],
-            }),
-            MLIL_ADDRESS_OF_FIELD => Op::AddressOfField(Field {
-                src: get_var(op.operands[0]),
-                offset: op.operands[1],
-            }),
-            MLIL_VAR_SSA => Op::VarSsa(VarSsa {
-                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
-            }),
-            MLIL_VAR_ALIASED => Op::VarAliased(VarSsa {
-                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
-            }),
-            MLIL_VAR_SSA_FIELD => Op::VarSsaField(VarSsaField {
-                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                offset: op.operands[2],
-            }),
-            MLIL_VAR_ALIASED_FIELD => Op::VarAliasedField(VarSsaField {
-                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
-                offset: op.operands[2],
+            MLIL_CALL_OUTPUT_SSA => Op::CallOutputSsa(CallOutputSsa {
+                dest_memory: op.operands[0],
+                first_output: op.operands[2] as usize,
+                num_outputs: op.operands[1] as usize,
             }),
             MLIL_VAR_OUTPUT_SSA => Op::VarOutputSsa(VarOutputSsa {
                 dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
@@ -767,13 +677,105 @@ impl MediumLevelILInstruction {
                 prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
                 offset: op.operands[3],
             }),
-            MLIL_TRAP => Op::Trap(Trap {
-                vector: op.operands[0],
+            MLIL_MEMORY_INTRINSIC_OUTPUT_SSA => {
+                Op::MemoryIntrinsicOutputSsa(MemoryIntrinsicOutputSsa {
+                    dest_memory: op.operands[0],
+                    first_output: op.operands[2] as usize,
+                    num_outputs: op.operands[1] as usize,
+                })
+            }
+            MLIL_LOAD_SSA => Op::LoadSsa(LoadSsa {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+                src_memory: op.operands[1],
+            }),
+            MLIL_LOAD_STRUCT_SSA => Op::LoadStructSsa(LoadStructSsa {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+                offset: op.operands[1],
+                src_memory: op.operands[2],
+            }),
+            MLIL_STORE_SSA => Op::StoreSsa(StoreSsa {
+                dest: MediumLevelExpressionIndex::from(op.operands[0]),
+                dest_memory: op.operands[1],
+                src_memory: op.operands[2],
+                src: MediumLevelExpressionIndex::from(op.operands[3]),
+            }),
+            MLIL_STORE_STRUCT_SSA => Op::StoreStructSsa(StoreStructSsa {
+                dest: MediumLevelExpressionIndex::from(op.operands[0]),
+                offset: op.operands[1],
+                dest_memory: op.operands[2],
+                src_memory: op.operands[3],
+                src: MediumLevelExpressionIndex::from(op.operands[4]),
+            }),
+            MLIL_INTRINSIC_SSA => Op::IntrinsicSsa(IntrinsicSsa {
+                first_output: op.operands[1] as usize,
+                num_outputs: op.operands[0] as usize,
+                intrinsic: op.operands[2] as u32,
+                first_param: op.operands[4] as usize,
+                num_params: op.operands[3] as usize,
+            }),
+            MLIL_MEMORY_INTRINSIC_SSA => Op::MemoryIntrinsicSsa(MemoryIntrinsicSsa {
+                output: MediumLevelExpressionIndex::from(op.operands[0]),
+                intrinsic: op.operands[1] as u32,
+                first_param: op.operands[3] as usize,
+                num_params: op.operands[2] as usize,
+                src_memory: op.operands[4],
+            }),
+            MLIL_FREE_VAR_SLOT_SSA => Op::FreeVarSlotSsa(FreeVarSlotSsa {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
+            }),
+            MLIL_VAR_PHI => Op::VarPhi(VarPhi {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                first_operand: op.operands[3] as usize,
+                num_operands: op.operands[2] as usize,
+            }),
+            MLIL_MEM_PHI => Op::MemPhi(MemPhi {
+                dest_memory: op.operands[0],
+                first_operand: op.operands[2] as usize,
+                num_operands: op.operands[1] as usize,
             }),
             MLIL_BLOCK_TO_EXPAND => Op::BlockToExpand(BlockToExpand {
-                num_operands: op.operands[0] as usize,
                 first_operand: op.operands[1] as usize,
+                num_operands: op.operands[0] as usize,
             }),
+            MLIL_BSWAP => Op::Bswap(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_POPCNT => Op::Popcnt(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_CLZ => Op::Clz(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_CTZ => Op::Ctz(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_RBIT => Op::Rbit(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_CLS => Op::Cls(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            MLIL_MINS => Op::MinSigned(BinaryOp {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_MAXS => Op::MaxSigned(BinaryOp {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_MINU => Op::MinUnsigned(BinaryOp {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_MAXU => Op::MaxUnsigned(BinaryOp {
+                left: MediumLevelExpressionIndex::from(op.operands[0]),
+                right: MediumLevelExpressionIndex::from(op.operands[1]),
+            }),
+            MLIL_ABS => Op::Abs(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0]),
+            }),
+            // END GENERATED mlil-decode
         };
 
         Self {
@@ -835,125 +837,23 @@ impl MediumLevelILInstruction {
     }
 
     pub fn lift(&self) -> MediumLevelILLiftedInstruction {
+        use BNMediumLevelILOperation::*;
         use MediumLevelILInstructionKind::*;
         use MediumLevelILLiftedInstructionKind as Lifted;
 
         let kind = match self.kind {
+            // BEGIN GENERATED mlil-lift: from api/il, do not edit
             Nop => Lifted::Nop,
-            Noret => Lifted::Noret,
-            Bp => Lifted::Bp,
-            Undef => Lifted::Undef,
-            Unimpl => Lifted::Unimpl,
-            If(op) => Lifted::If(LiftedIf {
-                condition: self.lift_operand(op.condition),
-                dest_true: op.dest_true,
-                dest_false: op.dest_false,
-            }),
-
-            FloatConst(op) => Lifted::FloatConst(op),
-            Const(op) => Lifted::Const(op),
-            ConstPtr(op) => Lifted::ConstPtr(op),
-            Import(op) => Lifted::Import(op),
-            ExternPtr(op) => Lifted::ExternPtr(op),
-
-            ConstData(op) => Lifted::ConstData(LiftedConstData {
-                constant_data: ConstantData::new(
-                    self.function.function(),
-                    RegisterValue {
-                        // TODO: Replace with a From<u32> for RegisterValueType.
-                        // TODO: We might also want to change the type of `op.constant_data_kind`
-                        // TODO: To RegisterValueType and do the conversion when creating instruction.
-                        state: unsafe {
-                            std::mem::transmute::<u32, BNRegisterValueType>(op.constant_data_kind)
-                        },
-                        value: op.constant_data_value,
-                        offset: 0,
-                        size: op.size,
-                    },
-                ),
-            }),
-            Jump(op) => Lifted::Jump(LiftedJump {
-                dest: self.lift_operand(op.dest),
-            }),
-            RetHint(op) => Lifted::RetHint(LiftedJump {
-                dest: self.lift_operand(op.dest),
-            }),
-            StoreSsa(op) => Lifted::StoreSsa(LiftedStoreSsa {
-                dest: self.lift_operand(op.dest),
-                dest_memory: op.dest_memory,
-                src_memory: op.src_memory,
+            SetVar(op) => Lifted::SetVar(LiftedSetVar {
+                dest: op.dest,
                 src: self.lift_operand(op.src),
             }),
-            StoreStructSsa(op) => Lifted::StoreStructSsa(LiftedStoreStructSsa {
-                dest: self.lift_operand(op.dest),
-                offset: op.offset,
-                dest_memory: op.dest_memory,
-                src_memory: op.src_memory,
-                src: self.lift_operand(op.src),
-            }),
-            StoreStruct(op) => Lifted::StoreStruct(LiftedStoreStruct {
-                dest: self.lift_operand(op.dest),
-                offset: op.offset,
-                src: self.lift_operand(op.src),
-            }),
-            Store(op) => Lifted::Store(LiftedStore {
-                dest: self.lift_operand(op.dest),
-                src: self.lift_operand(op.src),
-            }),
-            JumpTo(op) => Lifted::JumpTo(LiftedJumpTo {
-                dest: self.lift_operand(op.dest),
-                targets: self.get_target_map(1),
-            }),
-            Goto(op) => Lifted::Goto(op),
-            FreeVarSlot(op) => Lifted::FreeVarSlot(op),
             SetVarField(op) => Lifted::SetVarField(LiftedSetVarField {
                 dest: op.dest,
                 offset: op.offset,
                 src: self.lift_operand(op.src),
             }),
-            SetVar(op) => Lifted::SetVar(LiftedSetVar {
-                dest: op.dest,
-                src: self.lift_operand(op.src),
-            }),
-            FreeVarSlotSsa(op) => Lifted::FreeVarSlotSsa(op),
-            SetVarSsaField(op) => Lifted::SetVarSsaField(LiftedSetVarSsaField {
-                dest: op.dest,
-                prev: op.prev,
-                offset: op.offset,
-                src: self.lift_operand(op.src),
-            }),
-            SetVarAliasedField(op) => Lifted::SetVarAliasedField(LiftedSetVarSsaField {
-                dest: op.dest,
-                prev: op.prev,
-                offset: op.offset,
-                src: self.lift_operand(op.src),
-            }),
-            SetVarAliased(op) => Lifted::SetVarAliased(LiftedSetVarAliased {
-                dest: op.dest,
-                prev: op.prev,
-                src: self.lift_operand(op.src),
-            }),
-            SetVarSsa(op) => Lifted::SetVarSsa(LiftedSetVarSsa {
-                dest: op.dest,
-                src: self.lift_operand(op.src),
-            }),
-            VarPhi(op) => Lifted::VarPhi(LiftedVarPhi {
-                dest: op.dest,
-                src: self.get_ssa_var_list(2),
-            }),
-            MemPhi(op) => Lifted::MemPhi(LiftedMemPhi {
-                dest_memory: op.dest_memory,
-                // TODO: Make a stronger type for this.
-                src_memory: self.get_operand_list(1),
-            }),
-            VarSplit(op) => Lifted::VarSplit(op),
             SetVarSplit(op) => Lifted::SetVarSplit(LiftedSetVarSplit {
-                high: op.high,
-                low: op.low,
-                src: self.lift_operand(op.src),
-            }),
-            VarSplitSsa(op) => Lifted::VarSplitSsa(op),
-            SetVarSplitSsa(op) => Lifted::SetVarSplitSsa(LiftedSetVarSplitSsa {
                 high: op.high,
                 low: op.low,
                 src: self.lift_operand(op.src),
@@ -968,6 +868,412 @@ impl MediumLevelILInstruction {
                 }),
             }),
             ForceVer(op) => Lifted::ForceVer(op),
+            Load(op) => Lifted::Load(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            LoadStruct(op) => Lifted::LoadStruct(LiftedLoadStruct {
+                src: self.lift_operand(op.src),
+                offset: op.offset,
+            }),
+            Store(op) => Lifted::Store(LiftedStore {
+                dest: self.lift_operand(op.dest),
+                src: self.lift_operand(op.src),
+            }),
+            StoreStruct(op) => Lifted::StoreStruct(LiftedStoreStruct {
+                dest: self.lift_operand(op.dest),
+                offset: op.offset,
+                src: self.lift_operand(op.src),
+            }),
+            Var(op) => Lifted::Var(op),
+            VarField(op) => Lifted::VarField(op),
+            VarSplit(op) => Lifted::VarSplit(op),
+            AddressOf(op) => Lifted::AddressOf(op),
+            AddressOfField(op) => Lifted::AddressOfField(op),
+            PassByRef(op) => Lifted::PassByRef(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            ReturnByRef(op) => Lifted::ReturnByRef(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Const(op) => Lifted::Const(op),
+            ConstData(op) => Lifted::ConstData(LiftedConstData {
+                constant_data: ConstantData::new(
+                    self.function.function(),
+                    RegisterValue {
+                        state: unsafe {
+                            std::mem::transmute::<u32, BNRegisterValueType>(op.constant_data_kind)
+                        },
+                        value: op.constant_data_value,
+                        offset: 0,
+                        size: op.size,
+                    },
+                ),
+            }),
+            ConstPtr(op) => Lifted::ConstPtr(op),
+            ExternPtr(op) => Lifted::ExternPtr(op),
+            FloatConst(op) => Lifted::FloatConst(op),
+            Import(op) => Lifted::Import(op),
+            Add(op) => Lifted::Add(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Adc(op) => Lifted::Adc(LiftedBinaryOpCarry {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+                carry: self.lift_operand(op.carry),
+            }),
+            Sub(op) => Lifted::Sub(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Sbb(op) => Lifted::Sbb(LiftedBinaryOpCarry {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+                carry: self.lift_operand(op.carry),
+            }),
+            And(op) => Lifted::And(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Or(op) => Lifted::Or(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Xor(op) => Lifted::Xor(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Lsl(op) => Lifted::Lsl(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Lsr(op) => Lifted::Lsr(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Asr(op) => Lifted::Asr(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Rol(op) => Lifted::Rol(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Rlc(op) => Lifted::Rlc(LiftedBinaryOpCarry {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+                carry: self.lift_operand(op.carry),
+            }),
+            Ror(op) => Lifted::Ror(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Rrc(op) => Lifted::Rrc(LiftedBinaryOpCarry {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+                carry: self.lift_operand(op.carry),
+            }),
+            Mul(op) => Lifted::Mul(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            MuluDp(op) => Lifted::MuluDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            MulsDp(op) => Lifted::MulsDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Divu(op) => Lifted::Divu(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            DivuDp(op) => Lifted::DivuDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Divs(op) => Lifted::Divs(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            DivsDp(op) => Lifted::DivsDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Modu(op) => Lifted::Modu(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            ModuDp(op) => Lifted::ModuDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Mods(op) => Lifted::Mods(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            ModsDp(op) => Lifted::ModsDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Neg(op) => Lifted::Neg(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Not(op) => Lifted::Not(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Sx(op) => Lifted::Sx(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Zx(op) => Lifted::Zx(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            LowPart(op) => Lifted::LowPart(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Jump(op) => Lifted::Jump(LiftedJump {
+                dest: self.lift_operand(op.dest),
+            }),
+            JumpTo(op) => Lifted::JumpTo(LiftedJumpTo {
+                dest: self.lift_operand(op.dest),
+                targets: self.get_target_map(1),
+            }),
+            RetHint(op) => Lifted::RetHint(LiftedJump {
+                dest: self.lift_operand(op.dest),
+            }),
+            Call(op) => Lifted::Call(LiftedCall {
+                output: self.lift_expr_list(0),
+                dest: self.lift_operand(op.dest),
+                params: self.lift_expr_list(3),
+            }),
+            CallUntyped(op) => Lifted::CallUntyped(LiftedCallUntyped {
+                output: self.lift_expr_list(0),
+                dest: self.lift_operand(op.dest),
+                params: self.lift_part_expr_list(op.params, MLIL_CALL_PARAM, 0),
+                stack: self.lift_operand(op.stack),
+            }),
+            CallParam(_op) => Lifted::CallParam(LiftedCallParam {
+                params: self.lift_expr_list(0),
+            }),
+            SeparateParamList(_op) => Lifted::SeparateParamList(LiftedSeparateParamList {
+                params: self.lift_expr_list(0),
+            }),
+            SharedParamSlot(_op) => Lifted::SharedParamSlot(LiftedSharedParamSlot {
+                params: self.lift_expr_list(0),
+            }),
+            VarOutput(op) => Lifted::VarOutput(op),
+            VarOutputField(op) => Lifted::VarOutputField(op),
+            StoreOutput(op) => Lifted::StoreOutput(LiftedStoreOutput {
+                dest: self.lift_operand(op.dest),
+            }),
+            Ret(_op) => Lifted::Ret(LiftedRet {
+                src: self.lift_expr_list(0),
+            }),
+            Noret => Lifted::Noret,
+            If(op) => Lifted::If(LiftedIf {
+                condition: self.lift_operand(op.condition),
+                dest_true: op.dest_true,
+                dest_false: op.dest_false,
+            }),
+            Goto(op) => Lifted::Goto(op),
+            CmpE(op) => Lifted::CmpE(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpNe(op) => Lifted::CmpNe(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpSlt(op) => Lifted::CmpSlt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpUlt(op) => Lifted::CmpUlt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpSle(op) => Lifted::CmpSle(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpUle(op) => Lifted::CmpUle(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpSge(op) => Lifted::CmpSge(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpUge(op) => Lifted::CmpUge(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpSgt(op) => Lifted::CmpSgt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpUgt(op) => Lifted::CmpUgt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            TestBit(op) => Lifted::TestBit(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            BoolToInt(op) => Lifted::BoolToInt(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            AddOverflow(op) => Lifted::AddOverflow(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Syscall(_op) => Lifted::Syscall(LiftedSyscallCall {
+                output: self.lift_expr_list(0),
+                params: self.lift_expr_list(2),
+            }),
+            SyscallUntyped(op) => Lifted::SyscallUntyped(LiftedSyscallUntyped {
+                output: self.lift_expr_list(0),
+                params: self.lift_part_expr_list(op.params, MLIL_CALL_PARAM, 0),
+                stack: self.lift_operand(op.stack),
+            }),
+            Tailcall(op) => Lifted::Tailcall(LiftedCall {
+                output: self.lift_expr_list(0),
+                dest: self.lift_operand(op.dest),
+                params: self.lift_expr_list(3),
+            }),
+            TailcallUntyped(op) => Lifted::TailcallUntyped(LiftedCallUntyped {
+                output: self.lift_expr_list(0),
+                dest: self.lift_operand(op.dest),
+                params: self.lift_part_expr_list(op.params, MLIL_CALL_PARAM, 0),
+                stack: self.lift_operand(op.stack),
+            }),
+            Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
+                output: self.get_var_list(0),
+                intrinsic: CoreIntrinsic::new(
+                    self.function.function().arch(),
+                    IntrinsicId(op.intrinsic),
+                )
+                .expect("Valid intrinsic"),
+                params: self.lift_expr_list(3),
+            }),
+            FreeVarSlot(op) => Lifted::FreeVarSlot(op),
+            Bp => Lifted::Bp,
+            Trap(op) => Lifted::Trap(op),
+            Undef => Lifted::Undef,
+            Unimpl => Lifted::Unimpl,
+            UnimplMem(op) => Lifted::UnimplMem(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Fadd(op) => Lifted::Fadd(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Fsub(op) => Lifted::Fsub(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Fmul(op) => Lifted::Fmul(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Fdiv(op) => Lifted::Fdiv(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Fsqrt(op) => Lifted::Fsqrt(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Fneg(op) => Lifted::Fneg(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Fabs(op) => Lifted::Fabs(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            FloatToInt(op) => Lifted::FloatToInt(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            IntToFloat(op) => Lifted::IntToFloat(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            FloatConv(op) => Lifted::FloatConv(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            RoundToInt(op) => Lifted::RoundToInt(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Floor(op) => Lifted::Floor(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Ceil(op) => Lifted::Ceil(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Ftrunc(op) => Lifted::Ftrunc(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            FcmpE(op) => Lifted::FcmpE(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpNe(op) => Lifted::FcmpNe(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpLt(op) => Lifted::FcmpLt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpLe(op) => Lifted::FcmpLe(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpGe(op) => Lifted::FcmpGe(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpGt(op) => Lifted::FcmpGt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpO(op) => Lifted::FcmpO(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpUo(op) => Lifted::FcmpUo(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            SetVarSsa(op) => Lifted::SetVarSsa(LiftedSetVarSsa {
+                dest: op.dest,
+                src: self.lift_operand(op.src),
+            }),
+            SetVarSsaField(op) => Lifted::SetVarSsaField(LiftedSetVarSsaField {
+                dest: op.dest,
+                prev: op.prev,
+                offset: op.offset,
+                src: self.lift_operand(op.src),
+            }),
+            SetVarSplitSsa(op) => Lifted::SetVarSplitSsa(LiftedSetVarSplitSsa {
+                high: op.high,
+                low: op.low,
+                src: self.lift_operand(op.src),
+            }),
+            SetVarAliased(op) => Lifted::SetVarAliased(LiftedSetVarAliased {
+                dest: op.dest,
+                prev: op.prev,
+                src: self.lift_operand(op.src),
+            }),
+            SetVarAliasedField(op) => Lifted::SetVarAliasedField(LiftedSetVarSsaField {
+                dest: op.dest,
+                prev: op.prev,
+                offset: op.offset,
+                src: self.lift_operand(op.src),
+            }),
+            VarSsa(op) => Lifted::VarSsa(op),
+            VarSsaField(op) => Lifted::VarSsaField(op),
+            VarAliased(op) => Lifted::VarAliased(op),
+            VarAliasedField(op) => Lifted::VarAliasedField(op),
+            VarSplitSsa(op) => Lifted::VarSplitSsa(op),
             AssertSsa(op) => Lifted::AssertSsa(LiftedAssertSsa {
                 src: op.src,
                 constraint: PossibleValueSet::from_owned_core_raw(unsafe {
@@ -978,101 +1284,79 @@ impl MediumLevelILInstruction {
                 }),
             }),
             ForceVerSsa(op) => Lifted::ForceVerSsa(op),
-
-            Add(op) => Lifted::Add(self.lift_binary_op(op)),
-            Sub(op) => Lifted::Sub(self.lift_binary_op(op)),
-            And(op) => Lifted::And(self.lift_binary_op(op)),
-            Or(op) => Lifted::Or(self.lift_binary_op(op)),
-            Xor(op) => Lifted::Xor(self.lift_binary_op(op)),
-            Lsl(op) => Lifted::Lsl(self.lift_binary_op(op)),
-            Lsr(op) => Lifted::Lsr(self.lift_binary_op(op)),
-            Asr(op) => Lifted::Asr(self.lift_binary_op(op)),
-            Rol(op) => Lifted::Rol(self.lift_binary_op(op)),
-            Ror(op) => Lifted::Ror(self.lift_binary_op(op)),
-            Mul(op) => Lifted::Mul(self.lift_binary_op(op)),
-            MuluDp(op) => Lifted::MuluDp(self.lift_binary_op(op)),
-            MulsDp(op) => Lifted::MulsDp(self.lift_binary_op(op)),
-            Divu(op) => Lifted::Divu(self.lift_binary_op(op)),
-            DivuDp(op) => Lifted::DivuDp(self.lift_binary_op(op)),
-            Divs(op) => Lifted::Divs(self.lift_binary_op(op)),
-            DivsDp(op) => Lifted::DivsDp(self.lift_binary_op(op)),
-            Modu(op) => Lifted::Modu(self.lift_binary_op(op)),
-            ModuDp(op) => Lifted::ModuDp(self.lift_binary_op(op)),
-            Mods(op) => Lifted::Mods(self.lift_binary_op(op)),
-            ModsDp(op) => Lifted::ModsDp(self.lift_binary_op(op)),
-            MinSigned(op) => Lifted::MinSigned(self.lift_binary_op(op)),
-            MaxSigned(op) => Lifted::MaxSigned(self.lift_binary_op(op)),
-            MinUnsigned(op) => Lifted::MinUnsigned(self.lift_binary_op(op)),
-            MaxUnsigned(op) => Lifted::MaxUnsigned(self.lift_binary_op(op)),
-            CmpE(op) => Lifted::CmpE(self.lift_binary_op(op)),
-            CmpNe(op) => Lifted::CmpNe(self.lift_binary_op(op)),
-            CmpSlt(op) => Lifted::CmpSlt(self.lift_binary_op(op)),
-            CmpUlt(op) => Lifted::CmpUlt(self.lift_binary_op(op)),
-            CmpSle(op) => Lifted::CmpSle(self.lift_binary_op(op)),
-            CmpUle(op) => Lifted::CmpUle(self.lift_binary_op(op)),
-            CmpSge(op) => Lifted::CmpSge(self.lift_binary_op(op)),
-            CmpUge(op) => Lifted::CmpUge(self.lift_binary_op(op)),
-            CmpSgt(op) => Lifted::CmpSgt(self.lift_binary_op(op)),
-            CmpUgt(op) => Lifted::CmpUgt(self.lift_binary_op(op)),
-            TestBit(op) => Lifted::TestBit(self.lift_binary_op(op)),
-            AddOverflow(op) => Lifted::AddOverflow(self.lift_binary_op(op)),
-            FcmpE(op) => Lifted::FcmpE(self.lift_binary_op(op)),
-            FcmpNe(op) => Lifted::FcmpNe(self.lift_binary_op(op)),
-            FcmpLt(op) => Lifted::FcmpLt(self.lift_binary_op(op)),
-            FcmpLe(op) => Lifted::FcmpLe(self.lift_binary_op(op)),
-            FcmpGe(op) => Lifted::FcmpGe(self.lift_binary_op(op)),
-            FcmpGt(op) => Lifted::FcmpGt(self.lift_binary_op(op)),
-            FcmpO(op) => Lifted::FcmpO(self.lift_binary_op(op)),
-            FcmpUo(op) => Lifted::FcmpUo(self.lift_binary_op(op)),
-            Fadd(op) => Lifted::Fadd(self.lift_binary_op(op)),
-            Fsub(op) => Lifted::Fsub(self.lift_binary_op(op)),
-            Fmul(op) => Lifted::Fmul(self.lift_binary_op(op)),
-            Fdiv(op) => Lifted::Fdiv(self.lift_binary_op(op)),
-
-            Adc(op) => Lifted::Adc(self.lift_binary_op_carry(op)),
-            Sbb(op) => Lifted::Sbb(self.lift_binary_op_carry(op)),
-            Rlc(op) => Lifted::Rlc(self.lift_binary_op_carry(op)),
-            Rrc(op) => Lifted::Rrc(self.lift_binary_op_carry(op)),
-
-            Call(op) => Lifted::Call(self.lift_call(op)),
-            CallParam(_op) => Lifted::CallParam(LiftedCallParam {
-                params: self.get_expr_list(0).iter().map(|i| i.lift()).collect(),
+            CallSsa(op) => Lifted::CallSsa(LiftedCallSsa {
+                output: self.lift_part_expr_list(op.output, MLIL_CALL_OUTPUT_SSA, 1),
+                dest: self.lift_operand(op.dest),
+                params: self.lift_expr_list(2),
+                src_memory: op.src_memory,
             }),
-            CallOutputSsa(op) => Lifted::CallOutputSsa(LiftedCallOutputSsa {
-                dest_memory: op.dest_memory,
-                output: self.get_expr_list(1).iter().map(|i| i.lift()).collect(),
+            CallUntypedSsa(op) => Lifted::CallUntypedSsa(LiftedCallUntypedSsa {
+                output: self.lift_part_expr_list(op.output, MLIL_CALL_OUTPUT_SSA, 1),
+                dest: self.lift_operand(op.dest),
+                params: self.lift_part_expr_list(op.params, MLIL_CALL_PARAM_SSA, 1),
+                stack: self.lift_operand(op.stack),
+            }),
+            SyscallSsa(op) => Lifted::SyscallSsa(LiftedSyscallSsa {
+                output: self.lift_part_expr_list(op.output, MLIL_CALL_OUTPUT_SSA, 1),
+                params: self.lift_expr_list(1),
+                src_memory: op.src_memory,
+            }),
+            SyscallUntypedSsa(op) => Lifted::SyscallUntypedSsa(LiftedSyscallUntypedSsa {
+                output: self.lift_part_expr_list(op.output, MLIL_CALL_OUTPUT_SSA, 1),
+                params: self.lift_part_expr_list(op.params, MLIL_CALL_PARAM_SSA, 1),
+                stack: self.lift_operand(op.stack),
+            }),
+            TailcallSsa(op) => Lifted::TailcallSsa(LiftedCallSsa {
+                output: self.lift_part_expr_list(op.output, MLIL_CALL_OUTPUT_SSA, 1),
+                dest: self.lift_operand(op.dest),
+                params: self.lift_expr_list(2),
+                src_memory: op.src_memory,
+            }),
+            TailcallUntypedSsa(op) => Lifted::TailcallUntypedSsa(LiftedCallUntypedSsa {
+                output: self.lift_part_expr_list(op.output, MLIL_CALL_OUTPUT_SSA, 1),
+                dest: self.lift_operand(op.dest),
+                params: self.lift_part_expr_list(op.params, MLIL_CALL_PARAM_SSA, 1),
+                stack: self.lift_operand(op.stack),
             }),
             CallParamSsa(op) => Lifted::CallParamSsa(LiftedCallParamSsa {
                 src_memory: op.src_memory,
-                params: self.get_expr_list(1).iter().map(|i| i.lift()).collect(),
+                params: self.lift_expr_list(1),
             }),
-
-            Tailcall(op) => Lifted::Tailcall(self.lift_call(op)),
-
-            Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
-                output: self.get_var_list(0),
-                intrinsic: CoreIntrinsic::new(
-                    self.function.function().arch(),
-                    IntrinsicId(op.intrinsic),
-                )
-                .expect("Valid intrinsic"),
-                params: self
-                    .get_expr_list(3)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
+            CallOutputSsa(op) => Lifted::CallOutputSsa(LiftedCallOutputSsa {
+                dest_memory: op.dest_memory,
+                output: self.lift_expr_list(1),
             }),
-            Syscall(_op) => Lifted::Syscall(LiftedSyscallCall {
-                output: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-                params: self
-                    .get_expr_list(2)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
+            VarOutputSsa(op) => Lifted::VarOutputSsa(op),
+            VarOutputSsaField(op) => Lifted::VarOutputSsaField(op),
+            VarOutputAliased(op) => Lifted::VarOutputAliased(op),
+            VarOutputAliasedField(op) => Lifted::VarOutputAliasedField(op),
+            MemoryIntrinsicOutputSsa(op) => {
+                Lifted::MemoryIntrinsicOutputSsa(LiftedMemoryIntrinsicOutputSsa {
+                    dest_memory: op.dest_memory,
+                    output: self.get_ssa_var_list(1),
+                })
+            }
+            LoadSsa(op) => Lifted::LoadSsa(LiftedLoadSsa {
+                src: self.lift_operand(op.src),
+                src_memory: op.src_memory,
+            }),
+            LoadStructSsa(op) => Lifted::LoadStructSsa(LiftedLoadStructSsa {
+                src: self.lift_operand(op.src),
+                offset: op.offset,
+                src_memory: op.src_memory,
+            }),
+            StoreSsa(op) => Lifted::StoreSsa(LiftedStoreSsa {
+                dest: self.lift_operand(op.dest),
+                dest_memory: op.dest_memory,
+                src_memory: op.src_memory,
+                src: self.lift_operand(op.src),
+            }),
+            StoreStructSsa(op) => Lifted::StoreStructSsa(LiftedStoreStructSsa {
+                dest: self.lift_operand(op.dest),
+                offset: op.offset,
+                dest_memory: op.dest_memory,
+                src_memory: op.src_memory,
+                src: self.lift_operand(op.src),
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
                 output: self.get_ssa_var_list(0),
@@ -1081,11 +1365,7 @@ impl MediumLevelILInstruction {
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Valid intrinsic"),
-                params: self
-                    .get_expr_list(3)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
+                params: self.lift_expr_list(3),
             }),
             MemoryIntrinsicSsa(op) => Lifted::MemoryIntrinsicSsa(LiftedMemoryIntrinsicSsa {
                 output: self.lift_operand(op.output),
@@ -1094,174 +1374,59 @@ impl MediumLevelILInstruction {
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Valid intrinsic"),
-                params: self
-                    .get_expr_list(2)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
+                params: self.lift_expr_list(2),
                 src_memory: op.src_memory,
             }),
-            MemoryIntrinsicOutputSsa(op) => {
-                Lifted::MemoryIntrinsicOutputSsa(LiftedMemoryIntrinsicOutputSsa {
-                    dest_memory: op.dest_memory,
-                    output: self.get_ssa_var_list(1),
-                })
-            }
-
-            CallSsa(op) => Lifted::CallSsa(self.lift_call_ssa(op)),
-            TailcallSsa(op) => Lifted::TailcallSsa(self.lift_call_ssa(op)),
-
-            CallUntypedSsa(op) => Lifted::CallUntypedSsa(self.lift_call_untyped_ssa(op)),
-            TailcallUntypedSsa(op) => Lifted::TailcallUntypedSsa(self.lift_call_untyped_ssa(op)),
-
-            SyscallSsa(op) => {
-                let output_instr = self
-                    .function
-                    .instruction_from_expr_index(op.output)
-                    .expect("Valid output expression index");
-                Lifted::SyscallSsa(LiftedSyscallSsa {
-                    output: get_call_output_ssa(&output_instr)
-                        .iter()
-                        .map(|expr| expr.lift())
-                        .collect(),
-                    params: self
-                        .get_expr_list(1)
-                        .iter()
-                        .map(|expr| expr.lift())
-                        .collect(),
-                    src_memory: op.src_memory,
-                })
-            }
-            SyscallUntypedSsa(op) => {
-                let output_instr = self
-                    .function
-                    .instruction_from_expr_index(op.output)
-                    .expect("Valid output expression index");
-                let params_instr = self
-                    .function
-                    .instruction_from_expr_index(op.params)
-                    .expect("Valid params expression index");
-                Lifted::SyscallUntypedSsa(LiftedSyscallUntypedSsa {
-                    output: get_call_output_ssa(&output_instr)
-                        .iter()
-                        .map(|expr| expr.lift())
-                        .collect(),
-                    params: get_call_params_ssa(&params_instr)
-                        .iter()
-                        .map(|param| param.lift())
-                        .collect(),
-                    stack: self.lift_operand(op.stack),
-                })
-            }
-
-            CallUntyped(op) => Lifted::CallUntyped(self.lift_call_untyped(op)),
-            TailcallUntyped(op) => Lifted::TailcallUntyped(self.lift_call_untyped(op)),
-            SyscallUntyped(op) => {
-                let params_instr = self
-                    .function
-                    .instruction_from_expr_index(op.params)
-                    .expect("Valid params expression index");
-                Lifted::SyscallUntyped(LiftedSyscallUntyped {
-                    output: self
-                        .get_expr_list(0)
-                        .iter()
-                        .map(|expr| expr.lift())
-                        .collect(),
-                    params: get_call_params(&params_instr)
-                        .iter()
-                        .map(|param| param.lift())
-                        .collect(),
-                    stack: self.lift_operand(op.stack),
-                })
-            }
-
-            Neg(op) => Lifted::Neg(self.lift_unary_op(op)),
-            Not(op) => Lifted::Not(self.lift_unary_op(op)),
-            Bswap(op) => Lifted::Bswap(self.lift_unary_op(op)),
-            Popcnt(op) => Lifted::Popcnt(self.lift_unary_op(op)),
-            Clz(op) => Lifted::Clz(self.lift_unary_op(op)),
-            Ctz(op) => Lifted::Ctz(self.lift_unary_op(op)),
-            Rbit(op) => Lifted::Rbit(self.lift_unary_op(op)),
-            Cls(op) => Lifted::Cls(self.lift_unary_op(op)),
-            Abs(op) => Lifted::Abs(self.lift_unary_op(op)),
-            Sx(op) => Lifted::Sx(self.lift_unary_op(op)),
-            Zx(op) => Lifted::Zx(self.lift_unary_op(op)),
-            LowPart(op) => Lifted::LowPart(self.lift_unary_op(op)),
-            BoolToInt(op) => Lifted::BoolToInt(self.lift_unary_op(op)),
-            UnimplMem(op) => Lifted::UnimplMem(self.lift_unary_op(op)),
-            Fsqrt(op) => Lifted::Fsqrt(self.lift_unary_op(op)),
-            Fneg(op) => Lifted::Fneg(self.lift_unary_op(op)),
-            Fabs(op) => Lifted::Fabs(self.lift_unary_op(op)),
-            FloatToInt(op) => Lifted::FloatToInt(self.lift_unary_op(op)),
-            IntToFloat(op) => Lifted::IntToFloat(self.lift_unary_op(op)),
-            FloatConv(op) => Lifted::FloatConv(self.lift_unary_op(op)),
-            RoundToInt(op) => Lifted::RoundToInt(self.lift_unary_op(op)),
-            Floor(op) => Lifted::Floor(self.lift_unary_op(op)),
-            Ceil(op) => Lifted::Ceil(self.lift_unary_op(op)),
-            Ftrunc(op) => Lifted::Ftrunc(self.lift_unary_op(op)),
-            Load(op) => Lifted::Load(self.lift_unary_op(op)),
-
-            LoadStruct(op) => Lifted::LoadStruct(LiftedLoadStruct {
-                src: self.lift_operand(op.src),
-                offset: op.offset,
+            FreeVarSlotSsa(op) => Lifted::FreeVarSlotSsa(op),
+            VarPhi(op) => Lifted::VarPhi(LiftedVarPhi {
+                dest: op.dest,
+                src: self.get_ssa_var_list(2),
             }),
-            LoadStructSsa(op) => Lifted::LoadStructSsa(LiftedLoadStructSsa {
-                src: self.lift_operand(op.src),
-                offset: op.offset,
-                src_memory: op.src_memory,
+            MemPhi(op) => Lifted::MemPhi(LiftedMemPhi {
+                dest_memory: op.dest_memory,
+                src_memory: self.get_operand_list(1),
             }),
-            LoadSsa(op) => Lifted::LoadSsa(LiftedLoadSsa {
-                src: self.lift_operand(op.src),
-                src_memory: op.src_memory,
-            }),
-            Ret(_op) => Lifted::Ret(LiftedRet {
-                src: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            SeparateParamList(_op) => Lifted::SeparateParamList(LiftedSeparateParamList {
-                params: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            SharedParamSlot(_op) => Lifted::SharedParamSlot(LiftedSharedParamSlot {
-                params: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            Var(op) => Lifted::Var(op),
-            VarOutput(op) => Lifted::VarOutput(op),
-            VarOutputField(op) => Lifted::VarOutputField(op),
-            StoreOutput(op) => Lifted::StoreOutput(LiftedStoreOutput {
-                dest: self.lift_operand(op.dest),
-            }),
-            AddressOf(op) => Lifted::AddressOf(op),
-            PassByRef(op) => Lifted::PassByRef(self.lift_unary_op(op)),
-            ReturnByRef(op) => Lifted::ReturnByRef(self.lift_unary_op(op)),
-            VarField(op) => Lifted::VarField(op),
-            AddressOfField(op) => Lifted::AddressOfField(op),
-            VarSsa(op) => Lifted::VarSsa(op),
-            VarAliased(op) => Lifted::VarAliased(op),
-            VarSsaField(op) => Lifted::VarSsaField(op),
-            VarAliasedField(op) => Lifted::VarAliasedField(op),
-            VarOutputSsa(op) => Lifted::VarOutputSsa(op),
-            VarOutputSsaField(op) => Lifted::VarOutputSsaField(op),
-            VarOutputAliased(op) => Lifted::VarOutputAliased(op),
-            VarOutputAliasedField(op) => Lifted::VarOutputAliasedField(op),
-            Trap(op) => Lifted::Trap(op),
             BlockToExpand(_op) => Lifted::BlockToExpand(LiftedBlockToExpand {
-                exprs: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
+                exprs: self.lift_expr_list(0),
             }),
+            Bswap(op) => Lifted::Bswap(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Popcnt(op) => Lifted::Popcnt(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Clz(op) => Lifted::Clz(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Ctz(op) => Lifted::Ctz(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Rbit(op) => Lifted::Rbit(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Cls(op) => Lifted::Cls(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            MinSigned(op) => Lifted::MinSigned(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            MaxSigned(op) => Lifted::MaxSigned(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            MinUnsigned(op) => Lifted::MinUnsigned(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            MaxUnsigned(op) => Lifted::MaxUnsigned(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Abs(op) => Lifted::Abs(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            // END GENERATED mlil-lift
         };
 
         MediumLevelILLiftedInstruction {
@@ -1716,104 +1881,31 @@ impl MediumLevelILInstruction {
         Box::new(operand_instr.lift())
     }
 
-    fn lift_binary_op(&self, op: BinaryOp) -> LiftedBinaryOp {
-        LiftedBinaryOp {
-            left: self.lift_operand(op.left),
-            right: self.lift_operand(op.right),
-        }
+    fn lift_expr_list(&self, operand_idx: usize) -> Vec<MediumLevelILLiftedInstruction> {
+        self.get_expr_list(operand_idx)
+            .iter()
+            .map(|expr| expr.lift())
+            .collect()
     }
 
-    fn lift_binary_op_carry(&self, op: BinaryOpCarry) -> LiftedBinaryOpCarry {
-        LiftedBinaryOpCarry {
-            left: self.lift_operand(op.left),
-            right: self.lift_operand(op.right),
-            carry: self.lift_operand(op.carry),
-        }
-    }
-
-    fn lift_unary_op(&self, op: UnaryOp) -> LiftedUnaryOp {
-        LiftedUnaryOp {
-            src: self.lift_operand(op.src),
-        }
-    }
-
-    fn lift_call(&self, op: Call) -> LiftedCall {
-        LiftedCall {
-            output: self
-                .get_expr_list(0)
-                .iter()
-                .map(|expr| expr.lift())
-                .collect(),
-            dest: self.lift_operand(op.dest),
-            params: self
-                .get_expr_list(3)
-                .iter()
-                .map(|expr| expr.lift())
-                .collect(),
-        }
-    }
-
-    fn lift_call_untyped(&self, op: CallUntyped) -> LiftedCallUntyped {
-        let params_instr = self
+    /// Lifts the expression list at `operand_idx` of `part`, or returns an empty list if `part` isn't a
+    /// `part_operation`.
+    fn lift_part_expr_list(
+        &self,
+        part: MediumLevelExpressionIndex,
+        part_operation: BNMediumLevelILOperation,
+        operand_idx: usize,
+    ) -> Vec<MediumLevelILLiftedInstruction> {
+        let part_instr = self
             .function
-            .instruction_from_expr_index(op.params)
-            .expect("Valid params expression index");
-        LiftedCallUntyped {
-            output: self
-                .get_expr_list(0)
-                .iter()
-                .map(|expr| expr.lift())
-                .collect(),
-            dest: self.lift_operand(op.dest),
-            params: get_call_params(&params_instr)
-                .iter()
-                .map(|expr| expr.lift())
-                .collect(),
-            stack: self.lift_operand(op.stack),
+            .instruction_from_expr_index(part)
+            .expect("Valid part expression index");
+        let raw = unsafe { BNGetMediumLevelILByIndex(self.function.handle, part.0) };
+        if raw.operation != part_operation {
+            return vec![];
         }
-    }
 
-    fn lift_call_ssa(&self, op: CallSsa) -> LiftedCallSsa {
-        let output_instr = self
-            .function
-            .instruction_from_expr_index(op.output)
-            .expect("Valid output expression index");
-        LiftedCallSsa {
-            output: get_call_output_ssa(&output_instr)
-                .iter()
-                .map(|expr| expr.lift())
-                .collect(),
-            dest: self.lift_operand(op.dest),
-            params: self
-                .get_expr_list(2)
-                .iter()
-                .map(|expr| expr.lift())
-                .collect(),
-            src_memory: op.src_memory,
-        }
-    }
-
-    fn lift_call_untyped_ssa(&self, op: CallUntypedSsa) -> LiftedCallUntypedSsa {
-        let output_instr = self
-            .function
-            .instruction_from_expr_index(op.output)
-            .expect("Valid output expression index");
-        let params_instr = self
-            .function
-            .instruction_from_expr_index(op.params)
-            .expect("Valid params expression index");
-        LiftedCallUntypedSsa {
-            output: get_call_output_ssa(&output_instr)
-                .iter()
-                .map(|expr| expr.lift())
-                .collect(),
-            dest: self.lift_operand(op.dest),
-            params: get_call_params_ssa(&params_instr)
-                .iter()
-                .map(|param| param.lift())
-                .collect(),
-            stack: self.lift_operand(op.stack),
-        }
+        part_instr.lift_expr_list(operand_idx)
     }
 }
 
@@ -1847,48 +1939,36 @@ unsafe impl CoreArrayProviderInner for MediumLevelILInstruction {
     }
 }
 
+// BEGIN GENERATED mlil-instruction-kind: from api/il, do not edit
 #[derive(Debug, Copy, Clone)]
 pub enum MediumLevelILInstructionKind {
     Nop,
-    Noret,
-    Bp,
-    Undef,
-    Unimpl,
-    If(MediumLevelILOperationIf),
-    FloatConst(FloatConst),
-    Const(Constant),
-    ConstPtr(Constant),
-    Import(Constant),
-    ExternPtr(ExternPtr),
-    ConstData(ConstData),
-    Jump(Jump),
-    RetHint(Jump),
-    StoreSsa(StoreSsa),
-    StoreStructSsa(StoreStructSsa),
-    StoreStruct(StoreStruct),
-    Store(Store),
-    JumpTo(JumpTo),
-    Goto(Goto),
-    FreeVarSlot(FreeVarSlot),
-    SetVarField(SetVarField),
     SetVar(SetVar),
-    FreeVarSlotSsa(FreeVarSlotSsa),
-    SetVarSsaField(SetVarSsaField),
-    SetVarAliasedField(SetVarSsaField),
-    SetVarAliased(SetVarAliased),
-    SetVarSsa(SetVarSsa),
-    VarPhi(VarPhi),
-    MemPhi(MemPhi),
-    VarSplit(VarSplit),
+    SetVarField(SetVarField),
     SetVarSplit(SetVarSplit),
     Assert(Assert),
     ForceVer(ForceVer),
-    VarSplitSsa(VarSplitSsa),
-    SetVarSplitSsa(SetVarSplitSsa),
-    AssertSsa(AssertSsa),
-    ForceVerSsa(ForceVerSsa),
+    Load(UnaryOp),
+    LoadStruct(LoadStruct),
+    Store(Store),
+    StoreStruct(StoreStruct),
+    Var(Var),
+    VarField(Field),
+    VarSplit(VarSplit),
+    AddressOf(Var),
+    AddressOfField(Field),
+    PassByRef(UnaryOp),
+    ReturnByRef(UnaryOp),
+    Const(Constant),
+    ConstData(ConstData),
+    ConstPtr(Constant),
+    ExternPtr(ExternPtr),
+    FloatConst(FloatConst),
+    Import(Constant),
     Add(BinaryOp),
+    Adc(BinaryOpCarry),
     Sub(BinaryOp),
+    Sbb(BinaryOpCarry),
     And(BinaryOp),
     Or(BinaryOp),
     Xor(BinaryOp),
@@ -1896,7 +1976,9 @@ pub enum MediumLevelILInstructionKind {
     Lsr(BinaryOp),
     Asr(BinaryOp),
     Rol(BinaryOp),
+    Rlc(BinaryOpCarry),
     Ror(BinaryOp),
+    Rrc(BinaryOpCarry),
     Mul(BinaryOp),
     MuluDp(BinaryOp),
     MulsDp(BinaryOp),
@@ -1908,10 +1990,26 @@ pub enum MediumLevelILInstructionKind {
     ModuDp(BinaryOp),
     Mods(BinaryOp),
     ModsDp(BinaryOp),
-    MinSigned(BinaryOp),
-    MaxSigned(BinaryOp),
-    MinUnsigned(BinaryOp),
-    MaxUnsigned(BinaryOp),
+    Neg(UnaryOp),
+    Not(UnaryOp),
+    Sx(UnaryOp),
+    Zx(UnaryOp),
+    LowPart(UnaryOp),
+    Jump(Jump),
+    JumpTo(JumpTo),
+    RetHint(Jump),
+    Call(Call),
+    CallUntyped(CallUntyped),
+    CallParam(CallParam),
+    SeparateParamList(SeparateParamList),
+    SharedParamSlot(SharedParamSlot),
+    VarOutput(VarOutput),
+    VarOutputField(VarOutputField),
+    StoreOutput(StoreOutput),
+    Ret(Ret),
+    Noret,
+    If(MediumLevelILOperationIf),
+    Goto(Goto),
     CmpE(BinaryOp),
     CmpNe(BinaryOp),
     CmpSlt(BinaryOp),
@@ -1923,61 +2021,23 @@ pub enum MediumLevelILInstructionKind {
     CmpSgt(BinaryOp),
     CmpUgt(BinaryOp),
     TestBit(BinaryOp),
+    BoolToInt(UnaryOp),
     AddOverflow(BinaryOp),
-    FcmpE(BinaryOp),
-    FcmpNe(BinaryOp),
-    FcmpLt(BinaryOp),
-    FcmpLe(BinaryOp),
-    FcmpGe(BinaryOp),
-    FcmpGt(BinaryOp),
-    FcmpO(BinaryOp),
-    FcmpUo(BinaryOp),
+    Syscall(Syscall),
+    SyscallUntyped(SyscallUntyped),
+    Tailcall(Call),
+    TailcallUntyped(CallUntyped),
+    Intrinsic(Intrinsic),
+    FreeVarSlot(FreeVarSlot),
+    Bp,
+    Trap(Trap),
+    Undef,
+    Unimpl,
+    UnimplMem(UnaryOp),
     Fadd(BinaryOp),
     Fsub(BinaryOp),
     Fmul(BinaryOp),
     Fdiv(BinaryOp),
-    Adc(BinaryOpCarry),
-    Sbb(BinaryOpCarry),
-    Rlc(BinaryOpCarry),
-    Rrc(BinaryOpCarry),
-    Call(Call),
-    CallParam(CallParam),
-    CallOutputSsa(CallOutputSsa),
-    CallParamSsa(CallParamSsa),
-    Tailcall(Call),
-    Syscall(Syscall),
-    Intrinsic(Intrinsic),
-    IntrinsicSsa(IntrinsicSsa),
-    MemoryIntrinsicSsa(MemoryIntrinsicSsa),
-    MemoryIntrinsicOutputSsa(MemoryIntrinsicOutputSsa),
-    CallSsa(CallSsa),
-    TailcallSsa(CallSsa),
-    CallUntypedSsa(CallUntypedSsa),
-    TailcallUntypedSsa(CallUntypedSsa),
-    SyscallSsa(SyscallSsa),
-    SyscallUntypedSsa(SyscallUntypedSsa),
-    CallUntyped(CallUntyped),
-    TailcallUntyped(CallUntyped),
-    SyscallUntyped(SyscallUntyped),
-    SeparateParamList(SeparateParamList),
-    SharedParamSlot(SharedParamSlot),
-    VarOutput(VarOutput),
-    VarOutputField(VarOutputField),
-    StoreOutput(StoreOutput),
-    Neg(UnaryOp),
-    Not(UnaryOp),
-    Bswap(UnaryOp),
-    Popcnt(UnaryOp),
-    Clz(UnaryOp),
-    Ctz(UnaryOp),
-    Rbit(UnaryOp),
-    Cls(UnaryOp),
-    Abs(UnaryOp),
-    Sx(UnaryOp),
-    Zx(UnaryOp),
-    LowPart(UnaryOp),
-    BoolToInt(UnaryOp),
-    UnimplMem(UnaryOp),
     Fsqrt(UnaryOp),
     Fneg(UnaryOp),
     Fabs(UnaryOp),
@@ -1988,28 +2048,62 @@ pub enum MediumLevelILInstructionKind {
     Floor(UnaryOp),
     Ceil(UnaryOp),
     Ftrunc(UnaryOp),
-    Load(UnaryOp),
-    LoadStruct(LoadStruct),
-    LoadStructSsa(LoadStructSsa),
-    LoadSsa(LoadSsa),
-    Ret(Ret),
-    Var(Var),
-    AddressOf(Var),
-    PassByRef(UnaryOp),
-    ReturnByRef(UnaryOp),
-    VarField(Field),
-    AddressOfField(Field),
+    FcmpE(BinaryOp),
+    FcmpNe(BinaryOp),
+    FcmpLt(BinaryOp),
+    FcmpLe(BinaryOp),
+    FcmpGe(BinaryOp),
+    FcmpGt(BinaryOp),
+    FcmpO(BinaryOp),
+    FcmpUo(BinaryOp),
+    SetVarSsa(SetVarSsa),
+    SetVarSsaField(SetVarSsaField),
+    SetVarSplitSsa(SetVarSplitSsa),
+    SetVarAliased(SetVarAliased),
+    SetVarAliasedField(SetVarSsaField),
     VarSsa(VarSsa),
-    VarAliased(VarSsa),
     VarSsaField(VarSsaField),
+    VarAliased(VarSsa),
     VarAliasedField(VarSsaField),
+    VarSplitSsa(VarSplitSsa),
+    AssertSsa(AssertSsa),
+    ForceVerSsa(ForceVerSsa),
+    CallSsa(CallSsa),
+    CallUntypedSsa(CallUntypedSsa),
+    SyscallSsa(SyscallSsa),
+    SyscallUntypedSsa(SyscallUntypedSsa),
+    TailcallSsa(CallSsa),
+    TailcallUntypedSsa(CallUntypedSsa),
+    CallParamSsa(CallParamSsa),
+    CallOutputSsa(CallOutputSsa),
     VarOutputSsa(VarOutputSsa),
     VarOutputSsaField(VarOutputSsaField),
     VarOutputAliased(VarOutputAliased),
     VarOutputAliasedField(VarOutputAliasedField),
-    Trap(Trap),
+    MemoryIntrinsicOutputSsa(MemoryIntrinsicOutputSsa),
+    LoadSsa(LoadSsa),
+    LoadStructSsa(LoadStructSsa),
+    StoreSsa(StoreSsa),
+    StoreStructSsa(StoreStructSsa),
+    IntrinsicSsa(IntrinsicSsa),
+    MemoryIntrinsicSsa(MemoryIntrinsicSsa),
+    FreeVarSlotSsa(FreeVarSlotSsa),
+    VarPhi(VarPhi),
+    MemPhi(MemPhi),
     BlockToExpand(BlockToExpand),
+    Bswap(UnaryOp),
+    Popcnt(UnaryOp),
+    Clz(UnaryOp),
+    Ctz(UnaryOp),
+    Rbit(UnaryOp),
+    Cls(UnaryOp),
+    MinSigned(BinaryOp),
+    MaxSigned(BinaryOp),
+    MinUnsigned(BinaryOp),
+    MaxUnsigned(BinaryOp),
+    Abs(UnaryOp),
 }
+// END GENERATED mlil-instruction-kind
 
 fn get_float(value: u64, size: usize) -> f64 {
     match size {
@@ -2026,27 +2120,6 @@ fn get_var(id: u64) -> Variable {
 
 fn get_var_ssa(id: u64, version: usize) -> SSAVariable {
     SSAVariable::new(get_var(id), version)
-}
-
-fn get_call_params(instr: &MediumLevelILInstruction) -> Vec<MediumLevelILInstruction> {
-    match instr.kind {
-        MediumLevelILInstructionKind::CallParam(_op) => instr.get_expr_list(0),
-        _ => vec![],
-    }
-}
-
-fn get_call_output_ssa(instr: &MediumLevelILInstruction) -> Vec<MediumLevelILInstruction> {
-    match instr.kind {
-        MediumLevelILInstructionKind::CallOutputSsa(_op) => instr.get_expr_list(1),
-        _ => vec![],
-    }
-}
-
-fn get_call_params_ssa(instr: &MediumLevelILInstruction) -> Vec<MediumLevelILInstruction> {
-    match instr.kind {
-        MediumLevelILInstructionKind::CallParamSsa(_op) => instr.get_expr_list(1),
-        _ => vec![],
-    }
 }
 
 /// Conditional branching instruction and an expected conditional result

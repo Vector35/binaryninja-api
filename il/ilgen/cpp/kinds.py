@@ -1,4 +1,4 @@
-"""How C++ reads, spells and writes each kind of value, from the model's CppKind records."""
+"""How C++ reads, spells and writes each kind of value at a level, from the model's CppKind records."""
 
 from dataclasses import dataclass
 
@@ -28,6 +28,9 @@ ENCODERS = {
 	'ssa_register': lambda expr, prelude: [f'{expr}.reg', f'{expr}.version'],
 	'ssa_register_stack': lambda expr, prelude: [f'{expr}.regStack', f'{expr}.version'],
 	'ssa_flag': lambda expr, prelude: [f'{expr}.flag', f'{expr}.version'],
+	'ssa_variable': lambda expr, prelude: [f'{expr}.var.ToIdentifier()', f'{expr}.version'],
+	'variable_identifier': lambda expr, prelude: [f'{expr}.ToIdentifier()'],
+	'constant_data': lambda expr, prelude: [f'{expr}.state', f'{expr}.value'],
 	'cached_value_set': lambda expr, prelude: [f'CachePossibleValueSet({expr})'],
 	'flattened_map': flattened_map,
 }
@@ -48,6 +51,7 @@ SOURCE_CONTAINERS = Containers('vector', 'map')
 
 class Kinds:
 	def __init__(self, schema, containers):
+		self.stem = schema.level.stem
 		self.containers = containers
 		for kind in schema.kinds.values():
 			if kind.cpp.decoder is not None and kind.cpp.decoder not in DECODERS:
@@ -57,7 +61,11 @@ class Kinds:
 				raise SchemaError(f'kind {kind.name}: no cpp encoder named {kind.cpp.encoder}')
 
 	def type(self, kind):
-		"""The type an accessor of the kind returns. A kind with a key and no type of its own returns a map."""
+		"""The type an accessor of the kind returns. A kind's stem type follows the level's class stem, and a kind with
+		a key and no type of its own returns a map."""
+		if kind.cpp.stem_type is not None:
+			return self.stem + kind.cpp.stem_type
+
 		if kind.cpp.type is None and kind.cpp.key is not None:
 			return self.map(kind)
 
@@ -90,13 +98,12 @@ class Kinds:
 
 		return kind.cpp.partial_reader
 
-	@staticmethod
-	def read(kind, call):
+	def read(self, kind, call):
 		"""An accessor's expression for a value of the kind, from its raw read."""
 		if kind.cpp.decoder is not None:
 			return DECODERS[kind.cpp.decoder].format(call)
 
-		return call
+		return f'({self.type(kind)}){call}' if kind.cpp.cast else call
 
 	def operand_getters(self, kinds):
 		"""{operand type: (the operand class's getter for it, its return type in the .cpp)}."""

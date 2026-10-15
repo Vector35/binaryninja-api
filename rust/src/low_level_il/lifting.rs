@@ -4359,7 +4359,7 @@ impl LowLevelILMutableFunction {
         }
     }
 
-    /// The absolute value of `src` as a signed integer.
+    /// The absolute value of `src` as a signed integer. The most negative value is its own absolute value.
     ///
     /// Returns the expression `abs.<size>{<flags>}(src)`.
     ///

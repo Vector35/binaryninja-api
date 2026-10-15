@@ -1,19 +1,32 @@
-"""How Python reads, annotates and writes each kind of value, from the model's PyKind records."""
+"""How Python reads, annotates and writes each kind of value at a level, from the model's PyKind records."""
 
 from ..model import SchemaError
 
 # The decoders that kinds.xml's py elements name, each formatted with the raw read.
 DECODERS = {'nonzero': '{} != 0'}
+# The encoders that kinds.xml's py elements name. Each gives an expression of {p} for each slot the value takes.
+ENCODERS = {
+	'identifier': ('{p}.identifier',),
+	'ssa_variable': ('{p}.var.identifier', '{p}.version'),
+	'constant_data': ('{p}.type', '{p}.value'),
+}
 
 
 class Kinds:
 	def __init__(self, schema):
+		self.stem = schema.level.stem
 		for kind in schema.kinds.values():
 			if kind.py.decoder is not None and kind.py.decoder not in DECODERS:
 				raise SchemaError(f'kind {kind.name}: no py decoder named {kind.py.decoder}')
 
+			if kind.py.encoder is not None and kind.py.encoder not in ENCODERS:
+				raise SchemaError(f'kind {kind.name}: no py encoder named {kind.py.encoder}')
+
 	def type(self, kind):
 		"""A property's type annotation."""
+		if kind.py.stem_type is not None:
+			return self.stem + kind.py.stem_type
+
 		if kind.py.type is not None:
 			return kind.py.type
 
@@ -24,8 +37,8 @@ class Kinds:
 		if kind.py.detailed_type is not None:
 			return kind.py.detailed_type
 
-		if kind.py.type is not None:
-			return kind.py.type
+		if kind.py.stem_type is not None or kind.py.type is not None:
+			return self.type(kind)
 
 		return f'List[{self.detailed_type(kind.item)}]'
 
@@ -39,8 +52,12 @@ class Kinds:
 		return f'{self.type(kind)}({read})' if kind.py.construct else read
 
 	@staticmethod
-	def tag(kind):
-		"""The value's ILOperations tag, which is its kind's tag or else its reader's name."""
+	def tag(kind, shared):
+		"""The value's ILOperations tag, which is its kind's tag or else its reader's name. `shared` is whether
+		another pair shares the value's register or variable, which can give it a different tag."""
+		if shared and kind.py.shared_tag is not None:
+			return kind.py.shared_tag
+
 		return kind.py.tag if kind.py.tag is not None else kind.py.reader
 
 	def param(self, kind):
@@ -53,11 +70,14 @@ class Kinds:
 	@staticmethod
 	def converts(kind):
 		"""Whether a builder converts a parameter of the kind before storing it."""
-		return kind.py.converter is not None
+		return kind.py.encoder is not None or kind.py.converter is not None
 
 	@staticmethod
 	def conversions(kind):
 		"""An expression of the parameter {p} for each slot the value takes."""
+		if kind.py.encoder is not None:
+			return ENCODERS[kind.py.encoder]
+
 		if kind.py.converter is not None:
 			return (f'{kind.py.converter}({{p}})',)
 

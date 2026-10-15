@@ -10,9 +10,14 @@
 	<name name="offset">
 		<cpp type="uint64_t"/>
 	</name>
-	<name name="output_exprs" role="output"/>
+	<name name="output">
+		<rust item="output"/>
+	</name>
+	<name name="output_exprs" role="output">
+		<rust item="output"/>
+	</name>
 	<name name="params" role="parameter">
-		<rust role="param"/>
+		<rust role="param" item="param"/>
 	</name>
 	<name name="prev" role="source"/>
 	<name name="reason" role="force_version_reason"/>

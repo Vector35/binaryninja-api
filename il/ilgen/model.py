@@ -15,12 +15,14 @@ class SchemaError(Exception):
 
 @dataclass(frozen=True)
 class CppKind:
-	"""How C++ spells, reads and writes a value of a kind. il.xsd's CppKind documents each field."""
+	"""How C++ spells, reads and writes a value of a kind at a level. il.xsd's CppKind documents each field."""
 
 	suffix: str = ''
 	type: str | None = None
+	stem_type: str | None = None
 	reader: str | None = None
 	partial_reader: str | None = None
+	cast: bool = False
 	decoder: str | None = None
 	verb: str = 'Get'
 	operand: str | None = None
@@ -33,23 +35,27 @@ class CppKind:
 	adder: str | None = None
 	writer: str | None = None
 	encoder: str | None = None
+	settable: bool = False
 	version_setter: str | None = None
 
 
 @dataclass(frozen=True)
 class PyKind:
-	"""How Python spells, reads and writes a value of a kind. il.xsd's PyKind documents each field."""
+	"""How Python spells, reads and writes a value of a kind at a level. il.xsd's PyKind documents each field."""
 
 	type: str | None = None
 	detailed_type: str | None = None
+	stem_type: str | None = None
 	reader: str | None = None
 	reader_slots: int = 1
 	construct: bool = False
 	decoder: str | None = None
 	tag: str | None = None
+	shared_tag: str | None = None
 	param: str | None = None
 	param_optional: bool = False
 	converter: str | None = None
+	encoder: str | None = None
 	default: str | None = None
 	adder: str | None = None
 	item_slots: int | None = None
@@ -57,17 +63,23 @@ class PyKind:
 
 @dataclass(frozen=True)
 class RustKind:
-	"""How Rust spells and decodes a value of a kind. il.xsd's RustKind documents each field."""
+	"""How Rust spells, decodes and lifts a value of a kind at a level. il.xsd's RustKind documents each field."""
 
 	suffix: str = ''
 	type: str | None = None
+	implements: frozenset | None = None
 	decoder: str | None = None
+	field_suffix: str = ''
+	lifted_type: str | None = None
+	lifted_boxed: bool = False
+	lifted_implements: frozenset | None = None
+	lifter: str | None = None
+	operand: str | None = None
 
 
 @dataclass(eq=False)
 class Kind:
-	"""A kind of value an operand can hold and how each language handles it. il.xsd's kind element documents what a
-	value of it is."""
+	"""A kind resolved for one level. il.xsd's kind element documents what a value of it is."""
 
 	name: str
 	slots: int
@@ -110,6 +122,8 @@ class Name:
 	cpp_type: str | None
 	# The role Rust names the accessor after, where it isn't the role.
 	rust_role: str | None
+	# For a list, the item that MLIL's and HLIL's Rust operation structs name its stored fields after.
+	rust_item: str | None = None
 
 
 @dataclass(frozen=True)
@@ -150,16 +164,25 @@ class Location:
 
 @dataclass(eq=False)
 class Value:
-	"""A value an op exposes, which it reads from its location."""
+	"""A value an op exposes. A stored value has a location. A derived value has none, since a hand-written
+	accessor computes it."""
 
 	name: str
 	kind: Kind
+
+	@property
+	def location(self):
+		return None
 
 	@property
 	def version_index(self):
 		"""Which of its register or variable's versions a pair reads, when the register or variable is stored once
 		for several pairs."""
 		return 0
+
+	@property
+	def derived(self):
+		return self.location is None
 
 	@property
 	def written(self):
@@ -183,10 +206,13 @@ class Operand(Value):
 
 	slot: int = 0
 	part: 'Op | None' = None
+	items: tuple = ()
 	sort: Sort | None = None
+	statement: bool = False
 	is_written: bool = False
 	signed: bool = False
 	is_listed: bool = True
+	visited: bool = True
 	description: ET.Element | None = None
 	accessors: list = field(default_factory=list)
 	# The pairs that combine this operand with another, in order.
@@ -261,7 +287,7 @@ class PartAccessor(Value):
 	@property
 	def location(self):
 		inner = self.target.location
-		return Location(self.owner.slot, inner.slot, inner.version)
+		return None if inner is None else Location(self.owner.slot, inner.slot, inner.version)
 
 	@property
 	def version_index(self):
@@ -270,6 +296,11 @@ class PartAccessor(Value):
 	@property
 	def written(self):
 		return self.target.written
+
+
+@dataclass(eq=False)
+class Derived(Value):
+	"""A value a hand-written accessor computes."""
 
 
 @dataclass(eq=False)
@@ -352,10 +383,19 @@ class Builder:
 		return next((arg for arg in self.args if arg.name == name), None)
 
 
+@dataclass(frozen=True)
+class PyParam:
+	name: str | None
+	annotation: str | None
+	conversion: str | None
+	default: str | None
+
+
 @dataclass(eq=False)
 class CppOp:
 	# {value name: the C++ accessor's name after its verb}
 	renames: dict = field(default_factory=dict)
+	setters: list = field(default_factory=list)
 	usages: dict = field(default_factory=dict)
 	parent_usages: dict = field(default_factory=dict)
 	types: dict = field(default_factory=dict)
@@ -365,7 +405,11 @@ class CppOp:
 @dataclass(eq=False)
 class PyOp:
 	renames: dict = field(default_factory=dict)
-	# {arg name: the builder parameter's name}
+	# {alias: the name of the value it reads}
+	aliases: dict = field(default_factory=dict)
+	# {name: Kind} for the values only Python has, which the op's mixin computes.
+	accessors: dict = field(default_factory=dict)
+	# {arg name: PyParam}
 	params: dict = field(default_factory=dict)
 	# The method name of an op with one builder group, where it isn't the group's name.
 	builder: str | None = None
@@ -383,11 +427,16 @@ class RustOp:
 	marker: str | None = None
 	# {builder name: lifter name}, where it isn't the op's name in lower case.
 	lifters: dict = field(default_factory=dict)
+	struct: str | None = None
+	lifted: str | None = None
+	operands: list | None = None
 	renames: dict = field(default_factory=dict)
 	# The names of the values whose LLIL accessors drop the suffix their naming rule appends.
 	unsuffixed: set = field(default_factory=set)
 	# {operand name: the width its lifter builds a bare value at}
 	lifts: dict = field(default_factory=dict)
+	# {value name: the item its stored fields are named after}
+	lists: dict = field(default_factory=dict)
 	types: dict = field(default_factory=dict)
 
 
@@ -411,6 +460,7 @@ class RustMarker:
 class ShapeOperand:
 	name: str
 	kind: Kind
+	accessors: tuple
 
 
 @dataclass(frozen=True)
@@ -423,6 +473,8 @@ class PyShape:
 	trait: str | None
 	# The shape operands the base class decodes.
 	decodes: tuple
+	# The mixin that implements the shape's derived accessors.
+	mixin: str | None = None
 
 
 @dataclass(eq=False)
@@ -431,14 +483,22 @@ class Shape:
 
 	name: str
 	operands: list
+	derived: list
 	# The C++ base class, after the level's class stem.
 	cpp_base: str | None
 	py: PyShape
+	# The stored values whose accessors the C++ base class implements, where it doesn't implement them all.
+	cpp_implements: list | None = None
 
 	@property
-	def values(self):
-		"""The names of the values the shape gives."""
-		return [operand.name for operand in self.operands]
+	def stored_values(self):
+		"""The names of the stored values the shape gives. A part operand gives its accessors."""
+		return [name for operand in self.operands for name in operand.accessors or [operand.name]]
+
+	@property
+	def cpp_values(self):
+		"""The names of the values whose accessors the C++ base class implements, the derived values included."""
+		return (self.stored_values if self.cpp_implements is None else self.cpp_implements) + self.derived
 
 
 @dataclass(eq=False)
@@ -451,12 +511,14 @@ class Op:
 	# The SSA ops that take the op's place, or ('expanded',) where SSA form expands it, or () where it's valid in SSA
 	# form.
 	ssa_form: tuple
+	visit_order: tuple
 	doc: list
 	description: ET.Element | None
 	size: ET.Element | None
 	form: ET.Element | None
 	operands: list = field(default_factory=list)
 	pairs: list = field(default_factory=list)
+	derived: list = field(default_factory=list)
 	result: Sort | None = None
 	# Whether the op is only valid in SSA form.
 	ssa_only: bool = False
@@ -489,19 +551,20 @@ class Op:
 
 	@functools.cached_property
 	def values(self):
-		"""{name: value} for every operand, pair and part accessor."""
+		"""{name: value} for every operand, pair, part accessor and derived value."""
 		found = {}
 		for operand in self.operands:
 			found[operand.name] = operand
 			found.update((accessor.name, accessor) for accessor in operand.accessors)
 
 		found.update((pair.name, pair) for pair in self.pairs)
+		found.update((value.name, value) for value in self.derived)
 		return found
 
 	@functools.cached_property
 	def default_values(self):
 		"""The default operand list. It has the values in storage order, with each part operand replaced by its
-		accessors and each pair in place of the operands it combines."""
+		accessors and each pair in place of the operands it combines, then the derived values."""
 		result = []
 		for operand in self.operands:
 			for value in operand.accessors or [operand]:
@@ -511,7 +574,7 @@ class Op:
 
 				result += [pair for pair in pairs if pair not in result]
 
-		return result
+		return result + self.derived
 
 	@functools.cached_property
 	def listed_values(self):
@@ -539,6 +602,10 @@ class Op:
 
 		return result
 
+	def visit_ordered(self):
+		"""The operands that visit_order names, in its order, after the others in storage order."""
+		return sorted(self.operands, key=lambda o: self.visit_order.index(o.name) if o.name in self.visit_order else -1)
+
 
 @dataclass(eq=False)
 class Schema:
@@ -546,7 +613,7 @@ class Schema:
 
 	# The levels.Level that spells the level's names.
 	level: object
-	# {name: Kind}
+	# {name: Kind}, resolved for the level.
 	kinds: dict
 	# {value name: Name}
 	names: dict

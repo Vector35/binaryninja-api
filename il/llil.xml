@@ -1,218 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <il xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="il.xsd" level="llil" slots="4" flags="true">
 	<shape name="binary">
-		<operand name="left">
-			<integer width="size"/>
-			<description>The left operand</description>
-		</operand>
-		<operand name="right">
-			<integer width="size"/>
-			<description>The right operand</description>
-		</operand>
-		<result>
-			<integer width="size"/>
-		</result>
-		<cpp base="TwoOperandInstruction"/>
-		<py base="BinaryBase" decodes="left right">
-			<param operand="left" name="a"/>
-			<param operand="right" name="b"/>
-		</py>
 		<rust marker="BinaryOp"/>
 	</shape>
-
 	<shape name="comparison">
-		<operand name="left">
-			<integer width="size"/>
-			<description>The left operand</description>
-		</operand>
-		<operand name="right">
-			<integer width="size"/>
-			<description>The right operand</description>
-		</operand>
-		<result>
-			<boolean/>
-		</result>
-		<cpp base="TwoOperandInstruction"/>
-		<py base="ComparisonBase" trait="comparison" decodes="left right">
-			<param operand="left" name="a"/>
-			<param operand="right" name="b"/>
-		</py>
 		<rust marker="Condition"/>
 	</shape>
-
 	<shape name="unary">
-		<operand name="src">
-			<integer width="size"/>
-			<description>The operand</description>
-		</operand>
-		<result>
-			<integer width="size"/>
-		</result>
-		<cpp base="OneOperandInstruction"/>
-		<py base="UnaryBase" decodes="src">
-			<param operand="src" name="value"/>
-		</py>
 		<rust marker="UnaryOp"/>
 	</shape>
-
 	<shape name="carry">
-		<operand name="left">
-			<integer width="size"/>
-			<description>The left operand</description>
-		</operand>
-		<operand name="right">
-			<integer width="size"/>
-			<description>The right operand</description>
-		</operand>
-		<operand name="carry">
-			<boolean/>
-			<description>The carry in</description>
-		</operand>
-		<result>
-			<integer width="size"/>
-		</result>
-		<cpp base="TwoOperandWithCarryInstruction"/>
-		<py base="CarryBase" decodes="left right carry">
-			<param operand="left" name="a"/>
-			<param operand="right" name="b"/>
-		</py>
 		<rust marker="BinaryOpCarry"/>
 	</shape>
-
 	<shape name="shift">
-		<operand name="left">
-			<integer width="size"/>
-			<description>The left operand</description>
-		</operand>
-		<operand name="right">
-			<integer width="any"/>
-			<description>The right operand</description>
-		</operand>
-		<result>
-			<integer width="size"/>
-		</result>
-		<cpp base="TwoOperandInstruction"/>
-		<py base="BinaryBase" decodes="left right">
-			<param operand="left" name="a"/>
-			<param operand="right" name="b"/>
-		</py>
 		<rust marker="BinaryOp">
 			<lift operand="right" width="size"/>
 		</rust>
 	</shape>
-
 	<shape name="rotate_carry">
-		<operand name="left">
-			<integer width="size"/>
-			<description>The left operand</description>
-		</operand>
-		<operand name="right">
-			<integer width="any"/>
-			<description>The right operand</description>
-		</operand>
-		<operand name="carry">
-			<boolean/>
-			<description>The carry in</description>
-		</operand>
-		<result>
-			<integer width="size"/>
-		</result>
-		<cpp base="TwoOperandWithCarryInstruction"/>
-		<py base="CarryBase" decodes="left right carry">
-			<param operand="left" name="a"/>
-			<param operand="right" name="b"/>
-		</py>
 		<rust marker="BinaryOpCarry">
 			<lift operand="right" width="size"/>
 		</rust>
 	</shape>
-
 	<shape name="double_precision_division">
-		<operand name="left">
-			<integer width="twice-size"/>
-			<description>The left operand</description>
-		</operand>
-		<operand name="right">
-			<integer width="size"/>
-			<description>The right operand</description>
-		</operand>
-		<result>
-			<integer width="size"/>
-		</result>
-		<cpp base="TwoOperandInstruction"/>
-		<py base="BinaryBase" decodes="left right">
-			<param operand="left" name="a"/>
-			<param operand="right" name="b"/>
-		</py>
 		<rust marker="BinaryOp"/>
 	</shape>
-
 	<shape name="float_binary">
-		<operand name="left">
-			<float width="size"/>
-			<description>The left operand</description>
-		</operand>
-		<operand name="right">
-			<float width="size"/>
-			<description>The right operand</description>
-		</operand>
-		<result>
-			<float width="size"/>
-		</result>
-		<cpp base="TwoOperandInstruction"/>
-		<py base="BinaryBase" decodes="left right">
-			<param operand="left" name="a"/>
-			<param operand="right" name="b"/>
-		</py>
 		<rust marker="BinaryOp"/>
 	</shape>
-
 	<shape name="float_comparison">
-		<operand name="left">
-			<float width="size"/>
-			<description>The left operand</description>
-		</operand>
-		<operand name="right">
-			<float width="size"/>
-			<description>The right operand</description>
-		</operand>
-		<result>
-			<boolean/>
-		</result>
-		<cpp base="TwoOperandInstruction"/>
-		<py base="ComparisonBase" trait="comparison" decodes="left right">
-			<param operand="left" name="a"/>
-			<param operand="right" name="b"/>
-		</py>
 		<rust marker="Condition"/>
 	</shape>
-
 	<shape name="float_unary">
-		<operand name="src">
-			<float width="size"/>
-			<description>The operand</description>
-		</operand>
-		<result>
-			<float width="size"/>
-		</result>
-		<cpp base="OneOperandInstruction"/>
-		<py base="UnaryBase" decodes="src">
-			<param operand="src" name="value"/>
-		</py>
 		<rust marker="UnaryOp"/>
 	</shape>
-
 	<shape name="constant">
-		<operand name="constant" kind="immediate">
-			<description>The value</description>
-		</operand>
-		<result>
-			<integer width="size"/>
-		</result>
-		<cpp base="ConstantInstruction"/>
-		<py base="ConstantBase" trait="constant" decodes="constant">
-			<param operand="constant" name="value"/>
-		</py>
+		<py base="ConstantBase" trait="constant" decodes="constant"/>
 	</shape>
 
 	<rust-marker name="BinaryOp" as="as_binary_op">
@@ -262,9 +85,7 @@
 		<rename operand="src" to="operand"/>
 	</rust-marker>
 
-	<op name="NOP" placement="statement" sized="false">
-		<description>Does nothing.</description>
-		<form>nop</form>
+	<op name="NOP">
 		<rust marker="NoArgs"/>
 	</op>
 
@@ -390,35 +211,15 @@
 		<rust variant="ForceVersion"/>
 	</op>
 
-	<op name="LOAD" shape="unary" flags="true" ssa-form="LOAD_SSA">
-		<description>Reads <ref name="size"/> bytes from memory at <ref name="src"/>.</description>
-		<form>[<ref name="src"/>]<size/> <flags/></form>
-		<operand name="src">
-			<integer width="any"/>
-			<description>The address to read from</description>
-		</operand>
-		<result>
-			<bits width="size"/>
-		</result>
-		<py traits="load">
+	<op name="LOAD" flags="true">
+		<py>
 			<param operand="src" name="addr"/>
 		</py>
 		<rust marker="Load"/>
 	</op>
 
-	<op name="STORE" placement="statement" flags="true" ssa-form="STORE_SSA">
-		<description>Writes the <ref name="size"/> bytes of <ref name="src"/> to memory at
-			<ref name="dest"/>.</description>
-		<form>[<ref name="dest"/>]<size/> = <ref name="src"/> <flags/></form>
-		<operand name="dest">
-			<integer width="any"/>
-			<description>The address to write to</description>
-		</operand>
-		<operand name="src">
-			<bits width="size"/>
-			<description>The value to write</description>
-		</operand>
-		<py traits="store">
+	<op name="STORE" flags="true">
+		<py>
 			<param operand="dest" name="addr"/>
 			<param operand="src" name="value"/>
 		</py>
@@ -545,55 +346,23 @@
 		</py>
 	</op>
 
-	<op name="CONST" shape="constant">
-		<description>An integer constant.</description>
-		<form><ref name="constant"/></form>
-	</op>
+	<op name="CONST"/>
 
-	<op name="CONST_PTR" builder="const_pointer" shape="constant">
-		<description>A constant pointer to address <ref name="constant"/>.</description>
-		<form><ref name="constant"/></form>
+	<op name="CONST_PTR">
 		<rust marker="Const"/>
 	</op>
 
-	<op name="EXTERN_PTR" builder="extern_pointer" shape="constant">
-		<description>A constant pointer <ref name="offset"/> bytes from the relocated external
-			address <ref name="constant"/>.</description>
-		<form>(<ref name="constant"/> + <ref name="offset"/>)</form>
-		<operand name="constant" kind="immediate">
-			<description>The external address</description>
-		</operand>
-		<operand name="offset" kind="immediate">
-			<description>The offset from the external address, in bytes</description>
-		</operand>
+	<op name="EXTERN_PTR">
 		<cpp>
 			<type operand="constant" is="size_t"/>
 			<type operand="offset" is="size_t"/>
 		</cpp>
-		<py>
-			<param operand="constant" name="value"/>
-		</py>
 		<rust marker="Extern">
 			<rename operand="constant" to="value"/>
 		</rust>
 	</op>
 
-	<op name="FLOAT_CONST" shape="constant">
-		<operand name="constant" kind="immediate_float">
-			<description>The bits of the constant's representation, read as an integer</description>
-		</operand>
-		<result>
-			<float width="size"/>
-		</result>
-		<builder name="float_const_raw">
-			<description>A floating point constant. <ref name="constant"/> holds the bits of its
-				representation as an integer. The single and double precision builders take a
-				floating point value and convert it themselves.</description>
-			<form><ref name="constant"/></form>
-		</builder>
-		<builder name="float_const_single" size="4" handwritten="true"/>
-		<builder name="float_const_double" size="8" handwritten="true"/>
-		<py traits="floating_point"/>
+	<op name="FLOAT_CONST">
 		<rust>
 			<rename operand="constant" to="raw_value"/>
 		</rust>
@@ -631,252 +400,114 @@
 		</py>
 	</op>
 
-	<op name="ADD" flags="true" shape="binary">
+	<op name="ADD" flags="true">
 		<description>Adds <ref name="left"/> and <ref name="right"/>. Without flags, renders as
 			<code><ref name="left"/> + <ref name="right"/></code>.</description>
 		<form>add<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic"/>
 	</op>
 
-	<op name="ADC" builder="add_carry" shape="carry" flags="true">
-		<description>Adds <ref name="left"/>, <ref name="right"/> and the carry <ref name="carry"/>.</description>
-		<form>adc<size/><flags/>(<ref name="left"/>, <ref name="right"/>, <ref name="carry"/>)</form>
-	</op>
+	<op name="ADC" flags="true"/>
 
-	<op name="SUB" shape="binary" flags="true">
+	<op name="SUB" flags="true">
 		<description>Subtracts <ref name="right"/> from <ref name="left"/>. Without flags, renders as
 			<code><ref name="left"/> - <ref name="right"/></code>.</description>
 		<form>sub<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic"/>
 	</op>
 
-	<op name="SBB" builder="sub_borrow" shape="carry" flags="true">
-		<description>Subtracts <ref name="right"/> and the borrow <ref name="carry"/> from
-			<ref name="left"/>.</description>
-		<form>sbb<size/><flags/>(<ref name="left"/>, <ref name="right"/>, <ref name="carry"/>)</form>
-	</op>
+	<op name="SBB" flags="true"/>
 
-	<op name="AND" shape="binary" flags="true">
+	<op name="AND" flags="true">
 		<description>The bitwise and of <ref name="left"/> and <ref name="right"/>. Without flags,
 			renders as <code><ref name="left"/> &amp; <ref name="right"/></code>, or as
 			<code><ref name="left"/> &amp;&amp; <ref name="right"/></code> when <ref name="size"/> is
 			0.</description>
 		<form>and<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py builder="and_expr" traits="arithmetic"/>
 	</op>
 
-	<op name="OR" shape="binary" flags="true">
+	<op name="OR" flags="true">
 		<description>The bitwise or of <ref name="left"/> and <ref name="right"/>. Without flags,
 			renders as <code><ref name="left"/> | <ref name="right"/></code>, or as
 			<code><ref name="left"/> || <ref name="right"/></code> when <ref name="size"/> is
 			0.</description>
 		<form>or<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py builder="or_expr" traits="arithmetic"/>
 	</op>
 
-	<op name="XOR" shape="binary" flags="true">
+	<op name="XOR" flags="true">
 		<description>The bitwise exclusive or of <ref name="left"/> and <ref name="right"/>. Without
 			flags, renders as <code><ref name="left"/> ^ <ref name="right"/></code>.</description>
 		<form>xor<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py builder="xor_expr" traits="arithmetic"/>
 	</op>
 
-	<op name="LSL" builder="shift_left" shape="shift" flags="true">
+	<op name="LSL" flags="true">
 		<description>Shifts <ref name="left"/> left by <ref name="right"/> bits. Without flags,
 			renders as <code><ref name="left"/> &lt;&lt; <ref name="right"/></code>.</description>
 		<form>lsl<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic"/>
 	</op>
 
-	<op name="LSR" builder="logical_shift_right" shape="shift" flags="true">
+	<op name="LSR" flags="true">
 		<description>Shifts <ref name="left"/> logically right by <ref name="right"/> bits. Without
 			flags, renders as <code><ref name="left"/> u&gt;&gt; <ref name="right"/></code>.</description>
 		<form>lsr<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic"/>
 	</op>
 
-	<op name="ASR" builder="arith_shift_right" shape="shift" flags="true">
+	<op name="ASR" flags="true">
 		<description>Shifts <ref name="left"/> arithmetically right by <ref name="right"/> bits.
 			Without flags, renders as <code><ref name="left"/> s&gt;&gt; <ref name="right"/></code>.</description>
 		<form>asr<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic"/>
 	</op>
 
-	<op name="ROL" builder="rotate_left" shape="shift" flags="true">
-		<description>Rotates <ref name="left"/> left by <ref name="right"/> bits.</description>
-		<form>rol<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic"/>
-	</op>
+	<op name="ROL" flags="true"/>
 
-	<op name="RLC" builder="rotate_left_carry" shape="rotate_carry" flags="true">
-		<description>Rotates <ref name="left"/> left by <ref name="right"/> bits through the carry
-			<ref name="carry"/>.</description>
-		<form>rlc<size/><flags/>(<ref name="left"/>, <ref name="right"/>, <ref name="carry"/>)</form>
-	</op>
+	<op name="RLC" flags="true"/>
 
-	<op name="ROR" builder="rotate_right" shape="shift" flags="true">
-		<description>Rotates <ref name="left"/> right by <ref name="right"/> bits.</description>
-		<form>ror<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic"/>
-	</op>
+	<op name="ROR" flags="true"/>
 
-	<op name="RRC" builder="rotate_right_carry" shape="rotate_carry" flags="true">
-		<description>Rotates <ref name="left"/> right by <ref name="right"/> bits through the carry
-			<ref name="carry"/>.</description>
-		<form>rrc<size/><flags/>(<ref name="left"/>, <ref name="right"/>, <ref name="carry"/>)</form>
-	</op>
+	<op name="RRC" flags="true"/>
 
-	<op name="MUL" builder="mult" shape="binary" flags="true">
+	<op name="MUL" flags="true">
 		<description>Multiplies <ref name="left"/> by <ref name="right"/>. The operands and the result
 			are all <ref name="size"/> bytes, so the upper half of the product is discarded. Without
 			flags, renders as <code><ref name="left"/> * <ref name="right"/></code>.</description>
 		<form>mul<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic"/>
 	</op>
 
-	<op name="MULU_DP" builder="mult_double_prec_unsigned" shape="binary" flags="true">
-		<description>Multiplies <ref name="left"/> by <ref name="right"/> as unsigned integers. The
-			operands are <ref name="size"/> bytes and the result is <code>2 * <ref name="size"/></code>
-			bytes. The expression's size, which it renders with, is still <ref name="size"/>.</description>
-		<form>mulu.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<result>
-			<integer width="twice-size"/>
-		</result>
-		<py traits="double_precision"/>
-	</op>
+	<op name="MULU_DP" flags="true"/>
 
-	<op name="MULS_DP" builder="mult_double_prec_signed" shape="binary" flags="true">
-		<description>Multiplies <ref name="left"/> by <ref name="right"/> as signed integers. The
-			operands are <ref name="size"/> bytes and the result is <code>2 * <ref name="size"/></code>
-			bytes. The expression's size, which it renders with, is still <ref name="size"/>.</description>
-		<form>muls.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<result>
-			<integer width="twice-size"/>
-		</result>
-		<py traits="double_precision signed"/>
-	</op>
+	<op name="MULS_DP" flags="true"/>
 
-	<op name="DIVU" builder="div_unsigned" shape="binary" flags="true">
-		<description>Divides <ref name="left"/> by <ref name="right"/> as unsigned integers.</description>
-		<form>divu<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic"/>
-	</op>
+	<op name="DIVU" flags="true"/>
 
-	<op name="DIVU_DP" builder="div_double_prec_unsigned" shape="double_precision_division" flags="true">
-		<description>Divides <ref name="left"/> by <ref name="right"/> as unsigned integers.
-			<ref name="left"/> is <code>2 * <ref name="size"/></code> bytes, and <ref name="right"/>
-			and the result are <ref name="size"/> bytes.</description>
-		<form>divu.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="double_precision"/>
-	</op>
+	<op name="DIVU_DP" flags="true"/>
 
-	<op name="DIVS" builder="div_signed" shape="binary" flags="true">
-		<description>Divides <ref name="left"/> by <ref name="right"/> as signed integers.</description>
-		<form>divs<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic signed"/>
-	</op>
+	<op name="DIVS" flags="true"/>
 
-	<op name="DIVS_DP" builder="div_double_prec_signed" shape="double_precision_division" flags="true">
-		<description>Divides <ref name="left"/> by <ref name="right"/> as signed integers.
-			<ref name="left"/> is <code>2 * <ref name="size"/></code> bytes, and <ref name="right"/>
-			and the result are <ref name="size"/> bytes.</description>
-		<form>divs.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="double_precision signed"/>
-	</op>
+	<op name="DIVS_DP" flags="true"/>
 
-	<op name="MODU" builder="mod_unsigned" shape="binary" flags="true">
-		<description>The remainder of dividing <ref name="left"/> by <ref name="right"/> as unsigned
-			integers.</description>
-		<form>modu<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic"/>
-	</op>
+	<op name="MODU" flags="true"/>
 
-	<op name="MODU_DP" builder="mod_double_prec_unsigned" shape="double_precision_division" flags="true">
-		<description>The remainder of dividing <ref name="left"/> by <ref name="right"/> as unsigned
-			integers. <ref name="left"/> is <code>2 * <ref name="size"/></code> bytes, and
-			<ref name="right"/> and the result are <ref name="size"/> bytes.</description>
-		<form>modu.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="double_precision"/>
-	</op>
+	<op name="MODU_DP" flags="true"/>
 
-	<op name="MODS" builder="mod_signed" shape="binary" flags="true">
-		<description>The remainder of dividing <ref name="left"/> by <ref name="right"/> as signed
-			integers.</description>
-		<form>mods<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="arithmetic signed"/>
-	</op>
+	<op name="MODS" flags="true"/>
 
-	<op name="MODS_DP" builder="mod_double_prec_signed" shape="double_precision_division" flags="true">
-		<description>The remainder of dividing <ref name="left"/> by <ref name="right"/> as signed
-			integers. <ref name="left"/> is <code>2 * <ref name="size"/></code> bytes, and
-			<ref name="right"/> and the result are <ref name="size"/> bytes.</description>
-		<form>mods.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-		<py traits="double_precision signed"/>
-	</op>
+	<op name="MODS_DP" flags="true"/>
 
-	<op name="NEG" shape="unary" flags="true">
-		<description>Negates <ref name="src"/> as a two's complement integer.</description>
-		<form>neg<size/><flags/>(<ref name="src"/>)</form>
-		<py builder="neg_expr" traits="arithmetic"/>
-	</op>
+	<op name="NEG" flags="true"/>
 
-	<op name="NOT" shape="unary" flags="true">
-		<description>Inverts the bits of <ref name="src"/>.</description>
-		<form>not<size/><flags/>(<ref name="src"/>)</form>
-		<py builder="not_expr" traits="arithmetic"/>
-	</op>
+	<op name="NOT" flags="true"/>
 
-	<op name="SX" builder="sign_extend" shape="unary" flags="true">
-		<description>Sign-extends <ref name="src"/> to <ref name="size"/> bytes.</description>
-		<form>sx<size/>(<ref name="src"/>)</form>
-		<operand name="src">
-			<integer width="below-size"/>
-		</operand>
-		<py traits="arithmetic"/>
-	</op>
+	<op name="SX" flags="true"/>
 
-	<op name="ZX" builder="zero_extend" shape="unary" flags="true">
-		<description>Zero-extends <ref name="src"/> to <ref name="size"/> bytes.</description>
-		<form>zx<size/>(<ref name="src"/>)</form>
-		<operand name="src">
-			<integer width="below-size"/>
-		</operand>
-		<py traits="arithmetic"/>
-	</op>
+	<op name="ZX" flags="true"/>
 
-	<op name="LOW_PART" shape="unary" flags="true">
-		<description>Truncates <ref name="src"/> to its low <ref name="size"/> bytes.</description>
-		<form>(<ref name="src"/>)<size/></form>
-		<operand name="src">
-			<integer width="above-size"/>
-		</operand>
-		<py traits="arithmetic"/>
-	</op>
+	<op name="LOW_PART" flags="true"/>
 
-	<op name="JUMP" placement="statement" sized="false">
-		<description>Jumps to <ref name="dest"/>.</description>
-		<form>jump(<ref name="dest"/>)</form>
-		<operand name="dest">
-			<integer width="any"/>
-			<description>The address to jump to</description>
-		</operand>
-		<py traits="terminal"/>
+	<op name="JUMP">
 		<rust>
 			<rename operand="dest" to="target"/>
 		</rust>
 	</op>
 
-	<op name="JUMP_TO" placement="statement" sized="false">
-		<description>Jumps to the target in <ref name="targets"/> chosen by the value of <ref name="dest"/>.</description>
-		<form>jump(<ref name="dest"/> =&gt; <ref name="targets"/>)</form>
-		<operand name="dest">
-			<integer width="any"/>
-			<description>The value that chooses the target</description>
-		</operand>
-		<operand name="targets" kind="label_map">
-			<description>The labels to jump to, keyed by the value of the destination that chooses each</description>
-		</operand>
-		<py traits="terminal"/>
+	<op name="JUMP_TO">
 		<rust>
 			<rename operand="dest" to="target"/>
 			<rename operand="targets" to="target_list"/>
@@ -945,11 +576,7 @@
 		</rust>
 	</op>
 
-	<op name="NORET" builder="no_return" placement="statement" sized="false">
-		<description>Marks a point that execution doesn't pass, such as after a call that doesn't
-			return.</description>
-		<form>noreturn</form>
-		<py builder="no_ret" traits="terminal"/>
+	<op name="NORET">
 		<rust variant="NoRet" marker="NoArgs" lifter="no_ret"/>
 	</op>
 
@@ -1026,100 +653,39 @@
 		</rust>
 	</op>
 
-	<op name="CMP_E" builder="compare_equal" shape="comparison">
-		<description>Tests whether <ref name="left"/> equals <ref name="right"/>.</description>
-		<form><ref name="left"/> == <ref name="right"/></form>
-	</op>
+	<op name="CMP_E"/>
 
-	<op name="CMP_NE" builder="compare_not_equal" shape="comparison">
-		<description>Tests whether <ref name="left"/> doesn't equal <ref name="right"/>.</description>
-		<form><ref name="left"/> != <ref name="right"/></form>
-	</op>
+	<op name="CMP_NE"/>
 
-	<op name="CMP_SLT" builder="compare_signed_less_than" shape="comparison">
-		<description>Tests whether <ref name="left"/> is less than <ref name="right"/> as signed
-			integers.</description>
-		<form><ref name="left"/> s&lt; <ref name="right"/></form>
-		<py traits="signed"/>
-	</op>
+	<op name="CMP_SLT"/>
 
-	<op name="CMP_ULT" builder="compare_unsigned_less_than" shape="comparison">
-		<description>Tests whether <ref name="left"/> is less than <ref name="right"/> as unsigned
-			integers.</description>
-		<form><ref name="left"/> u&lt; <ref name="right"/></form>
-	</op>
+	<op name="CMP_ULT"/>
 
-	<op name="CMP_SLE" builder="compare_signed_less_equal" shape="comparison">
-		<description>Tests whether <ref name="left"/> is less than or equal to <ref name="right"/>
-			as signed integers.</description>
-		<form><ref name="left"/> s&lt;= <ref name="right"/></form>
-		<py traits="signed"/>
-	</op>
+	<op name="CMP_SLE"/>
 
-	<op name="CMP_ULE" builder="compare_unsigned_less_equal" shape="comparison">
-		<description>Tests whether <ref name="left"/> is less than or equal to <ref name="right"/>
-			as unsigned integers.</description>
-		<form><ref name="left"/> u&lt;= <ref name="right"/></form>
-	</op>
+	<op name="CMP_ULE"/>
 
-	<op name="CMP_SGE" builder="compare_signed_greater_equal" shape="comparison">
-		<description>Tests whether <ref name="left"/> is greater than or equal to <ref name="right"/>
-			as signed integers.</description>
-		<form><ref name="left"/> s&gt;= <ref name="right"/></form>
-		<py traits="signed"/>
-	</op>
+	<op name="CMP_SGE"/>
 
-	<op name="CMP_UGE" builder="compare_unsigned_greater_equal" shape="comparison">
-		<description>Tests whether <ref name="left"/> is greater than or equal to <ref name="right"/>
-			as unsigned integers.</description>
-		<form><ref name="left"/> u&gt;= <ref name="right"/></form>
-	</op>
+	<op name="CMP_UGE"/>
 
-	<op name="CMP_SGT" builder="compare_signed_greater_than" shape="comparison">
-		<description>Tests whether <ref name="left"/> is greater than <ref name="right"/> as signed
-			integers.</description>
-		<form><ref name="left"/> s&gt; <ref name="right"/></form>
-		<py traits="signed"/>
-	</op>
+	<op name="CMP_SGT"/>
 
-	<op name="CMP_UGT" builder="compare_unsigned_greater_than" shape="comparison">
-		<description>Tests whether <ref name="left"/> is greater than <ref name="right"/> as unsigned
-			integers.</description>
-		<form><ref name="left"/> u&gt; <ref name="right"/></form>
-	</op>
+	<op name="CMP_UGT"/>
 
-	<op name="TEST_BIT" shape="comparison">
-		<description>Tests whether bit <ref name="right"/> of <ref name="left"/> is set.</description>
-		<form>test_bit(<ref name="left"/>, <ref name="right"/>)</form>
-		<operand name="right">
-			<integer width="any"/>
-			<description>The index of the bit to test</description>
-		</operand>
+	<op name="TEST_BIT">
 		<rust marker="BinaryOp">
 			<lift operand="right" width="size"/>
 		</rust>
 	</op>
 
-	<op name="BOOL_TO_INT" shape="unary">
-		<description>Converts <ref name="src"/> to the integer 1 if it's true, or 0 if it's false.</description>
-		<form><ref name="src"/> ? 1 : 0</form>
-		<operand name="src">
-			<boolean/>
-		</operand>
-		<py>
-			<param operand="src" name="a"/>
-		</py>
+	<op name="BOOL_TO_INT">
 		<rust>
 			<lift operand="src" width="any"/>
 		</rust>
 	</op>
 
-	<op name="ADD_OVERFLOW" shape="binary">
-		<result>
-			<boolean/>
-		</result>
-		<py no-builder="true" traits="arithmetic"/>
-	</op>
+	<op name="ADD_OVERFLOW"/>
 
 	<op name="SYSCALL" builder="system_call" placement="statement" sized="false">
 		<description>Makes a system call.</description>
@@ -1127,23 +693,11 @@
 		<py traits="syscall"/>
 	</op>
 
-	<op name="BP" builder="breakpoint" placement="statement" sized="false">
-		<description>A processor breakpoint.</description>
-		<form>breakpoint</form>
-		<py traits="terminal"/>
+	<op name="BP">
 		<rust marker="NoArgs"/>
 	</op>
 
-	<op name="TRAP" placement="statement" sized="false">
-		<description>A processor trap, or interrupt, with number <ref name="vector"/>.</description>
-		<form>trap(<ref name="vector"/>)</form>
-		<operand name="vector" kind="immediate" signed="true">
-			<description>The trap number</description>
-		</operand>
-		<py traits="terminal">
-			<param operand="vector" name="value"/>
-		</py>
-	</op>
+	<op name="TRAP"/>
 
 	<op name="INTRINSIC" placement="statement" sized="false" flags="true">
 		<description>Calls intrinsic <ref name="intrinsic"/> with <ref name="params"/>. An intrinsic is
@@ -1162,22 +716,14 @@
 		</py>
 	</op>
 
-	<op name="UNDEF" builder="undefined" placement="either" sized="false">
+	<op name="UNDEF">
 		<description>An undefined value or operation. As a statement, it ends the basic block and
 			leaves its outgoing edges undetermined.</description>
-		<form>undefined</form>
-		<result>
-			<bits width="any"/>
-		</result>
 		<py traits="terminal"/>
 		<rust marker="NoArgs" lifter="undefined"/>
 	</op>
 
-	<op name="UNIMPL" placement="either" sized="false">
-		<operand name="unknown" kind="bool" listed="false"/>
-		<result>
-			<bits width="any"/>
-		</result>
+	<op name="UNIMPL">
 		<builder name="unimplemented">
 			<description>An unimplemented instruction or value.</description>
 			<form>unimplemented</form>
@@ -1196,31 +742,7 @@
 		</rust>
 	</op>
 
-	<op name="UNIMPL_MEM" shape="unary">
-		<operand name="src">
-			<integer width="any"/>
-			<description>The address referenced</description>
-		</operand>
-		<operand name="unknown" kind="bool" listed="false"/>
-		<result>
-			<bits width="size"/>
-		</result>
-		<builder name="unimplemented_memory_ref">
-			<description>A reference to <ref name="size"/> bytes of memory at <ref name="src"/>, for
-				an unimplemented operation.</description>
-			<form>unimplemented([<ref name="src"/>]<size/>)</form>
-			<fixed operand="unknown" value="0"/>
-		</builder>
-		<builder name="unknown_memory_ref">
-			<description>A reference to <ref name="size"/> bytes of memory at <ref name="src"/>,
-				whose value can't be known at analysis time. It doesn't produce the warning
-				an unimplemented expression does.</description>
-			<form>unknown([<ref name="src"/>]<size/>)</form>
-			<fixed operand="unknown" value="1"/>
-		</builder>
-		<py traits="memory">
-			<param operand="src" name="addr"/>
-		</py>
+	<op name="UNIMPL_MEM">
 		<rust marker="UnimplMem">
 			<rename operand="src" to="mem_expr"/>
 			<lifter builder="unimplemented_memory_ref" name="unimplemented_mem"/>
@@ -1229,167 +751,95 @@
 	</op>
 
 	<group title="Floating point">
-		<op name="FADD" builder="float_add" shape="float_binary" flags="true">
+		<op name="FADD" flags="true">
 			<description>Adds <ref name="left"/> and <ref name="right"/> as floating point values.
 				Without flags, renders as <code><ref name="left"/> f+ <ref name="right"/></code>.</description>
 			<form>fadd<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-			<py traits="arithmetic floating_point"/>
 		</op>
 
-		<op name="FSUB" builder="float_sub" shape="float_binary" flags="true">
+		<op name="FSUB" flags="true">
 			<description>Subtracts <ref name="right"/> from <ref name="left"/> as floating point
 				values. Without flags, renders as <code><ref name="left"/> f- <ref name="right"/></code>.</description>
 			<form>fsub<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-			<py traits="arithmetic floating_point"/>
 		</op>
 
-		<op name="FMUL" builder="float_mult" shape="float_binary" flags="true">
+		<op name="FMUL" flags="true">
 			<description>Multiplies <ref name="left"/> by <ref name="right"/> as floating point
 				values. Without flags, renders as <code><ref name="left"/> f* <ref name="right"/></code>.</description>
 			<form>fmul<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-			<py traits="arithmetic floating_point"/>
 		</op>
 
-		<op name="FDIV" builder="float_div" shape="float_binary" flags="true">
+		<op name="FDIV" flags="true">
 			<description>Divides <ref name="left"/> by <ref name="right"/> as floating point values.
 				Without flags, renders as <code><ref name="left"/> f/ <ref name="right"/></code>.</description>
 			<form>fdiv<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-			<py traits="arithmetic floating_point"/>
 		</op>
 
-		<op name="FSQRT" builder="float_sqrt" shape="float_unary" flags="true">
-			<description>The square root of the floating point value <ref name="src"/>.</description>
-			<form>sqrt<flags/>(<ref name="src"/>)</form>
+		<op name="FSQRT" flags="true">
 			<py traits="floating_point arithmetic"/>
 		</op>
 
-		<op name="FNEG" builder="float_neg" shape="float_unary" flags="true">
-			<description>Negates the floating point value <ref name="src"/>.</description>
-			<form>fneg<flags/>(<ref name="src"/>)</form>
+		<op name="FNEG" flags="true">
 			<py traits="floating_point arithmetic"/>
 		</op>
 
-		<op name="FABS" builder="float_abs" shape="float_unary" flags="true">
-			<description>The absolute value of the floating point value <ref name="src"/>.</description>
-			<form>fabs<flags/>(<ref name="src"/>)</form>
+		<op name="FABS" flags="true">
 			<py traits="floating_point arithmetic"/>
 		</op>
 
-		<op name="FLOAT_TO_INT" shape="unary" flags="true">
-			<description>Converts the floating point value <ref name="src"/> to an integer.</description>
-			<form>int<size/><flags/>(<ref name="src"/>)</form>
-			<operand name="src">
-				<float width="any"/>
-			</operand>
+		<op name="FLOAT_TO_INT" flags="true">
 			<py traits="floating_point arithmetic"/>
 		</op>
 
-		<op name="INT_TO_FLOAT" shape="float_unary" flags="true">
-			<description>Converts the integer <ref name="src"/> to a floating point value.</description>
-			<form>float<size/><flags/>(<ref name="src"/>)</form>
-			<operand name="src">
-				<integer width="any"/>
-			</operand>
+		<op name="INT_TO_FLOAT" flags="true">
 			<py traits="floating_point arithmetic"/>
 		</op>
 
-		<op name="FLOAT_CONV" builder="float_convert" shape="float_unary" flags="true">
-			<description>Converts the floating point value <ref name="src"/> to a floating point value of
-				<ref name="size"/> bytes.</description>
-			<form>fconvert<size/><flags/>(<ref name="src"/>)</form>
-			<operand name="src">
-				<float width="any"/>
-			</operand>
+		<op name="FLOAT_CONV" flags="true">
 			<py traits="floating_point arithmetic"/>
 		</op>
 
-		<op name="ROUND_TO_INT" shape="float_unary" flags="true">
-			<description>Rounds the floating point value <ref name="src"/> to the nearest integral
-				value.</description>
-			<form>roundint<size/><flags/>(<ref name="src"/>)</form>
+		<op name="ROUND_TO_INT" flags="true">
 			<py traits="floating_point arithmetic"/>
 		</op>
 
-		<op name="FLOOR" shape="float_unary" flags="true">
-			<description>Rounds the floating point value <ref name="src"/> to an integral value, towards
-				negative infinity.</description>
-			<form>floor<size/><flags/>(<ref name="src"/>)</form>
+		<op name="FLOOR" flags="true">
 			<py traits="floating_point arithmetic"/>
 		</op>
 
-		<op name="CEIL" shape="float_unary" flags="true">
-			<description>Rounds the floating point value <ref name="src"/> to an integral value, towards
-				positive infinity.</description>
-			<form>ceil<size/><flags/>(<ref name="src"/>)</form>
+		<op name="CEIL" flags="true">
 			<py traits="floating_point arithmetic"/>
 		</op>
 
-		<op name="FTRUNC" builder="float_trunc" shape="float_unary" flags="true">
-			<description>Rounds the floating point value <ref name="src"/> to an integral value, towards
-				zero.</description>
-			<form>ftrunc<size/><flags/>(<ref name="src"/>)</form>
+		<op name="FTRUNC" flags="true">
 			<py traits="floating_point arithmetic"/>
 		</op>
 
-		<op name="FCMP_E" builder="float_compare_equal" shape="float_comparison">
-			<description>Tests whether <ref name="left"/> equals <ref name="right"/> as floating point
-				values.</description>
-			<form><ref name="left"/> f== <ref name="right"/></form>
-			<py traits="floating_point"/>
-		</op>
+		<op name="FCMP_E"/>
 
-		<op name="FCMP_NE" builder="float_compare_not_equal" shape="float_comparison">
-			<description>Tests whether <ref name="left"/> doesn't equal <ref name="right"/> as floating
-				point values.</description>
-			<form><ref name="left"/> f!= <ref name="right"/></form>
-			<py traits="floating_point"/>
+		<op name="FCMP_NE">
 			<rust variant="FcmpNE"/>
 		</op>
 
-		<op name="FCMP_LT" builder="float_compare_less_than" shape="float_comparison">
-			<description>Tests whether <ref name="left"/> is less than <ref name="right"/> as floating
-				point values.</description>
-			<form><ref name="left"/> f&lt; <ref name="right"/></form>
-			<py traits="floating_point"/>
+		<op name="FCMP_LT">
 			<rust variant="FcmpLT"/>
 		</op>
 
-		<op name="FCMP_LE" builder="float_compare_less_equal" shape="float_comparison">
-			<description>Tests whether <ref name="left"/> is less than or equal to <ref name="right"/>
-				as floating point values.</description>
-			<form><ref name="left"/> f&lt;= <ref name="right"/></form>
-			<py traits="floating_point"/>
+		<op name="FCMP_LE">
 			<rust variant="FcmpLE"/>
 		</op>
 
-		<op name="FCMP_GE" builder="float_compare_greater_equal" shape="float_comparison">
-			<description>Tests whether <ref name="left"/> is greater than or equal to <ref name="right"/>
-				as floating point values.</description>
-			<form><ref name="left"/> f&gt;= <ref name="right"/></form>
-			<py traits="floating_point"/>
+		<op name="FCMP_GE">
 			<rust variant="FcmpGE"/>
 		</op>
 
-		<op name="FCMP_GT" builder="float_compare_greater_than" shape="float_comparison">
-			<description>Tests whether <ref name="left"/> is greater than <ref name="right"/> as floating
-				point values.</description>
-			<form><ref name="left"/> f&gt; <ref name="right"/></form>
-			<py traits="floating_point"/>
+		<op name="FCMP_GT">
 			<rust variant="FcmpGT"/>
 		</op>
 
-		<op name="FCMP_O" builder="float_compare_ordered" shape="float_comparison">
-			<description>Tests whether <ref name="left"/> and <ref name="right"/> are ordered,
-				which they are when neither is NaN.</description>
-			<form>is_ordered<size/>(<ref name="left"/>, <ref name="right"/>)</form>
-			<py traits="floating_point"/>
-		</op>
+		<op name="FCMP_O"/>
 
-		<op name="FCMP_UO" builder="float_compare_unordered" shape="float_comparison">
-			<description>Tests whether <ref name="left"/> and <ref name="right"/> are unordered,
-				which they are when either is NaN.</description>
-			<form>is_unordered<size/>(<ref name="left"/>, <ref name="right"/>)</form>
-			<py traits="floating_point"/>
+		<op name="FCMP_UO">
 			<rust variant="FcmpUO"/>
 		</op>
 	</group>
@@ -1709,28 +1159,10 @@
 			<py mixin="_MemoryIntrinsicOutputSsaFormatting" traits="ssa"/>
 		</op>
 
-		<op name="LOAD_SSA">
-			<operand name="src">
-				<integer width="any"/>
-			</operand>
-			<operand name="src_memory" kind="memory_version"/>
-			<result>
-				<bits width="size"/>
-			</result>
-			<py traits="load ssa"/>
-		</op>
+		<op name="LOAD_SSA"/>
 
-		<op name="STORE_SSA" placement="statement">
-			<operand name="dest">
-				<integer width="any"/>
-			</operand>
-			<operand name="dest_memory" kind="memory_version" written="true"/>
-			<operand name="src_memory" kind="memory_version"/>
-			<operand name="src">
-				<bits width="size"/>
-			</operand>
+		<op name="STORE_SSA">
 			<builder params="dest src dest_memory src_memory"/>
-			<py traits="store ssa"/>
 		</op>
 
 		<op name="INTRINSIC_SSA" placement="statement" sized="false">
@@ -1771,10 +1203,7 @@
 			<py traits="phi"/>
 		</op>
 
-		<op name="MEM_PHI" builder="memory_phi" placement="statement" sized="false">
-			<operand name="dest_memory" kind="memory_version" written="true"/>
-			<operand name="src_memory" kind="memory_version_list"/>
-			<py traits="memory phi"/>
+		<op name="MEM_PHI">
 			<rust>
 				<type operand="dest_memory" is="usize"/>
 			</rust>
@@ -1782,93 +1211,36 @@
 	</group>
 
 	<group title="Bit manipulation">
-		<op name="BSWAP" builder="byte_swap" shape="unary" flags="true">
-			<doc>Reverse byte order of the whole value</doc>
-			<description>Reverses the byte order of <ref name="src"/>.</description>
-			<form>bswap<size/><flags/>(<ref name="src"/>)</form>
-			<py traits="arithmetic"/>
-		</op>
+		<op name="BSWAP" flags="true"/>
 
-		<op name="POPCNT" builder="population_count" shape="unary" flags="true">
-			<doc>Population count (number of set bits)</doc>
-			<description>Counts the set bits in <ref name="src"/>.</description>
-			<form>popcnt<size/><flags/>(<ref name="src"/>)</form>
-			<py traits="arithmetic"/>
-		</op>
+		<op name="POPCNT" flags="true"/>
 
-		<op name="CLZ" builder="count_leading_zeros" shape="unary" flags="true">
-			<doc>Count leading zero bits, where clz(0) == 8 * size</doc>
-			<description>Counts the leading zero bits in <ref name="src"/>. The result is
-				<code>8 * <ref name="size"/></code> when <ref name="src"/> is zero.</description>
-			<form>clz<size/><flags/>(<ref name="src"/>)</form>
-			<py traits="arithmetic"/>
-		</op>
+		<op name="CLZ" flags="true"/>
 
-		<op name="CTZ" builder="count_trailing_zeros" shape="unary" flags="true">
-			<doc>Count trailing zero bits, where ctz(0) == 8 * size</doc>
-			<description>Counts the trailing zero bits in <ref name="src"/>. The result is
-				<code>8 * <ref name="size"/></code> when <ref name="src"/> is zero.</description>
-			<form>ctz<size/><flags/>(<ref name="src"/>)</form>
-			<py traits="arithmetic"/>
-		</op>
+		<op name="CTZ" flags="true"/>
 
-		<op name="RBIT" builder="reverse_bits" shape="unary" flags="true">
-			<doc>Reverse bit order of the whole value</doc>
-			<description>Reverses the bit order of <ref name="src"/>.</description>
-			<form>rbit<size/><flags/>(<ref name="src"/>)</form>
-			<py traits="arithmetic"/>
-		</op>
+		<op name="RBIT" flags="true"/>
 
-		<op name="CLS" builder="count_leading_signs" shape="unary" flags="true">
-			<doc>Count the bits below the sign bit that match it</doc>
-			<description>Counts the bits below the sign bit of <ref name="src"/> that match it.</description>
-			<form>cls<size/><flags/>(<ref name="src"/>)</form>
-			<py traits="arithmetic"/>
-		</op>
+		<op name="CLS" flags="true"/>
 	</group>
 
 	<group title="Integer minimum, maximum and absolute value">
-		<op name="MINS" builder="min_signed" shape="binary" flags="true">
-			<doc>Signed minimum of left and right</doc>
-			<description>The smaller of <ref name="left"/> and <ref name="right"/> as signed
-				integers.</description>
-			<form>mins<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-			<py traits="arithmetic signed"/>
-			<rust variant="MinSigned" lifter="min_signed"/>
+		<op name="MINS" flags="true">
+			<rust lifter="min_signed"/>
 		</op>
 
-		<op name="MAXS" builder="max_signed" shape="binary" flags="true">
-			<doc>Signed maximum of left and right</doc>
-			<description>The larger of <ref name="left"/> and <ref name="right"/> as signed
-				integers.</description>
-			<form>maxs<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-			<py traits="arithmetic signed"/>
-			<rust variant="MaxSigned" lifter="max_signed"/>
+		<op name="MAXS" flags="true">
+			<rust lifter="max_signed"/>
 		</op>
 
-		<op name="MINU" builder="min_unsigned" shape="binary" flags="true">
-			<doc>Unsigned minimum of left and right</doc>
-			<description>The smaller of <ref name="left"/> and <ref name="right"/> as unsigned
-				integers.</description>
-			<form>minu<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-			<py traits="arithmetic"/>
-			<rust variant="MinUnsigned" lifter="min_unsigned"/>
+		<op name="MINU" flags="true">
+			<rust lifter="min_unsigned"/>
 		</op>
 
-		<op name="MAXU" builder="max_unsigned" shape="binary" flags="true">
-			<doc>Unsigned maximum of left and right</doc>
-			<description>The larger of <ref name="left"/> and <ref name="right"/> as unsigned
-				integers.</description>
-			<form>maxu<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
-			<py traits="arithmetic"/>
-			<rust variant="MaxUnsigned" lifter="max_unsigned"/>
+		<op name="MAXU" flags="true">
+			<rust lifter="max_unsigned"/>
 		</op>
 
-		<op name="ABS" builder="absolute_value" shape="unary" flags="true">
-			<doc>Signed absolute value of src, where abs(INT_MIN) == INT_MIN</doc>
-			<description>The absolute value of <ref name="src"/> as a signed integer.</description>
-			<form>abs<size/><flags/>(<ref name="src"/>)</form>
-			<py traits="arithmetic"/>
-		</op>
+		<op name="ABS" flags="true"/>
 	</group>
 </il>

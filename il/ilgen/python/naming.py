@@ -28,8 +28,8 @@ class Names:
 		"""The builder parameter for an arg. The op's py param can name it. Otherwise it's the property name of the
 		value it writes, or its parameter words in snake_case where another arg writes a value of the same name."""
 		param = op.py.params.get(arg.name)
-		if param is not None:
-			return param
+		if param is not None and param.name is not None:
+			return param.name
 
 		if arg.clashes:
 			return '_'.join(arg.param_words)

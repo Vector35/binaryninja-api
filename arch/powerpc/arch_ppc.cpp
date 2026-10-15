@@ -2572,9 +2572,8 @@ public:
 			writePointer(target);
 			break;
 		case R_PPC_GLOB_DAT:
-			// R_PPC64_GLOB_DAT requires S + A. Keep the existing 32-bit
-			// handler behavior separate from this PPC64 fix.
-			writePointer(arch->GetAddressSize() == 8 ? target + info.addend : target);
+			// Both R_PPC_GLOB_DAT and R_PPC64_GLOB_DAT require S + A.
+			writePointer(target + info.addend);
 			break;
 		case R_PPC_PLTREL24:
 			dest32[0] = swap((swap(dest32[0]) & 0xfc000003) |

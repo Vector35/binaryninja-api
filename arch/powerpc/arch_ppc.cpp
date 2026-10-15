@@ -686,9 +686,21 @@ class PowerpcArchitecture: public Architecture
 
 	virtual BNIntrinsicClass GetIntrinsicClass(uint32_t intrinsic) override
 	{
-		// Reservation operations carry hidden state, including consumption on failure.
-		return intrinsic == PPC_INTRIN_COPY_STRING_WORDS || intrinsic == PPC_INTRIN_SET_RESERVATION
-			|| intrinsic == PPC_INTRIN_CHECK_RESERVATION ? MemoryIntrinsicClass : GeneralIntrinsicClass;
+		switch (intrinsic)
+		{
+		case PPC_INTRIN_COPY_STRING_WORDS:
+		case PPC_INTRIN_SET_RESERVATION:
+		case PPC_INTRIN_CHECK_RESERVATION:
+		case PPC_INTRIN_SYNC: case PPC_INTRIN_LWSYNC: case PPC_INTRIN_PTESYNC:
+		case PPC_INTRIN_EIEIO: case PPC_INTRIN_ISYNC: case PPC_INTRIN_MBAR:
+		case PPC_INTRIN_DCBZ: case PPC_INTRIN_DCBZL: case PPC_INTRIN_DCBF:
+		case PPC_INTRIN_DCBST: case PPC_INTRIN_DCBI: case PPC_INTRIN_ICBI:
+		case PPC_INTRIN_MTMSR: case PPC_INTRIN_MTMSRD:
+		case PPC_INTRIN_MTSPR:
+			return MemoryIntrinsicClass;
+		default:
+			return GeneralIntrinsicClass;
+		}
 	}
 
 	virtual string GetIntrinsicName(uint32_t intrinsic) override
@@ -723,6 +735,62 @@ class PowerpcArchitecture: public Architecture
 		case PPC_INTRIN_FCFIDU: return "__fcfidu";
 		case PPC_INTRIN_FCFIDS: return "__fcfids";
 		case PPC_INTRIN_FCFIDUS: return "__fcfidus";
+		case PPC_INTRIN_SYNC:
+			return "__sync";
+		case PPC_INTRIN_LWSYNC:
+			return "__lwsync";
+		case PPC_INTRIN_PTESYNC:
+			return "__ptesync";
+		case PPC_INTRIN_EIEIO:
+			return "__eieio";
+		case PPC_INTRIN_ISYNC:
+			return "__isync";
+		case PPC_INTRIN_MBAR:
+			return "__mbar";
+		case PPC_INTRIN_DCBZ:
+			return "__dcbz";
+		case PPC_INTRIN_DCBZL:
+			return "__dcbzl";
+		case PPC_INTRIN_DCBF:
+			return "__dcbf";
+		case PPC_INTRIN_DCBST:
+			return "__dcbst";
+		case PPC_INTRIN_DCBI:
+			return "__dcbi";
+		case PPC_INTRIN_ICBI:
+			return "__icbi";
+		case PPC_INTRIN_POPCNTB:
+			return "__popcntb";
+		case PPC_INTRIN_POPCNTW:
+			return "__popcntw";
+		case PPC_INTRIN_POPCNTD:
+			return "__popcntd";
+		case PPC_INTRIN_CMPB:
+			return "__cmpb";
+		case PPC_INTRIN_BPERMD:
+			return "__bpermd";
+		case PPC_INTRIN_DARN:
+			return "__darn";
+		case PPC_INTRIN_MFTB:
+			return "__mftb";
+		case PPC_INTRIN_MFTBU:
+			return "__mftbu";
+		case PPC_INTRIN_MTMSR:
+			return "__mtmsr";
+		case PPC_INTRIN_MTMSRD:
+			return "__mtmsrd";
+		case PPC_INTRIN_MFSPR:
+			return "__mfspr";
+		case PPC_INTRIN_MTSPR:
+			return "__mtspr";
+		case PPC_INTRIN_MFFS:
+			return "__mffs";
+		case PPC_INTRIN_MTFSF:
+			return "__mtfsf";
+		case PPC_INTRIN_MTFSB0:
+			return "__mtfsb0";
+		case PPC_INTRIN_MTFSB1:
+			return "__mtfsb1";
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
 			{
@@ -744,6 +812,9 @@ class PowerpcArchitecture: public Architecture
 		// on it to fill the next array.
 		static_assert(PPCIntrinsic::PPC_INTRIN_CNTLZW == 0,
 			"Invalid first PPCIntrinsic value. Please add your intrinsic further in the enum.");
+		static_assert(PPC_INTRIN_FRSP == 1 && PPC_PS_INTRIN_QUANTIZE == 3
+			&& PPC_PS_INTRIN_DEQUANTIZE == 4 && PPC_INTRIN_COPY_STRING_WORDS == 6,
+			"Existing PowerPC intrinsic IDs must not change.");
 
 		// Normal intrinsics.
 		for (uint32_t id = PPC_INTRIN_CNTLZW; id < PPCIntrinsic::PPC_INTRIN_END; id++) {
@@ -778,7 +849,7 @@ class PowerpcArchitecture: public Architecture
 	{
 		if (intrinsic >= PPC_INTRIN_FSQRT && intrinsic <= PPC_INTRIN_FCFIDUS)
 			return {NameAndType("value", Type::IntegerType(8, false)),
-				NameAndType("fpscr", Type::IntegerType(4, false))};
+				NameAndType("fpscr", Type::IntegerType(8, false))};
 		switch (intrinsic)
 		{
 		case PPC_INTRIN_CNTLZW:
@@ -793,6 +864,50 @@ class PowerpcArchitecture: public Architecture
 		case PPC_INTRIN_CHECK_RESERVATION:
 			return {NameAndType("address", Type::IntegerType(addressSize, false)),
 				NameAndType("size", Type::IntegerType(4, false))};
+		case PPC_INTRIN_DCBZ:
+		case PPC_INTRIN_DCBZL:
+		case PPC_INTRIN_DCBST:
+		case PPC_INTRIN_DCBI:
+		case PPC_INTRIN_ICBI:
+			return {NameAndType("address", Type::IntegerType(addressSize, false))};
+		case PPC_INTRIN_DCBF:
+			return {NameAndType("address", Type::IntegerType(addressSize, false)),
+				NameAndType("l", Type::IntegerType(4, false))};
+		case PPC_INTRIN_MBAR:
+			return {NameAndType("mo", Type::IntegerType(4, false))};
+		case PPC_INTRIN_POPCNTB:
+		case PPC_INTRIN_POPCNTW:
+		case PPC_INTRIN_POPCNTD:
+			return {NameAndType(Type::IntegerType(addressSize, false))};
+		case PPC_INTRIN_CMPB:
+			return {NameAndType(Type::IntegerType(addressSize, false)),
+				NameAndType(Type::IntegerType(addressSize, false))};
+		case PPC_INTRIN_BPERMD:
+			return {NameAndType(Type::IntegerType(8, false)),
+				NameAndType(Type::IntegerType(8, false))};
+		case PPC_INTRIN_DARN:
+			return {NameAndType("l", Type::IntegerType(4, false))};
+		case PPC_INTRIN_MTMSR:
+		case PPC_INTRIN_MTMSRD:
+			return {NameAndType("msr", Type::IntegerType(addressSize, false)),
+				NameAndType("value", Type::IntegerType(addressSize, false)),
+				NameAndType("l", Type::IntegerType(4, false))};
+		case PPC_INTRIN_MFSPR:
+			return {NameAndType("spr", Type::IntegerType(4, false))};
+		case PPC_INTRIN_MTSPR:
+			return {NameAndType("spr", Type::IntegerType(4, false)),
+				NameAndType("value", Type::IntegerType(addressSize, false))};
+		case PPC_INTRIN_MTFSF:
+			return {NameAndType("fpscr", Type::IntegerType(8, false)),
+				NameAndType("mask", Type::IntegerType(4, false)),
+				NameAndType("value", Type::IntegerType(8, false)),
+				NameAndType("l", Type::IntegerType(4, false)),
+				NameAndType("w", Type::IntegerType(4, false))};
+		case PPC_INTRIN_MFFS:
+			return {NameAndType("fpscr", Type::IntegerType(8, false))};
+		case PPC_INTRIN_MTFSB0:
+		case PPC_INTRIN_MTFSB1:
+			return {NameAndType("fpscr", Type::IntegerType(8, false)), NameAndType("bit", Type::IntegerType(4, false))};
 		// for now, quantize is operating on the float in, and the gqr that holds the scale
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
@@ -822,7 +937,7 @@ class PowerpcArchitecture: public Architecture
 	virtual vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic) override
 	{
 		if (intrinsic >= PPC_INTRIN_FSQRT && intrinsic <= PPC_INTRIN_FCFIDUS)
-			return {Type::IntegerType(8, false), Type::IntegerType(4, false)};
+			return {Type::IntegerType(8, false), Type::IntegerType(8, false)};
 		switch (intrinsic)
 		{
 		case PPC_INTRIN_CNTLZW:
@@ -834,6 +949,25 @@ class PowerpcArchitecture: public Architecture
 			return vector<Confidence<Ref<Type>>>(8, Type::IntegerType(GetAddressSize(), false));
 		case PPC_INTRIN_CHECK_RESERVATION:
 			return {Type::BoolType()};
+		case PPC_INTRIN_POPCNTB:
+		case PPC_INTRIN_POPCNTW:
+		case PPC_INTRIN_POPCNTD:
+		case PPC_INTRIN_CMPB:
+		case PPC_INTRIN_MFTB:
+		case PPC_INTRIN_MFSPR:
+		case PPC_INTRIN_MTMSR:
+		case PPC_INTRIN_MTMSRD:
+			return {Type::IntegerType(addressSize, false)};
+		case PPC_INTRIN_BPERMD:
+		case PPC_INTRIN_DARN:
+			return {Type::IntegerType(8, false)};
+		case PPC_INTRIN_MFTBU:
+			return {Type::IntegerType(4, false)};
+		case PPC_INTRIN_MFFS:
+		case PPC_INTRIN_MTFSF:
+		case PPC_INTRIN_MTFSB0:
+		case PPC_INTRIN_MTFSB1:
+			return {Type::IntegerType(8, false)};
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
 			{
@@ -1636,7 +1770,7 @@ class PowerpcArchitecture: public Architecture
 			PPC_REG_GPR20,  PPC_REG_GPR21,  PPC_REG_GPR22,  PPC_REG_GPR23,
 			PPC_REG_GPR24,  PPC_REG_GPR25,  PPC_REG_GPR26,  PPC_REG_GPR27,
 			PPC_REG_GPR28,  PPC_REG_GPR29,  PPC_REG_GPR30,  PPC_REG_GPR31,
-			PPC_REG_FPSCR
+			PPC_REG_FPSCR, PPC_REG_MSR
 		};
 	}
 
@@ -1668,7 +1802,7 @@ class PowerpcArchitecture: public Architecture
 			PPC_REG_GPR24, PPC_REG_GPR25, PPC_REG_GPR26, PPC_REG_GPR27,
 			PPC_REG_GPR28, PPC_REG_GPR29, PPC_REG_GPR30, PPC_REG_GPR31,
 
-			PPC_REG_XER, PPC_REG_LR, PPC_REG_FPSCR, // PPC_REG_CTR,
+			PPC_REG_XER, PPC_REG_LR, PPC_REG_FPSCR, PPC_REG_MSR, // PPC_REG_CTR,
 
 			// PPC_REG_FR0,  PPC_REG_FR1,  PPC_REG_FR2,  PPC_REG_FR3,
 			// PPC_REG_FR4,  PPC_REG_FR5,  PPC_REG_FR6,  PPC_REG_FR7,
@@ -1775,7 +1909,8 @@ class PowerpcArchitecture: public Architecture
 
 			case PPC_REG_CARRY: return RegisterInfo(PPC_REG_CARRY, 0, 4);
 			case PPC_REG_XER: return RegisterInfo(PPC_REG_XER, 0, 4);
-			case PPC_REG_FPSCR: return RegisterInfo(PPC_REG_FPSCR, 0, 4);
+			case PPC_REG_FPSCR: return RegisterInfo(PPC_REG_FPSCR, 0, 8);
+			case PPC_REG_MSR: return RegisterInfo(PPC_REG_MSR, 0, addressSize);
 			case PPC_REG_LR: return RegisterInfo(PPC_REG_LR, 0, addressSize);
 			case PPC_REG_CTR: return RegisterInfo(PPC_REG_CTR, 0, addressSize);
 			case PPC_REG_RM: return RegisterInfo(PPC_REG_RM, 0, addressSize);

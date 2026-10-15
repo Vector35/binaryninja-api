@@ -39,6 +39,7 @@ const char* PowerPCRegisterName(uint32_t regId)
 
 		case PPC_REG_XER: return "xer";
 		case PPC_REG_FPSCR: return "fpscr";
+		case PPC_REG_MSR: return "msr";
 		case PPC_REG_LR: return "lr";
 		case PPC_REG_CTR: return "ctr";
 		case PPC_REG_CARRY: return "ca";

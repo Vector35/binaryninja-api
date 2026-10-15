@@ -230,6 +230,7 @@ extern "C" {
 		PPC_REG_GQR6,
 		PPC_REG_GQR7,
 		PPC_REG_FPSCR,
+		PPC_REG_MSR,
 	};
 
 #ifndef __cplusplus

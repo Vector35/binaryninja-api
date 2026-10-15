@@ -473,6 +473,76 @@ static void ByteReversedStore(LowLevelILFunction &il, Instruction* instruction, 
 	il.AddInstruction(il.Store(size, addr, val));                             // [(rA|0) + (rB)] = swap(rS)
 }
 
+// Power ISA SINGLE/DOUBLE memory conversions are bit packing, not arithmetic
+// conversions: in particular they do not quiet signaling NaNs or update FPSCR.
+static ExprId SingleBits(LowLevelILFunction& il, ExprId value)
+{
+	il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0), value));
+	auto source = [&]() { return il.Register(8, LLIL_TEMP(0)); };
+	auto exponent = [&]() { return il.And(4, il.LowPart(4,
+		il.LogicalShiftRight(8, source(), il.Const(1, 52))), il.Const(4, 0x7ff)); };
+	auto sign = [&]() { return il.And(4, il.LowPart(4,
+		il.LogicalShiftRight(8, source(), il.Const(1, 32))), il.Const(4, 0x80000000)); };
+	LowLevelILLabel normal, smallLabel, denormal, zero, done;
+	il.AddInstruction(il.If(il.CompareUnsignedGreaterThan(4, exponent(), il.Const(4, 896)), normal, smallLabel));
+	il.MarkLabel(normal);
+	il.AddInstruction(il.SetRegister(4, LLIL_TEMP(1), il.Or(4,
+		il.And(4, il.LowPart(4, il.LogicalShiftRight(8, source(), il.Const(1, 32))), il.Const(4, 0xc0000000)),
+		il.And(4, il.LowPart(4, il.LogicalShiftRight(8, source(), il.Const(1, 29))), il.Const(4, 0x3fffffff)))));
+	il.AddInstruction(il.Goto(done));
+	il.MarkLabel(smallLabel);
+	il.AddInstruction(il.If(il.CompareUnsignedGreaterEqual(4, exponent(), il.Const(4, 874)), denormal, zero));
+	il.MarkLabel(denormal);
+	il.AddInstruction(il.SetRegister(4, LLIL_TEMP(1), il.Or(4, sign(), il.LowPart(4,
+		il.LogicalShiftRight(8,
+			il.Or(8, il.And(8, source(), il.Const(8, 0x000fffffffffffffULL)), il.Const(8, 1ULL << 52)),
+			il.Sub(4, il.Const(4, 926), exponent()))))));
+	il.AddInstruction(il.Goto(done));
+	il.MarkLabel(zero);
+	// Out-of-range nonzero inputs have undefined results; choose signed zero.
+	il.AddInstruction(il.SetRegister(4, LLIL_TEMP(1), sign()));
+	il.MarkLabel(done);
+	return il.Register(4, LLIL_TEMP(1));
+}
+
+static ExprId DoubleBits(LowLevelILFunction& il, ExprId value)
+{
+	il.AddInstruction(il.SetRegister(4, LLIL_TEMP(0), value));
+	auto source = [&]() { return il.Register(4, LLIL_TEMP(0)); };
+	auto fraction = [&]() { return il.And(4, source(), il.Const(4, 0x7fffff)); };
+	auto exponent = [&]() { return il.And(4,
+		il.LogicalShiftRight(4, source(), il.Const(1, 23)), il.Const(4, 0xff)); };
+	auto sign = [&]() { return il.ShiftLeft(8,
+		il.ZeroExtend(8, il.And(4, source(), il.Const(4, 0x80000000))), il.Const(1, 32)); };
+	LowLevelILLabel normal, smallLabel, denormal, zero, done;
+	il.AddInstruction(il.If(il.CompareEqual(4, exponent(), il.Const(4, 0)), smallLabel, normal));
+	il.MarkLabel(normal);
+	ExprId exp = il.Add(8, il.ZeroExtend(8, exponent()), il.Const(8, 896));
+	// Map exponent 255 to 2047 while preserving the NaN payload/signaling bit.
+	exp = il.Add(8, exp, il.Mult(8, il.BoolToInt(8,
+		il.CompareEqual(4, exponent(), il.Const(4, 255))), il.Const(8, 896)));
+	il.AddInstruction(il.SetRegister(8, LLIL_TEMP(1), il.Or(8, sign(), il.Or(8,
+		il.ShiftLeft(8, exp, il.Const(1, 52)),
+		il.ShiftLeft(8, il.ZeroExtend(8, fraction()), il.Const(1, 29))))));
+	il.AddInstruction(il.Goto(done));
+	il.MarkLabel(smallLabel);
+	il.AddInstruction(il.If(il.CompareEqual(4, fraction(), il.Const(4, 0)), zero, denormal));
+	il.MarkLabel(denormal);
+	il.AddInstruction(il.SetRegister(4, LLIL_TEMP(2),
+		il.Sub(4, il.CountLeadingZeros(4, fraction()), il.Const(4, 8))));
+	ExprId shift = il.Register(4, LLIL_TEMP(2));
+	exp = il.Sub(8, il.Const(8, 897), il.ZeroExtend(8, shift));
+	ExprId frac = il.And(4, il.ShiftLeft(4, fraction(), shift), il.Const(4, 0x7fffff));
+	il.AddInstruction(il.SetRegister(8, LLIL_TEMP(1), il.Or(8, sign(), il.Or(8,
+		il.ShiftLeft(8, exp, il.Const(1, 52)),
+		il.ShiftLeft(8, il.ZeroExtend(8, frac), il.Const(1, 29))))));
+	il.AddInstruction(il.Goto(done));
+	il.MarkLabel(zero);
+	il.AddInstruction(il.SetRegister(8, LLIL_TEMP(1), sign()));
+	il.MarkLabel(done);
+	return il.Register(8, LLIL_TEMP(1));
+}
+
 static void load_float(LowLevelILFunction& il,
 	int load_sz,
 	Operand* operand1, /* register that gets read/written */
@@ -511,7 +581,10 @@ static void load_float(LowLevelILFunction& il,
 		return;
 	}
 	// FPRs hold binary64 values, including single-precision loads.
-	il.AddInstruction(il.SetRegister(8, operand1->reg, il.FloatConvert(8, il.Operand(1, il.Load(load_sz, tmp)))));
+	ExprId value = il.Operand(1, il.Load(load_sz, tmp));
+	if (load_sz == 4)
+		value = DoubleBits(il, value);
+	il.AddInstruction(il.SetRegister(8, operand1->reg, value));
 
 	if (update == true)
 	{
@@ -3113,7 +3186,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_STFS:
 		case PPC_ID_STFSU:
 			REQUIRE2OPS
-			ei0 = il.FloatConvert(4, operToIL_a(il, oper0, 8));
+			ei0 = SingleBits(il, operToIL_a(il, oper0, 8));
 			ei0 = il.Store(4, operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l), ei0);
 			il.AddInstruction(ei0);
 
@@ -3127,7 +3200,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_STFSX:
 		case PPC_ID_STFSUX:
 			REQUIRE3OPS
-			ei0 = il.FloatConvert(4, operToIL_a(il, oper0, 8));
+			ei0 = SingleBits(il, operToIL_a(il, oper0, 8));
 			ei1 = il.Add(addressSize_l,
 				operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
 				operToIL_a(il, oper2, addressSize_l));
@@ -3146,7 +3219,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_STFDU:
 			REQUIRE2OPS
 			ei0 = il.Store(8, operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
-				il.FloatConvert(8, operToIL_a(il, oper0,  8)));
+				operToIL_a(il, oper0, 8));
 			il.AddInstruction(ei0);
 
 			if (instruction->id == PPC_ID_STFDU) {
@@ -3163,7 +3236,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				il.Add(addressSize_l,
 					operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
 					operToIL_a(il, oper2, addressSize_l)),
-				il.FloatConvert(8, operToIL_a(il, oper0, 8)));
+				operToIL_a(il, oper0, 8));
 			il.AddInstruction(ei0);
 
 			if (instruction->id == PPC_ID_STFDUX) {

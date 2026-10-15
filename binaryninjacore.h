@@ -1656,6 +1656,7 @@ extern "C"
 
 	BN_ENUM(uint8_t, BNHighLevelILOperation)
 	{
+		// BEGIN GENERATED hlil-operations: from api/il, do not edit
 		HLIL_NOP,
 
 		HLIL_BLOCK,
@@ -1664,7 +1665,7 @@ extern "C"
 		HLIL_DO_WHILE,
 		HLIL_FOR,
 		HLIL_SWITCH,
-		HLIL_CASE,
+		HLIL_CASE,  // Only valid within HLIL_SWITCH
 		HLIL_BREAK,
 		HLIL_CONTINUE,
 		HLIL_JUMP,
@@ -1747,7 +1748,7 @@ extern "C"
 		HLIL_UNIMPL,
 		HLIL_UNIMPL_MEM,
 		HLIL_STRUCT_INIT,
-		HLIL_STRUCT_INIT_FIELD,  // Only valid in HLIL_STRUCT_INIT
+		HLIL_STRUCT_INIT_FIELD,  // Only valid within HLIL_STRUCT_INIT
 
 		// Floating point
 		HLIL_FADD,
@@ -1773,9 +1774,7 @@ extern "C"
 		HLIL_FCMP_O,
 		HLIL_FCMP_UO,
 
-		// Unreachable hint, typically used in switch statements that analysis knows
-		// has an unreachable default.
-		HLIL_UNREACHABLE,
+		HLIL_UNREACHABLE,  // Marks a point analysis knows execution can't reach
 
 		// The following instructions are only used in SSA form
 		HLIL_WHILE_SSA,
@@ -1800,17 +1799,18 @@ extern "C"
 		// Bit manipulation
 		HLIL_BSWAP,   // Reverse byte order of the whole value
 		HLIL_POPCNT,  // Population count (number of set bits)
-		HLIL_CLZ,     // Count leading zero bits; clz(0) == 8 * size
-		HLIL_CTZ,     // Count trailing zero bits; ctz(0) == 8 * size
+		HLIL_CLZ,     // Count leading zero bits, where clz(0) == 8 * size
+		HLIL_CTZ,     // Count trailing zero bits, where ctz(0) == 8 * size
 		HLIL_RBIT,    // Reverse bit order of the whole value
-		HLIL_CLS,     // Count leading sign bits; number of bits below the sign bit that match it
+		HLIL_CLS,     // Count the bits below the sign bit that match it
 
 		// Integer minimum, maximum and absolute value
-		HLIL_MINS,    // Signed minimum of left and right
-		HLIL_MAXS,    // Signed maximum of left and right
-		HLIL_MINU,    // Unsigned minimum of left and right
-		HLIL_MAXU,    // Unsigned maximum of left and right
-		HLIL_ABS      // Signed absolute value of src; abs(INT_MIN) == INT_MIN
+		HLIL_MINS,  // Signed minimum of left and right
+		HLIL_MAXS,  // Signed maximum of left and right
+		HLIL_MINU,  // Unsigned minimum of left and right
+		HLIL_MAXU,  // Unsigned maximum of left and right
+		HLIL_ABS    // Signed absolute value of src, where abs(INT_MIN) == INT_MIN
+		// END GENERATED hlil-operations
 	};
 
 	typedef struct BNHighLevelILInstruction

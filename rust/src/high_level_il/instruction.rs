@@ -114,41 +114,153 @@ impl HighLevelILInstruction {
         use BNHighLevelILOperation::*;
         use HighLevelILInstructionKind as Op;
         let kind = match op.operation {
+            // BEGIN GENERATED hlil-decode: from api/il, do not edit
             HLIL_NOP => Op::Nop,
+            HLIL_BLOCK => Op::Block(Block {
+                first_param: op.operands[1] as usize,
+                num_params: op.operands[0] as usize,
+            }),
+            HLIL_IF => Op::If(If {
+                condition: HighLevelExpressionIndex::from(op.operands[0]),
+                cond_true: HighLevelExpressionIndex::from(op.operands[1]),
+                cond_false: HighLevelExpressionIndex::from(op.operands[2]),
+            }),
+            HLIL_WHILE => Op::While(While {
+                condition: HighLevelExpressionIndex::from(op.operands[0]),
+                body: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_DO_WHILE => Op::DoWhile(While {
+                body: HighLevelExpressionIndex::from(op.operands[0]),
+                condition: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_FOR => Op::For(ForLoop {
+                init: HighLevelExpressionIndex::from(op.operands[0]),
+                condition: HighLevelExpressionIndex::from(op.operands[1]),
+                update: HighLevelExpressionIndex::from(op.operands[2]),
+                body: HighLevelExpressionIndex::from(op.operands[3]),
+            }),
+            HLIL_SWITCH => Op::Switch(Switch {
+                condition: HighLevelExpressionIndex::from(op.operands[0]),
+                default: HighLevelExpressionIndex::from(op.operands[1]),
+                first_case: op.operands[3] as usize,
+                num_cases: op.operands[2] as usize,
+            }),
+            HLIL_CASE => Op::Case(Case {
+                first_value: op.operands[1] as usize,
+                num_values: op.operands[0] as usize,
+                body: HighLevelExpressionIndex::from(op.operands[2]),
+            }),
             HLIL_BREAK => Op::Break,
             HLIL_CONTINUE => Op::Continue,
+            HLIL_JUMP => Op::Jump(Jump {
+                dest: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_RET => Op::Ret(Ret {
+                first_src: op.operands[1] as usize,
+                num_srcs: op.operands[0] as usize,
+            }),
             HLIL_NORET => Op::Noret,
-            HLIL_UNREACHABLE => Op::Unreachable,
-            HLIL_BP => Op::Bp,
-            HLIL_UNDEF => Op::Undef,
-            HLIL_UNIMPL => Op::Unimpl,
-            HLIL_ADC => Op::Adc(BinaryOpCarry {
-                left: HighLevelExpressionIndex::from(op.operands[0]),
-                right: HighLevelExpressionIndex::from(op.operands[1]),
-                carry: HighLevelExpressionIndex::from(op.operands[2]),
+            HLIL_GOTO => Op::Goto(Label {
+                target: op.operands[0],
             }),
-            HLIL_SBB => Op::Sbb(BinaryOpCarry {
-                left: HighLevelExpressionIndex::from(op.operands[0]),
-                right: HighLevelExpressionIndex::from(op.operands[1]),
-                carry: HighLevelExpressionIndex::from(op.operands[2]),
+            HLIL_LABEL => Op::Label(Label {
+                target: op.operands[0],
             }),
-            HLIL_RLC => Op::Rlc(BinaryOpCarry {
-                left: HighLevelExpressionIndex::from(op.operands[0]),
-                right: HighLevelExpressionIndex::from(op.operands[1]),
-                carry: HighLevelExpressionIndex::from(op.operands[2]),
+            HLIL_VAR_DECLARE => Op::VarDeclare(Var {
+                var: get_var(op.operands[0]),
             }),
-            HLIL_RRC => Op::Rrc(BinaryOpCarry {
-                left: HighLevelExpressionIndex::from(op.operands[0]),
-                right: HighLevelExpressionIndex::from(op.operands[1]),
-                carry: HighLevelExpressionIndex::from(op.operands[2]),
+            HLIL_VAR_INIT => Op::VarInit(VarInit {
+                dest: get_var(op.operands[0]),
+                src: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_ASSIGN => Op::Assign(Assign {
+                dest: HighLevelExpressionIndex::from(op.operands[0]),
+                src: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_ASSIGN_UNPACK => Op::AssignUnpack(AssignUnpack {
+                first_dest: op.operands[1] as usize,
+                num_dests: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[2]),
+            }),
+            HLIL_FORCE_VER => Op::ForceVer(ForceVer {
+                dest: get_var(op.operands[0]),
+                src: get_var(op.operands[1]),
+            }),
+            HLIL_ASSERT => Op::Assert(Assert {
+                src: get_var(op.operands[0]),
+                constraint_index: op.operands[1] as usize,
+            }),
+            HLIL_VAR => Op::Var(Var {
+                var: get_var(op.operands[0]),
+            }),
+            HLIL_STRUCT_FIELD => Op::StructField(StructField {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+                offset: op.operands[1],
+                member_index: get_member_index(op.operands[2]),
+            }),
+            HLIL_ARRAY_INDEX => Op::ArrayIndex(ArrayIndex {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+                index: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_SPLIT => Op::Split(Split {
+                high: HighLevelExpressionIndex::from(op.operands[0]),
+                low: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_DEREF => Op::Deref(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_DEREF_FIELD => Op::DerefField(StructField {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+                offset: op.operands[1],
+                member_index: get_member_index(op.operands[2]),
+            }),
+            HLIL_ADDRESS_OF => Op::AddressOf(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_PASS_BY_REF => Op::PassByRef(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_RETURN_BY_REF => Op::ReturnByRef(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_CONST => Op::Const(Const {
+                constant: op.operands[0],
+            }),
+            HLIL_CONST_DATA => Op::ConstData(ConstData {
+                constant_data_kind: op.operands[0] as u32,
+                constant_data_value: op.operands[1] as i64,
+                size: op.size,
+            }),
+            HLIL_CONST_PTR => Op::ConstPtr(Const {
+                constant: op.operands[0],
+            }),
+            HLIL_EXTERN_PTR => Op::ExternPtr(ExternPtr {
+                constant: op.operands[0],
+                offset: op.operands[1],
+            }),
+            HLIL_FLOAT_CONST => Op::FloatConst(FloatConst {
+                constant: get_float(op.operands[0], op.size),
+            }),
+            HLIL_IMPORT => Op::Import(Const {
+                constant: op.operands[0],
             }),
             HLIL_ADD => Op::Add(BinaryOp {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
                 right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
+            HLIL_ADC => Op::Adc(BinaryOpCarry {
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+                carry: HighLevelExpressionIndex::from(op.operands[2]),
+            }),
             HLIL_SUB => Op::Sub(BinaryOp {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
                 right: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_SBB => Op::Sbb(BinaryOpCarry {
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+                carry: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_AND => Op::And(BinaryOp {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
@@ -178,9 +290,19 @@ impl HighLevelILInstruction {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
                 right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
+            HLIL_RLC => Op::Rlc(BinaryOpCarry {
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+                carry: HighLevelExpressionIndex::from(op.operands[2]),
+            }),
             HLIL_ROR => Op::Ror(BinaryOp {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
                 right: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_RRC => Op::Rrc(BinaryOpCarry {
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+                carry: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_MUL => Op::Mul(BinaryOp {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
@@ -226,21 +348,25 @@ impl HighLevelILInstruction {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
                 right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
-            HLIL_MINS => Op::MinSigned(BinaryOp {
-                left: HighLevelExpressionIndex::from(op.operands[0]),
-                right: HighLevelExpressionIndex::from(op.operands[1]),
+            HLIL_NEG => Op::Neg(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
-            HLIL_MAXS => Op::MaxSigned(BinaryOp {
-                left: HighLevelExpressionIndex::from(op.operands[0]),
-                right: HighLevelExpressionIndex::from(op.operands[1]),
+            HLIL_NOT => Op::Not(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
-            HLIL_MINU => Op::MinUnsigned(BinaryOp {
-                left: HighLevelExpressionIndex::from(op.operands[0]),
-                right: HighLevelExpressionIndex::from(op.operands[1]),
+            HLIL_SX => Op::Sx(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
-            HLIL_MAXU => Op::MaxUnsigned(BinaryOp {
-                left: HighLevelExpressionIndex::from(op.operands[0]),
-                right: HighLevelExpressionIndex::from(op.operands[1]),
+            HLIL_ZX => Op::Zx(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_LOW_PART => Op::LowPart(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_CALL => Op::Call(Call {
+                dest: HighLevelExpressionIndex::from(op.operands[0]),
+                first_param: op.operands[2] as usize,
+                num_params: op.operands[1] as usize,
             }),
             HLIL_CMP_E => Op::CmpE(BinaryOp {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
@@ -286,9 +412,44 @@ impl HighLevelILInstruction {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
                 right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
+            HLIL_BOOL_TO_INT => Op::BoolToInt(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
             HLIL_ADD_OVERFLOW => Op::AddOverflow(BinaryOp {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
                 right: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_SYSCALL => Op::Syscall(Syscall {
+                first_param: op.operands[1] as usize,
+                num_params: op.operands[0] as usize,
+            }),
+            HLIL_TAILCALL => Op::Tailcall(Call {
+                dest: HighLevelExpressionIndex::from(op.operands[0]),
+                first_param: op.operands[2] as usize,
+                num_params: op.operands[1] as usize,
+            }),
+            HLIL_INTRINSIC => Op::Intrinsic(Intrinsic {
+                intrinsic: op.operands[0] as u32,
+                first_param: op.operands[2] as usize,
+                num_params: op.operands[1] as usize,
+            }),
+            HLIL_BP => Op::Bp,
+            HLIL_TRAP => Op::Trap(Trap {
+                vector: op.operands[0],
+            }),
+            HLIL_UNDEF => Op::Undef,
+            HLIL_UNIMPL => Op::Unimpl,
+            HLIL_UNIMPL_MEM => Op::UnimplMem(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_STRUCT_INIT => Op::StructInit(StructInit {
+                first_field: op.operands[1] as usize,
+                num_fields: op.operands[0] as usize,
+            }),
+            HLIL_STRUCT_INIT_FIELD => Op::StructInitField(StructField {
+                offset: op.operands[0],
+                member_index: get_member_index(op.operands[1]),
+                src: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_FADD => Op::Fadd(BinaryOp {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
@@ -305,6 +466,36 @@ impl HighLevelILInstruction {
             HLIL_FDIV => Op::Fdiv(BinaryOp {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
                 right: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_FSQRT => Op::Fsqrt(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_FNEG => Op::Fneg(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_FABS => Op::Fabs(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_FLOAT_TO_INT => Op::FloatToInt(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_INT_TO_FLOAT => Op::IntToFloat(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_FLOAT_CONV => Op::FloatConv(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_ROUND_TO_INT => Op::RoundToInt(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_FLOOR => Op::Floor(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_CEIL => Op::Ceil(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+            }),
+            HLIL_FTRUNC => Op::Ftrunc(UnaryOp {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_FCMP_E => Op::FcmpE(BinaryOp {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
@@ -338,26 +529,27 @@ impl HighLevelILInstruction {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
                 right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
-            HLIL_ARRAY_INDEX => Op::ArrayIndex(ArrayIndex {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-                index: HighLevelExpressionIndex::from(op.operands[1]),
+            HLIL_UNREACHABLE => Op::Unreachable,
+            HLIL_WHILE_SSA => Op::WhileSsa(WhileSsa {
+                condition_phi: HighLevelExpressionIndex::from(op.operands[0]),
+                condition: HighLevelExpressionIndex::from(op.operands[1]),
+                body: HighLevelExpressionIndex::from(op.operands[2]),
             }),
-            HLIL_ARRAY_INDEX_SSA => Op::ArrayIndexSsa(ArrayIndexSsa {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-                src_memory: op.operands[1],
-                index: HighLevelExpressionIndex::from(op.operands[2]),
+            HLIL_DO_WHILE_SSA => Op::DoWhileSsa(WhileSsa {
+                body: HighLevelExpressionIndex::from(op.operands[0]),
+                condition_phi: HighLevelExpressionIndex::from(op.operands[1]),
+                condition: HighLevelExpressionIndex::from(op.operands[2]),
             }),
-            HLIL_ASSERT => Op::Assert(Assert {
-                src: get_var(op.operands[0]),
-                constraint_index: op.operands[1] as usize,
+            HLIL_FOR_SSA => Op::ForSsa(ForLoopSsa {
+                init: HighLevelExpressionIndex::from(op.operands[0]),
+                condition_phi: HighLevelExpressionIndex::from(op.operands[1]),
+                condition: HighLevelExpressionIndex::from(op.operands[2]),
+                update: HighLevelExpressionIndex::from(op.operands[3]),
+                body: HighLevelExpressionIndex::from(op.operands[4]),
             }),
-            HLIL_ASSERT_SSA => Op::AssertSsa(AssertSsa {
-                src: get_var_ssa((op.operands[0], op.operands[1] as usize)),
-                constraint_index: op.operands[2] as usize,
-            }),
-            HLIL_ASSIGN => Op::Assign(Assign {
-                dest: HighLevelExpressionIndex::from(op.operands[0]),
-                src: HighLevelExpressionIndex::from(op.operands[1]),
+            HLIL_VAR_INIT_SSA => Op::VarInitSsa(VarInitSsa {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                src: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_ASSIGN_MEM_SSA => Op::AssignMemSsa(AssignMemSsa {
                 dest: HighLevelExpressionIndex::from(op.operands[0]),
@@ -365,75 +557,72 @@ impl HighLevelILInstruction {
                 src: HighLevelExpressionIndex::from(op.operands[2]),
                 src_memory: op.operands[3],
             }),
-            HLIL_ASSIGN_UNPACK => Op::AssignUnpack(AssignUnpack {
-                num_dests: op.operands[0] as usize,
-                first_dest: op.operands[1] as usize,
-                src: HighLevelExpressionIndex::from(op.operands[2]),
-            }),
             HLIL_ASSIGN_UNPACK_MEM_SSA => Op::AssignUnpackMemSsa(AssignUnpackMemSsa {
-                num_dests: op.operands[0] as usize,
                 first_dest: op.operands[1] as usize,
+                num_dests: op.operands[0] as usize,
                 dest_memory: op.operands[2],
                 src: HighLevelExpressionIndex::from(op.operands[3]),
                 src_memory: op.operands[4],
             }),
-            HLIL_BLOCK => Op::Block(Block {
-                num_params: op.operands[0] as usize,
-                first_param: op.operands[1] as usize,
+            HLIL_FORCE_VER_SSA => Op::ForceVerSsa(ForceVerSsa {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                src: get_var_ssa(op.operands[2], op.operands[3] as usize),
             }),
-            HLIL_CALL => Op::Call(Call {
-                dest: HighLevelExpressionIndex::from(op.operands[0]),
-                num_params: op.operands[1] as usize,
-                first_param: op.operands[2] as usize,
+            HLIL_ASSERT_SSA => Op::AssertSsa(AssertSsa {
+                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                constraint_index: op.operands[2] as usize,
             }),
-            HLIL_TAILCALL => Op::Tailcall(Call {
-                dest: HighLevelExpressionIndex::from(op.operands[0]),
-                num_params: op.operands[1] as usize,
-                first_param: op.operands[2] as usize,
+            HLIL_VAR_SSA => Op::VarSsa(VarSsa {
+                var: get_var_ssa(op.operands[0], op.operands[1] as usize),
+            }),
+            HLIL_VAR_SSA_PARTIAL => Op::VarSsaPartial(VarSsaPartial {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                prev: get_var_ssa(op.operands[0], op.operands[2] as usize),
+            }),
+            HLIL_ARRAY_INDEX_SSA => Op::ArrayIndexSsa(ArrayIndexSsa {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+                src_memory: op.operands[1],
+                index: HighLevelExpressionIndex::from(op.operands[2]),
+            }),
+            HLIL_DEREF_SSA => Op::DerefSsa(DerefSsa {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+                src_memory: op.operands[1],
+            }),
+            HLIL_DEREF_FIELD_SSA => Op::DerefFieldSsa(DerefFieldSsa {
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+                src_memory: op.operands[1],
+                offset: op.operands[2],
+                member_index: get_member_index(op.operands[3]),
             }),
             HLIL_CALL_SSA => Op::CallSsa(CallSsa {
                 dest: HighLevelExpressionIndex::from(op.operands[0]),
-                num_params: op.operands[1] as usize,
                 first_param: op.operands[2] as usize,
+                num_params: op.operands[1] as usize,
                 dest_memory: op.operands[3],
                 src_memory: op.operands[4],
             }),
-            HLIL_CASE => Op::Case(Case {
-                num_values: op.operands[0] as usize,
-                first_value: op.operands[1] as usize,
-                body: HighLevelExpressionIndex::from(op.operands[2]),
+            HLIL_SYSCALL_SSA => Op::SyscallSsa(SyscallSsa {
+                first_param: op.operands[1] as usize,
+                num_params: op.operands[0] as usize,
+                dest_memory: op.operands[2],
+                src_memory: op.operands[3],
             }),
-            HLIL_CONST => Op::Const(Const {
-                constant: op.operands[0],
+            HLIL_INTRINSIC_SSA => Op::IntrinsicSsa(IntrinsicSsa {
+                intrinsic: op.operands[0] as u32,
+                first_param: op.operands[2] as usize,
+                num_params: op.operands[1] as usize,
+                dest_memory: op.operands[3],
+                src_memory: op.operands[4],
             }),
-            HLIL_CONST_PTR => Op::ConstPtr(Const {
-                constant: op.operands[0],
+            HLIL_VAR_PHI => Op::VarPhi(VarPhi {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                first_src: op.operands[3] as usize,
+                num_srcs: op.operands[2] as usize,
             }),
-            HLIL_IMPORT => Op::Import(Const {
-                constant: op.operands[0],
-            }),
-            HLIL_CONST_DATA => Op::ConstData(ConstData {
-                constant_data_kind: op.operands[0] as u32,
-                constant_data_value: op.operands[1] as i64,
-                size: op.size,
-            }),
-            HLIL_DEREF => Op::Deref(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_ADDRESS_OF => Op::AddressOf(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_PASS_BY_REF => Op::PassByRef(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_RETURN_BY_REF => Op::ReturnByRef(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_NEG => Op::Neg(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_NOT => Op::Not(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
+            HLIL_MEM_PHI => Op::MemPhi(MemPhi {
+                dest: op.operands[0],
+                first_src: op.operands[2] as usize,
+                num_srcs: op.operands[1] as usize,
             }),
             HLIL_BSWAP => Op::Bswap(UnaryOp {
                 src: HighLevelExpressionIndex::from(op.operands[0]),
@@ -453,213 +642,26 @@ impl HighLevelILInstruction {
             HLIL_CLS => Op::Cls(UnaryOp {
                 src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
+            HLIL_MINS => Op::MinSigned(BinaryOp {
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_MAXS => Op::MaxSigned(BinaryOp {
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_MINU => Op::MinUnsigned(BinaryOp {
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
+            HLIL_MAXU => Op::MaxUnsigned(BinaryOp {
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+            }),
             HLIL_ABS => Op::Abs(UnaryOp {
                 src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
-            HLIL_SX => Op::Sx(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_ZX => Op::Zx(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_LOW_PART => Op::LowPart(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_BOOL_TO_INT => Op::BoolToInt(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_UNIMPL_MEM => Op::UnimplMem(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_FSQRT => Op::Fsqrt(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_FNEG => Op::Fneg(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_FABS => Op::Fabs(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_FLOAT_TO_INT => Op::FloatToInt(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_INT_TO_FLOAT => Op::IntToFloat(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_FLOAT_CONV => Op::FloatConv(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_ROUND_TO_INT => Op::RoundToInt(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_FLOOR => Op::Floor(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_CEIL => Op::Ceil(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_FTRUNC => Op::Ftrunc(UnaryOp {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_DEREF_FIELD_SSA => Op::DerefFieldSsa(DerefFieldSsa {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-                src_memory: op.operands[1],
-                offset: op.operands[2],
-                member_index: get_member_index(op.operands[3]),
-            }),
-            HLIL_DEREF_SSA => Op::DerefSsa(DerefSsa {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-                src_memory: op.operands[1],
-            }),
-            HLIL_EXTERN_PTR => Op::ExternPtr(ExternPtr {
-                constant: op.operands[0],
-                offset: op.operands[1],
-            }),
-            HLIL_FLOAT_CONST => Op::FloatConst(FloatConst {
-                constant: get_float(op.operands[0], op.size),
-            }),
-            HLIL_FOR => Op::For(ForLoop {
-                init: HighLevelExpressionIndex::from(op.operands[0]),
-                condition: HighLevelExpressionIndex::from(op.operands[1]),
-                update: HighLevelExpressionIndex::from(op.operands[2]),
-                body: HighLevelExpressionIndex::from(op.operands[3]),
-            }),
-            HLIL_FOR_SSA => Op::ForSsa(ForLoopSsa {
-                init: HighLevelExpressionIndex::from(op.operands[0]),
-                condition_phi: HighLevelExpressionIndex::from(op.operands[1]),
-                condition: HighLevelExpressionIndex::from(op.operands[2]),
-                update: HighLevelExpressionIndex::from(op.operands[3]),
-                body: HighLevelExpressionIndex::from(op.operands[4]),
-            }),
-            HLIL_FORCE_VER => Op::ForceVer(ForceVer {
-                dest: get_var(op.operands[0]),
-                src: get_var(op.operands[1]),
-            }),
-            HLIL_FORCE_VER_SSA => Op::ForceVerSsa(ForceVerSsa {
-                dest: get_var_ssa((op.operands[0], op.operands[1] as usize)),
-                src: get_var_ssa((op.operands[2], op.operands[3] as usize)),
-            }),
-            HLIL_GOTO => Op::Goto(Label {
-                target: op.operands[0],
-            }),
-            HLIL_LABEL => Op::Label(Label {
-                target: op.operands[0],
-            }),
-            HLIL_IF => Op::If(If {
-                condition: HighLevelExpressionIndex::from(op.operands[0]),
-                cond_true: HighLevelExpressionIndex::from(op.operands[1]),
-                cond_false: HighLevelExpressionIndex::from(op.operands[2]),
-            }),
-            HLIL_INTRINSIC => Op::Intrinsic(Intrinsic {
-                intrinsic: op.operands[0] as u32,
-                num_params: op.operands[1] as usize,
-                first_param: op.operands[2] as usize,
-            }),
-            HLIL_INTRINSIC_SSA => Op::IntrinsicSsa(IntrinsicSsa {
-                intrinsic: op.operands[0] as u32,
-                num_params: op.operands[1] as usize,
-                first_param: op.operands[2] as usize,
-                dest_memory: op.operands[3],
-                src_memory: op.operands[4],
-            }),
-            HLIL_JUMP => Op::Jump(Jump {
-                dest: HighLevelExpressionIndex::from(op.operands[0]),
-            }),
-            HLIL_MEM_PHI => Op::MemPhi(MemPhi {
-                dest: op.operands[0],
-                num_srcs: op.operands[1] as usize,
-                first_src: op.operands[2] as usize,
-            }),
-            HLIL_RET => Op::Ret(Ret {
-                num_srcs: op.operands[0] as usize,
-                first_src: op.operands[1] as usize,
-            }),
-            HLIL_SPLIT => Op::Split(Split {
-                high: HighLevelExpressionIndex::from(op.operands[0]),
-                low: HighLevelExpressionIndex::from(op.operands[1]),
-            }),
-            HLIL_STRUCT_FIELD => Op::StructField(StructField {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-                offset: op.operands[1],
-                member_index: get_member_index(op.operands[2]),
-            }),
-            HLIL_DEREF_FIELD => Op::DerefField(StructField {
-                src: HighLevelExpressionIndex::from(op.operands[0]),
-                offset: op.operands[1],
-                member_index: get_member_index(op.operands[2]),
-            }),
-            HLIL_STRUCT_INIT => Op::StructInit(StructInit {
-                num_fields: op.operands[0] as usize,
-                first_field: op.operands[1] as usize,
-            }),
-            HLIL_STRUCT_INIT_FIELD => Op::StructInitField(StructField {
-                offset: op.operands[0],
-                member_index: get_member_index(op.operands[1]),
-                src: HighLevelExpressionIndex::from(op.operands[2]),
-            }),
-            HLIL_SWITCH => Op::Switch(Switch {
-                condition: HighLevelExpressionIndex::from(op.operands[0]),
-                default: HighLevelExpressionIndex::from(op.operands[1]),
-                num_cases: op.operands[2] as usize,
-                first_case: op.operands[3] as usize,
-            }),
-            HLIL_SYSCALL => Op::Syscall(Syscall {
-                num_params: op.operands[0] as usize,
-                first_param: op.operands[1] as usize,
-            }),
-            HLIL_SYSCALL_SSA => Op::SyscallSsa(SyscallSsa {
-                num_params: op.operands[0] as usize,
-                first_param: op.operands[1] as usize,
-                dest_memory: op.operands[2],
-                src_memory: op.operands[3],
-            }),
-            HLIL_TRAP => Op::Trap(Trap {
-                vector: op.operands[0],
-            }),
-            HLIL_VAR_DECLARE => Op::VarDeclare(Var {
-                var: get_var(op.operands[0]),
-            }),
-            HLIL_VAR => Op::Var(Var {
-                var: get_var(op.operands[0]),
-            }),
-            HLIL_VAR_INIT => Op::VarInit(VarInit {
-                dest: get_var(op.operands[0]),
-                src: HighLevelExpressionIndex::from(op.operands[1]),
-            }),
-            HLIL_VAR_INIT_SSA => Op::VarInitSsa(VarInitSsa {
-                dest: get_var_ssa((op.operands[0], op.operands[1] as usize)),
-                src: HighLevelExpressionIndex::from(op.operands[2]),
-            }),
-            HLIL_VAR_PHI => Op::VarPhi(VarPhi {
-                dest: get_var_ssa((op.operands[0], op.operands[1] as usize)),
-                num_srcs: op.operands[2] as usize,
-                first_src: op.operands[3] as usize,
-            }),
-            HLIL_VAR_SSA => Op::VarSsa(VarSsa {
-                var: get_var_ssa((op.operands[0], op.operands[1] as usize)),
-            }),
-            HLIL_VAR_SSA_PARTIAL => Op::VarSsaPartial(VarSsaPartial {
-                dest: get_var_ssa((op.operands[0], op.operands[1] as usize)),
-                prev: get_var_ssa((op.operands[0], op.operands[2] as usize)),
-            }),
-            HLIL_WHILE => Op::While(While {
-                condition: HighLevelExpressionIndex::from(op.operands[0]),
-                body: HighLevelExpressionIndex::from(op.operands[1]),
-            }),
-            HLIL_DO_WHILE => Op::DoWhile(While {
-                body: HighLevelExpressionIndex::from(op.operands[0]),
-                condition: HighLevelExpressionIndex::from(op.operands[1]),
-            }),
-            HLIL_WHILE_SSA => Op::WhileSsa(WhileSsa {
-                condition_phi: HighLevelExpressionIndex::from(op.operands[0]),
-                condition: HighLevelExpressionIndex::from(op.operands[1]),
-                body: HighLevelExpressionIndex::from(op.operands[2]),
-            }),
-            HLIL_DO_WHILE_SSA => Op::DoWhileSsa(WhileSsa {
-                body: HighLevelExpressionIndex::from(op.operands[0]),
-                condition_phi: HighLevelExpressionIndex::from(op.operands[1]),
-                condition: HighLevelExpressionIndex::from(op.operands[2]),
-            }),
+            // END GENERATED hlil-decode
         };
         Self {
             function,
@@ -703,165 +705,123 @@ impl HighLevelILInstruction {
             .collect()
     }
 
-    fn get_constraint(&self, constraint_index: usize) -> PossibleValueSet {
-        let value = unsafe {
-            BNGetCachedHighLevelILPossibleValueSet(self.function.handle, constraint_index)
-        };
-        PossibleValueSet::from_owned_core_raw(value)
-    }
-
     pub fn lift(&self) -> HighLevelILLiftedInstruction {
         use HighLevelILInstructionKind::*;
         use HighLevelILLiftedInstructionKind as Lifted;
         let kind = match self.kind {
+            // BEGIN GENERATED hlil-lift: from api/il, do not edit
             Nop => Lifted::Nop,
+            Block(_op) => Lifted::Block(LiftedBlock {
+                body: self.lift_expr_list(0),
+            }),
+            If(op) => Lifted::If(LiftedIf {
+                condition: self.lift_operand(op.condition),
+                cond_true: self.lift_operand(op.cond_true),
+                cond_false: self.lift_operand(op.cond_false),
+            }),
+            While(op) => Lifted::While(LiftedWhile {
+                condition: self.lift_operand(op.condition),
+                body: self.lift_operand(op.body),
+            }),
+            DoWhile(op) => Lifted::DoWhile(LiftedWhile {
+                body: self.lift_operand(op.body),
+                condition: self.lift_operand(op.condition),
+            }),
+            For(op) => Lifted::For(LiftedForLoop {
+                init: self.lift_operand(op.init),
+                condition: self.lift_operand(op.condition),
+                update: self.lift_operand(op.update),
+                body: self.lift_operand(op.body),
+            }),
+            Switch(op) => Lifted::Switch(LiftedSwitch {
+                condition: self.lift_operand(op.condition),
+                default: self.lift_operand(op.default),
+                cases: self.lift_expr_list(2),
+            }),
+            Case(op) => Lifted::Case(LiftedCase {
+                values: self.lift_expr_list(0),
+                body: self.lift_operand(op.body),
+            }),
             Break => Lifted::Break,
             Continue => Lifted::Continue,
+            Jump(op) => Lifted::Jump(LiftedJump {
+                dest: self.lift_operand(op.dest),
+            }),
+            Ret(_op) => Lifted::Ret(LiftedRet {
+                src: self.lift_expr_list(0),
+            }),
             Noret => Lifted::Noret,
-            Unreachable => Lifted::Unreachable,
-            Bp => Lifted::Bp,
-            Undef => Lifted::Undef,
-            Unimpl => Lifted::Unimpl,
-
-            Adc(op) => Lifted::Adc(self.lift_binary_op_carry(op)),
-            Sbb(op) => Lifted::Sbb(self.lift_binary_op_carry(op)),
-            Rlc(op) => Lifted::Rlc(self.lift_binary_op_carry(op)),
-            Rrc(op) => Lifted::Rrc(self.lift_binary_op_carry(op)),
-
-            Add(op) => Lifted::Add(self.lift_binary_op(op)),
-            Sub(op) => Lifted::Sub(self.lift_binary_op(op)),
-            And(op) => Lifted::And(self.lift_binary_op(op)),
-            Or(op) => Lifted::Or(self.lift_binary_op(op)),
-            Xor(op) => Lifted::Xor(self.lift_binary_op(op)),
-            Lsl(op) => Lifted::Lsl(self.lift_binary_op(op)),
-            Lsr(op) => Lifted::Lsr(self.lift_binary_op(op)),
-            Asr(op) => Lifted::Asr(self.lift_binary_op(op)),
-            Rol(op) => Lifted::Rol(self.lift_binary_op(op)),
-            Ror(op) => Lifted::Ror(self.lift_binary_op(op)),
-            Mul(op) => Lifted::Mul(self.lift_binary_op(op)),
-            MuluDp(op) => Lifted::MuluDp(self.lift_binary_op(op)),
-            MulsDp(op) => Lifted::MulsDp(self.lift_binary_op(op)),
-            Divu(op) => Lifted::Divu(self.lift_binary_op(op)),
-            DivuDp(op) => Lifted::DivuDp(self.lift_binary_op(op)),
-            Divs(op) => Lifted::Divs(self.lift_binary_op(op)),
-            DivsDp(op) => Lifted::DivsDp(self.lift_binary_op(op)),
-            Modu(op) => Lifted::Modu(self.lift_binary_op(op)),
-            ModuDp(op) => Lifted::ModuDp(self.lift_binary_op(op)),
-            Mods(op) => Lifted::Mods(self.lift_binary_op(op)),
-            ModsDp(op) => Lifted::ModsDp(self.lift_binary_op(op)),
-            MinSigned(op) => Lifted::MinSigned(self.lift_binary_op(op)),
-            MaxSigned(op) => Lifted::MaxSigned(self.lift_binary_op(op)),
-            MinUnsigned(op) => Lifted::MinUnsigned(self.lift_binary_op(op)),
-            MaxUnsigned(op) => Lifted::MaxUnsigned(self.lift_binary_op(op)),
-            CmpE(op) => Lifted::CmpE(self.lift_binary_op(op)),
-            CmpNe(op) => Lifted::CmpNe(self.lift_binary_op(op)),
-            CmpSlt(op) => Lifted::CmpSlt(self.lift_binary_op(op)),
-            CmpUlt(op) => Lifted::CmpUlt(self.lift_binary_op(op)),
-            CmpSle(op) => Lifted::CmpSle(self.lift_binary_op(op)),
-            CmpUle(op) => Lifted::CmpUle(self.lift_binary_op(op)),
-            CmpSge(op) => Lifted::CmpSge(self.lift_binary_op(op)),
-            CmpUge(op) => Lifted::CmpUge(self.lift_binary_op(op)),
-            CmpSgt(op) => Lifted::CmpSgt(self.lift_binary_op(op)),
-            CmpUgt(op) => Lifted::CmpUgt(self.lift_binary_op(op)),
-            TestBit(op) => Lifted::TestBit(self.lift_binary_op(op)),
-            AddOverflow(op) => Lifted::AddOverflow(self.lift_binary_op(op)),
-            Fadd(op) => Lifted::Fadd(self.lift_binary_op(op)),
-            Fsub(op) => Lifted::Fsub(self.lift_binary_op(op)),
-            Fmul(op) => Lifted::Fmul(self.lift_binary_op(op)),
-            Fdiv(op) => Lifted::Fdiv(self.lift_binary_op(op)),
-            FcmpE(op) => Lifted::FcmpE(self.lift_binary_op(op)),
-            FcmpNe(op) => Lifted::FcmpNe(self.lift_binary_op(op)),
-            FcmpLt(op) => Lifted::FcmpLt(self.lift_binary_op(op)),
-            FcmpLe(op) => Lifted::FcmpLe(self.lift_binary_op(op)),
-            FcmpGe(op) => Lifted::FcmpGe(self.lift_binary_op(op)),
-            FcmpGt(op) => Lifted::FcmpGt(self.lift_binary_op(op)),
-            FcmpO(op) => Lifted::FcmpO(self.lift_binary_op(op)),
-            FcmpUo(op) => Lifted::FcmpUo(self.lift_binary_op(op)),
-
-            ArrayIndex(op) => Lifted::ArrayIndex(LiftedArrayIndex {
+            Goto(op) => Lifted::Goto(LiftedLabel {
+                target: GotoLabel {
+                    function: self.function.function(),
+                    target: op.target,
+                },
+            }),
+            Label(op) => Lifted::Label(LiftedLabel {
+                target: GotoLabel {
+                    function: self.function.function(),
+                    target: op.target,
+                },
+            }),
+            VarDeclare(op) => Lifted::VarDeclare(op),
+            VarInit(op) => Lifted::VarInit(LiftedVarInit {
+                dest: op.dest,
                 src: self.lift_operand(op.src),
-                index: self.lift_operand(op.index),
-            }),
-            ArrayIndexSsa(op) => Lifted::ArrayIndexSsa(LiftedArrayIndexSsa {
-                src: self.lift_operand(op.src),
-                src_memory: op.src_memory,
-                index: self.lift_operand(op.index),
-            }),
-            Assert(op) => Lifted::Assert(LiftedAssert {
-                src: op.src,
-                constraint: self.get_constraint(op.constraint_index),
-            }),
-            AssertSsa(op) => Lifted::AssertSsa(LiftedAssertSsa {
-                src: op.src,
-                constraint: self.get_constraint(op.constraint_index),
             }),
             Assign(op) => Lifted::Assign(LiftedAssign {
                 dest: self.lift_operand(op.dest),
                 src: self.lift_operand(op.src),
             }),
             AssignUnpack(op) => Lifted::AssignUnpack(LiftedAssignUnpack {
-                dest: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
+                dest: self.lift_expr_list(0),
                 src: self.lift_operand(op.src),
             }),
-            AssignMemSsa(op) => Lifted::AssignMemSsa(LiftedAssignMemSsa {
-                dest: self.lift_operand(op.dest),
-                dest_memory: op.dest_memory,
+            ForceVer(op) => Lifted::ForceVer(op),
+            Assert(op) => Lifted::Assert(LiftedAssert {
+                src: op.src,
+                constraint: PossibleValueSet::from_owned_core_raw(unsafe {
+                    BNGetCachedHighLevelILPossibleValueSet(
+                        self.function.handle,
+                        op.constraint_index,
+                    )
+                }),
+            }),
+            Var(op) => Lifted::Var(op),
+            StructField(op) => Lifted::StructField(LiftedStructField {
                 src: self.lift_operand(op.src),
-                src_memory: op.src_memory,
+                offset: op.offset,
+                member_index: op.member_index,
             }),
-            AssignUnpackMemSsa(op) => Lifted::AssignUnpackMemSsa(LiftedAssignUnpackMemSsa {
-                dest: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-                dest_memory: op.dest_memory,
+            ArrayIndex(op) => Lifted::ArrayIndex(LiftedArrayIndex {
                 src: self.lift_operand(op.src),
-                src_memory: op.src_memory,
+                index: self.lift_operand(op.index),
             }),
-            Block(_op) => Lifted::Block(LiftedBlock {
-                body: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
+            Split(op) => Lifted::Split(LiftedSplit {
+                high: self.lift_operand(op.high),
+                low: self.lift_operand(op.low),
             }),
-
-            Call(op) => Lifted::Call(self.lift_call(op)),
-            Tailcall(op) => Lifted::Tailcall(self.lift_call(op)),
-            CallSsa(op) => Lifted::CallSsa(LiftedCallSsa {
-                dest: self.lift_operand(op.dest),
-                params: self
-                    .get_expr_list(1)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-                dest_memory: op.dest_memory,
-                src_memory: op.src_memory,
+            Deref(op) => Lifted::Deref(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
             }),
-
-            Case(op) => Lifted::Case(LiftedCase {
-                values: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-                body: self.lift_operand(op.body),
+            DerefField(op) => Lifted::DerefField(LiftedStructField {
+                src: self.lift_operand(op.src),
+                offset: op.offset,
+                member_index: op.member_index,
+            }),
+            AddressOf(op) => Lifted::AddressOf(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            PassByRef(op) => Lifted::PassByRef(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            ReturnByRef(op) => Lifted::ReturnByRef(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
             }),
             Const(op) => Lifted::Const(op),
-            ConstPtr(op) => Lifted::ConstPtr(op),
-            Import(op) => Lifted::Import(op),
             ConstData(op) => Lifted::ConstData(LiftedConstData {
                 constant_data: ConstantData::new(
                     self.function.function(),
                     RegisterValue {
-                        // TODO: Replace with a From<u32> for RegisterValueType.
-                        // TODO: We might also want to change the type of `op.constant_data_kind`
-                        // TODO: To RegisterValueType and do the conversion when creating instruction.
                         state: unsafe {
                             std::mem::transmute::<u32, BNRegisterValueType>(op.constant_data_kind)
                         },
@@ -871,56 +831,303 @@ impl HighLevelILInstruction {
                     },
                 ),
             }),
-
-            Deref(op) => Lifted::Deref(self.lift_unary_op(op)),
-            AddressOf(op) => Lifted::AddressOf(self.lift_unary_op(op)),
-            PassByRef(op) => Lifted::PassByRef(self.lift_unary_op(op)),
-            ReturnByRef(op) => Lifted::ReturnByRef(self.lift_unary_op(op)),
-            Neg(op) => Lifted::Neg(self.lift_unary_op(op)),
-            Not(op) => Lifted::Not(self.lift_unary_op(op)),
-            Bswap(op) => Lifted::Bswap(self.lift_unary_op(op)),
-            Popcnt(op) => Lifted::Popcnt(self.lift_unary_op(op)),
-            Clz(op) => Lifted::Clz(self.lift_unary_op(op)),
-            Ctz(op) => Lifted::Ctz(self.lift_unary_op(op)),
-            Rbit(op) => Lifted::Rbit(self.lift_unary_op(op)),
-            Cls(op) => Lifted::Cls(self.lift_unary_op(op)),
-            Abs(op) => Lifted::Abs(self.lift_unary_op(op)),
-            Sx(op) => Lifted::Sx(self.lift_unary_op(op)),
-            Zx(op) => Lifted::Zx(self.lift_unary_op(op)),
-            LowPart(op) => Lifted::LowPart(self.lift_unary_op(op)),
-            BoolToInt(op) => Lifted::BoolToInt(self.lift_unary_op(op)),
-            UnimplMem(op) => Lifted::UnimplMem(self.lift_unary_op(op)),
-            Fsqrt(op) => Lifted::Fsqrt(self.lift_unary_op(op)),
-            Fneg(op) => Lifted::Fneg(self.lift_unary_op(op)),
-            Fabs(op) => Lifted::Fabs(self.lift_unary_op(op)),
-            FloatToInt(op) => Lifted::FloatToInt(self.lift_unary_op(op)),
-            IntToFloat(op) => Lifted::IntToFloat(self.lift_unary_op(op)),
-            FloatConv(op) => Lifted::FloatConv(self.lift_unary_op(op)),
-            RoundToInt(op) => Lifted::RoundToInt(self.lift_unary_op(op)),
-            Floor(op) => Lifted::Floor(self.lift_unary_op(op)),
-            Ceil(op) => Lifted::Ceil(self.lift_unary_op(op)),
-            Ftrunc(op) => Lifted::Ftrunc(self.lift_unary_op(op)),
-
-            DerefFieldSsa(op) => Lifted::DerefFieldSsa(LiftedDerefFieldSsa {
-                src: self.lift_operand(op.src),
-                src_memory: op.src_memory,
-                offset: op.offset,
-                member_index: op.member_index,
-            }),
-            DerefSsa(op) => Lifted::DerefSsa(LiftedDerefSsa {
-                src: self.lift_operand(op.src),
-                src_memory: op.src_memory,
-            }),
+            ConstPtr(op) => Lifted::ConstPtr(op),
             ExternPtr(op) => Lifted::ExternPtr(op),
             FloatConst(op) => Lifted::FloatConst(op),
-            For(op) => Lifted::For(LiftedForLoop {
-                init: self.lift_operand(op.init),
+            Import(op) => Lifted::Import(op),
+            Add(op) => Lifted::Add(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Adc(op) => Lifted::Adc(LiftedBinaryOpCarry {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+                carry: self.lift_operand(op.carry),
+            }),
+            Sub(op) => Lifted::Sub(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Sbb(op) => Lifted::Sbb(LiftedBinaryOpCarry {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+                carry: self.lift_operand(op.carry),
+            }),
+            And(op) => Lifted::And(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Or(op) => Lifted::Or(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Xor(op) => Lifted::Xor(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Lsl(op) => Lifted::Lsl(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Lsr(op) => Lifted::Lsr(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Asr(op) => Lifted::Asr(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Rol(op) => Lifted::Rol(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Rlc(op) => Lifted::Rlc(LiftedBinaryOpCarry {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+                carry: self.lift_operand(op.carry),
+            }),
+            Ror(op) => Lifted::Ror(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Rrc(op) => Lifted::Rrc(LiftedBinaryOpCarry {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+                carry: self.lift_operand(op.carry),
+            }),
+            Mul(op) => Lifted::Mul(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            MuluDp(op) => Lifted::MuluDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            MulsDp(op) => Lifted::MulsDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Divu(op) => Lifted::Divu(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            DivuDp(op) => Lifted::DivuDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Divs(op) => Lifted::Divs(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            DivsDp(op) => Lifted::DivsDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Modu(op) => Lifted::Modu(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            ModuDp(op) => Lifted::ModuDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Mods(op) => Lifted::Mods(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            ModsDp(op) => Lifted::ModsDp(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Neg(op) => Lifted::Neg(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Not(op) => Lifted::Not(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Sx(op) => Lifted::Sx(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Zx(op) => Lifted::Zx(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            LowPart(op) => Lifted::LowPart(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Call(op) => Lifted::Call(LiftedCall {
+                dest: self.lift_operand(op.dest),
+                params: self.lift_expr_list(1),
+            }),
+            CmpE(op) => Lifted::CmpE(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpNe(op) => Lifted::CmpNe(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpSlt(op) => Lifted::CmpSlt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpUlt(op) => Lifted::CmpUlt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpSle(op) => Lifted::CmpSle(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpUle(op) => Lifted::CmpUle(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpSge(op) => Lifted::CmpSge(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpUge(op) => Lifted::CmpUge(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpSgt(op) => Lifted::CmpSgt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            CmpUgt(op) => Lifted::CmpUgt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            TestBit(op) => Lifted::TestBit(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            BoolToInt(op) => Lifted::BoolToInt(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            AddOverflow(op) => Lifted::AddOverflow(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Syscall(_op) => Lifted::Syscall(LiftedSyscall {
+                params: self.lift_expr_list(0),
+            }),
+            Tailcall(op) => Lifted::Tailcall(LiftedCall {
+                dest: self.lift_operand(op.dest),
+                params: self.lift_expr_list(1),
+            }),
+            Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
+                intrinsic: CoreIntrinsic::new(
+                    self.function.function().arch(),
+                    IntrinsicId(op.intrinsic),
+                )
+                .expect("Valid intrinsic"),
+                params: self.lift_expr_list(1),
+            }),
+            Bp => Lifted::Bp,
+            Trap(op) => Lifted::Trap(op),
+            Undef => Lifted::Undef,
+            Unimpl => Lifted::Unimpl,
+            UnimplMem(op) => Lifted::UnimplMem(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            StructInit(_op) => Lifted::StructInit(LiftedStructInit {
+                fields: self.lift_expr_list(0),
+            }),
+            StructInitField(op) => Lifted::StructInitField(LiftedStructField {
+                offset: op.offset,
+                member_index: op.member_index,
+                src: self.lift_operand(op.src),
+            }),
+            Fadd(op) => Lifted::Fadd(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Fsub(op) => Lifted::Fsub(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Fmul(op) => Lifted::Fmul(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Fdiv(op) => Lifted::Fdiv(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Fsqrt(op) => Lifted::Fsqrt(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Fneg(op) => Lifted::Fneg(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Fabs(op) => Lifted::Fabs(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            FloatToInt(op) => Lifted::FloatToInt(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            IntToFloat(op) => Lifted::IntToFloat(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            FloatConv(op) => Lifted::FloatConv(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            RoundToInt(op) => Lifted::RoundToInt(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Floor(op) => Lifted::Floor(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Ceil(op) => Lifted::Ceil(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Ftrunc(op) => Lifted::Ftrunc(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            FcmpE(op) => Lifted::FcmpE(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpNe(op) => Lifted::FcmpNe(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpLt(op) => Lifted::FcmpLt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpLe(op) => Lifted::FcmpLe(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpGe(op) => Lifted::FcmpGe(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpGt(op) => Lifted::FcmpGt(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpO(op) => Lifted::FcmpO(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            FcmpUo(op) => Lifted::FcmpUo(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Unreachable => Lifted::Unreachable,
+            WhileSsa(op) => Lifted::WhileSsa(LiftedWhileSsa {
+                condition_phi: self.lift_operand(op.condition_phi),
                 condition: self.lift_operand(op.condition),
-                update: self.lift_operand(op.update),
                 body: self.lift_operand(op.body),
             }),
-            Goto(op) => Lifted::Goto(self.lift_label(op)),
-            Label(op) => Lifted::Label(self.lift_label(op)),
+            DoWhileSsa(op) => Lifted::DoWhileSsa(LiftedWhileSsa {
+                body: self.lift_operand(op.body),
+                condition_phi: self.lift_operand(op.condition_phi),
+                condition: self.lift_operand(op.condition),
+            }),
             ForSsa(op) => Lifted::ForSsa(LiftedForLoopSsa {
                 init: self.lift_operand(op.init),
                 condition_phi: self.lift_operand(op.condition_phi),
@@ -928,115 +1135,116 @@ impl HighLevelILInstruction {
                 update: self.lift_operand(op.update),
                 body: self.lift_operand(op.body),
             }),
-            ForceVer(op) => Lifted::ForceVer(op),
-            ForceVerSsa(op) => Lifted::ForceVerSsa(op),
-            If(op) => Lifted::If(LiftedIf {
-                condition: self.lift_operand(op.condition),
-                cond_true: self.lift_operand(op.cond_true),
-                cond_false: self.lift_operand(op.cond_false),
+            VarInitSsa(op) => Lifted::VarInitSsa(LiftedVarInitSsa {
+                dest: op.dest,
+                src: self.lift_operand(op.src),
             }),
-            Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
-                intrinsic: CoreIntrinsic::new(
-                    self.function.function().arch(),
-                    IntrinsicId(op.intrinsic),
-                )
-                .expect("Invalid intrinsic"),
-                params: self
-                    .get_expr_list(1)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
+            AssignMemSsa(op) => Lifted::AssignMemSsa(LiftedAssignMemSsa {
+                dest: self.lift_operand(op.dest),
+                dest_memory: op.dest_memory,
+                src: self.lift_operand(op.src),
+                src_memory: op.src_memory,
+            }),
+            AssignUnpackMemSsa(op) => Lifted::AssignUnpackMemSsa(LiftedAssignUnpackMemSsa {
+                dest: self.lift_expr_list(0),
+                dest_memory: op.dest_memory,
+                src: self.lift_operand(op.src),
+                src_memory: op.src_memory,
+            }),
+            ForceVerSsa(op) => Lifted::ForceVerSsa(op),
+            AssertSsa(op) => Lifted::AssertSsa(LiftedAssertSsa {
+                src: op.src,
+                constraint: PossibleValueSet::from_owned_core_raw(unsafe {
+                    BNGetCachedHighLevelILPossibleValueSet(
+                        self.function.handle,
+                        op.constraint_index,
+                    )
+                }),
+            }),
+            VarSsa(op) => Lifted::VarSsa(op),
+            VarSsaPartial(op) => Lifted::VarSsaPartial(op),
+            ArrayIndexSsa(op) => Lifted::ArrayIndexSsa(LiftedArrayIndexSsa {
+                src: self.lift_operand(op.src),
+                src_memory: op.src_memory,
+                index: self.lift_operand(op.index),
+            }),
+            DerefSsa(op) => Lifted::DerefSsa(LiftedDerefSsa {
+                src: self.lift_operand(op.src),
+                src_memory: op.src_memory,
+            }),
+            DerefFieldSsa(op) => Lifted::DerefFieldSsa(LiftedDerefFieldSsa {
+                src: self.lift_operand(op.src),
+                src_memory: op.src_memory,
+                offset: op.offset,
+                member_index: op.member_index,
+            }),
+            CallSsa(op) => Lifted::CallSsa(LiftedCallSsa {
+                dest: self.lift_operand(op.dest),
+                params: self.lift_expr_list(1),
+                dest_memory: op.dest_memory,
+                src_memory: op.src_memory,
+            }),
+            SyscallSsa(op) => Lifted::SyscallSsa(LiftedSyscallSsa {
+                params: self.lift_expr_list(0),
+                dest_memory: op.dest_memory,
+                src_memory: op.src_memory,
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
                 intrinsic: CoreIntrinsic::new(
                     self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
-                .expect("Invalid intrinsic"),
-                params: self
-                    .get_expr_list(1)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
+                .expect("Valid intrinsic"),
+                params: self.lift_expr_list(1),
                 dest_memory: op.dest_memory,
                 src_memory: op.src_memory,
-            }),
-            Jump(op) => Lifted::Jump(LiftedJump {
-                dest: self.lift_operand(op.dest),
-            }),
-            MemPhi(op) => Lifted::MemPhi(LiftedMemPhi {
-                dest: op.dest,
-                src: self.get_operand_list(1),
-            }),
-            Ret(_op) => Lifted::Ret(LiftedRet {
-                src: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            Split(op) => Lifted::Split(LiftedSplit {
-                high: self.lift_operand(op.high),
-                low: self.lift_operand(op.low),
-            }),
-            StructField(op) => Lifted::StructField(self.lift_struct_field(op)),
-            DerefField(op) => Lifted::DerefField(self.lift_struct_field(op)),
-            StructInit(_op) => Lifted::StructInit(LiftedStructInit {
-                fields: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            StructInitField(op) => Lifted::StructInitField(self.lift_struct_field(op)),
-            Switch(op) => Lifted::Switch(LiftedSwitch {
-                condition: self.lift_operand(op.condition),
-                default: self.lift_operand(op.default),
-                cases: self
-                    .get_expr_list(2)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            Syscall(_op) => Lifted::Syscall(LiftedSyscall {
-                params: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-            }),
-            SyscallSsa(op) => Lifted::SyscallSsa(LiftedSyscallSsa {
-                params: self
-                    .get_expr_list(0)
-                    .iter()
-                    .map(|expr| expr.lift())
-                    .collect(),
-                dest_memory: op.dest_memory,
-                src_memory: op.src_memory,
-            }),
-            Trap(op) => Lifted::Trap(op),
-            VarDeclare(op) => Lifted::VarDeclare(op),
-            Var(op) => Lifted::Var(op),
-            VarInit(op) => Lifted::VarInit(LiftedVarInit {
-                dest: op.dest,
-                src: self.lift_operand(op.src),
-            }),
-            VarInitSsa(op) => Lifted::VarInitSsa(LiftedVarInitSsa {
-                dest: op.dest,
-                src: self.lift_operand(op.src),
             }),
             VarPhi(op) => Lifted::VarPhi(LiftedVarPhi {
                 dest: op.dest,
                 src: self.get_ssa_var_list(2),
             }),
-            VarSsa(op) => Lifted::VarSsa(op),
-            VarSsaPartial(op) => Lifted::VarSsaPartial(op),
-
-            While(op) => Lifted::While(self.lift_while(op)),
-            DoWhile(op) => Lifted::DoWhile(self.lift_while(op)),
-
-            WhileSsa(op) => Lifted::WhileSsa(self.lift_while_ssa(op)),
-            DoWhileSsa(op) => Lifted::DoWhileSsa(self.lift_while_ssa(op)),
+            MemPhi(op) => Lifted::MemPhi(LiftedMemPhi {
+                dest: op.dest,
+                src: self.get_operand_list(1),
+            }),
+            Bswap(op) => Lifted::Bswap(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Popcnt(op) => Lifted::Popcnt(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Clz(op) => Lifted::Clz(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Ctz(op) => Lifted::Ctz(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Rbit(op) => Lifted::Rbit(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            Cls(op) => Lifted::Cls(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            MinSigned(op) => Lifted::MinSigned(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            MaxSigned(op) => Lifted::MaxSigned(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            MinUnsigned(op) => Lifted::MinUnsigned(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            MaxUnsigned(op) => Lifted::MaxUnsigned(LiftedBinaryOp {
+                left: self.lift_operand(op.left),
+                right: self.lift_operand(op.right),
+            }),
+            Abs(op) => Lifted::Abs(LiftedUnaryOp {
+                src: self.lift_operand(op.src),
+            }),
+            // END GENERATED hlil-lift
         };
         HighLevelILLiftedInstruction {
             function: self.function.clone(),
@@ -1100,68 +1308,11 @@ impl HighLevelILInstruction {
         Box::new(operand_instr.lift())
     }
 
-    fn lift_binary_op(&self, op: BinaryOp) -> LiftedBinaryOp {
-        LiftedBinaryOp {
-            left: self.lift_operand(op.left),
-            right: self.lift_operand(op.right),
-        }
-    }
-
-    fn lift_binary_op_carry(&self, op: BinaryOpCarry) -> LiftedBinaryOpCarry {
-        LiftedBinaryOpCarry {
-            left: self.lift_operand(op.left),
-            right: self.lift_operand(op.right),
-            carry: self.lift_operand(op.carry),
-        }
-    }
-
-    fn lift_unary_op(&self, op: UnaryOp) -> LiftedUnaryOp {
-        LiftedUnaryOp {
-            src: self.lift_operand(op.src),
-        }
-    }
-
-    fn lift_label(&self, op: Label) -> LiftedLabel {
-        LiftedLabel {
-            target: GotoLabel {
-                function: self.function.function(),
-                target: op.target,
-            },
-        }
-    }
-
-    fn lift_call(&self, op: Call) -> LiftedCall {
-        LiftedCall {
-            dest: self.lift_operand(op.dest),
-            params: self
-                .get_expr_list(1)
-                .iter()
-                .map(|expr| expr.lift())
-                .collect(),
-        }
-    }
-
-    fn lift_while(&self, op: While) -> LiftedWhile {
-        LiftedWhile {
-            condition: self.lift_operand(op.condition),
-            body: self.lift_operand(op.body),
-        }
-    }
-
-    fn lift_while_ssa(&self, op: WhileSsa) -> LiftedWhileSsa {
-        LiftedWhileSsa {
-            condition_phi: self.lift_operand(op.condition_phi),
-            condition: self.lift_operand(op.condition),
-            body: self.lift_operand(op.body),
-        }
-    }
-
-    fn lift_struct_field(&self, op: StructField) -> LiftedStructField {
-        LiftedStructField {
-            src: self.lift_operand(op.src),
-            offset: op.offset,
-            member_index: op.member_index,
-        }
+    fn lift_expr_list(&self, operand_idx: usize) -> Vec<HighLevelILLiftedInstruction> {
+        self.get_expr_list(operand_idx)
+            .iter()
+            .map(|expr| expr.lift())
+            .collect()
     }
 }
 
@@ -1195,22 +1346,49 @@ impl Debug for HighLevelILInstruction {
     }
 }
 
+// BEGIN GENERATED hlil-instruction-kind: from api/il, do not edit
 #[derive(Debug, Copy, Clone)]
 pub enum HighLevelILInstructionKind {
     Nop,
+    Block(Block),
+    If(If),
+    While(While),
+    DoWhile(While),
+    For(ForLoop),
+    Switch(Switch),
+    Case(Case),
     Break,
     Continue,
+    Jump(Jump),
+    Ret(Ret),
     Noret,
-    Unreachable,
-    Bp,
-    Undef,
-    Unimpl,
-    Adc(BinaryOpCarry),
-    Sbb(BinaryOpCarry),
-    Rlc(BinaryOpCarry),
-    Rrc(BinaryOpCarry),
+    Goto(Label),
+    Label(Label),
+    VarDeclare(Var),
+    VarInit(VarInit),
+    Assign(Assign),
+    AssignUnpack(AssignUnpack),
+    ForceVer(ForceVer),
+    Assert(Assert),
+    Var(Var),
+    StructField(StructField),
+    ArrayIndex(ArrayIndex),
+    Split(Split),
+    Deref(UnaryOp),
+    DerefField(StructField),
+    AddressOf(UnaryOp),
+    PassByRef(UnaryOp),
+    ReturnByRef(UnaryOp),
+    Const(Const),
+    ConstData(ConstData),
+    ConstPtr(Const),
+    ExternPtr(ExternPtr),
+    FloatConst(FloatConst),
+    Import(Const),
     Add(BinaryOp),
+    Adc(BinaryOpCarry),
     Sub(BinaryOp),
+    Sbb(BinaryOpCarry),
     And(BinaryOp),
     Or(BinaryOp),
     Xor(BinaryOp),
@@ -1218,7 +1396,9 @@ pub enum HighLevelILInstructionKind {
     Lsr(BinaryOp),
     Asr(BinaryOp),
     Rol(BinaryOp),
+    Rlc(BinaryOpCarry),
     Ror(BinaryOp),
+    Rrc(BinaryOpCarry),
     Mul(BinaryOp),
     MuluDp(BinaryOp),
     MulsDp(BinaryOp),
@@ -1230,10 +1410,12 @@ pub enum HighLevelILInstructionKind {
     ModuDp(BinaryOp),
     Mods(BinaryOp),
     ModsDp(BinaryOp),
-    MinSigned(BinaryOp),
-    MaxSigned(BinaryOp),
-    MinUnsigned(BinaryOp),
-    MaxUnsigned(BinaryOp),
+    Neg(UnaryOp),
+    Not(UnaryOp),
+    Sx(UnaryOp),
+    Zx(UnaryOp),
+    LowPart(UnaryOp),
+    Call(Call),
     CmpE(BinaryOp),
     CmpNe(BinaryOp),
     CmpSlt(BinaryOp),
@@ -1245,54 +1427,22 @@ pub enum HighLevelILInstructionKind {
     CmpSgt(BinaryOp),
     CmpUgt(BinaryOp),
     TestBit(BinaryOp),
+    BoolToInt(UnaryOp),
     AddOverflow(BinaryOp),
+    Syscall(Syscall),
+    Tailcall(Call),
+    Intrinsic(Intrinsic),
+    Bp,
+    Trap(Trap),
+    Undef,
+    Unimpl,
+    UnimplMem(UnaryOp),
+    StructInit(StructInit),
+    StructInitField(StructField),
     Fadd(BinaryOp),
     Fsub(BinaryOp),
     Fmul(BinaryOp),
     Fdiv(BinaryOp),
-    FcmpE(BinaryOp),
-    FcmpNe(BinaryOp),
-    FcmpLt(BinaryOp),
-    FcmpLe(BinaryOp),
-    FcmpGe(BinaryOp),
-    FcmpGt(BinaryOp),
-    FcmpO(BinaryOp),
-    FcmpUo(BinaryOp),
-    ArrayIndex(ArrayIndex),
-    ArrayIndexSsa(ArrayIndexSsa),
-    Assert(Assert),
-    AssertSsa(AssertSsa),
-    Assign(Assign),
-    AssignMemSsa(AssignMemSsa),
-    AssignUnpack(AssignUnpack),
-    AssignUnpackMemSsa(AssignUnpackMemSsa),
-    Block(Block),
-    Call(Call),
-    Tailcall(Call),
-    CallSsa(CallSsa),
-    Case(Case),
-    Const(Const),
-    ConstPtr(Const),
-    Import(Const),
-    ConstData(ConstData),
-    Deref(UnaryOp),
-    AddressOf(UnaryOp),
-    PassByRef(UnaryOp),
-    ReturnByRef(UnaryOp),
-    Neg(UnaryOp),
-    Not(UnaryOp),
-    Bswap(UnaryOp),
-    Popcnt(UnaryOp),
-    Clz(UnaryOp),
-    Ctz(UnaryOp),
-    Rbit(UnaryOp),
-    Cls(UnaryOp),
-    Abs(UnaryOp),
-    Sx(UnaryOp),
-    Zx(UnaryOp),
-    LowPart(UnaryOp),
-    BoolToInt(UnaryOp),
-    UnimplMem(UnaryOp),
     Fsqrt(UnaryOp),
     Fneg(UnaryOp),
     Fabs(UnaryOp),
@@ -1303,43 +1453,46 @@ pub enum HighLevelILInstructionKind {
     Floor(UnaryOp),
     Ceil(UnaryOp),
     Ftrunc(UnaryOp),
-    DerefFieldSsa(DerefFieldSsa),
-    DerefSsa(DerefSsa),
-    ExternPtr(ExternPtr),
-    FloatConst(FloatConst),
-    For(ForLoop),
-    ForSsa(ForLoopSsa),
-    ForceVer(ForceVer),
-    ForceVerSsa(ForceVerSsa),
-    Goto(Label),
-    Label(Label),
-    If(If),
-    Intrinsic(Intrinsic),
-    IntrinsicSsa(IntrinsicSsa),
-    Jump(Jump),
-    MemPhi(MemPhi),
-    Ret(Ret),
-    Split(Split),
-    StructField(StructField),
-    DerefField(StructField),
-    StructInit(StructInit),
-    StructInitField(StructField),
-    Switch(Switch),
-    Syscall(Syscall),
-    SyscallSsa(SyscallSsa),
-    Trap(Trap),
-    VarDeclare(Var),
-    Var(Var),
-    VarInit(VarInit),
-    VarInitSsa(VarInitSsa),
-    VarPhi(VarPhi),
-    VarSsa(VarSsa),
-    VarSsaPartial(VarSsaPartial),
-    While(While),
-    DoWhile(While),
+    FcmpE(BinaryOp),
+    FcmpNe(BinaryOp),
+    FcmpLt(BinaryOp),
+    FcmpLe(BinaryOp),
+    FcmpGe(BinaryOp),
+    FcmpGt(BinaryOp),
+    FcmpO(BinaryOp),
+    FcmpUo(BinaryOp),
+    Unreachable,
     WhileSsa(WhileSsa),
     DoWhileSsa(WhileSsa),
+    ForSsa(ForLoopSsa),
+    VarInitSsa(VarInitSsa),
+    AssignMemSsa(AssignMemSsa),
+    AssignUnpackMemSsa(AssignUnpackMemSsa),
+    ForceVerSsa(ForceVerSsa),
+    AssertSsa(AssertSsa),
+    VarSsa(VarSsa),
+    VarSsaPartial(VarSsaPartial),
+    ArrayIndexSsa(ArrayIndexSsa),
+    DerefSsa(DerefSsa),
+    DerefFieldSsa(DerefFieldSsa),
+    CallSsa(CallSsa),
+    SyscallSsa(SyscallSsa),
+    IntrinsicSsa(IntrinsicSsa),
+    VarPhi(VarPhi),
+    MemPhi(MemPhi),
+    Bswap(UnaryOp),
+    Popcnt(UnaryOp),
+    Clz(UnaryOp),
+    Ctz(UnaryOp),
+    Rbit(UnaryOp),
+    Cls(UnaryOp),
+    MinSigned(BinaryOp),
+    MaxSigned(BinaryOp),
+    MinUnsigned(BinaryOp),
+    MaxUnsigned(BinaryOp),
+    Abs(UnaryOp),
 }
+// END GENERATED hlil-instruction-kind
 
 fn get_float(value: u64, size: usize) -> f64 {
     match size {
@@ -1358,6 +1511,6 @@ fn get_member_index(idx: u64) -> Option<usize> {
     (idx as i64 >= 0).then_some(idx as usize)
 }
 
-fn get_var_ssa(input: (u64, usize)) -> SSAVariable {
-    SSAVariable::new(get_var(input.0), input.1)
+fn get_var_ssa(id: u64, version: usize) -> SSAVariable {
+    SSAVariable::new(get_var(id), version)
 }

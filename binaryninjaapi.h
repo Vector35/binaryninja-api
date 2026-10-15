@@ -17639,204 +17639,1290 @@ namespace BinaryNinja {
 		ExprId AddExprWithLocation(BNHighLevelILOperation operation, const ILSourceLocation& loc, size_t size,
 		    ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
 
+		// BEGIN GENERATED hlil-builders: from api/il, do not edit
+		/*! Does nothing.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>nop</tt>
+		*/
 		ExprId Nop(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Block(const std::vector<ExprId>& exprs, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Runs the statements <tt>body</tt> in order.
+
+		    \param body The statements
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>{ body }</tt>
+		*/
+		ExprId Block(const std::vector<ExprId>& body, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Runs <tt>trueExpr</tt> if <tt>condition</tt> holds, and <tt>falseExpr</tt> otherwise.
+
+		    \param condition The condition
+		    \param trueExpr The statement to run when the condition holds
+		    \param falseExpr The statement to run otherwise, a NOP for none
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>if (condition) trueExpr else falseExpr</tt>
+		*/
 		ExprId If(
 		    ExprId condition, ExprId trueExpr, ExprId falseExpr, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId While(ExprId condition, ExprId loopExpr, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId WhileSSA(
-		    ExprId conditionPhi, ExprId condition, ExprId loopExpr, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DoWhile(ExprId loopExpr, ExprId condition, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DoWhileSSA(
-		    ExprId loopExpr, ExprId conditionPhi, ExprId condition, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId For(ExprId initExpr, ExprId condition, ExprId updateExpr, ExprId loopExpr,
+
+		/*! Runs <tt>body</tt> for as long as <tt>condition</tt> holds, testing it before each iteration.
+
+		    \param condition The loop condition
+		    \param body The loop body
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>while (condition) body</tt>
+		*/
+		ExprId While(ExprId condition, ExprId body, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Runs <tt>body</tt> for as long as <tt>condition</tt> holds, testing it after each iteration.
+
+		    \param body The loop body
+		    \param condition The loop condition
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>do body while (condition)</tt>
+		*/
+		ExprId DoWhile(ExprId body, ExprId condition, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Runs <tt>init</tt>, then runs <tt>body</tt> followed by <tt>update</tt> for as long as
+		    <tt>condition</tt> holds.
+
+		    \param init The statement to run before the loop, a NOP for none
+		    \param condition The loop condition
+		    \param update The statement to run after each iteration, a NOP for none
+		    \param body The loop body
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>for (init; condition; update) body</tt>
+		*/
+		ExprId For(ExprId init, ExprId condition, ExprId update, ExprId body,
 		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ForSSA(ExprId initExpr, ExprId conditionPhi, ExprId condition, ExprId updateExpr, ExprId loopExpr,
-		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Runs the body of the case in <tt>cases</tt> whose values include <tt>condition</tt>, or
+		    <tt>defaultExpr</tt> when none does.
+
+		    \param condition The value to switch on
+		    \param defaultExpr The statement to run when no case matches
+		    \param cases The cases
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>switch (condition) cases default: defaultExpr</tt>
+		*/
 		ExprId Switch(ExprId condition, ExprId defaultExpr, const std::vector<ExprId>& cases,
 		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Case(
-		    const std::vector<ExprId>& condition, ExprId expr, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A case of a SWITCH that runs <tt>body</tt> when the switch's value is one of <tt>values</tt>.
+
+		    \param values The values the case matches
+		    \param body The statement to run
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>case values: body</tt>
+		*/
+		ExprId Case(const std::vector<ExprId>& values, ExprId body, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Leaves the innermost enclosing loop or switch.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>break</tt>
+		*/
 		ExprId Break(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Starts the next iteration of the innermost enclosing loop.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>continue</tt>
+		*/
 		ExprId Continue(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Jumps to <tt>dest</tt>.
+
+		    \param dest The address to jump to
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>jump(dest)</tt>
+		*/
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Return(const std::vector<ExprId>& sources, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Returns <tt>src</tt> from the function.
+
+		    \param src The values to return
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>return src</tt>
+		*/
+		ExprId Return(const std::vector<ExprId>& src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Marks a point that execution doesn't pass, such as after a call that doesn't return.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>noreturn</tt>
+		*/
 		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Unreachable(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Jumps to the LABEL with ID <tt>target</tt>.
+
+		    \param target The label's ID
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>goto target</tt>
+		*/
 		ExprId Goto(uint64_t target, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A label with ID <tt>target</tt>, which GOTO statements jump to.
+
+		    \param target The label's ID
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>target:</tt>
+		*/
 		ExprId Label(uint64_t target, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Declares variable <tt>var</tt> without initializing it.
+
+		    \param var The variable to declare
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>var</tt>
+		*/
 		ExprId VarDeclare(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Declares variable <tt>dest</tt> and initializes it to <tt>src</tt>.
+
+		    \param size The size of <tt>src</tt> in bytes
+		    \param dest The variable to declare
+		    \param src Its initial value
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>dest = src</tt>
+		*/
 		ExprId VarInit(size_t size, const Variable& dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId VarInitSSA(
-		    size_t size, const SSAVariable& dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Stores <tt>src</tt> to the location <tt>dest</tt> names, such as a variable, a structure field or a
+		    dereferenced pointer.
+
+		    \param size The size of <tt>dest</tt> and <tt>src</tt> in bytes
+		    \param dest Where to store the value
+		    \param src The value to store
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>dest = src</tt>
+		*/
 		ExprId Assign(size_t size, ExprId dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Stores the several values <tt>src</tt> produces, such as a call's results, to the locations
+		    <tt>dest</tt> names.
+
+		    \param dest Where to store the values
+		    \param src The expression producing the values
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>dest = src</tt>
+		*/
 		ExprId AssignUnpack(
-		    const std::vector<ExprId>& output, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AssignMemSSA(size_t size, ExprId dest, size_t destMemVersion, ExprId src, size_t srcMemVersion,
+		    const std::vector<ExprId>& dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Gives variable <tt>dest</tt> a new SSA version holding the value of <tt>src</tt>. Analysis can then
+		    use this as a new variable definition site.
+
+		    \param size The size of the variable in bytes
+		    \param dest The variable to give a new version
+		    \param src The variable whose value it takes
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>FORCE_VER(dest = src)</tt>
+		*/
+		ExprId ForceVer(
+		    size_t size, const Variable& dest, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Asserts that variable <tt>src</tt> holds one of the values <tt>constraint</tt> allows. Core inserts
+		    it where a user has set possible values for <tt>src</tt>.
+
+		    \param size The size of the variable in bytes
+		    \param src The variable to constrain
+		    \param constraint The values the variable may hold
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ASSERT(src, constraint)</tt>
+		*/
+		ExprId Assert(size_t size, const Variable& src, const PossibleValueSet& constraint,
 		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AssignUnpackMemSSA(const std::vector<ExprId>& output, size_t destMemVersion, ExprId src,
-		    size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 
-		ExprId ForceVer(size_t size, const Variable& dest, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ForceVerSSA(size_t size, const SSAVariable& dest, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
+		/*! Reads variable <tt>var</tt>.
 
-		ExprId Assert(size_t size, const Variable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AssertSSA(size_t size, const SSAVariable& src, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
+		    \param size The size of the result in bytes
+		    \param var The variable to read
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>var</tt>
+		*/
+		ExprId Var(size_t size, const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
 
-		ExprId Var(size_t size, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId VarSSAPartial(size_t size, const Variable& dest, size_t newVersion, size_t prevVersion,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId VarPhi(const SSAVariable& dest, const std::vector<SSAVariable>& sources,
-		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MemPhi(
-		    size_t dest, const std::vector<size_t>& sources, const ILSourceLocation& loc = ILSourceLocation());
+		/*! Reads the <tt>size</tt> byte field at offset <tt>offset</tt> within the structure <tt>src</tt>.
+		    Shows the member's name when the structure's type has a member at <tt>offset</tt>.
+
+		    \param size The size of the field in bytes
+		    \param src The structure
+		    \param offset The offset of the field within the structure, in bytes
+		    \param memberIndex The index of the field among the structure type's members, or -1 for none
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>src:offset.\<size\></tt>
+		*/
 		ExprId StructField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
 		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ArrayIndex(size_t size, ExprId src, ExprId idx, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ArrayIndexSSA(size_t size, ExprId src, size_t srcMemVersion, ExprId idx,
-		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId StructInit(size_t size, const std::vector<ExprId>& fields, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId StructInitField(size_t size, uint64_t offset, size_t memberIndex, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Reads element <tt>index</tt> of the array <tt>src</tt>.
+
+		    \param size The size of the element in bytes
+		    \param src The array
+		    \param index The element's index
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>src[index]</tt>
+		*/
+		ExprId ArrayIndex(size_t size, ExprId src, ExprId index, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Joins <tt>high</tt> and <tt>low</tt> into one value of <tt>2 * size</tt> bytes, with <tt>high</tt>
+		    as its high half.
+
+		    \param size The size of each half in bytes
+		    \param high The high half
+		    \param low The low half
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>high:low</tt>
+		*/
 		ExprId Split(size_t size, ExprId high, ExprId low, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Reads <tt>size</tt> bytes from memory at <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The address to read from
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>*src</tt>
+		*/
 		ExprId Deref(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Reads the <tt>size</tt> byte field at offset <tt>offset</tt> within the structure that <tt>src</tt>
+		    points to. Shows the member's name when the structure's type has a member at <tt>offset</tt>.
+
+		    \param size The size of the field in bytes
+		    \param src The address of the structure
+		    \param offset The offset of the field within the structure, in bytes
+		    \param memberIndex The index of the field among the structure type's members, or -1 for none
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>src-\>:offset.\<size\></tt>
+		*/
 		ExprId DerefField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
 		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DerefSSA(
-		    size_t size, ExprId src, size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DerefFieldSSA(size_t size, ExprId src, size_t srcMemVersion, uint64_t offset, size_t memberIndex,
-		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The address of <tt>src</tt>, such as a variable or structure field.
+
+		    \param src The value to take the address of
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>\&src</tt>
+		*/
 		ExprId AddressOf(ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Passes <tt>src</tt> to a call by reference, as the calling convention requires. <tt>src</tt> is a
+		    pointer to the value. Only appears as a call's parameter.
+
+		    \param size The size of the pointer in bytes
+		    \param src The address of the value being passed
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ref *src</tt>
+		*/
 		ExprId PassByRef(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Receives a call's result in <tt>src</tt> through a pointer the caller supplies.
+
+		    \param size The size of the result in bytes
+		    \param src Where the result goes
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ref src</tt>
+		*/
 		ExprId ReturnByRef(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! An integer constant.
+
+		    \param size The size of the result in bytes
+		    \param constant The value
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>constant</tt>
+		*/
+		ExprId Const(size_t size, uint64_t constant, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Constant data that isn't a plain integer, such as a string or a value with known extension.
+
+		    \param size The size of the result in bytes
+		    \param constantData The constant data
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>constantData</tt>
+		*/
+		ExprId ConstData(
+		    size_t size, const ConstantData& constantData, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A constant pointer to address <tt>constant</tt>.
+
+		    \param size The size of the result in bytes
+		    \param constant The value
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>constant</tt>
+		*/
+		ExprId ConstPointer(size_t size, uint64_t constant, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A constant pointer <tt>offset</tt> bytes from the relocated external address <tt>constant</tt>.
+
+		    \param size The size of the result in bytes
+		    \param constant The external address
+		    \param offset The offset from the external address, in bytes
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>(constant + offset)</tt>
+		*/
 		ExprId ExternPointer(
-		    size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ConstData(size_t size, const ConstantData& data, const ILSourceLocation& loc = ILSourceLocation());
+		    size_t size, uint64_t constant, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A floating point constant. <tt>constant</tt> holds the bits of its representation as an integer. The
+		    single and double precision builders take a floating point value and convert it themselves.
+
+		    \param size The size of the result in bytes
+		    \param constant The bits of the constant's representation, read as an integer
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>constant</tt>
+		*/
+		ExprId FloatConstRaw(size_t size, uint64_t constant, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The constant address <tt>constant</tt> of an imported symbol. Renders as the symbol's name where one
+		    is known.
+
+		    \param size The size of the result in bytes
+		    \param constant The value
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>*constant</tt>
+		*/
+		ExprId ImportedAddress(size_t size, uint64_t constant, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Adds <tt>left</tt> and <tt>right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left + right</tt>
+		*/
 		ExprId Add(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Adds <tt>left</tt>, <tt>right</tt> and the carry <tt>carry</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param carry The carry in
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>adc.\<size\>(left, right, carry)</tt>
+		*/
 		ExprId AddWithCarry(
 		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Subtracts <tt>right</tt> from <tt>left</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left - right</tt>
+		*/
 		ExprId Sub(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Subtracts <tt>right</tt> and the borrow <tt>carry</tt> from <tt>left</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param carry The carry in
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>sbb.\<size\>(left, right, carry)</tt>
+		*/
 		ExprId SubWithBorrow(
 		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The bitwise and of <tt>left</tt> and <tt>right</tt>. Renders as <tt>left \&\& right</tt> when
+		    <tt>size</tt> is 0.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left \& right</tt>
+		*/
 		ExprId And(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The bitwise or of <tt>left</tt> and <tt>right</tt>. Renders as <tt>left || right</tt> when
+		    <tt>size</tt> is 0.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left | right</tt>
+		*/
 		ExprId Or(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The bitwise exclusive or of <tt>left</tt> and <tt>right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left ^ right</tt>
+		*/
 		ExprId Xor(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Shifts <tt>left</tt> left by <tt>right</tt> bits.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left \<\< right</tt>
+		*/
 		ExprId ShiftLeft(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Shifts <tt>left</tt> logically right by <tt>right</tt> bits.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left u\>\> right</tt>
+		*/
 		ExprId LogicalShiftRight(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Shifts <tt>left</tt> arithmetically right by <tt>right</tt> bits.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left s\>\> right</tt>
+		*/
 		ExprId ArithShiftRight(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rotates <tt>left</tt> left by <tt>right</tt> bits.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>rol.\<size\>(left, right)</tt>
+		*/
 		ExprId RotateLeft(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rotates <tt>left</tt> left by <tt>right</tt> bits through the carry <tt>carry</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param carry The carry in
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>rlc.\<size\>(left, right, carry)</tt>
+		*/
 		ExprId RotateLeftCarry(
 		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rotates <tt>left</tt> right by <tt>right</tt> bits.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ror.\<size\>(left, right)</tt>
+		*/
 		ExprId RotateRight(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rotates <tt>left</tt> right by <tt>right</tt> bits through the carry <tt>carry</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param carry The carry in
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>rrc.\<size\>(left, right, carry)</tt>
+		*/
 		ExprId RotateRightCarry(
 		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Multiplies <tt>left</tt> by <tt>right</tt>. The operands and the result are all <tt>size</tt> bytes,
+		    so the upper half of the product is discarded.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left * right</tt>
+		*/
 		ExprId Mult(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MultDoublePrecSigned(
-		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Multiplies <tt>left</tt> by <tt>right</tt> as unsigned integers. The operands are <tt>size</tt>
+		    bytes and the result is <tt>2 * size</tt> bytes. The expression's size, which it renders with, is
+		    still <tt>size</tt>.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>mulu.dp.\<size\>(left, right)</tt>
+		*/
 		ExprId MultDoublePrecUnsigned(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecSigned(
+
+		/*! Multiplies <tt>left</tt> by <tt>right</tt> as signed integers. The operands are <tt>size</tt> bytes
+		    and the result is <tt>2 * size</tt> bytes. The expression's size, which it renders with, is still
+		    <tt>size</tt>.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>muls.dp.\<size\>(left, right)</tt>
+		*/
+		ExprId MultDoublePrecSigned(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Divides <tt>left</tt> by <tt>right</tt> as unsigned integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left u/ right</tt>
+		*/
+		ExprId DivUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Divides <tt>left</tt> by <tt>right</tt> as unsigned integers. <tt>left</tt> is <tt>2 * size</tt>
+		    bytes, and <tt>right</tt> and the result are <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>divu.dp.\<size\>(left, right)</tt>
+		*/
 		ExprId DivDoublePrecUnsigned(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecSigned(
+
+		/*! Divides <tt>left</tt> by <tt>right</tt> as signed integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left s/ right</tt>
+		*/
+		ExprId DivSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Divides <tt>left</tt> by <tt>right</tt> as signed integers. <tt>left</tt> is <tt>2 * size</tt>
+		    bytes, and <tt>right</tt> and the result are <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>divs.dp.\<size\>(left, right)</tt>
+		*/
+		ExprId DivDoublePrecSigned(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The remainder of dividing <tt>left</tt> by <tt>right</tt> as unsigned integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left u% right</tt>
+		*/
+		ExprId ModUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The remainder of dividing <tt>left</tt> by <tt>right</tt> as unsigned integers. <tt>left</tt> is
+		    <tt>2 * size</tt> bytes, and <tt>right</tt> and the result are <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>modu.dp.\<size\>(left, right)</tt>
+		*/
 		ExprId ModDoublePrecUnsigned(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The remainder of dividing <tt>left</tt> by <tt>right</tt> as signed integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left s% right</tt>
+		*/
+		ExprId ModSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The remainder of dividing <tt>left</tt> by <tt>right</tt> as signed integers. <tt>left</tt> is
+		    <tt>2 * size</tt> bytes, and <tt>right</tt> and the result are <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>mods.dp.\<size\>(left, right)</tt>
+		*/
+		ExprId ModDoublePrecSigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Negates <tt>src</tt> as a two's complement integer.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>neg.\<size\>(src)</tt>
+		*/
 		ExprId Neg(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Inverts the bits of <tt>src</tt>, or negates it logically when <tt>size</tt> is 0.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>not.\<size\>(src)</tt>
+		*/
 		ExprId Not(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ByteSwap(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId PopulationCount(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CountLeadingZeros(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CountTrailingZeros(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ReverseBits(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CountLeadingSigns(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MinSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MaxSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MinUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MaxUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AbsoluteValue(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Sign-extends <tt>src</tt> to <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>sx.\<size\>(src)</tt>
+		*/
 		ExprId SignExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Zero-extends <tt>src</tt> to <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>zx.\<size\>(src)</tt>
+		*/
 		ExprId ZeroExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Truncates <tt>src</tt> to its low <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>(src).\<size\></tt>
+		*/
 		ExprId LowPart(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Calls <tt>dest</tt> with <tt>params</tt>.
+
+		    \param dest The address to call
+		    \param params The parameters
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>dest(params)</tt>
+		*/
 		ExprId Call(ExprId dest, const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Syscall(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId TailCall(
-		    ExprId dest, const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallSSA(ExprId dest, const std::vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion,
-		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SyscallSSA(const std::vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion,
-		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> equals <tt>right</tt>.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left == right</tt>
+		*/
 		ExprId CompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> doesn't equal <tt>right</tt>.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left != right</tt>
+		*/
 		ExprId CompareNotEqual(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than <tt>right</tt> as signed integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left s\< right</tt>
+		*/
 		ExprId CompareSignedLessThan(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than <tt>right</tt> as unsigned integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left u\< right</tt>
+		*/
 		ExprId CompareUnsignedLessThan(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than or equal to <tt>right</tt> as signed integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left s\<= right</tt>
+		*/
 		ExprId CompareSignedLessEqual(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than or equal to <tt>right</tt> as unsigned integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left u\<= right</tt>
+		*/
 		ExprId CompareUnsignedLessEqual(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than or equal to <tt>right</tt> as signed integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left s\>= right</tt>
+		*/
 		ExprId CompareSignedGreaterEqual(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than or equal to <tt>right</tt> as unsigned integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left u\>= right</tt>
+		*/
 		ExprId CompareUnsignedGreaterEqual(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than <tt>right</tt> as signed integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left s\> right</tt>
+		*/
 		ExprId CompareSignedGreaterThan(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than <tt>right</tt> as unsigned integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left u\> right</tt>
+		*/
 		ExprId CompareUnsignedGreaterThan(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether bit <tt>right</tt> of <tt>left</tt> is set.
+
+		    \param size The size of <tt>left</tt> in bytes
+		    \param left The left operand
+		    \param right The index of the bit to test
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>test_bit(left, right)</tt>
+		*/
 		ExprId TestBit(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Converts <tt>src</tt> to the integer 1 if it's true, or 0 if it's false.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>src ? 1 : 0</tt>
+		*/
 		ExprId BoolToInt(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddOverflow(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Trap(int64_t vector, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Makes a system call with <tt>params</tt>.
+
+		    \param params The parameters
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>syscall(params)</tt>
+		*/
+		ExprId Syscall(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Jumps to <tt>dest</tt> with <tt>params</tt> as a tail call, returning its results.
+
+		    \param dest The address to jump to
+		    \param params The parameters
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>return dest(params) __tailcall</tt>
+		*/
+		ExprId TailCall(
+		    ExprId dest, const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Calls intrinsic <tt>intrinsic</tt> with <tt>params</tt>. An intrinsic is an architecture operation
+		    lifted as a call to a built-in function that doesn't exist in the binary.
+
+		    \param intrinsic The architecture intrinsic to call
+		    \param params The parameters
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>intrinsic(params)</tt>
+		*/
 		ExprId Intrinsic(
 		    uint32_t intrinsic, const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId IntrinsicSSA(uint32_t intrinsic, const std::vector<ExprId>& params, size_t destMemVersion,
-		    size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A processor breakpoint.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>breakpoint</tt>
+		*/
+		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A processor trap, or interrupt, with number <tt>vector</tt>.
+
+		    \param vector The trap number
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>trap(vector)</tt>
+		*/
+		ExprId Trap(int64_t vector, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! An undefined value or operation.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>undefined</tt>
+		*/
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! An unimplemented instruction or value.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>unimplemented</tt>
+		*/
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A value that can't be known at analysis time. It doesn't produce the warning an unimplemented
+		    expression does.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>unknown</tt>
+		*/
 		ExprId Unknown(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId UnimplementedMemoryRef(size_t size, ExprId target, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId UnknownMemoryRef(size_t size, ExprId target, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatAdd(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatSub(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatMult(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatDiv(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatSqrt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatNeg(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatAbs(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId IntToFloat(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatConvert(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RoundToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Floor(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Ceil(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatTrunc(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A reference to <tt>size</tt> bytes of memory at <tt>src</tt>, for an unimplemented operation.
+
+		    \param size The size of the result in bytes
+		    \param src The address referenced
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>unimplemented([src].\<size\>)</tt>
+		*/
+		ExprId UnimplementedMemoryRef(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A reference to <tt>size</tt> bytes of memory at <tt>src</tt>, whose value can't be known at analysis
+		    time. It doesn't produce the warning an unimplemented expression does.
+
+		    \param size The size of the result in bytes
+		    \param src The address referenced
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>unknown([src].\<size\>)</tt>
+		*/
+		ExprId UnknownMemoryRef(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A structure value of <tt>size</tt> bytes built from the field values <tt>fields</tt>.
+
+		    \param size The size of the result in bytes
+		    \param fields The fields' values
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>{ fields }</tt>
+		*/
+		ExprId StructInit(
+		    size_t size, const std::vector<ExprId>& fields, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A STRUCT_INIT field that sets the <tt>size</tt> byte field at offset <tt>offset</tt> to
+		    <tt>src</tt>.
+
+		    \param size The size of the field in bytes
+		    \param offset The offset of the field within the structure, in bytes
+		    \param memberIndex The index of the field among the structure type's members, or -1 for none
+		    \param src The field's value
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>.offset = src</tt>
+		*/
+		ExprId StructInitField(size_t size, uint64_t offset, size_t memberIndex, ExprId src,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Adds <tt>left</tt> and <tt>right</tt> as floating point values.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f+ right</tt>
+		*/
+		ExprId FloatAdd(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Subtracts <tt>right</tt> from <tt>left</tt> as floating point values.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f- right</tt>
+		*/
+		ExprId FloatSub(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Multiplies <tt>left</tt> by <tt>right</tt> as floating point values.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f* right</tt>
+		*/
+		ExprId FloatMult(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Divides <tt>left</tt> by <tt>right</tt> as floating point values.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f/ right</tt>
+		*/
+		ExprId FloatDiv(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The square root of the floating point value <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>sqrt(src)</tt>
+		*/
+		ExprId FloatSqrt(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Negates the floating point value <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>fneg(src)</tt>
+		*/
+		ExprId FloatNeg(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The absolute value of the floating point value <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>fabs(src)</tt>
+		*/
+		ExprId FloatAbs(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Converts the floating point value <tt>src</tt> to an integer.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>int.\<size\>(src)</tt>
+		*/
+		ExprId FloatToInt(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Converts the integer <tt>src</tt> to a floating point value.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>float.\<size\>(src)</tt>
+		*/
+		ExprId IntToFloat(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Converts the floating point value <tt>src</tt> to a floating point value of <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>fconvert.\<size\>(src)</tt>
+		*/
+		ExprId FloatConvert(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rounds the floating point value <tt>src</tt> to the nearest integral value.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>roundint.\<size\>(src)</tt>
+		*/
+		ExprId RoundToInt(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rounds the floating point value <tt>src</tt> to an integral value, towards negative infinity.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>floor.\<size\>(src)</tt>
+		*/
+		ExprId Floor(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rounds the floating point value <tt>src</tt> to an integral value, towards positive infinity.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ceil.\<size\>(src)</tt>
+		*/
+		ExprId Ceil(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rounds the floating point value <tt>src</tt> to an integral value, towards zero.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ftrunc.\<size\>(src)</tt>
+		*/
+		ExprId FloatTrunc(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> equals <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f== right</tt>
+		*/
+		ExprId FloatCompareEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> doesn't equal <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f!= right</tt>
+		*/
+		ExprId FloatCompareNotEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f\< right</tt>
+		*/
+		ExprId FloatCompareLessThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than or equal to <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f\<= right</tt>
+		*/
+		ExprId FloatCompareLessEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than or equal to <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f\>= right</tt>
+		*/
 		ExprId FloatCompareGreaterEqual(
-		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f\> right</tt>
+		*/
 		ExprId FloatCompareGreaterThan(
-		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> and <tt>right</tt> are ordered, which they are when neither is NaN.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>is_ordered.\<size\>(left, right)</tt>
+		*/
+		ExprId FloatCompareOrdered(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> and <tt>right</tt> are unordered, which they are when either is NaN.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>is_unordered.\<size\>(left, right)</tt>
+		*/
+		ExprId FloatCompareUnordered(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Marks a point analysis knows execution can't reach, such as a switch's default case when every value
+		    has a case.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>unreachable</tt>
+		*/
+		ExprId Unreachable(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId WhileSSA(
+		    ExprId conditionPhi, ExprId condition, ExprId body, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DoWhileSSA(
+		    ExprId body, ExprId conditionPhi, ExprId condition, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForSSA(ExprId init, ExprId conditionPhi, ExprId condition, ExprId update, ExprId body,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarInitSSA(
+		    size_t size, const SSAVariable& dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssignMemSSA(size_t size, ExprId dest, size_t destMemory, ExprId src, size_t srcMemory,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssignUnpackMemSSA(const std::vector<ExprId>& dest, size_t destMemory, ExprId src, size_t srcMemory,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForceVerSSA(size_t size, const SSAVariable& dest, const SSAVariable& src,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssertSSA(size_t size, const SSAVariable& src, const PossibleValueSet& constraint,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarSSA(size_t size, const SSAVariable& var, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarSSAPartial(size_t size, const Variable& var, size_t destVersion, size_t prevVersion,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ArrayIndexSSA(
+		    size_t size, ExprId src, size_t srcMemory, ExprId index, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DerefSSA(size_t size, ExprId src, size_t srcMemory, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DerefFieldSSA(size_t size, ExprId src, size_t srcMemory, uint64_t offset, size_t memberIndex,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CallSSA(ExprId dest, const std::vector<ExprId>& params, size_t destMemory, size_t srcMemory,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SyscallSSA(const std::vector<ExprId>& params, size_t destMemory, size_t srcMemory,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntrinsicSSA(uint32_t intrinsic, const std::vector<ExprId>& params, size_t destMemory, size_t srcMemory,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarPhi(const SSAVariable& dest, const std::vector<SSAVariable>& src,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MemPhi(
+		    size_t destMemory, const std::vector<size_t>& srcMemory, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Reverses the byte order of <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>bswap.\<size\>(src)</tt>
+		*/
+		ExprId ByteSwap(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Counts the set bits in <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>popcnt.\<size\>(src)</tt>
+		*/
+		ExprId PopulationCount(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Counts the leading zero bits in <tt>src</tt>. The result is <tt>8 * size</tt> when <tt>src</tt> is
+		    zero.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>clz.\<size\>(src)</tt>
+		*/
+		ExprId CountLeadingZeros(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Counts the trailing zero bits in <tt>src</tt>. The result is <tt>8 * size</tt> when <tt>src</tt> is
+		    zero.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ctz.\<size\>(src)</tt>
+		*/
+		ExprId CountTrailingZeros(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Reverses the bit order of <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>rbit.\<size\>(src)</tt>
+		*/
+		ExprId ReverseBits(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Counts the bits below the sign bit of <tt>src</tt> that match it.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>cls.\<size\>(src)</tt>
+		*/
+		ExprId CountLeadingSigns(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The smaller of <tt>left</tt> and <tt>right</tt> as signed integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>mins.\<size\>(left, right)</tt>
+		*/
+		ExprId MinSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The larger of <tt>left</tt> and <tt>right</tt> as signed integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>maxs.\<size\>(left, right)</tt>
+		*/
+		ExprId MaxSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The smaller of <tt>left</tt> and <tt>right</tt> as unsigned integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>minu.\<size\>(left, right)</tt>
+		*/
+		ExprId MinUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The larger of <tt>left</tt> and <tt>right</tt> as unsigned integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>maxu.\<size\>(left, right)</tt>
+		*/
+		ExprId MaxUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The absolute value of <tt>src</tt> as a signed integer. The most negative value is its own absolute
+		    value.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>abs.\<size\>(src)</tt>
+		*/
+		ExprId AbsoluteValue(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		// END GENERATED hlil-builders
+
+		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
 
 		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
 		ExprId AddOperandList(const std::vector<ExprId>& operands);

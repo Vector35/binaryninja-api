@@ -13,6 +13,7 @@ from .model import (
 	Arg,
 	Builder,
 	CppKind,
+	CppRename,
 	Derived,
 	Kind,
 	Name,
@@ -354,7 +355,10 @@ class Loader:
 			self.problem(where, 'no Python base class')
 
 		derived = [a.get('name') for a in element.findall('accessor')]
-		shape = Shape(element.get('name'), operands, derived, cpp_base, py_shape, listed(cpp, 'implements'))
+		ordered_by_size = flag(cpp, 'ordered-by-size', True) if cpp is not None else True
+		shape = Shape(
+			element.get('name'), operands, derived, cpp_base, py_shape, listed(cpp, 'implements'), ordered_by_size
+		)
 		for name in sorted(set(shape.cpp_implements or ()) - set(shape.stored_values)):
 			self.problem(where, f"the C++ base class implements {name}, which isn't a stored value of the shape")
 
@@ -397,6 +401,7 @@ class Loader:
 			signed=flag(element, 'signed'),
 			is_listed=flag(element, 'listed', True),
 			visited=flag(element, 'visited', True),
+			ast_only=flag(element, 'ast-only'),
 			description=fallback if description is None else description,
 		)
 
@@ -644,7 +649,12 @@ class Loader:
 		own = self.elements[op].find('cpp')
 		shared = self.shape_element(op, 'cpp')
 		facts = op.cpp
-		facts.renames = {child.get('operand'): child.get('to') for child in children(own, 'rename')}
+		for child in children(own, 'rename'):
+			if (child.get('to') is None) == (child.get('role') is None):
+				self.problem(op.name, f"the C++ rename of {child.get('operand')} gives neither or both of to and role")
+
+			facts.renames[child.get('operand')] = CppRename(child.get('to'), child.get('role'))
+
 		for child in children(own, 'setter') + children(shared, 'setter'):
 			value = op.values.get(child.get('operand'))
 			if value is None:
@@ -902,6 +912,8 @@ class Loader:
 			groups(self.root, ops),
 			slots,
 			flag(self.root, 'flags'),
+			self.root.get('walker', 'visit'),
+			flag(self.root, 'ordered'),
 			markers,
 		)
 

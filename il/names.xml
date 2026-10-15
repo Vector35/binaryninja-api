@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <names xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="il.xsd">
 	<name name="bit" role="bit_index"/>
+	<name name="body" role="loop"/>
+	<name name="cases">
+		<rust item="case"/>
+	</name>
+	<name name="dest">
+		<rust item="dest"/>
+	</name>
 	<name name="dest_memory" role="dest"/>
 	<name name="dest_stack" role="dest"/>
+	<name name="fields" role="field">
+		<rust item="field"/>
+	</name>
 	<name name="hi" role="high"/>
 	<name name="hi_reg" role="high"/>
 	<name name="lo" role="low"/>
@@ -24,9 +34,20 @@
 	<name name="reg_stack_adjustments" role="register_stack_adjustments"/>
 	<name name="semantic_class" role="semantic_flag_class"/>
 	<name name="semantic_group" role="semantic_flag_group"/>
-	<name name="src" role="source"/>
-	<name name="src_memory" role="source"/>
+	<name name="src" role="source">
+		<rust item="src"/>
+	</name>
+	<name name="src_memory" role="source">
+		<rust item="src"/>
+	</name>
 	<name name="src_stack" role="source"/>
 	<name name="stack_reg" role="stack"/>
+	<name name="target">
+		<cpp type="uint64_t"/>
+	</name>
 	<name name="top_reg" role="top"/>
+	<name name="values" role="value">
+		<rust item="value"/>
+	</name>
+	<name name="var" role=""/>
 </names>

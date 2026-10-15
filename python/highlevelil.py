@@ -20,7 +20,7 @@
 
 import ctypes
 import struct
-from typing import Optional, Generator, List, Union, NewType, Tuple, ClassVar, Mapping, Set, Callable, Any, Iterator, overload
+from typing import Optional, Generator, List, Dict, Union, NewType, Tuple, ClassVar, Set, Callable, Any, Iterator, overload
 from dataclasses import dataclass
 from enum import Enum
 
@@ -152,187 +152,187 @@ class HighLevelILInstruction(BaseILInstruction):
 	instr_index: InstructionIndex
 	# ILOperations is deprecated and will be removed in a future version once BNIL Graph no longer uses it
 	# Use the visit methods visit, visit_all, and visit_operands
-	ILOperations: ClassVar[Mapping[HighLevelILOperation, List[Tuple[str, str]]]] = {
-	    HighLevelILOperation.HLIL_NOP: [], HighLevelILOperation.HLIL_BLOCK: [("body", "expr_list")],
-	    HighLevelILOperation.HLIL_IF: [("condition", "expr"), ("true", "expr"),
-	                                   ("false", "expr")], HighLevelILOperation.HLIL_WHILE: [("condition", "expr"),
-	                                                                                         ("body", "expr")],
-	    HighLevelILOperation.HLIL_WHILE_SSA: [("condition_phi", "expr"), ("condition", "expr"),
-	                                          ("body", "expr")], HighLevelILOperation.HLIL_DO_WHILE: [
-	                                              ("body", "expr"), ("condition", "expr")
-	                                          ], HighLevelILOperation.HLIL_DO_WHILE_SSA: [("body", "expr"),
-	                                                                                      ("condition_phi", "expr"),
-	                                                                                      ("condition", "expr")],
-	    HighLevelILOperation.HLIL_FOR: [("init", "expr"), ("condition", "expr"), ("update", "expr"),
-	                                    ("body", "expr")], HighLevelILOperation.HLIL_FOR_SSA: [
-	                                        ("init", "expr"), ("condition_phi", "expr"), ("condition", "expr"),
-	                                        ("update", "expr"), ("body", "expr")
-	                                    ], HighLevelILOperation.HLIL_SWITCH: [
-	                                        ("condition", "expr"), ("default", "expr"), ("cases", "expr_list")
-	                                    ], HighLevelILOperation.HLIL_CASE: [("values", "expr_list"), ("body", "expr")],
-	    HighLevelILOperation.HLIL_BREAK: [], HighLevelILOperation.HLIL_CONTINUE: [], HighLevelILOperation.HLIL_JUMP: [
-	        ("dest", "expr")
-	    ], HighLevelILOperation.HLIL_RET: [("src", "expr_list")], HighLevelILOperation.HLIL_NORET: [],
-	    HighLevelILOperation.HLIL_UNREACHABLE: [],
-	    HighLevelILOperation.HLIL_GOTO: [("target", "label")], HighLevelILOperation.HLIL_LABEL: [
-	        ("target", "label")
-	    ], HighLevelILOperation.HLIL_VAR_DECLARE: [("var", "var")], HighLevelILOperation.HLIL_VAR_INIT: [
-	        ("dest", "var"), ("src", "expr")
-	    ], HighLevelILOperation.HLIL_VAR_INIT_SSA: [
-	        ("dest", "var_ssa"), ("src", "expr")
-	    ], HighLevelILOperation.HLIL_ASSIGN: [("dest", "expr"),
-	                                          ("src", "expr")], HighLevelILOperation.HLIL_ASSIGN_UNPACK: [
-	                                              ("dest", "expr_list"), ("src", "expr")
-	                                          ], HighLevelILOperation.HLIL_ASSIGN_MEM_SSA: [("dest", "expr"),
-	                                                                                        ("dest_memory", "int"),
-	                                                                                        ("src", "expr"),
-	                                                                                        ("src_memory", "int")],
-	    HighLevelILOperation.HLIL_FORCE_VER: [("dest", "var"), ("src", "var")],
-	    HighLevelILOperation.HLIL_ASSERT: [("src", "var"), ("constraint", "constraint")],
-	    HighLevelILOperation.HLIL_FORCE_VER_SSA: [("dest", "var_ssa"), ("src", "var_ssa")],
-	    HighLevelILOperation.HLIL_ASSERT_SSA: [("src", "var_ssa"), ("constraint", "constraint")],
-	    HighLevelILOperation.HLIL_ASSIGN_UNPACK_MEM_SSA: [
-	        ("dest", "expr_list"), ("dest_memory", "int"), ("src", "expr"), ("src_memory", "int")
-	    ], HighLevelILOperation.HLIL_VAR: [("var", "var")], HighLevelILOperation.HLIL_VAR_SSA: [
-	        ("var", "var_ssa")
-	    ], HighLevelILOperation.HLIL_VAR_SSA_PARTIAL: [
-	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src")
-	    ], HighLevelILOperation.HLIL_VAR_PHI: [("dest", "var_ssa"),
-	                                           ("src", "var_ssa_list")], HighLevelILOperation.HLIL_MEM_PHI: [
-	                                               ("dest", "int"), ("src", "int_list")
-	                                           ], HighLevelILOperation.HLIL_STRUCT_FIELD: [
-	                                               ("src", "expr"), ("offset", "int"), ("member_index", "member_index")
-	                                           ], HighLevelILOperation.HLIL_ARRAY_INDEX: [
-	                                               ("src", "expr"), ("index", "expr")
-	                                           ], HighLevelILOperation.HLIL_ARRAY_INDEX_SSA: [("src", "expr"),
-	                                                                                          ("src_memory", "int"),
-	                                                                                          ("index", "expr")],
-	    HighLevelILOperation.HLIL_SPLIT: [("high", "expr"), ("low", "expr")], HighLevelILOperation.HLIL_DEREF: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_DEREF_FIELD: [
-	        ("src", "expr"), ("offset", "int"), ("member_index", "member_index")
-	    ], HighLevelILOperation.HLIL_DEREF_SSA: [
-	        ("src", "expr"), ("src_memory", "int")
-	    ], HighLevelILOperation.HLIL_DEREF_FIELD_SSA: [
-	        ("src", "expr"), ("src_memory", "int"), ("offset", "int"),
-	        ("member_index", "member_index")
-	    ], HighLevelILOperation.HLIL_ADDRESS_OF: [("src", "expr")], HighLevelILOperation.HLIL_PASS_BY_REF: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_RETURN_BY_REF: [
-			("src", "expr")
-		], HighLevelILOperation.HLIL_CONST: [
-	        ("constant", "int")
-	    ], HighLevelILOperation.HLIL_CONST_PTR: [("constant", "int")], HighLevelILOperation.HLIL_EXTERN_PTR: [
-	        ("constant", "int"), ("offset", "int")
-	    ], HighLevelILOperation.HLIL_FLOAT_CONST: [("constant", "float")], HighLevelILOperation.HLIL_IMPORT: [
-	        ("constant", "int")
-	    ], HighLevelILOperation.HLIL_CONST_DATA: [("constant", "ConstantData")], HighLevelILOperation.HLIL_CONST_DATA: [
-	        ("constant", "ConstantData")
-	    ], HighLevelILOperation.HLIL_ADD: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_ADC: [
-	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
-	    ], HighLevelILOperation.HLIL_SUB: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_SBB: [
-	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
-	    ], HighLevelILOperation.HLIL_AND: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_OR: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_XOR: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_LSL: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_LSR: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_ASR: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_ROL: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_RLC: [
-	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
-	    ], HighLevelILOperation.HLIL_ROR: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_RRC: [
-	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
-	    ], HighLevelILOperation.HLIL_MUL: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_MULU_DP: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_MULS_DP: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_DIVU: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_DIVU_DP: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_DIVS: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_DIVS_DP: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_MODU: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_MODU_DP: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_MODS: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_MODS_DP: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_NEG: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_NOT: [("src", "expr")], HighLevelILOperation.HLIL_BSWAP: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_POPCNT: [("src", "expr")], HighLevelILOperation.HLIL_CLZ: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_CTZ: [("src", "expr")], HighLevelILOperation.HLIL_RBIT: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_CLS: [("src", "expr")], HighLevelILOperation.HLIL_MINS: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_MAXS: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_MINU: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_MAXU: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_ABS: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_SX: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_ZX: [("src", "expr")], HighLevelILOperation.HLIL_LOW_PART: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_CALL: [
-	        ("dest", "expr"), ("params", "expr_list")
-	    ], HighLevelILOperation.HLIL_CALL_SSA: [
-	        ("dest", "expr"), ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int")
-	    ], HighLevelILOperation.HLIL_CMP_E: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_CMP_NE: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
-	    HighLevelILOperation.HLIL_CMP_ULT: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_CMP_SLE: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_CMP_ULE: [("left", "expr"),
-	                                           ("right", "expr")], HighLevelILOperation.HLIL_CMP_SGE: [
-	                                               ("left", "expr"), ("right", "expr")
-	                                           ], HighLevelILOperation.HLIL_CMP_UGE: [("left", "expr"),
-	                                                                                  ("right", "expr")],
-	    HighLevelILOperation.HLIL_CMP_SGT: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_CMP_UGT: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_TEST_BIT: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_BOOL_TO_INT: [("src", "expr")], HighLevelILOperation.HLIL_ADD_OVERFLOW: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_SYSCALL: [("params", "expr_list")], HighLevelILOperation.HLIL_SYSCALL_SSA: [
-	        ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int")
-	    ], HighLevelILOperation.HLIL_TAILCALL: [
-	        ("dest", "expr"), ("params", "expr_list")
-	    ], HighLevelILOperation.HLIL_BP: [], HighLevelILOperation.HLIL_TRAP: [
-	        ("vector", "int")
-	    ], HighLevelILOperation.HLIL_INTRINSIC: [("intrinsic", "intrinsic"),
-	                                             ("params", "expr_list")], HighLevelILOperation.HLIL_INTRINSIC_SSA: [
-	                                                 ("intrinsic", "intrinsic"), ("params", "expr_list"),
-	                                                 ("dest_memory", "int"), ("src_memory", "int")
-	                                             ], HighLevelILOperation.HLIL_UNDEF: [],
-	    HighLevelILOperation.HLIL_UNIMPL: [], HighLevelILOperation.HLIL_UNIMPL_MEM: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_STRUCT_INIT: [
-			("fields", "expr_list")
-		], HighLevelILOperation.HLIL_STRUCT_INIT_FIELD: [
-			("offset", "int"), ("member_index", "member_index"), ("src", "expr")
-		], HighLevelILOperation.HLIL_FADD: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_FSUB: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_FMUL: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_FDIV: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_FSQRT: [("src", "expr")], HighLevelILOperation.HLIL_FNEG: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_FABS: [("src", "expr")], HighLevelILOperation.HLIL_FLOAT_TO_INT: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_INT_TO_FLOAT: [("src", "expr")], HighLevelILOperation.HLIL_FLOAT_CONV: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_ROUND_TO_INT: [("src", "expr")], HighLevelILOperation.HLIL_FLOOR: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_CEIL: [("src", "expr")], HighLevelILOperation.HLIL_FTRUNC: [
-	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_FCMP_E: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_FCMP_NE: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_FCMP_LT: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_FCMP_LE: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_FCMP_GE: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_FCMP_GT: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_FCMP_O: [
-	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_FCMP_UO: [("left", "expr"), ("right", "expr")]
+	# BEGIN GENERATED hlil-operations: from api/il, do not edit
+	ILOperations: ClassVar[Dict[HighLevelILOperation, List[Tuple[str, str]]]] = {
+		HighLevelILOperation.HLIL_NOP: [],
+		HighLevelILOperation.HLIL_BLOCK: [("body", "expr_list")],
+		HighLevelILOperation.HLIL_IF: [("condition", "expr"), ("true", "expr"), ("false", "expr")],
+		HighLevelILOperation.HLIL_WHILE: [("condition", "expr"), ("body", "expr")],
+		HighLevelILOperation.HLIL_DO_WHILE: [("body", "expr"), ("condition", "expr")],
+		HighLevelILOperation.HLIL_FOR: [("init", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr")],
+		HighLevelILOperation.HLIL_SWITCH: [("condition", "expr"), ("default", "expr"), ("cases", "expr_list")],
+		HighLevelILOperation.HLIL_CASE: [("values", "expr_list"), ("body", "expr")],
+		HighLevelILOperation.HLIL_BREAK: [],
+		HighLevelILOperation.HLIL_CONTINUE: [],
+		HighLevelILOperation.HLIL_JUMP: [("dest", "expr")],
+		HighLevelILOperation.HLIL_RET: [("src", "expr_list")],
+		HighLevelILOperation.HLIL_NORET: [],
+		HighLevelILOperation.HLIL_GOTO: [("target", "label")],
+		HighLevelILOperation.HLIL_LABEL: [("target", "label")],
+		HighLevelILOperation.HLIL_VAR_DECLARE: [("var", "var")],
+		HighLevelILOperation.HLIL_VAR_INIT: [("dest", "var"), ("src", "expr")],
+		HighLevelILOperation.HLIL_ASSIGN: [("dest", "expr"), ("src", "expr")],
+		HighLevelILOperation.HLIL_ASSIGN_UNPACK: [("dest", "expr_list"), ("src", "expr")],
+		HighLevelILOperation.HLIL_FORCE_VER: [("dest", "var"), ("src", "var")],
+		HighLevelILOperation.HLIL_ASSERT: [("src", "var"), ("constraint", "constraint")],
+		HighLevelILOperation.HLIL_VAR: [("var", "var")],
+		HighLevelILOperation.HLIL_STRUCT_FIELD: [("src", "expr"), ("offset", "int"), ("member_index", "member_index")],
+		HighLevelILOperation.HLIL_ARRAY_INDEX: [("src", "expr"), ("index", "expr")],
+		HighLevelILOperation.HLIL_SPLIT: [("high", "expr"), ("low", "expr")],
+		HighLevelILOperation.HLIL_DEREF: [("src", "expr")],
+		HighLevelILOperation.HLIL_DEREF_FIELD: [("src", "expr"), ("offset", "int"), ("member_index", "member_index")],
+		HighLevelILOperation.HLIL_ADDRESS_OF: [("src", "expr")],
+		HighLevelILOperation.HLIL_PASS_BY_REF: [("src", "expr")],
+		HighLevelILOperation.HLIL_RETURN_BY_REF: [("src", "expr")],
+		HighLevelILOperation.HLIL_CONST: [("constant", "int")],
+		HighLevelILOperation.HLIL_CONST_DATA: [("constant", "ConstantData")],
+		HighLevelILOperation.HLIL_CONST_PTR: [("constant", "int")],
+		HighLevelILOperation.HLIL_EXTERN_PTR: [("constant", "int"), ("offset", "int")],
+		HighLevelILOperation.HLIL_FLOAT_CONST: [("constant", "float")],
+		HighLevelILOperation.HLIL_IMPORT: [("constant", "int")],
+		HighLevelILOperation.HLIL_ADD: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_ADC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		HighLevelILOperation.HLIL_SUB: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_SBB: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		HighLevelILOperation.HLIL_AND: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_OR: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_XOR: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_LSL: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_LSR: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_ASR: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_ROL: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_RLC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		HighLevelILOperation.HLIL_ROR: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_RRC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		HighLevelILOperation.HLIL_MUL: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_DIVU: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_DIVU_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_DIVS: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_DIVS_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MODU: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MODU_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MODS: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MODS_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_NEG: [("src", "expr")],
+		HighLevelILOperation.HLIL_NOT: [("src", "expr")],
+		HighLevelILOperation.HLIL_SX: [("src", "expr")],
+		HighLevelILOperation.HLIL_ZX: [("src", "expr")],
+		HighLevelILOperation.HLIL_LOW_PART: [("src", "expr")],
+		HighLevelILOperation.HLIL_CALL: [("dest", "expr"), ("params", "expr_list")],
+		HighLevelILOperation.HLIL_CMP_E: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_ULT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_SLE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_ULE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_SGE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_UGE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_SGT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_BOOL_TO_INT: [("src", "expr")],
+		HighLevelILOperation.HLIL_ADD_OVERFLOW: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_SYSCALL: [("params", "expr_list")],
+		HighLevelILOperation.HLIL_TAILCALL: [("dest", "expr"), ("params", "expr_list")],
+		HighLevelILOperation.HLIL_INTRINSIC: [("intrinsic", "intrinsic"), ("params", "expr_list")],
+		HighLevelILOperation.HLIL_BP: [],
+		HighLevelILOperation.HLIL_TRAP: [("vector", "int")],
+		HighLevelILOperation.HLIL_UNDEF: [],
+		HighLevelILOperation.HLIL_UNIMPL: [],
+		HighLevelILOperation.HLIL_UNIMPL_MEM: [("src", "expr")],
+		HighLevelILOperation.HLIL_STRUCT_INIT: [("fields", "expr_list")],
+		HighLevelILOperation.HLIL_STRUCT_INIT_FIELD: [
+			("offset", "int"),
+			("member_index", "member_index"),
+			("src", "expr"),
+		],
+		HighLevelILOperation.HLIL_FADD: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FSUB: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FMUL: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FDIV: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FSQRT: [("src", "expr")],
+		HighLevelILOperation.HLIL_FNEG: [("src", "expr")],
+		HighLevelILOperation.HLIL_FABS: [("src", "expr")],
+		HighLevelILOperation.HLIL_FLOAT_TO_INT: [("src", "expr")],
+		HighLevelILOperation.HLIL_INT_TO_FLOAT: [("src", "expr")],
+		HighLevelILOperation.HLIL_FLOAT_CONV: [("src", "expr")],
+		HighLevelILOperation.HLIL_ROUND_TO_INT: [("src", "expr")],
+		HighLevelILOperation.HLIL_FLOOR: [("src", "expr")],
+		HighLevelILOperation.HLIL_CEIL: [("src", "expr")],
+		HighLevelILOperation.HLIL_FTRUNC: [("src", "expr")],
+		HighLevelILOperation.HLIL_FCMP_E: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_NE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_LT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_LE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_GE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_GT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_O: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_UO: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_UNREACHABLE: [],
+		HighLevelILOperation.HLIL_WHILE_SSA: [("condition_phi", "expr"), ("condition", "expr"), ("body", "expr")],
+		HighLevelILOperation.HLIL_DO_WHILE_SSA: [("body", "expr"), ("condition_phi", "expr"), ("condition", "expr")],
+		HighLevelILOperation.HLIL_FOR_SSA: [
+			("init", "expr"),
+			("condition_phi", "expr"),
+			("condition", "expr"),
+			("update", "expr"),
+			("body", "expr"),
+		],
+		HighLevelILOperation.HLIL_VAR_INIT_SSA: [("dest", "var_ssa"), ("src", "expr")],
+		HighLevelILOperation.HLIL_ASSIGN_MEM_SSA: [
+			("dest", "expr"),
+			("dest_memory", "int"),
+			("src", "expr"),
+			("src_memory", "int"),
+		],
+		HighLevelILOperation.HLIL_ASSIGN_UNPACK_MEM_SSA: [
+			("dest", "expr_list"),
+			("dest_memory", "int"),
+			("src", "expr"),
+			("src_memory", "int"),
+		],
+		HighLevelILOperation.HLIL_FORCE_VER_SSA: [("dest", "var_ssa"), ("src", "var_ssa")],
+		HighLevelILOperation.HLIL_ASSERT_SSA: [("src", "var_ssa"), ("constraint", "constraint")],
+		HighLevelILOperation.HLIL_VAR_SSA: [("var", "var_ssa")],
+		HighLevelILOperation.HLIL_VAR_SSA_PARTIAL: [("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src")],
+		HighLevelILOperation.HLIL_ARRAY_INDEX_SSA: [("src", "expr"), ("src_memory", "int"), ("index", "expr")],
+		HighLevelILOperation.HLIL_DEREF_SSA: [("src", "expr"), ("src_memory", "int")],
+		HighLevelILOperation.HLIL_DEREF_FIELD_SSA: [
+			("src", "expr"),
+			("src_memory", "int"),
+			("offset", "int"),
+			("member_index", "member_index"),
+		],
+		HighLevelILOperation.HLIL_CALL_SSA: [
+			("dest", "expr"),
+			("params", "expr_list"),
+			("dest_memory", "int"),
+			("src_memory", "int"),
+		],
+		HighLevelILOperation.HLIL_SYSCALL_SSA: [("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int")],
+		HighLevelILOperation.HLIL_INTRINSIC_SSA: [
+			("intrinsic", "intrinsic"),
+			("params", "expr_list"),
+			("dest_memory", "int"),
+			("src_memory", "int"),
+		],
+		HighLevelILOperation.HLIL_VAR_PHI: [("dest", "var_ssa"), ("src", "var_ssa_list")],
+		HighLevelILOperation.HLIL_MEM_PHI: [("dest", "int"), ("src", "int_list")],
+		HighLevelILOperation.HLIL_BSWAP: [("src", "expr")],
+		HighLevelILOperation.HLIL_POPCNT: [("src", "expr")],
+		HighLevelILOperation.HLIL_CLZ: [("src", "expr")],
+		HighLevelILOperation.HLIL_CTZ: [("src", "expr")],
+		HighLevelILOperation.HLIL_RBIT: [("src", "expr")],
+		HighLevelILOperation.HLIL_CLS: [("src", "expr")],
+		HighLevelILOperation.HLIL_MINS: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MAXS: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MINU: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MAXU: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_ABS: [("src", "expr")],
 	}
+	# END GENERATED hlil-operations
 
 	@staticmethod
 	def show_hlil_hierarchy():
@@ -751,11 +751,6 @@ class HighLevelILInstruction(BaseILInstruction):
 		version = self.core_instr.operands[operand_index2]
 		return mediumlevelil.SSAVariable(var, version)
 
-	def _get_var_ssa_dest_and_src(self, operand_index1: int, operand_index2: int) -> 'mediumlevelil.SSAVariable':
-		var = variable.Variable.from_identifier(self.function, self.core_instr.operands[operand_index1])
-		dest_version = self.core_instr.operands[operand_index2]
-		return mediumlevelil.SSAVariable(var, dest_version)
-
 	def _get_int_list(self, operand_index: int) -> List[int]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNHighLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
@@ -1084,20 +1079,74 @@ class HighLevelILCarryBase(HighLevelILInstruction, Arithmetic):
 		]
 
 
+class _BlockIteration:
+	def __iter__(self) -> Generator['HighLevelILInstruction', None, None]:
+		for expr in self.body:
+			yield expr
+
+
+class _DestVarWritten:
+	@property
+	def vars_written(self) -> VariablesList:
+		return [self.dest]
+
+
+class _ForceVerVars:
+	@property
+	def vars_written(self) -> VariablesList:
+		return [self.dest]
+
+
+class _AssignVars:
+	@property
+	def vars_written(self) -> VariablesList:
+		if isinstance(self.dest, (HighLevelILSplit, HighLevelILVar, HighLevelILVarSsa)):
+			return [*self.dest.vars, *self.src.vars_written]
+		elif isinstance(self.dest, HighLevelILStructField):
+			return [*self.dest.vars, *self.src.vars_written]
+		else:
+			return [*self.dest.vars_written, *self.src.vars_written]
+
+
+class _AssignUnpackVars:
+	@property
+	def vars_written(self) -> VariablesList:
+		result = []
+		for i in self.dest:
+			if isinstance(i, (HighLevelILVar, HighLevelILVarSsa)):
+				result.append(i.var)
+			else:
+				result.extend(i.vars_written)
+		return result
+
+
+class _AddressOfVars:
+	@property
+	def vars_address_taken(self) -> VariablesList:
+		if isinstance(self.src, (HighLevelILVar, HighLevelILVarSsa)):
+			return [self.src.var]
+		elif isinstance(self.src, HighLevelILStructField) and isinstance(self.src.src, (HighLevelILVar, HighLevelILVarSsa)):
+			return [self.src.src.var]
+		return [*self.src.vars_address_taken]
+
+
+class _ConstPtrString:
+	@property
+	def string(self) -> Optional[Tuple[str, StringType]]:
+		return self.function.view.check_for_string_annotation_type(self.constant, True, True, 0)
+
+
+# BEGIN GENERATED hlil-classes: from api/il, do not edit
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILNop(HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILBlock(HighLevelILInstruction):
+class HighLevelILBlock(_BlockIteration, HighLevelILInstruction):
 	@property
 	def body(self) -> List[HighLevelILInstruction]:
 		return self._get_expr_list(0, 1)
-
-	def __iter__(self) -> Generator['HighLevelILInstruction', None, None]:
-		for expr in self.body:
-			yield expr
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
@@ -1148,29 +1197,6 @@ class HighLevelILWhile(HighLevelILInstruction, Loop):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILWhileSsa(HighLevelILInstruction, Loop, SSA):
-	@property
-	def condition_phi(self) -> HighLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def condition(self) -> HighLevelILInstruction:
-		return self._get_expr(1)
-
-	@property
-	def body(self) -> HighLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("condition_phi", self.condition_phi, "HighLevelILInstruction"),
-			("condition", self.condition, "HighLevelILInstruction"),
-			("body", self.body, "HighLevelILInstruction"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILDoWhile(HighLevelILInstruction, Loop):
 	@property
 	def body(self) -> HighLevelILInstruction:
@@ -1184,29 +1210,6 @@ class HighLevelILDoWhile(HighLevelILInstruction, Loop):
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
 		return [
 			("body", self.body, "HighLevelILInstruction"),
-			("condition", self.condition, "HighLevelILInstruction"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILDoWhileSsa(HighLevelILInstruction, Loop, SSA):
-	@property
-	def body(self) -> HighLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def condition_phi(self) -> HighLevelILInstruction:
-		return self._get_expr(1)
-
-	@property
-	def condition(self) -> HighLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("body", self.body, "HighLevelILInstruction"),
-			("condition_phi", self.condition_phi, "HighLevelILInstruction"),
 			("condition", self.condition, "HighLevelILInstruction"),
 		]
 
@@ -1233,39 +1236,6 @@ class HighLevelILFor(HighLevelILInstruction, Loop):
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
 		return [
 			("init", self.init, "HighLevelILInstruction"),
-			("condition", self.condition, "HighLevelILInstruction"),
-			("update", self.update, "HighLevelILInstruction"),
-			("body", self.body, "HighLevelILInstruction"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILForSsa(HighLevelILInstruction, Loop, SSA):
-	@property
-	def init(self) -> HighLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def condition_phi(self) -> HighLevelILInstruction:
-		return self._get_expr(1)
-
-	@property
-	def condition(self) -> HighLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def update(self) -> HighLevelILInstruction:
-		return self._get_expr(3)
-
-	@property
-	def body(self) -> HighLevelILInstruction:
-		return self._get_expr(4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("init", self.init, "HighLevelILInstruction"),
-			("condition_phi", self.condition_phi, "HighLevelILInstruction"),
 			("condition", self.condition, "HighLevelILInstruction"),
 			("update", self.update, "HighLevelILInstruction"),
 			("body", self.body, "HighLevelILInstruction"),
@@ -1355,11 +1325,6 @@ class HighLevelILNoret(HighLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILUnreachable(HighLevelILInstruction, Terminal):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILGoto(HighLevelILInstruction, Terminal):
 	@property
 	def target(self) -> GotoLabel:
@@ -1388,7 +1353,7 @@ class HighLevelILLabel(HighLevelILInstruction):
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILVarDeclare(HighLevelILInstruction):
 	@property
-	def var(self) -> 'variable.Variable':
+	def var(self) -> variable.Variable:
 		return self._get_var(0)
 
 	@property
@@ -1399,9 +1364,9 @@ class HighLevelILVarDeclare(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarInit(HighLevelILInstruction, SetVar):
+class HighLevelILVarInit(_DestVarWritten, HighLevelILInstruction, SetVar):
 	@property
-	def dest(self) -> 'variable.Variable':
+	def dest(self) -> variable.Variable:
 		return self._get_var(0)
 
 	@property
@@ -1415,35 +1380,9 @@ class HighLevelILVarInit(HighLevelILInstruction, SetVar):
 			("src", self.src, "HighLevelILInstruction"),
 		]
 
-	@property
-	def vars_written(self) -> VariablesList:
-		return [self.dest]
-
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarInitSsa(HighLevelILInstruction, SetVar, SSA):
-	@property
-	def dest(self) -> 'mediumlevelil.SSAVariable':
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def src(self) -> HighLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("dest", self.dest, "SSAVariable"),
-			("src", self.src, "HighLevelILInstruction"),
-		]
-
-	@property
-	def vars_written(self) -> VariablesList:
-		return [self.dest]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILAssign(HighLevelILInstruction, SetVar):
+class HighLevelILAssign(_AssignVars, HighLevelILInstruction, SetVar):
 	@property
 	def dest(self) -> HighLevelILInstruction:
 		return self._get_expr(0)
@@ -1459,18 +1398,9 @@ class HighLevelILAssign(HighLevelILInstruction, SetVar):
 			("src", self.src, "HighLevelILInstruction"),
 		]
 
-	@property
-	def vars_written(self) -> VariablesList:
-		if isinstance(self.dest, (HighLevelILSplit, HighLevelILVar, HighLevelILVarSsa)):
-			return [*self.dest.vars, *self.src.vars_written]
-		elif isinstance(self.dest, HighLevelILStructField):
-			return [*self.dest.vars, *self.src.vars_written]
-		else:
-			return [*self.dest.vars_written, *self.src.vars_written]
-
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILAssignUnpack(HighLevelILInstruction, SetVar):
+class HighLevelILAssignUnpack(_AssignUnpackVars, HighLevelILInstruction, SetVar):
 	@property
 	def dest(self) -> List[HighLevelILInstruction]:
 		return self._get_expr_list(0, 1)
@@ -1486,154 +1416,53 @@ class HighLevelILAssignUnpack(HighLevelILInstruction, SetVar):
 			("src", self.src, "HighLevelILInstruction"),
 		]
 
-	@property
-	def vars_written(self) -> VariablesList:
-		result = []
-		for i in self.dest:
-			if isinstance(i, (HighLevelILVar, HighLevelILVarSsa)):
-				result.append(i.var)
-			else:
-				result.extend(i.vars_written)
-		return result
-
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILAssignMemSsa(HighLevelILInstruction, SSA):
+class HighLevelILForceVer(_ForceVerVars, HighLevelILInstruction):
 	@property
-	def dest(self) -> HighLevelILInstruction:
-		return self._get_expr(0)
+	def dest(self) -> variable.Variable:
+		return self._get_var(0)
 
 	@property
-	def dest_memory(self) -> int:
-		return self._get_int(1)
-
-	@property
-	def src(self) -> HighLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(3)
+	def src(self) -> variable.Variable:
+		return self._get_var(1)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
 		return [
-			("dest", self.dest, "HighLevelILInstruction"),
-			("dest_memory", self.dest_memory, "int"),
-			("src", self.src, "HighLevelILInstruction"),
-			("src_memory", self.src_memory, "int"),
+			("dest", self.dest, "Variable"),
+			("src", self.src, "Variable"),
 		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILAssignUnpackMemSsa(HighLevelILInstruction, SSA, Memory):
+class HighLevelILAssert(HighLevelILInstruction):
 	@property
-	def dest(self) -> List[HighLevelILInstruction]:
-		return self._get_expr_list(0, 1)
+	def src(self) -> variable.Variable:
+		return self._get_var(0)
 
 	@property
-	def dest_memory(self) -> int:
-		return self._get_int(2)
-
-	@property
-	def src(self) -> HighLevelILInstruction:
-		return self._get_expr(3)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(4)
+	def constraint(self) -> variable.PossibleValueSet:
+		return self._get_constraint(1)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
 		return [
-			("dest", self.dest, "List[HighLevelILInstruction]"),
-			("dest_memory", self.dest_memory, "int"),
-			("src", self.src, "HighLevelILInstruction"),
-			("src_memory", self.src_memory, "int"),
+			("src", self.src, "Variable"),
+			("constraint", self.constraint, "PossibleValueSet"),
 		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILVar(HighLevelILInstruction, VariableInstruction):
 	@property
-	def var(self) -> 'variable.Variable':
+	def var(self) -> variable.Variable:
 		return self._get_var(0)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
 		return [
 			("var", self.var, "Variable"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarSsa(HighLevelILInstruction, SSAVariableInstruction):
-	@property
-	def var(self) -> 'mediumlevelil.SSAVariable':
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("var", self.var, "SSAVariable"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarSsaPartial(HighLevelILInstruction, SSAVariableInstruction):
-	@property
-	def dest(self) -> 'mediumlevelil.SSAVariable':
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def prev(self) -> 'mediumlevelil.SSAVariable':
-		return self._get_var_ssa(0, 2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("dest", self.dest, "SSAVariable"),
-			("prev", self.prev, "SSAVariable"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarPhi(HighLevelILInstruction, Phi, SetVar):
-	@property
-	def dest(self) -> 'mediumlevelil.SSAVariable':
-		return self._get_var_ssa(0, 1)
-
-	@property
-	def src(self) -> List['mediumlevelil.SSAVariable']:
-		return self._get_var_ssa_list(2, 3)
-
-	@property
-	def vars_written(self) -> VariablesList:
-		return [self.dest]
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("dest", self.dest, "SSAVariable"),
-			("src", self.src, "List[SSAVariable]"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILMemPhi(HighLevelILInstruction, Memory, Phi):
-	@property
-	def dest(self) -> int:
-		return self._get_int(0)
-
-	@property
-	def src(self) -> List[int]:
-		return self._get_int_list(1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("dest", self.dest, "int"),
-			("src", self.src, "List[int]"),
 		]
 
 
@@ -1679,29 +1508,6 @@ class HighLevelILArrayIndex(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILArrayIndexSsa(HighLevelILInstruction, SSA):
-	@property
-	def src(self) -> HighLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(1)
-
-	@property
-	def index(self) -> HighLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("src", self.src, "HighLevelILInstruction"),
-			("src_memory", self.src_memory, "int"),
-			("index", self.index, "HighLevelILInstruction"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILSplit(HighLevelILInstruction):
 	@property
 	def high(self) -> HighLevelILInstruction:
@@ -1716,42 +1522,6 @@ class HighLevelILSplit(HighLevelILInstruction):
 		return [
 			("high", self.high, "HighLevelILInstruction"),
 			("low", self.low, "HighLevelILInstruction"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILStructInit(HighLevelILInstruction):
-	@property
-	def fields(self) -> List[HighLevelILInstruction]:
-		return self._get_expr_list(0, 1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("fields", self.fields, "List[HighLevelILInstruction]"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILStructInitField(HighLevelILInstruction):
-	@property
-	def offset(self) -> int:
-		return self._get_int(0)
-
-	@property
-	def member_index(self) -> Optional[int]:
-		return self._get_member_index(1)
-
-	@property
-	def src(self) -> HighLevelILInstruction:
-		return self._get_expr(2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("offset", self.offset, "int"),
-			("member_index", self.member_index, "Optional[int]"),
-			("src", self.src, "HighLevelILInstruction"),
 		]
 
 
@@ -1784,60 +1554,8 @@ class HighLevelILDerefField(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILDerefSsa(HighLevelILInstruction, SSA):
-	@property
-	def src(self) -> HighLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("src", self.src, "HighLevelILInstruction"),
-			("src_memory", self.src_memory, "int"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILDerefFieldSsa(HighLevelILInstruction, SSA):
-	@property
-	def src(self) -> HighLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(1)
-
-	@property
-	def offset(self) -> int:
-		return self._get_int(2)
-
-	@property
-	def member_index(self) -> Optional[int]:
-		return self._get_member_index(3)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("src", self.src, "HighLevelILInstruction"),
-			("src_memory", self.src_memory, "int"),
-			("offset", self.offset, "int"),
-			("member_index", self.member_index, "Optional[int]"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILAddressOf(HighLevelILUnaryBase):
-	@property
-	def vars_address_taken(self) -> VariablesList:
-		if isinstance(self.src, (HighLevelILVar, HighLevelILVarSsa)):
-			return [self.src.var]
-		elif isinstance(self.src, HighLevelILStructField) and isinstance(self.src.src, (HighLevelILVar, HighLevelILVarSsa)):
-			return [self.src.src.var]
-		return [*self.src.vars_address_taken]
+class HighLevelILAddressOf(_AddressOfVars, HighLevelILUnaryBase):
+	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1864,7 +1582,24 @@ class HighLevelILConst(HighLevelILInstruction, Constant):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILConstPtr(HighLevelILInstruction, Constant):
+class HighLevelILConstData(HighLevelILInstruction, Constant):
+	@property
+	def constant_data(self) -> variable.ConstantData:
+		return self._get_constant_data(0, 1)
+
+	@property
+	def constant(self) -> variable.ConstantData:
+		return self.constant_data
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "ConstantData"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILConstPtr(_ConstPtrString, HighLevelILInstruction, Constant):
 	@property
 	def constant(self) -> int:
 		return self._get_int(0)
@@ -1874,10 +1609,6 @@ class HighLevelILConstPtr(HighLevelILInstruction, Constant):
 		return [
 			("constant", self.constant, "int"),
 		]
-
-	@property
-	def string(self) -> Optional[Tuple[str, StringType]]:
-		return self.function.view.check_for_string_annotation_type(self.constant, True, True, 0)
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1921,23 +1652,6 @@ class HighLevelILImport(HighLevelILInstruction, Constant):
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
 		return [
 			("constant", self.constant, "int"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILConstData(HighLevelILInstruction, Constant):
-	@property
-	def constant(self) -> variable.ConstantData:
-		return self._get_constant_data(0, 1)
-
-	@property
-	def constant_data(self) -> variable.ConstantData:
-		return self._get_constant_data(0, 1)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("constant", self.constant, "ConstantData"),
 		]
 
 
@@ -2022,7 +1736,7 @@ class HighLevelILMuluDp(HighLevelILBinaryBase, DoublePrecision):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILMulsDp(Signed, HighLevelILBinaryBase, DoublePrecision):
+class HighLevelILMulsDp(HighLevelILBinaryBase, Signed, DoublePrecision):
 	pass
 
 
@@ -2077,61 +1791,6 @@ class HighLevelILNot(HighLevelILUnaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILBswap(HighLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILPopcnt(HighLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILClz(HighLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILCtz(HighLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILRbit(HighLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILCls(HighLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILMins(HighLevelILBinaryBase, Arithmetic, Signed):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILMaxs(HighLevelILBinaryBase, Arithmetic, Signed):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILMinu(HighLevelILBinaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILMaxu(HighLevelILBinaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILAbs(HighLevelILUnaryBase, Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILSx(HighLevelILUnaryBase, Arithmetic):
 	pass
 
@@ -2161,34 +1820,6 @@ class HighLevelILCall(HighLevelILInstruction, Localcall):
 		return [
 			("dest", self.dest, "HighLevelILInstruction"),
 			("params", self.params, "List[HighLevelILInstruction]"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILCallSsa(HighLevelILInstruction, Localcall, SSA):
-	@property
-	def dest(self) -> HighLevelILInstruction:
-		return self._get_expr(0)
-
-	@property
-	def params(self) -> List[HighLevelILInstruction]:
-		return self._get_expr_list(1, 2)
-
-	@property
-	def dest_memory(self) -> int:
-		return self._get_int(3)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("dest", self.dest, "HighLevelILInstruction"),
-			("params", self.params, "List[HighLevelILInstruction]"),
-			("dest_memory", self.dest_memory, "int"),
-			("src_memory", self.src_memory, "int"),
 		]
 
 
@@ -2271,29 +1902,6 @@ class HighLevelILSyscall(HighLevelILInstruction, Syscall):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILSyscallSsa(HighLevelILInstruction, Syscall, SSA):
-	@property
-	def params(self) -> List[HighLevelILInstruction]:
-		return self._get_expr_list(0, 1)
-
-	@property
-	def dest_memory(self) -> int:
-		return self._get_int(2)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(3)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("params", self.params, "List[HighLevelILInstruction]"),
-			("dest_memory", self.dest_memory, "int"),
-			("src_memory", self.src_memory, "int"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILTailcall(HighLevelILInstruction, Tailcall):
 	@property
 	def dest(self) -> HighLevelILInstruction:
@@ -2307,6 +1915,24 @@ class HighLevelILTailcall(HighLevelILInstruction, Tailcall):
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
 		return [
 			("dest", self.dest, "HighLevelILInstruction"),
+			("params", self.params, "List[HighLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILIntrinsic(HighLevelILInstruction, Intrinsic):
+	@property
+	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
+		return self._get_intrinsic(0)
+
+	@property
+	def params(self) -> List[HighLevelILInstruction]:
+		return self._get_expr_list(1, 2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("intrinsic", self.intrinsic, "ILIntrinsic"),
 			("params", self.params, "List[HighLevelILInstruction]"),
 		]
 
@@ -2330,64 +1956,58 @@ class HighLevelILTrap(HighLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILIntrinsic(HighLevelILInstruction, Intrinsic):
-	@property
-	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
-		return self._get_intrinsic(0)
-
-	@property
-	def params(self) -> List[HighLevelILInstruction]:
-		return self._get_expr_list(1, 2)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("intrinsic", self.intrinsic, "ILIntrinsic"),
-			("params", self.params, "List[HighLevelILInstruction]"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILIntrinsicSsa(HighLevelILInstruction, SSA):
-	@property
-	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
-		return self._get_intrinsic(0)
-
-	@property
-	def params(self) -> List[HighLevelILInstruction]:
-		return self._get_expr_list(1, 2)
-
-	@property
-	def dest_memory(self) -> int:
-		return self._get_int(3)
-
-	@property
-	def src_memory(self) -> int:
-		return self._get_int(4)
-
-	@property
-	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-		return [
-			("intrinsic", self.intrinsic, "ILIntrinsic"),
-			("params", self.params, "List[HighLevelILInstruction]"),
-			("dest_memory", self.dest_memory, "int"),
-			("src_memory", self.src_memory, "int"),
-		]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILUndef(HighLevelILInstruction, Terminal):
 	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILUnimpl(HighLevelILInstruction):
-	pass
+	@property
+	def unknown(self) -> bool:
+		return self._get_int(0) != 0
 
 
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILUnimplMem(HighLevelILUnaryBase, Memory):
-	pass
+	@property
+	def unknown(self) -> bool:
+		return self._get_int(1) != 0
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILStructInit(HighLevelILInstruction):
+	@property
+	def fields(self) -> List[HighLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("fields", self.fields, "List[HighLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILStructInitField(HighLevelILInstruction):
+	@property
+	def offset(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def member_index(self) -> Optional[int]:
+		return self._get_member_index(1)
+
+	@property
+	def src(self) -> HighLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("offset", self.offset, "int"),
+			("member_index", self.member_index, "Optional[int]"),
+			("src", self.src, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2499,242 +2119,1076 @@ class HighLevelILFcmpO(HighLevelILComparisonBase, FloatingPoint):
 class HighLevelILFcmpUo(HighLevelILComparisonBase, FloatingPoint):
 	pass
 
+
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILAssert(HighLevelILInstruction):
-    @property
-    def src(self) -> variable.Variable:
-        return self._get_var(0)
+class HighLevelILUnreachable(HighLevelILInstruction, Terminal):
+	pass
 
-    @property
-    def constraint(self) -> variable.PossibleValueSet:
-        return self._get_constraint(1)
 
-    @property
-    def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-        return [
-            ("src", self.src, "Variable"),
-            ("constraint", self.constraint, "PossibleValueSet"),
-        ]
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILWhileSsa(HighLevelILInstruction, Loop, SSA):
+	@property
+	def condition_phi(self) -> HighLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def condition(self) -> HighLevelILInstruction:
+		return self._get_expr(1)
+
+	@property
+	def body(self) -> HighLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("condition_phi", self.condition_phi, "HighLevelILInstruction"),
+			("condition", self.condition, "HighLevelILInstruction"),
+			("body", self.body, "HighLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILDoWhileSsa(HighLevelILInstruction, Loop, SSA):
+	@property
+	def body(self) -> HighLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def condition_phi(self) -> HighLevelILInstruction:
+		return self._get_expr(1)
+
+	@property
+	def condition(self) -> HighLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("body", self.body, "HighLevelILInstruction"),
+			("condition_phi", self.condition_phi, "HighLevelILInstruction"),
+			("condition", self.condition, "HighLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILForSsa(HighLevelILInstruction, Loop, SSA):
+	@property
+	def init(self) -> HighLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def condition_phi(self) -> HighLevelILInstruction:
+		return self._get_expr(1)
+
+	@property
+	def condition(self) -> HighLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def update(self) -> HighLevelILInstruction:
+		return self._get_expr(3)
+
+	@property
+	def body(self) -> HighLevelILInstruction:
+		return self._get_expr(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("init", self.init, "HighLevelILInstruction"),
+			("condition_phi", self.condition_phi, "HighLevelILInstruction"),
+			("condition", self.condition, "HighLevelILInstruction"),
+			("update", self.update, "HighLevelILInstruction"),
+			("body", self.body, "HighLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILVarInitSsa(_DestVarWritten, HighLevelILInstruction, SetVar, SSA):
+	@property
+	def dest(self) -> 'mediumlevelil.SSAVariable':
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def src(self) -> HighLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("src", self.src, "HighLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILAssignMemSsa(HighLevelILInstruction, SSA):
+	@property
+	def dest(self) -> HighLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def dest_memory(self) -> int:
+		return self._get_int(1)
+
+	@property
+	def src(self) -> HighLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "HighLevelILInstruction"),
+			("dest_memory", self.dest_memory, "int"),
+			("src", self.src, "HighLevelILInstruction"),
+			("src_memory", self.src_memory, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILAssignUnpackMemSsa(HighLevelILInstruction, SSA, Memory):
+	@property
+	def dest(self) -> List[HighLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def dest_memory(self) -> int:
+		return self._get_int(2)
+
+	@property
+	def src(self) -> HighLevelILInstruction:
+		return self._get_expr(3)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "List[HighLevelILInstruction]"),
+			("dest_memory", self.dest_memory, "int"),
+			("src", self.src, "HighLevelILInstruction"),
+			("src_memory", self.src_memory, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILForceVerSsa(_ForceVerVars, HighLevelILInstruction, SSA):
+	@property
+	def dest(self) -> 'mediumlevelil.SSAVariable':
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def src(self) -> 'mediumlevelil.SSAVariable':
+		return self._get_var_ssa(2, 3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("src", self.src, "SSAVariable"),
+		]
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILAssertSsa(HighLevelILInstruction, SSA):
-    @property
-    def src(self) -> 'mediumlevelil.SSAVariable':
-        return self._get_var_ssa(0, 1)
+	@property
+	def src(self) -> 'mediumlevelil.SSAVariable':
+		return self._get_var_ssa(0, 1)
 
-    @property
-    def constraint(self) -> variable.PossibleValueSet:
-        return self._get_constraint(2)
+	@property
+	def constraint(self) -> variable.PossibleValueSet:
+		return self._get_constraint(2)
 
-    @property
-    def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-        return [
-            ("src", self.src, "SSAVariable"),
-            ("constraint", self.constraint, "PossibleValueSet"),
-        ]
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "SSAVariable"),
+			("constraint", self.constraint, "PossibleValueSet"),
+		]
+
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILForceVer(HighLevelILInstruction):
-    @property
-    def dest(self) -> variable.Variable:
-        return self._get_var(0)
+class HighLevelILVarSsa(HighLevelILInstruction, SSAVariableInstruction):
+	@property
+	def var(self) -> 'mediumlevelil.SSAVariable':
+		return self._get_var_ssa(0, 1)
 
-    @property
-    def src(self) -> variable.Variable:
-        return self._get_var(1)
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("var", self.var, "SSAVariable"),
+		]
 
-    @property
-    def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-        return [
-            ("dest", self.dest, "Variable"),
-            ("src", self.src, "Variable"),
-        ]
-
-    @property
-    def vars_written(self) -> VariablesList:
-        return [self.dest]
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILForceVerSsa(HighLevelILInstruction, SSA):
-    @property
-    def dest(self) -> 'mediumlevelil.SSAVariable':
-        return self._get_var_ssa(0, 1)
+class HighLevelILVarSsaPartial(HighLevelILInstruction, SSAVariableInstruction):
+	@property
+	def dest(self) -> 'mediumlevelil.SSAVariable':
+		return self._get_var_ssa(0, 1)
 
-    @property
-    def src(self) -> 'mediumlevelil.SSAVariable':
-        return self._get_var_ssa(2, 3)
+	@property
+	def prev(self) -> 'mediumlevelil.SSAVariable':
+		return self._get_var_ssa(0, 2)
 
-    @property
-    def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
-        return [
-            ("dest", self.dest, "SSAVariable"),
-            ("src", self.src, "SSAVariable"),
-        ]
-
-    @property
-    def vars_written(self) -> VariablesList:
-        return [self.dest]
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("prev", self.prev, "SSAVariable"),
+		]
 
 
-ILInstruction = {
-    HighLevelILOperation.HLIL_NOP: HighLevelILNop,  #  ,
-    HighLevelILOperation.HLIL_BLOCK: HighLevelILBlock,  #  ("body", "expr_list"),
-    HighLevelILOperation.HLIL_IF: HighLevelILIf,  #  ("condition", "expr"), ("true", "expr"), ("false", "expr"),
-    HighLevelILOperation.HLIL_WHILE: HighLevelILWhile,  #  ("condition", "expr"), ("body", "expr"),
-    HighLevelILOperation.HLIL_WHILE_SSA:
-        HighLevelILWhileSsa,  #  ("condition_phi", "expr"), ("condition", "expr"), ("body", "expr"),
-    HighLevelILOperation.HLIL_DO_WHILE: HighLevelILDoWhile,  #  ("body", "expr"), ("condition", "expr"),
-    HighLevelILOperation.HLIL_DO_WHILE_SSA:
-        HighLevelILDoWhileSsa,  #  ("body", "expr"), ("condition_phi", "expr"), ("condition", "expr"),
-    HighLevelILOperation.HLIL_FOR:
-        HighLevelILFor,  #  ("init", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr"),
-    HighLevelILOperation.HLIL_FOR_SSA:
-        HighLevelILForSsa,  #  ("init", "expr"), ("condition_phi", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr"),
-    HighLevelILOperation.HLIL_SWITCH:
-        HighLevelILSwitch,  #  ("condition", "expr"), ("default", "expr"), ("cases", "expr_list"),
-    HighLevelILOperation.HLIL_CASE: HighLevelILCase,  #  ("values", "expr_list"), ("body", "expr"),
-    HighLevelILOperation.HLIL_BREAK: HighLevelILBreak,  #  ,
-    HighLevelILOperation.HLIL_CONTINUE: HighLevelILContinue,  #  ,
-    HighLevelILOperation.HLIL_JUMP: HighLevelILJump,  #  ("dest", "expr"),
-    HighLevelILOperation.HLIL_RET: HighLevelILRet,  #  ("src", "expr_list"),
-    HighLevelILOperation.HLIL_NORET: HighLevelILNoret,  #  ,
-    HighLevelILOperation.HLIL_UNREACHABLE: HighLevelILUnreachable,  #  ,
-    HighLevelILOperation.HLIL_GOTO: HighLevelILGoto,  #  ("target", "label"),
-    HighLevelILOperation.HLIL_LABEL: HighLevelILLabel,  #  ("target", "label"),
-    HighLevelILOperation.HLIL_VAR_DECLARE: HighLevelILVarDeclare,  #  ("var", "var"),
-    HighLevelILOperation.HLIL_VAR_INIT: HighLevelILVarInit,  #  ("dest", "var"), ("src", "expr"),
-    HighLevelILOperation.HLIL_VAR_INIT_SSA: HighLevelILVarInitSsa,  #  ("dest", "var_ssa"), ("src", "expr"),
-    HighLevelILOperation.HLIL_ASSIGN: HighLevelILAssign,  #  ("dest", "expr"), ("src", "expr"),
-    HighLevelILOperation.HLIL_ASSIGN_UNPACK: HighLevelILAssignUnpack,  #  ("dest", "expr_list"), ("src", "expr"),
-    HighLevelILOperation.HLIL_ASSIGN_MEM_SSA:
-        HighLevelILAssignMemSsa,  #  ("dest", "expr"), ("dest_memory", "int"), ("src", "expr"), ("src_memory", "int"),
-    HighLevelILOperation.HLIL_ASSIGN_UNPACK_MEM_SSA:
-        HighLevelILAssignUnpackMemSsa,  #  ("dest", "expr_list"), ("dest_memory", "int"), ("src", "expr"), ("src_memory", "int"),
-    HighLevelILOperation.HLIL_VAR: HighLevelILVar,  #  ("var", "var"),
-    HighLevelILOperation.HLIL_VAR_SSA: HighLevelILVarSsa,  #  ("var", "var_ssa"),
-	HighLevelILOperation.HLIL_VAR_SSA_PARTIAL: HighLevelILVarSsaPartial,  #  ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"),
-    HighLevelILOperation.HLIL_VAR_PHI: HighLevelILVarPhi,  #  ("dest", "var_ssa"), ("src", "var_ssa_list"),
-    HighLevelILOperation.HLIL_MEM_PHI: HighLevelILMemPhi,  #  ("dest", "int"), ("src", "int_list"),
-    HighLevelILOperation.HLIL_ARRAY_INDEX: HighLevelILArrayIndex,  #  ("src", "expr"), ("index", "expr"),
-    HighLevelILOperation.HLIL_ARRAY_INDEX_SSA:
-        HighLevelILArrayIndexSsa,  #  ("src", "expr"), ("src_memory", "int"), ("index", "expr"),
-    HighLevelILOperation.HLIL_SPLIT: HighLevelILSplit,  #  ("high", "expr"), ("low", "expr"),
-    HighLevelILOperation.HLIL_DEREF: HighLevelILDeref,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_STRUCT_FIELD:
-        HighLevelILStructField,  #  ("src", "expr"), ("offset", "int"), ("member_index", "member_index"),
-    HighLevelILOperation.HLIL_DEREF_FIELD:
-        HighLevelILDerefField,  #  ("src", "expr"), ("offset", "int"), ("member_index", "member_index"),
-    HighLevelILOperation.HLIL_DEREF_SSA: HighLevelILDerefSsa,  #  ("src", "expr"), ("src_memory", "int"),
-    HighLevelILOperation.HLIL_DEREF_FIELD_SSA:
-        HighLevelILDerefFieldSsa,  #  ("src", "expr"), ("src_memory", "int"), ("offset", "int"), ("member_index", "member_index"),
-    HighLevelILOperation.HLIL_ADDRESS_OF: HighLevelILAddressOf,  #  ("src", "expr"),
-	HighLevelILOperation.HLIL_PASS_BY_REF: HighLevelILPassByRef,  #  ("src", "expr"),
-	HighLevelILOperation.HLIL_RETURN_BY_REF: HighLevelILReturnByRef,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_CONST: HighLevelILConst,  #  ("constant", "int"),
-    HighLevelILOperation.HLIL_CONST_PTR: HighLevelILConstPtr,  #  ("constant", "int"),
-    HighLevelILOperation.HLIL_EXTERN_PTR: HighLevelILExternPtr,  #  ("constant", "int"), ("offset", "int"),
-    HighLevelILOperation.HLIL_FLOAT_CONST: HighLevelILFloatConst,  #  ("constant", "float"),
-    HighLevelILOperation.HLIL_IMPORT: HighLevelILImport,  #  ("constant", "int"),
-    HighLevelILOperation.HLIL_CONST_DATA: HighLevelILConstData,  # [("constant", "ConstantData")],
-    HighLevelILOperation.HLIL_ADD: HighLevelILAdd,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_ADC: HighLevelILAdc,  #  ("left", "expr"), ("right", "expr"), ("carry", "expr"),
-    HighLevelILOperation.HLIL_SUB: HighLevelILSub,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_SBB: HighLevelILSbb,  #  ("left", "expr"), ("right", "expr"), ("carry", "expr"),
-    HighLevelILOperation.HLIL_AND: HighLevelILAnd,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_OR: HighLevelILOr,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_XOR: HighLevelILXor,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_LSL: HighLevelILLsl,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_LSR: HighLevelILLsr,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_ASR: HighLevelILAsr,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_ROL: HighLevelILRol,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_RLC: HighLevelILRlc,  #  ("left", "expr"), ("right", "expr"), ("carry", "expr"),
-    HighLevelILOperation.HLIL_ROR: HighLevelILRor,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_RRC: HighLevelILRrc,  #  ("left", "expr"), ("right", "expr"), ("carry", "expr"),
-    HighLevelILOperation.HLIL_MUL: HighLevelILMul,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_MULU_DP: HighLevelILMuluDp,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_MULS_DP: HighLevelILMulsDp,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_DIVU: HighLevelILDivu,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_DIVU_DP: HighLevelILDivuDp,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_DIVS: HighLevelILDivs,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_DIVS_DP: HighLevelILDivsDp,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_MODU: HighLevelILModu,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_MODU_DP: HighLevelILModuDp,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_MODS: HighLevelILMods,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_MODS_DP: HighLevelILModsDp,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_NEG: HighLevelILNeg,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_NOT: HighLevelILNot,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_BSWAP: HighLevelILBswap,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_POPCNT: HighLevelILPopcnt,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_CLZ: HighLevelILClz,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_CTZ: HighLevelILCtz,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_RBIT: HighLevelILRbit,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_CLS: HighLevelILCls,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_MINS: HighLevelILMins,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_MAXS: HighLevelILMaxs,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_MINU: HighLevelILMinu,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_MAXU: HighLevelILMaxu,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_ABS: HighLevelILAbs,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_SX: HighLevelILSx,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_ZX: HighLevelILZx,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_LOW_PART: HighLevelILLowPart,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_CALL: HighLevelILCall,  #  ("dest", "expr"), ("params", "expr_list"),
-    HighLevelILOperation.HLIL_CALL_SSA:
-        HighLevelILCallSsa,  #  ("dest", "expr"), ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int"),
-    HighLevelILOperation.HLIL_CMP_E: HighLevelILCmpE,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_CMP_NE: HighLevelILCmpNe,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_CMP_SLT: HighLevelILCmpSlt,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_CMP_ULT: HighLevelILCmpUlt,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_CMP_SLE: HighLevelILCmpSle,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_CMP_ULE: HighLevelILCmpUle,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_CMP_SGE: HighLevelILCmpSge,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_CMP_UGE: HighLevelILCmpUge,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_CMP_SGT: HighLevelILCmpSgt,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_CMP_UGT: HighLevelILCmpUgt,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_TEST_BIT: HighLevelILTestBit,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_BOOL_TO_INT: HighLevelILBoolToInt,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_ADD_OVERFLOW: HighLevelILAddOverflow,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_SYSCALL: HighLevelILSyscall,  #  ("params", "expr_list"),
-    HighLevelILOperation.HLIL_SYSCALL_SSA:
-        HighLevelILSyscallSsa,  #  ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int"),
-    HighLevelILOperation.HLIL_TAILCALL: HighLevelILTailcall,  #  ("dest", "expr"), ("params", "expr_list"),
-    HighLevelILOperation.HLIL_BP: HighLevelILBp,  #  ,
-    HighLevelILOperation.HLIL_TRAP: HighLevelILTrap,  #  ("vector", "int"),
-    HighLevelILOperation.HLIL_INTRINSIC: HighLevelILIntrinsic,  #  ("intrinsic", "intrinsic"), ("params", "expr_list"),
-    HighLevelILOperation.HLIL_INTRINSIC_SSA:
-        HighLevelILIntrinsicSsa,  #  ("intrinsic", "intrinsic"), ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int"),
-    HighLevelILOperation.HLIL_UNDEF: HighLevelILUndef,  #  ,
-    HighLevelILOperation.HLIL_UNIMPL: HighLevelILUnimpl,  #  ,
-    HighLevelILOperation.HLIL_UNIMPL_MEM: HighLevelILUnimplMem,  #  ("src", "expr"),
-	HighLevelILOperation.HLIL_STRUCT_INIT: HighLevelILStructInit,  #  ("fields", "expr_list"),
-	HighLevelILOperation.HLIL_STRUCT_INIT_FIELD:
-		HighLevelILStructInitField,  #  ("offset", "int"), ("member_index", "member_index"), ("src", "expr"),
-    HighLevelILOperation.HLIL_FADD: HighLevelILFadd,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_FSUB: HighLevelILFsub,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_FMUL: HighLevelILFmul,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_FDIV: HighLevelILFdiv,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_FSQRT: HighLevelILFsqrt,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_FNEG: HighLevelILFneg,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_FABS: HighLevelILFabs,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_FLOAT_TO_INT: HighLevelILFloatToInt,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_INT_TO_FLOAT: HighLevelILIntToFloat,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_FLOAT_CONV: HighLevelILFloatConv,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_ROUND_TO_INT: HighLevelILRoundToInt,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_FLOOR: HighLevelILFloor,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_CEIL: HighLevelILCeil,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_FTRUNC: HighLevelILFtrunc,  #  ("src", "expr"),
-    HighLevelILOperation.HLIL_FCMP_E: HighLevelILFcmpE,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_FCMP_NE: HighLevelILFcmpNe,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_FCMP_LT: HighLevelILFcmpLt,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_FCMP_LE: HighLevelILFcmpLe,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_FCMP_GE: HighLevelILFcmpGe,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_FCMP_GT: HighLevelILFcmpGt,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_FCMP_O: HighLevelILFcmpO,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_FCMP_UO: HighLevelILFcmpUo,  #  ("left", "expr"), ("right", "expr"),
-    HighLevelILOperation.HLIL_ASSERT: HighLevelILAssert,
-    HighLevelILOperation.HLIL_ASSERT_SSA: HighLevelILAssertSsa,
-    HighLevelILOperation.HLIL_FORCE_VER: HighLevelILForceVer,
-    HighLevelILOperation.HLIL_FORCE_VER_SSA: HighLevelILForceVerSsa,
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILArrayIndexSsa(HighLevelILInstruction, SSA):
+	@property
+	def src(self) -> HighLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(1)
+
+	@property
+	def index(self) -> HighLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "HighLevelILInstruction"),
+			("src_memory", self.src_memory, "int"),
+			("index", self.index, "HighLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILDerefSsa(HighLevelILInstruction, SSA):
+	@property
+	def src(self) -> HighLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "HighLevelILInstruction"),
+			("src_memory", self.src_memory, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILDerefFieldSsa(HighLevelILInstruction, SSA):
+	@property
+	def src(self) -> HighLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(1)
+
+	@property
+	def offset(self) -> int:
+		return self._get_int(2)
+
+	@property
+	def member_index(self) -> Optional[int]:
+		return self._get_member_index(3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "HighLevelILInstruction"),
+			("src_memory", self.src_memory, "int"),
+			("offset", self.offset, "int"),
+			("member_index", self.member_index, "Optional[int]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILCallSsa(HighLevelILInstruction, Localcall, SSA):
+	@property
+	def dest(self) -> HighLevelILInstruction:
+		return self._get_expr(0)
+
+	@property
+	def params(self) -> List[HighLevelILInstruction]:
+		return self._get_expr_list(1, 2)
+
+	@property
+	def dest_memory(self) -> int:
+		return self._get_int(3)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "HighLevelILInstruction"),
+			("params", self.params, "List[HighLevelILInstruction]"),
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILSyscallSsa(HighLevelILInstruction, Syscall, SSA):
+	@property
+	def params(self) -> List[HighLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def dest_memory(self) -> int:
+		return self._get_int(2)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("params", self.params, "List[HighLevelILInstruction]"),
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILIntrinsicSsa(HighLevelILInstruction, SSA):
+	@property
+	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
+		return self._get_intrinsic(0)
+
+	@property
+	def params(self) -> List[HighLevelILInstruction]:
+		return self._get_expr_list(1, 2)
+
+	@property
+	def dest_memory(self) -> int:
+		return self._get_int(3)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("intrinsic", self.intrinsic, "ILIntrinsic"),
+			("params", self.params, "List[HighLevelILInstruction]"),
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILVarPhi(_DestVarWritten, HighLevelILInstruction, Phi, SetVar):
+	@property
+	def dest(self) -> 'mediumlevelil.SSAVariable':
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def src(self) -> List['mediumlevelil.SSAVariable']:
+		return self._get_var_ssa_list(2, 3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("src", self.src, "List[SSAVariable]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILMemPhi(HighLevelILInstruction, Memory, Phi):
+	@property
+	def dest(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def src(self) -> List[int]:
+		return self._get_int_list(1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "int"),
+			("src", self.src, "List[int]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILBswap(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILPopcnt(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILClz(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILCtz(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILRbit(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILCls(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILMins(HighLevelILBinaryBase, Arithmetic, Signed):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILMaxs(HighLevelILBinaryBase, Arithmetic, Signed):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILMinu(HighLevelILBinaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILMaxu(HighLevelILBinaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILAbs(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+ILInstruction: Dict[HighLevelILOperation, type[HighLevelILInstruction]] = {
+	HighLevelILOperation.HLIL_NOP: HighLevelILNop,
+	HighLevelILOperation.HLIL_BLOCK: HighLevelILBlock,
+	HighLevelILOperation.HLIL_IF: HighLevelILIf,
+	HighLevelILOperation.HLIL_WHILE: HighLevelILWhile,
+	HighLevelILOperation.HLIL_DO_WHILE: HighLevelILDoWhile,
+	HighLevelILOperation.HLIL_FOR: HighLevelILFor,
+	HighLevelILOperation.HLIL_SWITCH: HighLevelILSwitch,
+	HighLevelILOperation.HLIL_CASE: HighLevelILCase,
+	HighLevelILOperation.HLIL_BREAK: HighLevelILBreak,
+	HighLevelILOperation.HLIL_CONTINUE: HighLevelILContinue,
+	HighLevelILOperation.HLIL_JUMP: HighLevelILJump,
+	HighLevelILOperation.HLIL_RET: HighLevelILRet,
+	HighLevelILOperation.HLIL_NORET: HighLevelILNoret,
+	HighLevelILOperation.HLIL_GOTO: HighLevelILGoto,
+	HighLevelILOperation.HLIL_LABEL: HighLevelILLabel,
+	HighLevelILOperation.HLIL_VAR_DECLARE: HighLevelILVarDeclare,
+	HighLevelILOperation.HLIL_VAR_INIT: HighLevelILVarInit,
+	HighLevelILOperation.HLIL_ASSIGN: HighLevelILAssign,
+	HighLevelILOperation.HLIL_ASSIGN_UNPACK: HighLevelILAssignUnpack,
+	HighLevelILOperation.HLIL_FORCE_VER: HighLevelILForceVer,
+	HighLevelILOperation.HLIL_ASSERT: HighLevelILAssert,
+	HighLevelILOperation.HLIL_VAR: HighLevelILVar,
+	HighLevelILOperation.HLIL_STRUCT_FIELD: HighLevelILStructField,
+	HighLevelILOperation.HLIL_ARRAY_INDEX: HighLevelILArrayIndex,
+	HighLevelILOperation.HLIL_SPLIT: HighLevelILSplit,
+	HighLevelILOperation.HLIL_DEREF: HighLevelILDeref,
+	HighLevelILOperation.HLIL_DEREF_FIELD: HighLevelILDerefField,
+	HighLevelILOperation.HLIL_ADDRESS_OF: HighLevelILAddressOf,
+	HighLevelILOperation.HLIL_PASS_BY_REF: HighLevelILPassByRef,
+	HighLevelILOperation.HLIL_RETURN_BY_REF: HighLevelILReturnByRef,
+	HighLevelILOperation.HLIL_CONST: HighLevelILConst,
+	HighLevelILOperation.HLIL_CONST_DATA: HighLevelILConstData,
+	HighLevelILOperation.HLIL_CONST_PTR: HighLevelILConstPtr,
+	HighLevelILOperation.HLIL_EXTERN_PTR: HighLevelILExternPtr,
+	HighLevelILOperation.HLIL_FLOAT_CONST: HighLevelILFloatConst,
+	HighLevelILOperation.HLIL_IMPORT: HighLevelILImport,
+	HighLevelILOperation.HLIL_ADD: HighLevelILAdd,
+	HighLevelILOperation.HLIL_ADC: HighLevelILAdc,
+	HighLevelILOperation.HLIL_SUB: HighLevelILSub,
+	HighLevelILOperation.HLIL_SBB: HighLevelILSbb,
+	HighLevelILOperation.HLIL_AND: HighLevelILAnd,
+	HighLevelILOperation.HLIL_OR: HighLevelILOr,
+	HighLevelILOperation.HLIL_XOR: HighLevelILXor,
+	HighLevelILOperation.HLIL_LSL: HighLevelILLsl,
+	HighLevelILOperation.HLIL_LSR: HighLevelILLsr,
+	HighLevelILOperation.HLIL_ASR: HighLevelILAsr,
+	HighLevelILOperation.HLIL_ROL: HighLevelILRol,
+	HighLevelILOperation.HLIL_RLC: HighLevelILRlc,
+	HighLevelILOperation.HLIL_ROR: HighLevelILRor,
+	HighLevelILOperation.HLIL_RRC: HighLevelILRrc,
+	HighLevelILOperation.HLIL_MUL: HighLevelILMul,
+	HighLevelILOperation.HLIL_MULU_DP: HighLevelILMuluDp,
+	HighLevelILOperation.HLIL_MULS_DP: HighLevelILMulsDp,
+	HighLevelILOperation.HLIL_DIVU: HighLevelILDivu,
+	HighLevelILOperation.HLIL_DIVU_DP: HighLevelILDivuDp,
+	HighLevelILOperation.HLIL_DIVS: HighLevelILDivs,
+	HighLevelILOperation.HLIL_DIVS_DP: HighLevelILDivsDp,
+	HighLevelILOperation.HLIL_MODU: HighLevelILModu,
+	HighLevelILOperation.HLIL_MODU_DP: HighLevelILModuDp,
+	HighLevelILOperation.HLIL_MODS: HighLevelILMods,
+	HighLevelILOperation.HLIL_MODS_DP: HighLevelILModsDp,
+	HighLevelILOperation.HLIL_NEG: HighLevelILNeg,
+	HighLevelILOperation.HLIL_NOT: HighLevelILNot,
+	HighLevelILOperation.HLIL_SX: HighLevelILSx,
+	HighLevelILOperation.HLIL_ZX: HighLevelILZx,
+	HighLevelILOperation.HLIL_LOW_PART: HighLevelILLowPart,
+	HighLevelILOperation.HLIL_CALL: HighLevelILCall,
+	HighLevelILOperation.HLIL_CMP_E: HighLevelILCmpE,
+	HighLevelILOperation.HLIL_CMP_NE: HighLevelILCmpNe,
+	HighLevelILOperation.HLIL_CMP_SLT: HighLevelILCmpSlt,
+	HighLevelILOperation.HLIL_CMP_ULT: HighLevelILCmpUlt,
+	HighLevelILOperation.HLIL_CMP_SLE: HighLevelILCmpSle,
+	HighLevelILOperation.HLIL_CMP_ULE: HighLevelILCmpUle,
+	HighLevelILOperation.HLIL_CMP_SGE: HighLevelILCmpSge,
+	HighLevelILOperation.HLIL_CMP_UGE: HighLevelILCmpUge,
+	HighLevelILOperation.HLIL_CMP_SGT: HighLevelILCmpSgt,
+	HighLevelILOperation.HLIL_CMP_UGT: HighLevelILCmpUgt,
+	HighLevelILOperation.HLIL_TEST_BIT: HighLevelILTestBit,
+	HighLevelILOperation.HLIL_BOOL_TO_INT: HighLevelILBoolToInt,
+	HighLevelILOperation.HLIL_ADD_OVERFLOW: HighLevelILAddOverflow,
+	HighLevelILOperation.HLIL_SYSCALL: HighLevelILSyscall,
+	HighLevelILOperation.HLIL_TAILCALL: HighLevelILTailcall,
+	HighLevelILOperation.HLIL_INTRINSIC: HighLevelILIntrinsic,
+	HighLevelILOperation.HLIL_BP: HighLevelILBp,
+	HighLevelILOperation.HLIL_TRAP: HighLevelILTrap,
+	HighLevelILOperation.HLIL_UNDEF: HighLevelILUndef,
+	HighLevelILOperation.HLIL_UNIMPL: HighLevelILUnimpl,
+	HighLevelILOperation.HLIL_UNIMPL_MEM: HighLevelILUnimplMem,
+	HighLevelILOperation.HLIL_STRUCT_INIT: HighLevelILStructInit,
+	HighLevelILOperation.HLIL_STRUCT_INIT_FIELD: HighLevelILStructInitField,
+	HighLevelILOperation.HLIL_FADD: HighLevelILFadd,
+	HighLevelILOperation.HLIL_FSUB: HighLevelILFsub,
+	HighLevelILOperation.HLIL_FMUL: HighLevelILFmul,
+	HighLevelILOperation.HLIL_FDIV: HighLevelILFdiv,
+	HighLevelILOperation.HLIL_FSQRT: HighLevelILFsqrt,
+	HighLevelILOperation.HLIL_FNEG: HighLevelILFneg,
+	HighLevelILOperation.HLIL_FABS: HighLevelILFabs,
+	HighLevelILOperation.HLIL_FLOAT_TO_INT: HighLevelILFloatToInt,
+	HighLevelILOperation.HLIL_INT_TO_FLOAT: HighLevelILIntToFloat,
+	HighLevelILOperation.HLIL_FLOAT_CONV: HighLevelILFloatConv,
+	HighLevelILOperation.HLIL_ROUND_TO_INT: HighLevelILRoundToInt,
+	HighLevelILOperation.HLIL_FLOOR: HighLevelILFloor,
+	HighLevelILOperation.HLIL_CEIL: HighLevelILCeil,
+	HighLevelILOperation.HLIL_FTRUNC: HighLevelILFtrunc,
+	HighLevelILOperation.HLIL_FCMP_E: HighLevelILFcmpE,
+	HighLevelILOperation.HLIL_FCMP_NE: HighLevelILFcmpNe,
+	HighLevelILOperation.HLIL_FCMP_LT: HighLevelILFcmpLt,
+	HighLevelILOperation.HLIL_FCMP_LE: HighLevelILFcmpLe,
+	HighLevelILOperation.HLIL_FCMP_GE: HighLevelILFcmpGe,
+	HighLevelILOperation.HLIL_FCMP_GT: HighLevelILFcmpGt,
+	HighLevelILOperation.HLIL_FCMP_O: HighLevelILFcmpO,
+	HighLevelILOperation.HLIL_FCMP_UO: HighLevelILFcmpUo,
+	HighLevelILOperation.HLIL_UNREACHABLE: HighLevelILUnreachable,
+	HighLevelILOperation.HLIL_WHILE_SSA: HighLevelILWhileSsa,
+	HighLevelILOperation.HLIL_DO_WHILE_SSA: HighLevelILDoWhileSsa,
+	HighLevelILOperation.HLIL_FOR_SSA: HighLevelILForSsa,
+	HighLevelILOperation.HLIL_VAR_INIT_SSA: HighLevelILVarInitSsa,
+	HighLevelILOperation.HLIL_ASSIGN_MEM_SSA: HighLevelILAssignMemSsa,
+	HighLevelILOperation.HLIL_ASSIGN_UNPACK_MEM_SSA: HighLevelILAssignUnpackMemSsa,
+	HighLevelILOperation.HLIL_FORCE_VER_SSA: HighLevelILForceVerSsa,
+	HighLevelILOperation.HLIL_ASSERT_SSA: HighLevelILAssertSsa,
+	HighLevelILOperation.HLIL_VAR_SSA: HighLevelILVarSsa,
+	HighLevelILOperation.HLIL_VAR_SSA_PARTIAL: HighLevelILVarSsaPartial,
+	HighLevelILOperation.HLIL_ARRAY_INDEX_SSA: HighLevelILArrayIndexSsa,
+	HighLevelILOperation.HLIL_DEREF_SSA: HighLevelILDerefSsa,
+	HighLevelILOperation.HLIL_DEREF_FIELD_SSA: HighLevelILDerefFieldSsa,
+	HighLevelILOperation.HLIL_CALL_SSA: HighLevelILCallSsa,
+	HighLevelILOperation.HLIL_SYSCALL_SSA: HighLevelILSyscallSsa,
+	HighLevelILOperation.HLIL_INTRINSIC_SSA: HighLevelILIntrinsicSsa,
+	HighLevelILOperation.HLIL_VAR_PHI: HighLevelILVarPhi,
+	HighLevelILOperation.HLIL_MEM_PHI: HighLevelILMemPhi,
+	HighLevelILOperation.HLIL_BSWAP: HighLevelILBswap,
+	HighLevelILOperation.HLIL_POPCNT: HighLevelILPopcnt,
+	HighLevelILOperation.HLIL_CLZ: HighLevelILClz,
+	HighLevelILOperation.HLIL_CTZ: HighLevelILCtz,
+	HighLevelILOperation.HLIL_RBIT: HighLevelILRbit,
+	HighLevelILOperation.HLIL_CLS: HighLevelILCls,
+	HighLevelILOperation.HLIL_MINS: HighLevelILMins,
+	HighLevelILOperation.HLIL_MAXS: HighLevelILMaxs,
+	HighLevelILOperation.HLIL_MINU: HighLevelILMinu,
+	HighLevelILOperation.HLIL_MAXU: HighLevelILMaxu,
+	HighLevelILOperation.HLIL_ABS: HighLevelILAbs,
 }
+
+
+# Lists the slots `copy_expr_to` copies for each op.
+_COPY_LAYOUTS: Dict[HighLevelILOperation, Tuple] = {
+	HighLevelILOperation.HLIL_NOP: (),
+	HighLevelILOperation.HLIL_BLOCK: ("expr_list",),
+	HighLevelILOperation.HLIL_IF: (
+		"expr",
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_WHILE: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_DO_WHILE: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FOR: (
+		"expr",
+		"expr",
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_SWITCH: (
+		"expr",
+		"expr",
+		"expr_list",
+	),
+	HighLevelILOperation.HLIL_CASE: (
+		"expr_list",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_BREAK: (),
+	HighLevelILOperation.HLIL_CONTINUE: (),
+	HighLevelILOperation.HLIL_JUMP: ("expr",),
+	HighLevelILOperation.HLIL_RET: ("expr_list",),
+	HighLevelILOperation.HLIL_NORET: (),
+	HighLevelILOperation.HLIL_GOTO: ("value",),
+	HighLevelILOperation.HLIL_LABEL: ("value",),
+	HighLevelILOperation.HLIL_VAR_DECLARE: ("value",),
+	HighLevelILOperation.HLIL_VAR_INIT: (
+		"value",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_ASSIGN: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_ASSIGN_UNPACK: (
+		"expr_list",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FORCE_VER: (
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_ASSERT: (
+		"value",
+		"constraint",
+	),
+	HighLevelILOperation.HLIL_VAR: ("value",),
+	HighLevelILOperation.HLIL_STRUCT_FIELD: (
+		"expr",
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_ARRAY_INDEX: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_SPLIT: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_DEREF: ("expr",),
+	HighLevelILOperation.HLIL_DEREF_FIELD: (
+		"expr",
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_ADDRESS_OF: ("expr",),
+	HighLevelILOperation.HLIL_PASS_BY_REF: ("expr",),
+	HighLevelILOperation.HLIL_RETURN_BY_REF: ("expr",),
+	HighLevelILOperation.HLIL_CONST: ("value",),
+	HighLevelILOperation.HLIL_CONST_DATA: (
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_CONST_PTR: ("value",),
+	HighLevelILOperation.HLIL_EXTERN_PTR: (
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_FLOAT_CONST: ("value",),
+	HighLevelILOperation.HLIL_IMPORT: ("value",),
+	HighLevelILOperation.HLIL_ADD: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_ADC: (
+		"expr",
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_SUB: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_SBB: (
+		"expr",
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_AND: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_OR: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_XOR: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_LSL: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_LSR: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_ASR: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_ROL: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_RLC: (
+		"expr",
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_ROR: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_RRC: (
+		"expr",
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_MUL: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_MULU_DP: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_MULS_DP: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_DIVU: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_DIVU_DP: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_DIVS: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_DIVS_DP: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_MODU: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_MODU_DP: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_MODS: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_MODS_DP: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_NEG: ("expr",),
+	HighLevelILOperation.HLIL_NOT: ("expr",),
+	HighLevelILOperation.HLIL_SX: ("expr",),
+	HighLevelILOperation.HLIL_ZX: ("expr",),
+	HighLevelILOperation.HLIL_LOW_PART: ("expr",),
+	HighLevelILOperation.HLIL_CALL: (
+		"expr",
+		"expr_list",
+	),
+	HighLevelILOperation.HLIL_CMP_E: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_CMP_NE: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_CMP_SLT: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_CMP_ULT: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_CMP_SLE: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_CMP_ULE: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_CMP_SGE: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_CMP_UGE: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_CMP_SGT: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_CMP_UGT: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_TEST_BIT: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_BOOL_TO_INT: ("expr",),
+	HighLevelILOperation.HLIL_ADD_OVERFLOW: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_SYSCALL: ("expr_list",),
+	HighLevelILOperation.HLIL_TAILCALL: (
+		"expr",
+		"expr_list",
+	),
+	HighLevelILOperation.HLIL_INTRINSIC: (
+		"value",
+		"expr_list",
+	),
+	HighLevelILOperation.HLIL_BP: (),
+	HighLevelILOperation.HLIL_TRAP: ("value",),
+	HighLevelILOperation.HLIL_UNDEF: (),
+	HighLevelILOperation.HLIL_UNIMPL: ("value",),
+	HighLevelILOperation.HLIL_UNIMPL_MEM: (
+		"expr",
+		"value",
+	),
+	HighLevelILOperation.HLIL_STRUCT_INIT: ("expr_list",),
+	HighLevelILOperation.HLIL_STRUCT_INIT_FIELD: (
+		"value",
+		"value",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FADD: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FSUB: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FMUL: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FDIV: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FSQRT: ("expr",),
+	HighLevelILOperation.HLIL_FNEG: ("expr",),
+	HighLevelILOperation.HLIL_FABS: ("expr",),
+	HighLevelILOperation.HLIL_FLOAT_TO_INT: ("expr",),
+	HighLevelILOperation.HLIL_INT_TO_FLOAT: ("expr",),
+	HighLevelILOperation.HLIL_FLOAT_CONV: ("expr",),
+	HighLevelILOperation.HLIL_ROUND_TO_INT: ("expr",),
+	HighLevelILOperation.HLIL_FLOOR: ("expr",),
+	HighLevelILOperation.HLIL_CEIL: ("expr",),
+	HighLevelILOperation.HLIL_FTRUNC: ("expr",),
+	HighLevelILOperation.HLIL_FCMP_E: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FCMP_NE: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FCMP_LT: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FCMP_LE: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FCMP_GE: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FCMP_GT: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FCMP_O: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FCMP_UO: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_UNREACHABLE: (),
+	HighLevelILOperation.HLIL_WHILE_SSA: (
+		"expr",
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_DO_WHILE_SSA: (
+		"expr",
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_FOR_SSA: (
+		"expr",
+		"expr",
+		"expr",
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_VAR_INIT_SSA: (
+		"value",
+		"value",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_ASSIGN_MEM_SSA: (
+		"expr",
+		"value",
+		"expr",
+		"value",
+	),
+	HighLevelILOperation.HLIL_ASSIGN_UNPACK_MEM_SSA: (
+		"expr_list",
+		"value",
+		"expr",
+		"value",
+	),
+	HighLevelILOperation.HLIL_FORCE_VER_SSA: (
+		"value",
+		"value",
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_ASSERT_SSA: (
+		"value",
+		"value",
+		"constraint",
+	),
+	HighLevelILOperation.HLIL_VAR_SSA: (
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_VAR_SSA_PARTIAL: (
+		"value",
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_ARRAY_INDEX_SSA: (
+		"expr",
+		"value",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_DEREF_SSA: (
+		"expr",
+		"value",
+	),
+	HighLevelILOperation.HLIL_DEREF_FIELD_SSA: (
+		"expr",
+		"value",
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_CALL_SSA: (
+		"expr",
+		"expr_list",
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_SYSCALL_SSA: (
+		"expr_list",
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_INTRINSIC_SSA: (
+		"value",
+		"expr_list",
+		"value",
+		"value",
+	),
+	HighLevelILOperation.HLIL_VAR_PHI: (
+		"value",
+		"value",
+		"list",
+	),
+	HighLevelILOperation.HLIL_MEM_PHI: (
+		"value",
+		"list",
+	),
+	HighLevelILOperation.HLIL_BSWAP: ("expr",),
+	HighLevelILOperation.HLIL_POPCNT: ("expr",),
+	HighLevelILOperation.HLIL_CLZ: ("expr",),
+	HighLevelILOperation.HLIL_CTZ: ("expr",),
+	HighLevelILOperation.HLIL_RBIT: ("expr",),
+	HighLevelILOperation.HLIL_CLS: ("expr",),
+	HighLevelILOperation.HLIL_MINS: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_MAXS: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_MINU: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_MAXU: (
+		"expr",
+		"expr",
+	),
+	HighLevelILOperation.HLIL_ABS: ("expr",),
+}
+# END GENERATED hlil-classes
 
 
 class HighLevelILFunction:
@@ -3218,6 +3672,63 @@ class HighLevelILFunction:
 
 		core.BNReplaceHighLevelILExpr(self.handle, original, new)
 
+	def copy_expr_to(
+		self,
+		expr: HighLevelILInstruction,
+		dest: 'HighLevelILFunction',
+		sub_expr_handler: Optional[Callable[[HighLevelILInstruction], ExpressionIndex]] = None
+	) -> ExpressionIndex:
+		"""
+		``copy_expr_to`` deep copies an expression from this function into a target function
+		If provided, the function ``sub_expr_handler`` will be called on every copied sub-expression
+
+		.. warning:: This function should ONLY be called as a part of a lifter or workflow. It will otherwise not do anything useful as analysis will not be running.
+
+		:param HighLevelILInstruction expr: Expression in this function to copy
+		:param HighLevelILFunction dest: Function to copy the expression to
+		:param sub_expr_handler: Optional function to call on every copied sub-expression
+		:return: Index of the copied expression in the target function
+		"""
+
+		if sub_expr_handler is None:
+			sub_expr_handler = lambda sub_expr: self.copy_expr_to(sub_expr, dest)
+		layout = _COPY_LAYOUTS.get(expr.operation)
+		if layout is None:
+			raise NotImplementedError(f"unknown expr operation {expr.operation} in copy_expr_to")
+		loc = ILSourceLocation.from_instruction(expr)
+		operands = self._copy_operands(expr, layout, dest, sub_expr_handler)
+		new_index = dest.expr(expr.operation, *operands, size=expr.size, source_location=loc)
+		dest.set_expr_attributes(new_index, expr.attributes)
+		return new_index
+
+	def _copy_operands(
+		self, expr: HighLevelILInstruction, layout: Tuple, dest: 'HighLevelILFunction',
+		sub_expr_handler: Callable[[HighLevelILInstruction], ExpressionIndex]
+	) -> List[int]:
+		operands: List[int] = []
+		slot = 0
+		for entry in layout:
+			if entry == "value":
+				operands.append(expr.core_instr.operands[slot])
+				slot += 1
+			elif entry == "expr":
+				operands.append(sub_expr_handler(expr._get_expr(slot)))
+				slot += 1
+			elif entry == "expr_list":
+				exprs = [sub_expr_handler(sub_expr) for sub_expr in expr._get_expr_list(slot, slot + 1)]
+				operands += [len(exprs), dest.add_operand_list(exprs)]
+				slot += 2
+			elif entry == "list":
+				items = expr._get_int_list(slot)
+				operands += [len(items), dest.add_operand_list(items)]
+				slot += 2
+			elif entry == "constraint":
+				operands.append(dest.cache_possible_value_set(expr._get_constraint(slot)))
+				slot += 1
+			else:
+				raise NotImplementedError(f"copying a {entry!r} operand")
+		return operands
+
 	def set_expr_attributes(self, expr: InstructionOrExpression, value: ILInstructionAttributeSet):
 		"""
 		``set_expr_attributes`` allows modification of instruction attributes but ONLY during lifting.
@@ -3254,42 +3765,43 @@ class HighLevelILFunction:
 			expr = ExpressionIndex(expr)
 		core.BNRemoveHighLevelILDerivedStringReferenceForExpr(self.handle, expr)
 
+	# BEGIN GENERATED hlil-builders: from api/il, do not edit
 	def nop(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``nop`` no operation, this instruction does nothing
+		Does nothing.
 
-		:param ILSourceLocation loc: Location of expression
-		:return: The no operation expression
+		:param loc: The IL location this expression was added from
+		:return: The expression ``nop``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_NOP, source_location=loc)
 
-	def block(
-		self, exprs: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
+	def block(self, exprs: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``block`` a block expression containing multiple child expressions
+		Runs the statements ``exprs`` in order.
 
-		:param List[ExpressionIndex] exprs: child expressions in the block
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression `` { exprs... } ``
+		:param exprs: The statements
+		:param loc: The IL location this expression was added from
+		:return: The expression ``{ exprs }``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_BLOCK, len(exprs), self.add_operand_list(exprs), source_location=loc)
 
 	def if_expr(
-		self, condition: ExpressionIndex, true_expr: ExpressionIndex, false_expr: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
+		self,
+		condition: ExpressionIndex,
+		true_expr: ExpressionIndex,
+		false_expr: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
 	) -> ExpressionIndex:
 		"""
-		``if_expr`` an if-statement expression with a condition and true/false branches.
-		An ``else`` statement is included if the false_expr is not a NOP expression
+		Runs ``true_expr`` if ``condition`` holds, and ``false_expr`` otherwise.
 
-		:param ExpressionIndex condition: expression for the condition to test
-		:param ExpressionIndex true_expr: expression for the true branch
-		:param ExpressionIndex false_expr: expression for the false branch
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``if (condition) { true_expr } else { false_expr }``
+		:param condition: The condition
+		:param true_expr: The statement to run when the condition holds
+		:param false_expr: The statement to run otherwise, a NOP for none
+		:param loc: The IL location this expression was added from
+		:return: The expression ``if (condition) true_expr else false_expr``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_IF, condition, true_expr, false_expr, source_location=loc)
@@ -3298,12 +3810,12 @@ class HighLevelILFunction:
 		self, condition: ExpressionIndex, loop_expr: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``while_expr`` a while-loop expression with a condition and loop body.
+		Runs ``loop_expr`` for as long as ``condition`` holds, testing it before each iteration.
 
-		:param ExpressionIndex condition: expression for the loop condition
-		:param ExpressionIndex loop_expr: expression for the loop body
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``while (condition) { loop_expr }``
+		:param condition: The loop condition
+		:param loop_expr: The loop body
+		:param loc: The IL location this expression was added from
+		:return: The expression ``while (condition) loop_expr``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_WHILE, condition, loop_expr, source_location=loc)
@@ -3312,68 +3824,88 @@ class HighLevelILFunction:
 		self, loop_expr: ExpressionIndex, condition: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``do_while_expr`` a do-while-loop expression with a condition and loop body.
+		Runs ``loop_expr`` for as long as ``condition`` holds, testing it after each iteration.
 
-		:param ExpressionIndex condition: expression for the loop condition
-		:param ExpressionIndex loop_expr: expression for the loop body
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``do { loop_expr } while (condition)``
+		:param loop_expr: The loop body
+		:param condition: The loop condition
+		:param loc: The IL location this expression was added from
+		:return: The expression ``do loop_expr while (condition)``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_DO_WHILE, loop_expr, condition, source_location=loc)
 
 	def for_expr(
-		self, init_expr: ExpressionIndex, condition: ExpressionIndex, update_expr: ExpressionIndex, loop_expr: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
+		self,
+		init_expr: ExpressionIndex,
+		condition: ExpressionIndex,
+		update_expr: ExpressionIndex,
+		loop_expr: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
 	) -> ExpressionIndex:
 		"""
-		``for-expr`` a for-loop expression with an initializer, condition, updater, and loop body.
+		Runs ``init_expr``, then runs ``loop_expr`` followed by ``update_expr`` for as long as ``condition``
+		holds.
 
-		:param ExpressionIndex init_expr: expression for the loop initializer
-		:param ExpressionIndex condition: expression for the loop condition
-		:param ExpressionIndex update_expr: expression for the loop updater
-		:param ExpressionIndex loop_expr: expression for the loop body
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``for (init_expr ; condition ; update_expr) { loop_expr }``
+		:param init_expr: The statement to run before the loop, a NOP for none
+		:param condition: The loop condition
+		:param update_expr: The statement to run after each iteration, a NOP for none
+		:param loop_expr: The loop body
+		:param loc: The IL location this expression was added from
+		:return: The expression ``for (init_expr; condition; update_expr) loop_expr``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_FOR, init_expr, condition, update_expr, loop_expr, source_location=loc)
+		return self.expr(
+			HighLevelILOperation.HLIL_FOR, init_expr, condition, update_expr, loop_expr, source_location=loc
+		)
 
 	def switch(
-		self, condition: ExpressionIndex, default_expr: ExpressionIndex, cases: List[ExpressionIndex],
-		loc: Optional['ILSourceLocation'] = None
+		self,
+		condition: ExpressionIndex,
+		default_expr: ExpressionIndex,
+		cases: List[ExpressionIndex],
+		loc: Optional['ILSourceLocation'] = None,
 	) -> ExpressionIndex:
 		"""
-		``switch`` a switch expression with a condition, cases, and default case
+		Runs the body of the case in ``cases`` whose values include ``condition``, or ``default_expr`` when
+		none does.
 
-		:param ExpressionIndex condition: expression for the switch condition
-		:param ExpressionIndex default_expr: expression for the default branch
-		:param List[ExpressionIndex] cases: list of expressions for the switch cases
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``switch (condition) { cases...: ... default: default_expr }``
+		:param condition: The value to switch on
+		:param default_expr: The statement to run when no case matches
+		:param cases: The cases
+		:param loc: The IL location this expression was added from
+		:return: The expression ``switch (condition) cases default: default_expr``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_SWITCH, condition, default_expr, len(cases), self.add_operand_list(cases), source_location=loc)
+		return self.expr(
+			HighLevelILOperation.HLIL_SWITCH,
+			condition,
+			default_expr,
+			len(cases),
+			self.add_operand_list(cases),
+			source_location=loc,
+		)
 
 	def case(
 		self, values: List[ExpressionIndex], expr: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``case`` a switch case for values ``values`` with body ``expr``
+		A case of a SWITCH that runs ``expr`` when the switch's value is one of ``values``.
 
-		:param List[ExpressionIndex] values: matched values for the case
-		:param ExpressionIndex expr: body of switch case
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``case values...: { expr }``
+		:param values: The values the case matches
+		:param expr: The statement to run
+		:param loc: The IL location this expression was added from
+		:return: The expression ``case values: expr``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_CASE, len(values), self.add_operand_list(values), expr, source_location=loc)
+		return self.expr(
+			HighLevelILOperation.HLIL_CASE, len(values), self.add_operand_list(values), expr, source_location=loc
+		)
 
 	def break_expr(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``break`` break out of a loop or switch statement
+		Leaves the innermost enclosing loop or switch.
 
-		:param ILSourceLocation loc: location of returned expression
+		:param loc: The IL location this expression was added from
 		:return: The expression ``break``
 		:rtype: ExpressionIndex
 		"""
@@ -3381,9 +3913,9 @@ class HighLevelILFunction:
 
 	def continue_expr(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``continue`` continue to the top of a loop statement
+		Starts the next iteration of the innermost enclosing loop.
 
-		:param ILSourceLocation loc: location of returned expression
+		:param loc: The IL location this expression was added from
 		:return: The expression ``continue``
 		:rtype: ExpressionIndex
 		"""
@@ -3391,10 +3923,10 @@ class HighLevelILFunction:
 
 	def jump(self, dest: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``jump`` unconditionally branch to an expression by value
+		Jumps to ``dest``.
 
-		:param ExpressionIndex dest: target of the jump
-		:param ILSourceLocation loc: location of returned expression
+		:param dest: The address to jump to
+		:param loc: The IL location this expression was added from
 		:return: The expression ``jump(dest)``
 		:rtype: ExpressionIndex
 		"""
@@ -3402,53 +3934,44 @@ class HighLevelILFunction:
 
 	def ret(self, sources: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``ret`` returns an expression which jumps (branches) to the calling function,
-		returning a result specified by the expressions in ``sources``.
+		Returns ``sources`` from the function.
 
-		:param List[ExpressionIndex] sources: list of returned expressions
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``return sources...``
+		:param sources: The values to return
+		:param loc: The IL location this expression was added from
+		:return: The expression ``return sources``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_RET, len(sources), self.add_operand_list(sources), source_location=loc)
+		return self.expr(
+			HighLevelILOperation.HLIL_RET, len(sources), self.add_operand_list(sources), source_location=loc
+		)
 
 	def no_ret(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``no_ret`` returns an expression that halts execution
+		Marks a point that execution doesn't pass, such as after a call that doesn't return.
 
-		:param ILSourceLocation loc: location of returned expression
+		:param loc: The IL location this expression was added from
 		:return: The expression ``noreturn``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_NORET, source_location=loc)
 
-	def unreachable(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``unreachable`` returns an expression that is unreachable and should be omitted during analysis
-
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``unreachable``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_UNREACHABLE, source_location=loc)
-
 	def goto(self, target: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``goto`` unconditionally branch to a label
+		Jumps to the LABEL with ID ``target``.
 
-		:param int target: target of the goto
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``goto(target)``
+		:param target: The label's ID
+		:param loc: The IL location this expression was added from
+		:return: The expression ``goto target``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_GOTO, target, source_location=loc)
 
 	def label(self, target: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``label`` create a label expression at a target
+		A label with ID ``target``, which GOTO statements jump to.
 
-		:param int target: target of the label
-		:param ILSourceLocation loc: location of returned expression
+		:param target: The label's ID
+		:param loc: The IL location this expression was added from
 		:return: The expression ``target:``
 		:rtype: ExpressionIndex
 		"""
@@ -3456,11 +3979,11 @@ class HighLevelILFunction:
 
 	def var_declare(self, var: 'variable.Variable', loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``var_declare`` declare a variable in the current scope
+		Declares variable ``var`` without initializing it.
 
-		:param Variable var: location of variable being declared
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``var`` (no assignment or anything)
+		:param var: The variable to declare
+		:param loc: The IL location this expression was added from
+		:return: The expression ``var``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_VAR_DECLARE, var.identifier, source_location=loc)
@@ -3469,12 +3992,12 @@ class HighLevelILFunction:
 		self, size: int, dest: 'variable.Variable', src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``var_init`` declare and assign a variable in the current scope of size ``size``
+		Declares variable ``dest`` and initializes it to ``src``.
 
-		:param int size: size of the variable
-		:param Variable dest: location of variable being declared
-		:param ExpressionIndex src: value being assigned to the variable
-		:param ILSourceLocation loc: location of returned expression
+		:param size: The size of ``src`` in bytes
+		:param dest: The variable to declare
+		:param src: Its initial value
+		:param loc: The IL location this expression was added from
 		:return: The expression ``dest = src``
 		:rtype: ExpressionIndex
 		"""
@@ -3484,40 +4007,91 @@ class HighLevelILFunction:
 		self, size: int, dest: ExpressionIndex, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``assign`` assign expression ``src`` to expression ``dest``
+		Stores ``src`` to the location ``dest`` names, such as a variable, a structure field or a
+		dereferenced pointer.
 
-		:param int size: size of the expression
-		:param ExpressionIndex dest: expression being assigned
-		:param ExpressionIndex src: value being assigned to the expression
-		:param ILSourceLocation loc: location of returned expression
+		:param size: The size of ``dest`` and ``src`` in bytes
+		:param dest: Where to store the value
+		:param src: The value to store
+		:param loc: The IL location this expression was added from
 		:return: The expression ``dest = src``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_ASSIGN, dest, src, size=size, source_location=loc)
 
 	def assign_unpack(
-		self, size: int, output: List[ExpressionIndex], src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+		self, output: List[ExpressionIndex], src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``assign_unpack`` assign expression ``src`` to a list of expressions in ``output`` of size ``size``
+		Stores the several values ``src`` produces, such as a call's results, to the locations ``output``
+		names.
 
-		:param int size: size of the expression
-		:param List[ExpressionIndex] output: expressions being assigned
-		:param ExpressionIndex src: value being assigned to the expressions
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``output... = src``
+		:param output: Where to store the values
+		:param src: The expression producing the values
+		:param loc: The IL location this expression was added from
+		:return: The expression ``output = src``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_ASSIGN_UNPACK, len(output), self.add_operand_list(output), src, size=size, source_location=loc)
+		return self.expr(
+			HighLevelILOperation.HLIL_ASSIGN_UNPACK,
+			len(output),
+			self.add_operand_list(output),
+			src,
+			source_location=loc,
+		)
+
+	def force_ver(
+		self, size: int, dest: 'variable.Variable', src: 'variable.Variable', loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Gives variable ``dest`` a new SSA version holding the value of ``src``. Analysis can then use this
+		as a new variable definition site.
+
+		:param size: The size of the variable in bytes
+		:param dest: The variable to give a new version
+		:param src: The variable whose value it takes
+		:param loc: The IL location this expression was added from
+		:return: The expression ``FORCE_VER(dest = src)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			HighLevelILOperation.HLIL_FORCE_VER, dest.identifier, src.identifier, size=size, source_location=loc
+		)
+
+	def assert_expr(
+		self,
+		size: int,
+		src: 'variable.Variable',
+		constraint: 'variable.PossibleValueSet',
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Asserts that variable ``src`` holds one of the values ``constraint`` allows. Core inserts it where a
+		user has set possible values for ``src``.
+
+		:param size: The size of the variable in bytes
+		:param src: The variable to constrain
+		:param constraint: The values the variable may hold
+		:param loc: The IL location this expression was added from
+		:return: The expression ``ASSERT(src, constraint)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			HighLevelILOperation.HLIL_ASSERT,
+			src.identifier,
+			self.cache_possible_value_set(constraint),
+			size=size,
+			source_location=loc,
+		)
 
 	def var(self, size: int, src: 'variable.Variable', loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``var`` returns the variable ``src`` of size ``size``
+		Reads variable ``src``.
 
-		:param int size: the size of the variable in bytes
-		:param Variable src: the variable being read
-		:param ILSourceLocation loc: location of returned expression
-		:return: An expression for the given variable
+		:param size: The size of the result in bytes
+		:param src: The variable to read
+		:param loc: The IL location this expression was added from
+		:return: The expression ``src``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_VAR, src.identifier, size=size, source_location=loc)
@@ -3526,86 +4100,59 @@ class HighLevelILFunction:
 		self, size: int, src: ExpressionIndex, offset: int, member_index: int, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``struct_field`` returns the structure field at offset ``offset`` and index ``member_index`` from expression ``src`` of size ``size``
+		Reads the ``size`` byte field at offset ``offset`` within the structure ``src``. Shows the member's
+		name when the structure's type has a member at ``offset``.
 
-		:param int size: the size of the field in bytes
-		:param ExpressionIndex src: the expression being read
-		:param int offset: offset of field in the structure
-		:param int member_index: index of field in the structure
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``src:offset.size``
+		:param size: The size of the field in bytes
+		:param src: The structure
+		:param offset: The offset of the field within the structure, in bytes
+		:param member_index: The index of the field among the structure type's members, or -1 for none
+		:param loc: The IL location this expression was added from
+		:return: The expression ``src:offset.<size>``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_STRUCT_FIELD, src, offset, member_index, size=size, source_location=loc)
-
-	def split(
-		self, size: int, hi: ExpressionIndex, lo: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``var_split`` combines expressions ``hi`` and ``lo`` of size ``size`` into an expression of size ``2*size``
-
-		:param int size: the size of each expression in bytes
-		:param ExpressionIndex hi: the expression holding high part of value
-		:param ExpressionIndex lo: the expression holding low part of value
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``hi:lo``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_SPLIT, hi, lo, size=size, source_location=loc)
+		return self.expr(
+			HighLevelILOperation.HLIL_STRUCT_FIELD, src, offset, member_index, size=size, source_location=loc
+		)
 
 	def array_index(
 		self, size: int, src: ExpressionIndex, idx: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``array_index`` references an item at index ``idx`` in the array in ``src`` of size ``size``
+		Reads element ``idx`` of the array ``src``.
 
-		:param int size: size of the item in the array
-		:param ExpressionIndex src: expression for the array
-		:param ExpressionIndex idx: expression for the index into the array
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``src[idx].size``
+		:param size: The size of the element in bytes
+		:param src: The array
+		:param idx: The element's index
+		:param loc: The IL location this expression was added from
+		:return: The expression ``src[idx]``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_ARRAY_INDEX, src, idx, size=size, source_location=loc)
 
-	def struct_init(self, size: int, fields: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``struct_init`` initializes a structure with ``fields``. Each field should be a ``struct_init_field``.
-
-		:param int size: the size of the structure in bytes
-		:param List[ExpressionIndex] fields: list of fields to initialize
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``struct { .field = expr, ... }``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_STRUCT_INIT, len(fields), self.add_operand_list(fields), size=size, source_location=loc)
-
-	def struct_init_field(
-		self, size: int, offset: int, member_index: int, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	def split(
+		self, size: int, hi: ExpressionIndex, lo: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``struct_init_field`` returns an initialization of the structure field at offset ``offset`` and index
-		``member_index`` from expression ``src`` of size ``size``. This should only be used inside a ``struct_init``
-		expression.
+		Joins ``hi`` and ``lo`` into one value of ``2 * size`` bytes, with ``hi`` as its high half.
 
-		:param int size: the size of the field in bytes
-		:param int offset: offset of field in the structure
-		:param int member_index: index of field in the structure
-		:param ExpressionIndex src: the expression containing the value
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``.field = src``
+		:param size: The size of each half in bytes
+		:param hi: The high half
+		:param lo: The low half
+		:param loc: The IL location this expression was added from
+		:return: The expression ``hi:lo``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_STRUCT_INIT_FIELD, offset, member_index, src, size=size, source_location=loc)
+		return self.expr(HighLevelILOperation.HLIL_SPLIT, hi, lo, size=size, source_location=loc)
 
 	def deref(self, size: int, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``deref`` dereferences expression ``src`` and reads a value of size ``size``
+		Reads ``size`` bytes from memory at ``src``.
 
-		:param int size: size of the read
-		:param ExpressionIndex src: expression being read
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``(*src).size``
+		:param size: The size of the result in bytes
+		:param src: The address to read from
+		:param loc: The IL location this expression was added from
+		:return: The expression ``*src``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_DEREF, src, size=size, source_location=loc)
@@ -3614,48 +4161,54 @@ class HighLevelILFunction:
 		self, size: int, src: ExpressionIndex, offset: int, member_index: int, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``deref_field`` dereferences structure field in expression ``src`` at offset ``offset`` and index ``member_index`` of size ``size``
+		Reads the ``size`` byte field at offset ``offset`` within the structure that ``src`` points to.
+		Shows the member's name when the structure's type has a member at ``offset``.
 
-		:param int size: size of the read
-		:param ExpressionIndex src: expression of structure being read
-		:param int offset: offset of field in the structure
-		:param int member_index: index of field in the structure
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``src->offset.size``
+		:param size: The size of the field in bytes
+		:param src: The address of the structure
+		:param offset: The offset of the field within the structure, in bytes
+		:param member_index: The index of the field among the structure type's members, or -1 for none
+		:param loc: The IL location this expression was added from
+		:return: The expression ``src->:offset.<size>``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_DEREF_FIELD, src, offset, member_index, size=size, source_location=loc)
+		return self.expr(
+			HighLevelILOperation.HLIL_DEREF_FIELD, src, offset, member_index, size=size, source_location=loc
+		)
 
 	def address_of(self, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``address_of`` takes the address of ``src``
+		The address of ``src``, such as a variable or structure field.
 
-		:param ExpressionIndex src: the expression having its address taken
-		:param ILSourceLocation loc: location of returned expression
+		:param src: The value to take the address of
+		:param loc: The IL location this expression was added from
 		:return: The expression ``&src``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_ADDRESS_OF, src, size=0, source_location=loc)
+		return self.expr(HighLevelILOperation.HLIL_ADDRESS_OF, src, source_location=loc)
 
 	def pass_by_ref(self, size: int, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``pass_by_ref`` indicates that ``value`` is being passed by reference to a call with a pointer size of  ``size``
+		Passes ``src`` to a call by reference, as the calling convention requires. ``src`` is a pointer to
+		the value. Only appears as a call's parameter.
 
-		:param int size: the size of the pointer in bytes
-		:param ExpressionIndex src: the expression containing the reference being passed
-		:param ILSourceLocation loc: location of returned expression
+		:param size: The size of the pointer in bytes
+		:param src: The address of the value being passed
+		:param loc: The IL location this expression was added from
 		:return: The expression ``ref *src``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_PASS_BY_REF, src, size=size, source_location=loc)
 
-	def return_by_ref(self, size: int, dest: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+	def return_by_ref(
+		self, size: int, dest: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
 		"""
-		``return_by_ref`` indicates that ``dest`` is being returned by passing a reference to a call
+		Receives a call's result in ``dest`` through a pointer the caller supplies.
 
-		:param int size: the size of the value in bytes
-		:param ExpressionIndex dest: the expression containing the target of the return value
-		:param ILSourceLocation loc: location of returned expression
+		:param size: The size of the result in bytes
+		:param dest: Where the result goes
+		:param loc: The IL location this expression was added from
 		:return: The expression ``ref dest``
 		:rtype: ExpressionIndex
 		"""
@@ -3663,24 +4216,38 @@ class HighLevelILFunction:
 
 	def const(self, size: int, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``const`` returns an expression for the constant integer ``value`` of size ``size``
+		An integer constant.
 
-		:param int size: the size of the constant in bytes
-		:param int value: integer value of the constant
-		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size
+		:param size: The size of the result in bytes
+		:param value: The value
+		:param loc: The IL location this expression was added from
+		:return: The expression ``value``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_CONST, value, size=size, source_location=loc)
 
+	def const_data(
+		self, size: int, data: 'variable.ConstantData', loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Constant data that isn't a plain integer, such as a string or a value with known extension.
+
+		:param size: The size of the result in bytes
+		:param data: The constant data
+		:param loc: The IL location this expression was added from
+		:return: The expression ``data``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CONST_DATA, data.type, data.value, size=size, source_location=loc)
+
 	def const_pointer(self, size: int, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``const_pointer`` returns an expression for the constant pointer ``value`` of size ``size``
+		A constant pointer to address ``value``.
 
-		:param int size: the size of the pointer in bytes
-		:param int value: address referenced by the pointer
-		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size
+		:param size: The size of the result in bytes
+		:param value: The value
+		:param loc: The IL location this expression was added from
+		:return: The expression ``value``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_CONST_PTR, value, size=size, source_location=loc)
@@ -3689,29 +4256,1359 @@ class HighLevelILFunction:
 		self, size: int, value: int, offset: int, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``extern_pointer`` returns an expression for the external pointer ``value`` at offset ``offset`` of size ``size``
+		A constant pointer ``offset`` bytes from the relocated external address ``value``.
 
-		:param int size: the size of the pointer in bytes
-		:param int value: address referenced by the pointer
-		:param int offset: offset applied to the address
-		:param loc: location of returned expression
-		:return: A constant expression of given value and size
+		:param size: The size of the result in bytes
+		:param value: The external address
+		:param offset: The offset from the external address, in bytes
+		:param loc: The IL location this expression was added from
+		:return: The expression ``(value + offset)``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_EXTERN_PTR, value, offset, size=size, source_location=loc)
 
 	def float_const_raw(self, size: int, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
-		``float_const_raw`` returns an expression for the constant raw binary floating point
-		value ``value`` with size ``size``
+		A floating point constant. ``value`` holds the bits of its representation as an integer. The single
+		and double precision builders take a floating point value and convert it themselves.
 
-		:param int size: the size of the constant in bytes
-		:param int value: integer value for the raw binary representation of the constant
-		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size
+		:param size: The size of the result in bytes
+		:param value: The bits of the constant's representation, read as an integer
+		:param loc: The IL location this expression was added from
+		:return: The expression ``value``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_FLOAT_CONST, value, size=size, source_location=loc)
+
+	def imported_address(self, size: int, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		The constant address ``value`` of an imported symbol. Renders as the symbol's name where one is
+		known.
+
+		:param size: The size of the result in bytes
+		:param value: The value
+		:param loc: The IL location this expression was added from
+		:return: The expression ``*value``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_IMPORT, value, size=size, source_location=loc)
+
+	def add(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Adds ``a`` and ``b``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a + b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ADD, a, b, size=size, source_location=loc)
+
+	def add_carry(
+		self,
+		size: int,
+		a: ExpressionIndex,
+		b: ExpressionIndex,
+		carry: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Adds ``a``, ``b`` and the carry ``carry``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param carry: The carry in
+		:param loc: The IL location this expression was added from
+		:return: The expression ``adc.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ADC, a, b, carry, size=size, source_location=loc)
+
+	def sub(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Subtracts ``b`` from ``a``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a - b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_SUB, a, b, size=size, source_location=loc)
+
+	def sub_borrow(
+		self,
+		size: int,
+		a: ExpressionIndex,
+		b: ExpressionIndex,
+		carry: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Subtracts ``b`` and the borrow ``carry`` from ``a``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param carry: The carry in
+		:param loc: The IL location this expression was added from
+		:return: The expression ``sbb.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_SBB, a, b, carry, size=size, source_location=loc)
+
+	def and_expr(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The bitwise and of ``a`` and ``b``. Renders as ``a && b`` when ``size`` is 0.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a & b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_AND, a, b, size=size, source_location=loc)
+
+	def or_expr(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The bitwise or of ``a`` and ``b``. Renders as ``a || b`` when ``size`` is 0.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a | b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_OR, a, b, size=size, source_location=loc)
+
+	def xor_expr(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The bitwise exclusive or of ``a`` and ``b``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a ^ b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_XOR, a, b, size=size, source_location=loc)
+
+	def shift_left(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Shifts ``a`` left by ``b`` bits.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a << b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_LSL, a, b, size=size, source_location=loc)
+
+	def logical_shift_right(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Shifts ``a`` logically right by ``b`` bits.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u>> b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_LSR, a, b, size=size, source_location=loc)
+
+	def arith_shift_right(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Shifts ``a`` arithmetically right by ``b`` bits.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s>> b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ASR, a, b, size=size, source_location=loc)
+
+	def rotate_left(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Rotates ``a`` left by ``b`` bits.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``rol.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ROL, a, b, size=size, source_location=loc)
+
+	def rotate_left_carry(
+		self,
+		size: int,
+		a: ExpressionIndex,
+		b: ExpressionIndex,
+		carry: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Rotates ``a`` left by ``b`` bits through the carry ``carry``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param carry: The carry in
+		:param loc: The IL location this expression was added from
+		:return: The expression ``rlc.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_RLC, a, b, carry, size=size, source_location=loc)
+
+	def rotate_right(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Rotates ``a`` right by ``b`` bits.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``ror.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ROR, a, b, size=size, source_location=loc)
+
+	def rotate_right_carry(
+		self,
+		size: int,
+		a: ExpressionIndex,
+		b: ExpressionIndex,
+		carry: ExpressionIndex,
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Rotates ``a`` right by ``b`` bits through the carry ``carry``.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param carry: The carry in
+		:param loc: The IL location this expression was added from
+		:return: The expression ``rrc.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_RRC, a, b, carry, size=size, source_location=loc)
+
+	def mult(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Multiplies ``a`` by ``b``. The operands and the result are all ``size`` bytes, so the upper half of
+		the product is discarded.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a * b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MUL, a, b, size=size, source_location=loc)
+
+	def mult_double_prec_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Multiplies ``a`` by ``b`` as unsigned integers. The operands are ``size`` bytes and the result is
+		``2 * size`` bytes. The expression's size, which it renders with, is still ``size``.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``mulu.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MULU_DP, a, b, size=size, source_location=loc)
+
+	def mult_double_prec_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Multiplies ``a`` by ``b`` as signed integers. The operands are ``size`` bytes and the result is
+		``2 * size`` bytes. The expression's size, which it renders with, is still ``size``.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``muls.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MULS_DP, a, b, size=size, source_location=loc)
+
+	def div_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Divides ``a`` by ``b`` as unsigned integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u/ b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_DIVU, a, b, size=size, source_location=loc)
+
+	def div_double_prec_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Divides ``a`` by ``b`` as unsigned integers. ``a`` is ``2 * size`` bytes, and ``b`` and the result
+		are ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``divu.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_DIVU_DP, a, b, size=size, source_location=loc)
+
+	def div_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Divides ``a`` by ``b`` as signed integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s/ b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_DIVS, a, b, size=size, source_location=loc)
+
+	def div_double_prec_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Divides ``a`` by ``b`` as signed integers. ``a`` is ``2 * size`` bytes, and ``b`` and the result are
+		``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``divs.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_DIVS_DP, a, b, size=size, source_location=loc)
+
+	def mod_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The remainder of dividing ``a`` by ``b`` as unsigned integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u% b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MODU, a, b, size=size, source_location=loc)
+
+	def mod_double_prec_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The remainder of dividing ``a`` by ``b`` as unsigned integers. ``a`` is ``2 * size`` bytes, and
+		``b`` and the result are ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``modu.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MODU_DP, a, b, size=size, source_location=loc)
+
+	def mod_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The remainder of dividing ``a`` by ``b`` as signed integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s% b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MODS, a, b, size=size, source_location=loc)
+
+	def mod_double_prec_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The remainder of dividing ``a`` by ``b`` as signed integers. ``a`` is ``2 * size`` bytes, and ``b``
+		and the result are ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``mods.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MODS_DP, a, b, size=size, source_location=loc)
+
+	def neg_expr(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Negates ``value`` as a two's complement integer.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``neg.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_NEG, value, size=size, source_location=loc)
+
+	def not_expr(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Inverts the bits of ``value``, or negates it logically when ``size`` is 0.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``not.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_NOT, value, size=size, source_location=loc)
+
+	def sign_extend(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Sign-extends ``value`` to ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``sx.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_SX, value, size=size, source_location=loc)
+
+	def zero_extend(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Zero-extends ``value`` to ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``zx.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ZX, value, size=size, source_location=loc)
+
+	def low_part(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Truncates ``value`` to its low ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``(value).<size>``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_LOW_PART, value, size=size, source_location=loc)
+
+	def call(
+		self, dest: ExpressionIndex, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Calls ``dest`` with ``params``.
+
+		:param dest: The address to call
+		:param params: The parameters
+		:param loc: The IL location this expression was added from
+		:return: The expression ``dest(params)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			HighLevelILOperation.HLIL_CALL, dest, len(params), self.add_operand_list(params), source_location=loc
+		)
+
+	def compare_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` equals ``b``.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a == b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_E, a, b, size=size, source_location=loc)
+
+	def compare_not_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` doesn't equal ``b``.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a != b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_NE, a, b, size=size, source_location=loc)
+
+	def compare_signed_less_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than ``b`` as signed integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s< b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_SLT, a, b, size=size, source_location=loc)
+
+	def compare_unsigned_less_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than ``b`` as unsigned integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u< b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_ULT, a, b, size=size, source_location=loc)
+
+	def compare_signed_less_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than or equal to ``b`` as signed integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s<= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_SLE, a, b, size=size, source_location=loc)
+
+	def compare_unsigned_less_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than or equal to ``b`` as unsigned integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u<= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_ULE, a, b, size=size, source_location=loc)
+
+	def compare_signed_greater_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than or equal to ``b`` as signed integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s>= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_SGE, a, b, size=size, source_location=loc)
+
+	def compare_unsigned_greater_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than or equal to ``b`` as unsigned integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u>= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_UGE, a, b, size=size, source_location=loc)
+
+	def compare_signed_greater_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than ``b`` as signed integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a s> b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_SGT, a, b, size=size, source_location=loc)
+
+	def compare_unsigned_greater_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than ``b`` as unsigned integers.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a u> b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_UGT, a, b, size=size, source_location=loc)
+
+	def test_bit(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether bit ``b`` of ``a`` is set.
+
+		:param size: The size of ``a`` in bytes
+		:param a: The left operand
+		:param b: The index of the bit to test
+		:param loc: The IL location this expression was added from
+		:return: The expression ``test_bit(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_TEST_BIT, a, b, size=size, source_location=loc)
+
+	def bool_to_int(self, size: int, a: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Converts ``a`` to the integer 1 if it's true, or 0 if it's false.
+
+		:param size: The size of the result in bytes
+		:param a: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a ? 1 : 0``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_BOOL_TO_INT, a, size=size, source_location=loc)
+
+	def system_call(self, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Makes a system call with ``params``.
+
+		:param params: The parameters
+		:param loc: The IL location this expression was added from
+		:return: The expression ``syscall(params)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			HighLevelILOperation.HLIL_SYSCALL, len(params), self.add_operand_list(params), source_location=loc
+		)
+
+	def tailcall(
+		self, dest: ExpressionIndex, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Jumps to ``dest`` with ``params`` as a tail call, returning its results.
+
+		:param dest: The address to jump to
+		:param params: The parameters
+		:param loc: The IL location this expression was added from
+		:return: The expression ``return dest(params) __tailcall``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			HighLevelILOperation.HLIL_TAILCALL, dest, len(params), self.add_operand_list(params), source_location=loc
+		)
+
+	def intrinsic(
+		self,
+		intrinsic: 'architecture.IntrinsicType',
+		params: List[ExpressionIndex],
+		loc: Optional['ILSourceLocation'] = None,
+	) -> ExpressionIndex:
+		"""
+		Calls intrinsic ``intrinsic`` with ``params``. An intrinsic is an architecture operation lifted as a
+		call to a built-in function that doesn't exist in the binary.
+
+		:param intrinsic: The architecture intrinsic to call
+		:param params: The parameters
+		:param loc: The IL location this expression was added from
+		:return: The expression ``intrinsic(params)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			HighLevelILOperation.HLIL_INTRINSIC,
+			self.arch.get_intrinsic_index(intrinsic),
+			len(params),
+			self.add_operand_list(params),
+			source_location=loc,
+		)
+
+	def breakpoint(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		A processor breakpoint.
+
+		:param loc: The IL location this expression was added from
+		:return: The expression ``breakpoint``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_BP, source_location=loc)
+
+	def trap(self, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		A processor trap, or interrupt, with number ``value``.
+
+		:param value: The trap number
+		:param loc: The IL location this expression was added from
+		:return: The expression ``trap(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_TRAP, value, source_location=loc)
+
+	def undefined(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		An undefined value or operation.
+
+		:param loc: The IL location this expression was added from
+		:return: The expression ``undefined``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_UNDEF, source_location=loc)
+
+	def unimplemented(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		An unimplemented instruction or value.
+
+		:param loc: The IL location this expression was added from
+		:return: The expression ``unimplemented``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_UNIMPL, 0, source_location=loc)
+
+	def unknown(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		A value that can't be known at analysis time. It doesn't produce the warning an unimplemented
+		expression does.
+
+		:param loc: The IL location this expression was added from
+		:return: The expression ``unknown``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_UNIMPL, 1, source_location=loc)
+
+	def unimplemented_memory_ref(
+		self, size: int, addr: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		A reference to ``size`` bytes of memory at ``addr``, for an unimplemented operation.
+
+		:param size: The size of the result in bytes
+		:param addr: The address referenced
+		:param loc: The IL location this expression was added from
+		:return: The expression ``unimplemented([addr].<size>)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_UNIMPL_MEM, addr, 0, size=size, source_location=loc)
+
+	def unknown_memory_ref(
+		self, size: int, addr: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		A reference to ``size`` bytes of memory at ``addr``, whose value can't be known at analysis time. It
+		doesn't produce the warning an unimplemented expression does.
+
+		:param size: The size of the result in bytes
+		:param addr: The address referenced
+		:param loc: The IL location this expression was added from
+		:return: The expression ``unknown([addr].<size>)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_UNIMPL_MEM, addr, 1, size=size, source_location=loc)
+
+	def struct_init(
+		self, size: int, fields: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		A structure value of ``size`` bytes built from the field values ``fields``.
+
+		:param size: The size of the result in bytes
+		:param fields: The fields' values
+		:param loc: The IL location this expression was added from
+		:return: The expression ``{ fields }``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			HighLevelILOperation.HLIL_STRUCT_INIT,
+			len(fields),
+			self.add_operand_list(fields),
+			size=size,
+			source_location=loc,
+		)
+
+	def struct_init_field(
+		self, size: int, offset: int, member_index: int, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		A STRUCT_INIT field that sets the ``size`` byte field at offset ``offset`` to ``src``.
+
+		:param size: The size of the field in bytes
+		:param offset: The offset of the field within the structure, in bytes
+		:param member_index: The index of the field among the structure type's members, or -1 for none
+		:param src: The field's value
+		:param loc: The IL location this expression was added from
+		:return: The expression ``.offset = src``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(
+			HighLevelILOperation.HLIL_STRUCT_INIT_FIELD, offset, member_index, src, size=size, source_location=loc
+		)
+
+	def float_add(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Adds ``a`` and ``b`` as floating point values.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f+ b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FADD, a, b, size=size, source_location=loc)
+
+	def float_sub(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Subtracts ``b`` from ``a`` as floating point values.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f- b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FSUB, a, b, size=size, source_location=loc)
+
+	def float_mult(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Multiplies ``a`` by ``b`` as floating point values.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f* b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FMUL, a, b, size=size, source_location=loc)
+
+	def float_div(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Divides ``a`` by ``b`` as floating point values.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f/ b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FDIV, a, b, size=size, source_location=loc)
+
+	def float_sqrt(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The square root of the floating point value ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``sqrt(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FSQRT, value, size=size, source_location=loc)
+
+	def float_neg(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Negates the floating point value ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``fneg(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FNEG, value, size=size, source_location=loc)
+
+	def float_abs(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		The absolute value of the floating point value ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``fabs(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FABS, value, size=size, source_location=loc)
+
+	def float_to_int(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Converts the floating point value ``value`` to an integer.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``int.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FLOAT_TO_INT, value, size=size, source_location=loc)
+
+	def int_to_float(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Converts the integer ``value`` to a floating point value.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``float.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_INT_TO_FLOAT, value, size=size, source_location=loc)
+
+	def float_convert(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Converts the floating point value ``value`` to a floating point value of ``size`` bytes.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``fconvert.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FLOAT_CONV, value, size=size, source_location=loc)
+
+	def round_to_int(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Rounds the floating point value ``value`` to the nearest integral value.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``roundint.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ROUND_TO_INT, value, size=size, source_location=loc)
+
+	def floor(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Rounds the floating point value ``value`` to an integral value, towards negative infinity.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``floor.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FLOOR, value, size=size, source_location=loc)
+
+	def ceil(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Rounds the floating point value ``value`` to an integral value, towards positive infinity.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``ceil.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CEIL, value, size=size, source_location=loc)
+
+	def float_trunc(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Rounds the floating point value ``value`` to an integral value, towards zero.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``ftrunc.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FTRUNC, value, size=size, source_location=loc)
+
+	def float_compare_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` equals ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f== b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_E, a, b, size=size, source_location=loc)
+
+	def float_compare_not_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` doesn't equal ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f!= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_NE, a, b, size=size, source_location=loc)
+
+	def float_compare_less_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f< b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_LT, a, b, size=size, source_location=loc)
+
+	def float_compare_less_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is less than or equal to ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f<= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_LE, a, b, size=size, source_location=loc)
+
+	def float_compare_greater_equal(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than or equal to ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f>= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_GE, a, b, size=size, source_location=loc)
+
+	def float_compare_greater_than(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` is greater than ``b`` as floating point values.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``a f> b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_GT, a, b, size=size, source_location=loc)
+
+	def float_compare_ordered(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` and ``b`` are ordered, which they are when neither is NaN.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``is_ordered.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_O, a, b, size=size, source_location=loc)
+
+	def float_compare_unordered(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Tests whether ``a`` and ``b`` are unordered, which they are when either is NaN.
+
+		:param size: The size of ``a`` and ``b`` in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``is_unordered.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_UO, a, b, size=size, source_location=loc)
+
+	def unreachable(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Marks a point analysis knows execution can't reach, such as a switch's default case when every value
+		has a case.
+
+		:param loc: The IL location this expression was added from
+		:return: The expression ``unreachable``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_UNREACHABLE, source_location=loc)
+
+	def byte_swap(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		Reverses the byte order of ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``bswap.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_BSWAP, value, size=size, source_location=loc)
+
+	def population_count(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Counts the set bits in ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``popcnt.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_POPCNT, value, size=size, source_location=loc)
+
+	def count_leading_zeros(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Counts the leading zero bits in ``value``. The result is ``8 * size`` when ``value`` is zero.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``clz.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CLZ, value, size=size, source_location=loc)
+
+	def count_trailing_zeros(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Counts the trailing zero bits in ``value``. The result is ``8 * size`` when ``value`` is zero.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``ctz.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CTZ, value, size=size, source_location=loc)
+
+	def reverse_bits(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Reverses the bit order of ``value``.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``rbit.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_RBIT, value, size=size, source_location=loc)
+
+	def count_leading_signs(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		Counts the bits below the sign bit of ``value`` that match it.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``cls.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CLS, value, size=size, source_location=loc)
+
+	def min_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The smaller of ``a`` and ``b`` as signed integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``mins.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MINS, a, b, size=size, source_location=loc)
+
+	def max_signed(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The larger of ``a`` and ``b`` as signed integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``maxs.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MAXS, a, b, size=size, source_location=loc)
+
+	def min_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The smaller of ``a`` and ``b`` as unsigned integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``minu.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MINU, a, b, size=size, source_location=loc)
+
+	def max_unsigned(
+		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The larger of ``a`` and ``b`` as unsigned integers.
+
+		:param size: The size of the result in bytes
+		:param a: The left operand
+		:param b: The right operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``maxu.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MAXU, a, b, size=size, source_location=loc)
+
+	def absolute_value(
+		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		The absolute value of ``value`` as a signed integer. The most negative value is its own absolute
+		value.
+
+		:param size: The size of the result in bytes
+		:param value: The operand
+		:param loc: The IL location this expression was added from
+		:return: The expression ``abs.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ABS, value, size=size, source_location=loc)
+
+	# END GENERATED hlil-builders
 
 	def float_const_single(self, value: float, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
@@ -3735,1292 +5632,6 @@ class HighLevelILFunction:
 		"""
 		return self.expr(HighLevelILOperation.HLIL_FLOAT_CONST, struct.unpack("Q", struct.pack("d", value))[0], size=8, source_location=loc)
 
-	def imported_address(self, size: int, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``imported_address`` returns an expression for an imported value with address ``value`` and size ``size``
-
-		:param int size: size of the imported value
-		:param int value: address of the imported value
-		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_IMPORT, value, size=size, source_location=loc)
-
-	def const_data(self, size: int, data: 'variable.ConstantData', loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``const_data`` returns an expression for the constant data ``data``
-
-		:param int size: size of the data
-		:param ConstantData data: value of the data
-		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CONST_DATA, data.type, data.value, size=size, source_location=loc)
-
-	def add(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``add`` adds expression ``a`` to expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``add.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_ADD,a, b, size=size, source_location=loc)
-
-	def add_carry(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``add_carry`` adds expression ``a`` to expression ``b`` with carry from ``carry`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ExpressionIndex carry: Carried value expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``adc.<size>(a, b, carry)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_ADC, a, b, carry, size=size, source_location=loc)
-
-	def sub(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``sub`` subtracts expression ``a`` to expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``sub.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_SUB, a, b, size=size, source_location=loc)
-
-	def sub_borrow(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``sub_borrow`` subtracts expression ``a`` to expression ``b`` with borrow from ``carry`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ExpressionIndex carry: Carried value expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``sbb.<size>(a, b, carry)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_SBB, a, b, carry, size=size, source_location=loc)
-
-	def and_expr(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``and_expr`` bitwise and's expression ``a`` and expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``and.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_AND, a, b, size=size, source_location=loc)
-
-	def or_expr(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``or_expr`` bitwise or's expression ``a`` and expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``or.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_OR, a, b, size=size, source_location=loc)
-
-	def xor_expr(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``xor_expr`` xor's expression ``a`` and expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``xor.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_XOR, a, b, size=size, source_location=loc)
-
-	def shift_left(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``shift_left`` left shifts expression ``a`` by expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``lsl.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_LSL, a, b, size=size, source_location=loc)
-
-	def logical_shift_right(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``logical_shift_right`` logically right shifts expression ``a`` by expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``lsr.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_LSR, a, b, size=size, source_location=loc)
-
-	def arith_shift_right(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``arith_shift_right`` arithmetically right shifts expression ``a`` by expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``asr.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_ASR, a, b, size=size, source_location=loc)
-
-	def rotate_left(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``rotate_left`` bitwise rotates left expression ``a`` by expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``rol.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_ROL, a, b, size=size, source_location=loc)
-
-	def rotate_left_carry(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``rotate_left_carry`` bitwise rotates left expression ``a`` by expression ``b`` with carry from ``carry`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ExpressionIndex carry: Carried value expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``rlc.<size>(a, b, carry)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_RLC, a, b, carry, size=size, source_location=loc)
-
-	def rotate_right(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``rotate_right`` bitwise rotates right expression ``a`` by expression ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``ror.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_ROR, a, b, size=size, source_location=loc)
-
-	def rotate_right_carry(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``rotate_right_carry`` bitwise rotates right expression ``a`` by expression ``b`` with carry from ``carry`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ExpressionIndex carry: Carried value expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``rrc.<size>(a, b, carry)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_RRC, a, b, carry, size=size, source_location=loc)
-
-	def mult(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mult`` multiplies expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands and return value are ``size`` bytes as the product's upper half is discarded.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``mult.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_MUL, a, b, size=size, source_location=loc)
-
-	def mult_double_prec_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mult_double_prec_signed`` signed multiplies expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands are ``size`` bytes and the returned expression is of size ``2*size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``muls.dp.<2*size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_MULS_DP, a, b, size=size, source_location=loc)
-
-	def mult_double_prec_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mult_double_prec_unsigned`` unsigned multiplies expression ``a`` by expression ``b`` and returnisan expression.
-		Both the operands are ``size`` bytes and the returned expression is of size ``2*size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``mulu.dp.<2*size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_MULU_DP, a, b, size=size, source_location=loc)
-
-	def min_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``min_signed`` signed minimum of expressions ``a`` and ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``mins.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_MINS, a, b, size=size, source_location=loc)
-
-	def max_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``max_signed`` signed maximum of expressions ``a`` and ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``maxs.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_MAXS, a, b, size=size, source_location=loc)
-
-	def min_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``min_unsigned`` unsigned minimum of expressions ``a`` and ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``minu.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_MINU, a, b, size=size, source_location=loc)
-
-	def max_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``max_unsigned`` unsigned maximum of expressions ``a`` and ``b`` returning an expression of ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``maxu.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_MAXU, a, b, size=size, source_location=loc)
-
-	def div_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``div_signed`` signed divides expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands and return value are ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``divs.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_DIVS, a, b, size=size, source_location=loc)
-
-	def div_double_prec_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``div_double_prec_signed`` signed divides double precision expression ``a`` by expression ``b`` and returns an expression.
-		The first operand is of size ``2*size`` bytes and the other operand and return value are of size ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``divs.dp.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_DIVS_DP, a, b, size=size, source_location=loc)
-
-	def div_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``div_unsigned`` unsigned divides expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands and return value are ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``divu.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_DIVU, a, b, size=size, source_location=loc)
-
-	def div_double_prec_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``div_double_prec_unsigned`` unsigned divides double precision expression ``a`` by expression ``b`` and returns an expression.
-		The first operand is of size ``2*size`` bytes and the other operand and return value are of size ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``divu.dp.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_DIVU_DP, a, b, size=size, source_location=loc)
-
-	def mod_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mod_signed`` signed modulus expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands and return value are ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``mods.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_MODS, a, b, size=size, source_location=loc)
-
-	def mod_double_prec_signed(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mod_double_prec_signed`` signed modulus double precision expression ``a`` by expression ``b`` and returns an expression.
-		The first operand is of size ``2*size`` bytes and the other operand and return value are of size ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``mods.dp.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_MODS_DP, a, b, size=size, source_location=loc)
-
-	def mod_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mod_unsigned`` unsigned modulus expression ``a`` by expression ``b`` and returns an expression.
-		Both the operands and return value are ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``modu.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_MODU, a, b, size=size, source_location=loc)
-
-	def mod_double_prec_unsigned(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``mod_double_prec_unsigned`` unsigned modulus double precision expression ``a`` by expression ``b`` and returns an expression.
-		The first operand is of size ``2*size`` bytes and the other operand and return value are of size ``size`` bytes.
-
-		:param int size: the size of the result and input operands, in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``modu.dp.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_MODU_DP, a, b, size=size, source_location=loc)
-
-	def neg_expr(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``neg_expr`` two's complement sign negation of expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``neg.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_NEG, value, size=size, source_location=loc)
-
-	def not_expr(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``not_expr`` bitwise inversion of expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to bitwise invert
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``not.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_NOT, value, size=size, source_location=loc)
-
-	def byte_swap(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``byte_swap`` reverses the byte order of expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to byte swap
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``bswap.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_BSWAP, value, size=size, source_location=loc)
-
-	def population_count(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``population_count`` counts the number of set bits in expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to count set bits in
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``popcnt.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_POPCNT, value, size=size, source_location=loc)
-
-	def count_leading_zeros(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``count_leading_zeros`` counts the leading zero bits in expression ``value`` of size ``size``. The result is
-		``8 * size`` when ``value`` is zero.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to count leading zero bits in
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``clz.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CLZ, value, size=size, source_location=loc)
-
-	def count_trailing_zeros(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``count_trailing_zeros`` counts the trailing zero bits in expression ``value`` of size ``size``. The result is
-		``8 * size`` when ``value`` is zero.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to count trailing zero bits in
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``ctz.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CTZ, value, size=size, source_location=loc)
-
-	def reverse_bits(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``reverse_bits`` reverses the bit order of expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to reverse the bits of
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``rbit.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_RBIT, value, size=size, source_location=loc)
-
-	def count_leading_signs(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``count_leading_signs`` counts the leading sign bits in expression ``value`` of size ``size`` (the number of bits
-		below the sign bit that match it)
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to count leading sign bits in
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``cls.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CLS, value, size=size, source_location=loc)
-
-	def absolute_value(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``absolute_value`` signed absolute value of expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to take the absolute value of
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``abs.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_ABS, value, size=size, source_location=loc)
-
-	def sign_extend(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``sign_extend`` two's complement sign-extends the expression in ``value`` to ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to sign extend
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``sx.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_SX, value, size=size, source_location=loc)
-
-	def zero_extend(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``zero_extend`` zero-extends the expression in ``value`` to ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to zero extend
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``zx.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_ZX, value, size=size, source_location=loc)
-
-	def low_part(self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``low_part`` truncates the expression in ``value`` to ``size`` bytes
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to zero extend
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``(value).<size>``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_LOW_PART, value, size=size, source_location=loc)
-
-	def call(
-		self, dest: ExpressionIndex, params: List[ExpressionIndex],
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``call`` returns an expression which calls the function in the expression ``dest``
-		with the parameters defined in ``params``
-
-		:param ExpressionIndex dest: the expression to call
-		:param List[ExpressionIndex] params: parameter variables
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``call(dest, params...)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			HighLevelILOperation.HLIL_CALL,
-			dest,
-			len(params),
-			self.add_operand_list(params),
-			size=0,
-			source_location=loc
-		)
-
-	def system_call(
-		self, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``system_call`` returns an expression which performs a system call
-		with the parameters defined in ``params``
-
-		:param List[ExpressionIndex] params: parameter variables
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``syscall(dest, params...)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			HighLevelILOperation.HLIL_SYSCALL,
-			len(params),
-			self.add_operand_list(params),
-			size=0,
-			source_location=loc
-		)
-
-	def tailcall(
-		self, dest: ExpressionIndex, params: List[ExpressionIndex],
-		loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``tailcall`` returns an expression which tailcalls the function in the expression ``dest``
-		with the parameters defined in ``params``
-
-		:param ExpressionIndex dest: the expression to call
-		:param List[ExpressionIndex] params: parameter variables
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``tailcall(dest, params...)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			HighLevelILOperation.HLIL_TAILCALL,
-			dest,
-			len(params),
-			self.add_operand_list(params),
-			size=0,
-			source_location=loc
-		)
-
-	def compare_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is equal to
-		expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CMP_E, a, b, size=size, source_location=loc)
-
-	def compare_not_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_not_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is not equal to
-		expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CMP_NE, a, b, size=size, source_location=loc)
-
-	def compare_signed_less_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_signed_less_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		signed less than expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CMP_SLT, a, b, size=size, source_location=loc)
-
-	def compare_unsigned_less_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_unsigned_less_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		unsigned less than expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CMP_ULT, a, b, size=size, source_location=loc)
-
-	def compare_signed_less_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_signed_less_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		signed less than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CMP_SLE, a, b, size=size, source_location=loc)
-
-	def compare_unsigned_less_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_unsigned_less_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		unsigned less than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CMP_ULE, a, b, size=size, source_location=loc)
-
-	def compare_signed_greater_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_signed_greater_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		signed greater than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CMP_SGE, a, b, size=size, source_location=loc)
-
-	def compare_unsigned_greater_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_unsigned_greater_equal`` returns comparison expression of size ``size`` checking if expression ``a``
-		is unsigned greater than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CMP_UGE, a, b, size=size, source_location=loc)
-
-	def compare_signed_greater_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_signed_greater_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		signed greater than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CMP_SGT, a, b, size=size, source_location=loc)
-
-	def compare_unsigned_greater_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``compare_unsigned_greater_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
-		unsigned greater than or equal to expression ``b``
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: LHS of comparison
-		:param ExpressionIndex b: RHS of comparison
-		:param ILSourceLocation loc: location of returned expression
-		:return: a comparison expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CMP_UGT, a, b, size=size, source_location=loc)
-
-	def test_bit(self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``test_bit`` returns an expression of size ``size`` that tells whether expression ``a`` has its bit with an
-		index of the expression ``b`` is set
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: an expression to be tested
-		:param ExpressionIndex b: an expression for the index of the big
-		:param ILSourceLocation loc: location of returned expression
-		:return: the result expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_TEST_BIT, a, b, size=size, source_location=loc)
-
-	def bool_to_int(self, size: int, a: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``bool_to_int`` returns an expression of size ``size`` converting the boolean expression ``a`` to an integer
-
-		:param int size: size in bytes
-		:param ExpressionIndex a: boolean expression to be converted
-		:param ILSourceLocation loc: location of returned expression
-		:return: the converted integer expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_BOOL_TO_INT, a, size=size, source_location=loc)
-
-	def breakpoint(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``breakpoint`` returns a processor breakpoint expression.
-
-		:param ILSourceLocation loc: location of returned expression
-		:return: a breakpoint expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_BP, source_location=loc)
-
-	def trap(self, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``trap`` returns a processor trap (interrupt) expression of the given integer ``value``.
-
-		:param int value: trap (interrupt) number
-		:param ILSourceLocation loc: location of returned expression
-		:return: a trap expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_TRAP, value, source_location=loc)
-
-	def intrinsic(
-		self, intrinsic: 'architecture.IntrinsicType', params: List[ExpressionIndex],
-		loc: Optional['ILSourceLocation'] = None
-	):
-		"""
-		``intrinsic`` return an intrinsic expression.
-
-		:param IntrinsicType intrinsic: which intrinsic to call
-		:param List[ExpressionIndex] params: parameters to intrinsic
-		:param ILSourceLocation loc: location of returned expression
-		:return: an intrinsic expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(
-			HighLevelILOperation.HLIL_INTRINSIC,
-			self.arch.get_intrinsic_index(intrinsic),
-			len(params),
-			self.add_operand_list(params),
-			size=0,
-			source_location=loc
-		)
-
-	def undefined(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``undefined`` returns the undefined expression. This should be used for instructions which perform functions but
-		aren't important for dataflow or partial emulation purposes.
-
-		:param ILSourceLocation loc: location of returned expression
-		:return: the undefined expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_UNDEF, source_location=loc)
-
-	def unimplemented(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``unimplemented`` returns the unimplemented expression. This should be used for all instructions which aren't
-		implemented.
-
-		:param ILSourceLocation loc: location of returned expression
-		:return: the unimplemented expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_UNIMPL, source_location=loc)
-
-	def unimplemented_memory_ref(self, size: int, addr: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
-		"""
-		``unimplemented_memory_ref`` a memory reference to expression ``addr`` of size ``size`` with unimplemented operation.
-
-		:param int size: size in bytes of the memory reference
-		:param ExpressionIndex addr: expression to reference memory
-		:param ILSourceLocation loc: location of returned expression
-		:return: the unimplemented memory reference expression.
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_UNIMPL_MEM, addr, size=size, source_location=loc)
-
-	def float_add(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_add`` adds floating point expression ``a`` to expression ``b``
-		and returning an expression of ``size`` bytes.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fadd.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FADD,a, b, size=size, source_location=loc)
-
-	def float_sub(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_sub`` subtracts floating point expression ``b`` from expression ``a``
-		and returning an expression of ``size`` bytes.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fsub.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FSUB, a, b, size=size, source_location=loc)
-
-	def float_mult(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_mult`` multiplies floating point expression ``a`` by expression ``b``
-		and returning an expression of ``size`` bytes.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fmul.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FMUL, a, b, size=size, source_location=loc)
-
-	def float_div(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_div`` divides floating point expression ``a`` by expression ``b``
-		and returning an expression of ``size`` bytes.
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fdiv.<size>(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FDIV, a, b, size=size, source_location=loc)
-
-	def float_sqrt(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_sqrt`` returns square root of floating point expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to calculate the square root of
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``sqrt.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FSQRT, value, size=size, source_location=loc)
-
-	def float_neg(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_neg`` returns sign negation of floating point expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fneg.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FNEG, value, size=size, source_location=loc)
-
-	def float_abs(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_abs`` returns absolute value of floating point expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to get the absolute value of
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fabs.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FABS, value, size=size, source_location=loc)
-
-	def float_to_int(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_to_int`` returns integer value of floating point expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to convert to an int
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``int.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FLOAT_TO_INT, value, size=size, source_location=loc)
-
-	def int_to_float(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``int_to_float`` returns floating point value of integer expression ``value`` of size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to convert to a float
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``float.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_INT_TO_FLOAT, value, size=size, source_location=loc)
-
-	def float_convert(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``int_to_float`` converts floating point value of expression ``value`` to size ``size``
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``fconvert.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FLOAT_CONV, value, size=size, source_location=loc)
-
-	def round_to_int(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``round_to_int`` rounds a floating point value to the nearest integer
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to round to the nearest integer
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``roundint.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_ROUND_TO_INT, value, size=size, source_location=loc)
-
-	def floor(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``floor`` rounds a floating point value to an integer towards negative infinity
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to round down
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``roundint.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FLOOR, value, size=size, source_location=loc)
-
-	def ceil(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``ceil`` rounds a floating point value to an integer towards positive infinity
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to round up
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``roundint.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_CEIL, value, size=size, source_location=loc)
-
-	def float_trunc(
-		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_trunc`` rounds a floating point value to an integer towards zero
-
-		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to truncate
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``roundint.<size>(value)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FTRUNC, value, size=size, source_location=loc)
-
-	def float_compare_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_equal`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is equal to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f== b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FCMP_E, a, b, size=size, source_location=loc)
-
-	def float_compare_not_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_not_equal`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is not equal to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f!= b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FCMP_NE, a, b, size=size, source_location=loc)
-
-	def float_compare_less_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_less_than`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is less than expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f< b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FCMP_LT, a, b, size=size, source_location=loc)
-
-	def float_compare_less_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_less_equal`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is less than or equal to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f<= b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FCMP_LE, a, b, size=size, source_location=loc)
-
-	def float_compare_greater_equal(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_greater_equal`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is greater than or equal to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f>= b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FCMP_GE, a, b, size=size, source_location=loc)
-
-	def float_compare_greater_than(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_greater_than`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is greater than expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``a f> b``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FCMP_GT, a, b, size=size, source_location=loc)
-
-	def float_compare_ordered(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_ordered`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is ordered relative to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``is_ordered(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FCMP_O, a, b, size=size, source_location=loc)
-
-	def float_compare_unordered(
-		self, size: int, a: ExpressionIndex, b: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
-	) -> ExpressionIndex:
-		"""
-		``float_compare_unordered`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is unordered relative to expression ``b``
-
-		:param int size: the size of the operands in bytes
-		:param ExpressionIndex a: LHS expression
-		:param ExpressionIndex b: RHS expression
-		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``is_unordered(a, b)``
-		:rtype: ExpressionIndex
-		"""
-		return self.expr(HighLevelILOperation.HLIL_FCMP_UO, a, b, size=size, source_location=loc)
-
 	def add_operand_list(self, operands: List[int]) -> ExpressionIndex:
 		"""
 		``add_operand_list`` returns an operand list expression for the given list of integer operands.
@@ -5033,6 +5644,14 @@ class HighLevelILFunction:
 		for i in range(len(operands)):
 			operand_list[i] = operands[i]
 		return ExpressionIndex(core.BNHighLevelILAddOperandList(self.handle, operand_list, len(operands)))
+
+	def cache_possible_value_set(self, pvs: 'variable.PossibleValueSet') -> int:
+		"""
+		Cache a PossibleValueSet in the IL function, returning its index for use in an expression operand
+		:param pvs: PossibleValueSet to cache
+		:return: Index of the PossibleValueSet in the cache
+		"""
+		return core.BNCacheHighLevelILPossibleValueSet(self.handle, pvs._to_core_struct())
 
 	def finalize(self) -> None:
 		"""

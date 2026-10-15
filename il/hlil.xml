@@ -1,0 +1,1076 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<il xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="il.xsd" level="hlil" slots="5" walker="collect" ordered="true">
+	<shape name="binary">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="comparison">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="unary">
+		<rust struct="UnaryOp"/>
+	</shape>
+	<shape name="carry">
+		<py trait="arithmetic"/>
+		<rust struct="BinaryOpCarry"/>
+	</shape>
+	<shape name="shift">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="rotate_carry">
+		<py trait="arithmetic"/>
+		<rust struct="BinaryOpCarry"/>
+	</shape>
+	<shape name="double_precision_division">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="float_binary">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="float_comparison">
+		<rust struct="BinaryOp"/>
+	</shape>
+	<shape name="float_unary">
+		<rust struct="UnaryOp"/>
+	</shape>
+	<!-- Folding x = x & c into x &= c matches the same constant at different sizes. -->
+	<shape name="constant">
+		<cpp ordered-by-size="false"/>
+		<py base="Instruction"/>
+		<rust struct="Const"/>
+	</shape>
+	<shape name="constant_data">
+		<cpp ordered-by-size="false"/>
+		<py base="Instruction"/>
+	</shape>
+
+	<group>
+		<op name="NOP"/>
+	</group>
+
+	<group>
+		<op name="BLOCK" placement="statement" sized="false">
+			<description>Runs the statements <ref name="body"/> in order.</description>
+			<form>{ <ref name="body"/> }</form>
+			<operand name="body" kind="expr_list">
+				<statement/>
+				<description>The statements</description>
+			</operand>
+			<cpp>
+				<rename operand="body" to="BlockExprs"/>
+			</cpp>
+			<py mixin="_BlockIteration">
+				<param operand="body" name="exprs"/>
+			</py>
+			<rust>
+				<list operand="body" item="param"/>
+			</rust>
+		</op>
+
+		<op name="IF" placement="statement" sized="false">
+			<description>Runs <ref name="true"/> if <ref name="condition"/> holds, and <ref name="false"/>
+				otherwise.</description>
+			<form>if (<ref name="condition"/>) <ref name="true"/> else <ref name="false"/></form>
+			<operand name="condition">
+				<boolean/>
+				<description>The condition</description>
+			</operand>
+			<operand name="true" ast-only="true">
+				<statement/>
+				<description>The statement to run when the condition holds</description>
+			</operand>
+			<operand name="false" ast-only="true">
+				<statement/>
+				<description>The statement to run otherwise, a NOP for none</description>
+			</operand>
+			<py builder="if_expr" traits="control_flow">
+				<param operand="true" name="true_expr"/>
+				<param operand="false" name="false_expr"/>
+			</py>
+			<rust>
+				<rename operand="true" to="cond_true"/>
+				<rename operand="false" to="cond_false"/>
+			</rust>
+		</op>
+
+		<op name="WHILE" placement="statement" sized="false">
+			<description>Runs <ref name="body"/> for as long as <ref name="condition"/> holds, testing it
+				before each iteration.</description>
+			<form>while (<ref name="condition"/>) <ref name="body"/></form>
+			<operand name="condition">
+				<boolean/>
+				<description>The loop condition</description>
+			</operand>
+			<operand name="body" ast-only="true">
+				<statement/>
+				<description>The loop body</description>
+			</operand>
+			<py builder="while_expr" traits="loop">
+				<param operand="body" name="loop_expr"/>
+			</py>
+		</op>
+
+		<op name="DO_WHILE" placement="statement" sized="false">
+			<description>Runs <ref name="body"/> for as long as <ref name="condition"/> holds, testing it
+				after each iteration.</description>
+			<form>do <ref name="body"/> while (<ref name="condition"/>)</form>
+			<operand name="body" ast-only="true">
+				<statement/>
+				<description>The loop body</description>
+			</operand>
+			<operand name="condition">
+				<boolean/>
+				<description>The loop condition</description>
+			</operand>
+			<py builder="do_while_expr" traits="loop">
+				<param operand="body" name="loop_expr"/>
+			</py>
+			<rust struct="While"/>
+		</op>
+
+		<!-- CollectSubExprs visits the update before the body, though each iteration runs the body first. -->
+		<op name="FOR" placement="statement" sized="false">
+			<description>Runs <ref name="init"/>, then runs <ref name="body"/> followed by
+				<ref name="update"/> for as long as <ref name="condition"/> holds.</description>
+			<form>for (<ref name="init"/>; <ref name="condition"/>; <ref name="update"/>) <ref name="body"/></form>
+			<operand name="init">
+				<statement/>
+				<description>The statement to run before the loop, a NOP for none</description>
+			</operand>
+			<operand name="condition">
+				<boolean/>
+				<description>The loop condition</description>
+			</operand>
+			<operand name="update">
+				<statement/>
+				<description>The statement to run after each iteration, a NOP for none</description>
+			</operand>
+			<operand name="body" ast-only="true">
+				<statement/>
+				<description>The loop body</description>
+			</operand>
+			<py builder="for_expr" traits="loop">
+				<param operand="init" name="init_expr"/>
+				<param operand="update" name="update_expr"/>
+				<param operand="body" name="loop_expr"/>
+			</py>
+			<rust struct="ForLoop"/>
+		</op>
+
+		<!-- CollectSubExprs visits the default before the cases, though the default only runs when no case matches. -->
+		<op name="SWITCH" placement="statement" sized="false">
+			<description>Runs the body of the case in <ref name="cases"/> whose values include
+				<ref name="condition"/>, or <ref name="default"/> when none does.</description>
+			<form>switch (<ref name="condition"/>) <ref name="cases"/> default: <ref name="default"/></form>
+			<operand name="condition">
+				<integer width="any"/>
+				<description>The value to switch on</description>
+			</operand>
+			<operand name="default" ast-only="true">
+				<statement/>
+				<description>The statement to run when no case matches</description>
+			</operand>
+			<operand name="cases" kind="expr_list" items="CASE" ast-only="true">
+				<description>The cases</description>
+			</operand>
+			<cpp>
+				<rename operand="cases" to="Cases"/>
+			</cpp>
+			<py traits="control_flow">
+				<param operand="default" name="default_expr"/>
+			</py>
+		</op>
+
+		<op name="CASE" placement="part" sized="false">
+			<description>A case of a SWITCH that runs <ref name="body"/> when the switch's value is one of
+				<ref name="values"/>.</description>
+			<form>case <ref name="values"/>: <ref name="body"/></form>
+			<operand name="values" kind="expr_list">
+				<integer width="any"/>
+				<description>The values the case matches</description>
+			</operand>
+			<operand name="body" ast-only="true">
+				<statement/>
+				<description>The statement to run</description>
+			</operand>
+			<builder/>
+			<cpp>
+				<rename operand="body" to="TrueExpr"/>
+			</cpp>
+			<py>
+				<param operand="body" name="expr"/>
+			</py>
+		</op>
+
+		<op name="BREAK" placement="statement" sized="false">
+			<description>Leaves the innermost enclosing loop or switch.</description>
+			<form>break</form>
+			<py builder="break_expr" traits="terminal"/>
+		</op>
+
+		<op name="CONTINUE" placement="statement" sized="false">
+			<description>Starts the next iteration of the innermost enclosing loop.</description>
+			<form>continue</form>
+			<py builder="continue_expr" traits="control_flow"/>
+		</op>
+
+		<op name="JUMP"/>
+
+		<op name="RET" builder="return" placement="statement" sized="false">
+			<description>Returns <ref name="src"/> from the function.</description>
+			<form>return <ref name="src"/></form>
+			<operand name="src" kind="expr_list">
+				<bits width="any"/>
+				<description>The values to return</description>
+			</operand>
+			<cpp>
+				<setter operand="src"/>
+			</cpp>
+			<py builder="ret" traits="return">
+				<param operand="src" name="sources"/>
+			</py>
+		</op>
+
+		<op name="NORET"/>
+
+		<op name="GOTO" placement="statement" sized="false">
+			<description>Jumps to the LABEL with ID <ref name="target"/>.</description>
+			<form>goto <ref name="target"/></form>
+			<operand name="target" kind="goto_label">
+				<description>The label's ID</description>
+			</operand>
+			<cpp>
+				<setter operand="target"/>
+			</cpp>
+			<py traits="terminal"/>
+			<rust struct="Label"/>
+		</op>
+
+		<op name="LABEL" placement="statement" sized="false">
+			<description>A label with ID <ref name="target"/>, which GOTO statements jump to.</description>
+			<form><ref name="target"/>:</form>
+			<operand name="target" kind="goto_label">
+				<description>The label's ID</description>
+			</operand>
+			<cpp>
+				<setter operand="target"/>
+			</cpp>
+		</op>
+	</group>
+
+	<group>
+		<op name="VAR_DECLARE" placement="statement" sized="false">
+			<description>Declares variable <ref name="var"/> without initializing it.</description>
+			<form><ref name="var"/></form>
+			<operand name="var" kind="variable">
+				<description>The variable to declare</description>
+			</operand>
+			<rust struct="Var"/>
+		</op>
+
+		<op name="VAR_INIT" placement="statement">
+			<description>Declares variable <ref name="dest"/> and initializes it to <ref name="src"/>.</description>
+			<form><ref name="dest"/> = <ref name="src"/></form>
+			<operand name="dest" kind="variable" written="true">
+				<description>The variable to declare</description>
+			</operand>
+			<operand name="src">
+				<bits width="size"/>
+				<description>Its initial value</description>
+			</operand>
+			<py mixin="_DestVarWritten" traits="set_var"/>
+		</op>
+
+		<op name="ASSIGN" placement="statement" visit-order="src dest">
+			<description>Stores <ref name="src"/> to the location <ref name="dest"/> names, such as a
+				variable, a structure field or a dereferenced pointer.</description>
+			<form><ref name="dest"/> = <ref name="src"/></form>
+			<operand name="dest">
+				<bits width="size"/>
+				<description>Where to store the value</description>
+			</operand>
+			<operand name="src">
+				<bits width="size"/>
+				<description>The value to store</description>
+			</operand>
+			<py mixin="_AssignVars" traits="set_var"/>
+		</op>
+
+		<op name="ASSIGN_UNPACK" placement="statement" sized="false" visit-order="src dest">
+			<description>Stores the several values <ref name="src"/> produces, such as a call's results, to the
+				locations <ref name="dest"/> names.</description>
+			<form><ref name="dest"/> = <ref name="src"/></form>
+			<operand name="dest" kind="expr_list">
+				<bits width="any"/>
+				<description>Where to store the values</description>
+			</operand>
+			<operand name="src">
+				<bits width="any"/>
+				<description>The expression producing the values</description>
+			</operand>
+			<py mixin="_AssignUnpackVars" traits="set_var">
+				<param operand="dest" name="output"/>
+			</py>
+		</op>
+
+		<op name="FORCE_VER" placement="statement">
+			<description>Gives variable <ref name="dest"/> a new SSA version holding the value of
+				<ref name="src"/>. Analysis can then use this as a new variable definition site.</description>
+			<size>The size of the variable in bytes</size>
+			<form>FORCE_VER(<ref name="dest"/> = <ref name="src"/>)</form>
+			<operand name="dest" kind="variable" written="true">
+				<description>The variable to give a new version</description>
+			</operand>
+			<operand name="src" kind="variable">
+				<description>The variable whose value it takes</description>
+			</operand>
+			<cpp>
+				<rename operand="src" to="Variable"/>
+			</cpp>
+			<py mixin="_ForceVerVars"/>
+		</op>
+
+		<op name="ASSERT" placement="statement">
+			<description>Asserts that variable <ref name="src"/> holds one of the values
+				<ref name="constraint"/> allows. Core inserts it where a user has set possible values for
+				<ref name="src"/>.</description>
+			<size>The size of the variable in bytes</size>
+			<form>ASSERT(<ref name="src"/>, <ref name="constraint"/>)</form>
+			<operand name="src" kind="variable">
+				<description>The variable to constrain</description>
+			</operand>
+			<operand name="constraint" kind="possible_value_set">
+				<description>The values the variable may hold</description>
+			</operand>
+			<cpp>
+				<rename operand="src" to="Variable"/>
+			</cpp>
+			<py builder="assert_expr"/>
+		</op>
+
+		<op name="VAR">
+			<description>Reads variable <ref name="var"/>.</description>
+			<form><ref name="var"/></form>
+			<operand name="var" kind="variable">
+				<description>The variable to read</description>
+			</operand>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="variable_instruction">
+				<param operand="var" name="src"/>
+			</py>
+		</op>
+
+		<op name="STRUCT_FIELD">
+			<description>Reads the <ref name="size"/> byte field at offset <ref name="offset"/> within the
+				structure <ref name="src"/>. Shows the member's name when the structure's type has a member
+				at <ref name="offset"/>.</description>
+			<size>The size of the field in bytes</size>
+			<form><ref name="src"/>:<ref name="offset"/><size/></form>
+			<operand name="src">
+				<bits width="any"/>
+				<description>The structure</description>
+			</operand>
+			<operand name="offset" kind="immediate">
+				<description>The offset of the field within the structure, in bytes</description>
+			</operand>
+			<operand name="member_index" kind="member_index">
+				<description>The index of the field among the structure type's members, or -1 for none</description>
+			</operand>
+			<result>
+				<bits width="size"/>
+			</result>
+		</op>
+
+		<op name="ARRAY_INDEX" visit-order="index src">
+			<description>Reads element <ref name="index"/> of the array <ref name="src"/>.</description>
+			<size>The size of the element in bytes</size>
+			<form><ref name="src"/>[<ref name="index"/>]</form>
+			<operand name="src">
+				<bits width="any"/>
+				<description>The array</description>
+			</operand>
+			<operand name="index">
+				<integer width="any"/>
+				<description>The element's index</description>
+			</operand>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py>
+				<param operand="index" name="idx"/>
+			</py>
+		</op>
+
+		<op name="SPLIT">
+			<description>Joins <ref name="high"/> and <ref name="low"/> into one value of
+				<code>2 * <ref name="size"/></code> bytes, with <ref name="high"/> as its high half.</description>
+			<size>The size of each half in bytes</size>
+			<form><ref name="high"/>:<ref name="low"/></form>
+			<operand name="high">
+				<bits width="size"/>
+				<description>The high half</description>
+			</operand>
+			<operand name="low">
+				<bits width="size"/>
+				<description>The low half</description>
+			</operand>
+			<result>
+				<bits width="twice-size"/>
+			</result>
+			<py>
+				<param operand="high" name="hi"/>
+				<param operand="low" name="lo"/>
+			</py>
+		</op>
+
+		<op name="DEREF" shape="unary">
+			<description>Reads <ref name="size"/> bytes from memory at <ref name="src"/>.</description>
+			<form>*<ref name="src"/></form>
+			<operand name="src">
+				<integer width="any"/>
+				<description>The address to read from</description>
+			</operand>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py>
+				<param operand="src" name="src"/>
+			</py>
+		</op>
+
+		<op name="DEREF_FIELD">
+			<description>Reads the <ref name="size"/> byte field at offset <ref name="offset"/> within the
+				structure that <ref name="src"/> points to. Shows the member's name when the structure's type
+				has a member at <ref name="offset"/>.</description>
+			<size>The size of the field in bytes</size>
+			<form><ref name="src"/>-&gt;:<ref name="offset"/><size/></form>
+			<operand name="src">
+				<integer width="any"/>
+				<description>The address of the structure</description>
+			</operand>
+			<operand name="offset" kind="immediate">
+				<description>The offset of the field within the structure, in bytes</description>
+			</operand>
+			<operand name="member_index" kind="member_index">
+				<description>The index of the field among the structure type's members, or -1 for none</description>
+			</operand>
+			<result>
+				<bits width="size"/>
+			</result>
+			<rust struct="StructField"/>
+		</op>
+
+		<op name="ADDRESS_OF" shape="unary" sized="false">
+			<description>The address of <ref name="src"/>, such as a variable or structure field.</description>
+			<form>&amp;<ref name="src"/></form>
+			<operand name="src">
+				<bits width="any"/>
+				<description>The value to take the address of</description>
+			</operand>
+			<result>
+				<integer width="any"/>
+			</result>
+			<py mixin="_AddressOfVars">
+				<param operand="src" name="src"/>
+			</py>
+		</op>
+
+		<op name="PASS_BY_REF">
+			<py>
+				<param operand="src" name="src"/>
+			</py>
+		</op>
+
+		<op name="RETURN_BY_REF" shape="unary">
+			<description>Receives a call's result in <ref name="src"/> through a pointer the caller
+				supplies.</description>
+			<size>The size of the result in bytes</size>
+			<form>ref <ref name="src"/></form>
+			<operand name="src">
+				<bits width="any"/>
+				<description>Where the result goes</description>
+			</operand>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py>
+				<param operand="src" name="dest"/>
+			</py>
+		</op>
+
+		<op name="CONST">
+			<py traits="constant"/>
+		</op>
+
+		<op name="CONST_DATA">
+			<py traits="constant"/>
+		</op>
+
+		<op name="CONST_PTR">
+			<py mixin="_ConstPtrString" traits="constant"/>
+		</op>
+
+		<op name="EXTERN_PTR">
+			<cpp>
+				<type operand="offset" is="int64_t"/>
+			</cpp>
+			<py traits="constant"/>
+			<rust struct="ExternPtr"/>
+		</op>
+
+		<op name="FLOAT_CONST">
+			<py traits="constant"/>
+			<rust struct="FloatConst"/>
+		</op>
+
+		<op name="IMPORT">
+			<form>*<ref name="constant"/></form>
+			<py traits="constant"/>
+		</op>
+
+		<op name="ADD"/>
+
+		<op name="ADC" builder="add_with_carry">
+			<py builder="add_carry"/>
+		</op>
+
+		<op name="SUB"/>
+
+		<op name="SBB" builder="sub_with_borrow">
+			<py builder="sub_borrow"/>
+		</op>
+
+		<op name="AND"/>
+
+		<op name="OR"/>
+
+		<op name="XOR"/>
+
+		<op name="LSL"/>
+
+		<op name="LSR"/>
+
+		<op name="ASR"/>
+
+		<op name="ROL"/>
+
+		<op name="RLC"/>
+
+		<op name="ROR"/>
+
+		<op name="RRC"/>
+
+		<op name="MUL"/>
+
+		<op name="MULU_DP"/>
+
+		<op name="MULS_DP">
+			<py traits="signed double_precision"/>
+		</op>
+
+		<op name="DIVU">
+			<form><ref name="left"/> u/ <ref name="right"/></form>
+		</op>
+
+		<op name="DIVU_DP"/>
+
+		<op name="DIVS">
+			<form><ref name="left"/> s/ <ref name="right"/></form>
+			<py traits="signed"/>
+		</op>
+
+		<op name="DIVS_DP">
+			<py traits="signed double_precision"/>
+		</op>
+
+		<op name="MODU">
+			<form><ref name="left"/> u% <ref name="right"/></form>
+		</op>
+
+		<op name="MODU_DP"/>
+
+		<op name="MODS">
+			<form><ref name="left"/> s% <ref name="right"/></form>
+			<py traits="signed"/>
+		</op>
+
+		<op name="MODS_DP">
+			<py traits="signed double_precision"/>
+		</op>
+
+		<op name="NEG"/>
+
+		<op name="NOT">
+			<description>Inverts the bits of <ref name="src"/>, or negates it logically when
+				<ref name="size"/> is 0.</description>
+		</op>
+
+		<op name="SX"/>
+
+		<op name="ZX"/>
+
+		<op name="LOW_PART"/>
+
+		<op name="CALL" placement="either" sized="false" visit-order="params dest">
+			<description>Calls <ref name="dest"/> with <ref name="params"/>.</description>
+			<form><ref name="dest"/>(<ref name="params"/>)</form>
+			<operand name="dest">
+				<integer width="any"/>
+				<description>The address to call</description>
+			</operand>
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+				<description>The parameters</description>
+			</operand>
+			<result>
+				<bits width="any"/>
+			</result>
+			<py traits="localcall"/>
+		</op>
+
+		<op name="CMP_E"/>
+
+		<op name="CMP_NE"/>
+
+		<op name="CMP_SLT"/>
+
+		<op name="CMP_ULT"/>
+
+		<op name="CMP_SLE"/>
+
+		<op name="CMP_ULE"/>
+
+		<op name="CMP_SGE"/>
+
+		<op name="CMP_UGE"/>
+
+		<op name="CMP_SGT"/>
+
+		<op name="CMP_UGT"/>
+
+		<op name="TEST_BIT"/>
+
+		<op name="BOOL_TO_INT"/>
+
+		<op name="ADD_OVERFLOW"/>
+
+		<op name="SYSCALL" placement="either" sized="false">
+			<description>Makes a system call with <ref name="params"/>.</description>
+			<form>syscall(<ref name="params"/>)</form>
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+				<description>The parameters</description>
+			</operand>
+			<result>
+				<bits width="any"/>
+			</result>
+			<py builder="system_call" traits="syscall"/>
+		</op>
+
+		<op name="TAILCALL" builder="tail_call" placement="statement" sized="false" visit-order="params dest">
+			<description>Jumps to <ref name="dest"/> with <ref name="params"/> as a tail call, returning
+				its results.</description>
+			<form>return <ref name="dest"/>(<ref name="params"/>) __tailcall</form>
+			<operand name="dest">
+				<integer width="any"/>
+				<description>The address to jump to</description>
+			</operand>
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+				<description>The parameters</description>
+			</operand>
+			<py builder="tailcall" traits="tailcall"/>
+			<rust struct="Call"/>
+		</op>
+
+		<op name="INTRINSIC" placement="either" sized="false">
+			<description>Calls intrinsic <ref name="intrinsic"/> with <ref name="params"/>. An intrinsic
+				is an architecture operation lifted as a call to a built-in function that doesn't exist
+				in the binary.</description>
+			<form><ref name="intrinsic"/>(<ref name="params"/>)</form>
+			<operand name="intrinsic" kind="intrinsic">
+				<description>The architecture intrinsic to call</description>
+			</operand>
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+				<description>The parameters</description>
+			</operand>
+			<result>
+				<bits width="any"/>
+			</result>
+			<py traits="intrinsic"/>
+		</op>
+
+		<op name="BP"/>
+
+		<op name="TRAP"/>
+
+		<op name="UNDEF">
+			<py traits="terminal"/>
+		</op>
+
+		<op name="UNIMPL"/>
+
+		<op name="UNIMPL_MEM"/>
+
+		<op name="STRUCT_INIT">
+			<description>A structure value of <ref name="size"/> bytes built from the field values
+				<ref name="fields"/>.</description>
+			<form>{ <ref name="fields"/> }</form>
+			<operand name="fields" kind="expr_list" items="STRUCT_INIT_FIELD">
+				<description>The fields' values</description>
+			</operand>
+			<result>
+				<bits width="size"/>
+			</result>
+		</op>
+
+		<op name="STRUCT_INIT_FIELD" placement="part">
+			<description>A STRUCT_INIT field that sets the <ref name="size"/> byte field at offset
+				<ref name="offset"/> to <ref name="src"/>.</description>
+			<size>The size of the field in bytes</size>
+			<form>.<ref name="offset"/> = <ref name="src"/></form>
+			<operand name="offset" kind="immediate">
+				<description>The offset of the field within the structure, in bytes</description>
+			</operand>
+			<operand name="member_index" kind="member_index">
+				<description>The index of the field among the structure type's members, or -1 for none</description>
+			</operand>
+			<operand name="src">
+				<bits width="size"/>
+				<description>The field's value</description>
+			</operand>
+			<builder/>
+			<rust struct="StructField"/>
+		</op>
+	</group>
+
+	<group title="Floating point">
+		<op name="FADD">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FSUB">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FMUL">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FDIV">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FSQRT">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FNEG">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FABS">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FLOAT_TO_INT">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="INT_TO_FLOAT">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FLOAT_CONV">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="ROUND_TO_INT">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FLOOR">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="CEIL">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FTRUNC">
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FCMP_E"/>
+
+		<op name="FCMP_NE"/>
+
+		<op name="FCMP_LT"/>
+
+		<op name="FCMP_LE"/>
+
+		<op name="FCMP_GE"/>
+
+		<op name="FCMP_GT"/>
+
+		<op name="FCMP_O"/>
+
+		<op name="FCMP_UO"/>
+	</group>
+
+	<group>
+		<op name="UNREACHABLE" placement="statement" sized="false">
+			<doc>Marks a point analysis knows execution can't reach</doc>
+			<description>Marks a point analysis knows execution can't reach, such as a switch's default case
+				when every value has a case.</description>
+			<form>unreachable</form>
+			<py traits="terminal"/>
+		</op>
+	</group>
+
+	<group title="The following instructions are only used in SSA form" ssa-only="true">
+		<op name="WHILE_SSA" placement="statement" sized="false">
+			<operand name="condition_phi">
+				<statement/>
+			</operand>
+			<operand name="condition">
+				<boolean/>
+			</operand>
+			<operand name="body" ast-only="true">
+				<statement/>
+			</operand>
+			<py traits="loop ssa"/>
+		</op>
+
+		<op name="DO_WHILE_SSA" placement="statement" sized="false">
+			<operand name="body" ast-only="true">
+				<statement/>
+			</operand>
+			<operand name="condition_phi">
+				<statement/>
+			</operand>
+			<operand name="condition">
+				<boolean/>
+			</operand>
+			<py traits="loop ssa"/>
+			<rust struct="WhileSsa"/>
+		</op>
+
+		<!-- CollectSubExprs visits the update before the body, as with FOR. -->
+		<op name="FOR_SSA" placement="statement" sized="false">
+			<operand name="init">
+				<statement/>
+			</operand>
+			<operand name="condition_phi">
+				<statement/>
+			</operand>
+			<operand name="condition">
+				<boolean/>
+			</operand>
+			<operand name="update">
+				<statement/>
+			</operand>
+			<operand name="body" ast-only="true">
+				<statement/>
+			</operand>
+			<py traits="loop ssa"/>
+			<rust struct="ForLoopSsa"/>
+		</op>
+
+		<op name="VAR_INIT_SSA" placement="statement">
+			<operand name="dest" kind="ssa_variable" written="true"/>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<py mixin="_DestVarWritten" traits="set_var ssa"/>
+		</op>
+
+		<op name="ASSIGN_MEM_SSA" placement="statement" visit-order="src dest">
+			<operand name="dest">
+				<bits width="size"/>
+			</operand>
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<operand name="src_memory" kind="memory_version"/>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="ASSIGN_UNPACK_MEM_SSA" placement="statement" sized="false" visit-order="src dest">
+			<operand name="dest" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="src">
+				<bits width="any"/>
+			</operand>
+			<operand name="src_memory" kind="memory_version"/>
+			<py traits="ssa memory"/>
+		</op>
+
+		<op name="FORCE_VER_SSA" placement="statement">
+			<operand name="dest" kind="ssa_variable" written="true"/>
+			<operand name="src" kind="ssa_variable"/>
+			<cpp>
+				<rename operand="src" role=""/>
+			</cpp>
+			<py mixin="_ForceVerVars" traits="ssa"/>
+		</op>
+
+		<op name="ASSERT_SSA" placement="statement">
+			<operand name="src" kind="ssa_variable"/>
+			<operand name="constraint" kind="possible_value_set"/>
+			<cpp>
+				<rename operand="src" role=""/>
+			</cpp>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="VAR_SSA">
+			<operand name="var" kind="ssa_variable"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="ssa_variable_instruction"/>
+		</op>
+
+		<op name="VAR_SSA_PARTIAL">
+			<operand name="var" kind="variable"/>
+			<operand name="dest_version" kind="ssa_version" written="true"/>
+			<operand name="prev_version" kind="ssa_version"/>
+			<pair name="dest" kind="ssa_variable" of="var" version="dest_version"/>
+			<pair name="prev" kind="ssa_variable" of="var" version="prev_version"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="ssa_variable_instruction"/>
+		</op>
+
+		<op name="ARRAY_INDEX_SSA" visit-order="index src">
+			<operand name="src">
+				<bits width="any"/>
+			</operand>
+			<operand name="src_memory" kind="memory_version"/>
+			<operand name="index">
+				<integer width="any"/>
+			</operand>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="DEREF_SSA">
+			<operand name="src">
+				<integer width="any"/>
+			</operand>
+			<operand name="src_memory" kind="memory_version"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="DEREF_FIELD_SSA">
+			<operand name="src">
+				<integer width="any"/>
+			</operand>
+			<operand name="src_memory" kind="memory_version"/>
+			<operand name="offset" kind="immediate"/>
+			<operand name="member_index" kind="member_index"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="CALL_SSA" placement="either" sized="false" visit-order="params dest">
+			<operand name="dest">
+				<integer width="any"/>
+			</operand>
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="src_memory" kind="memory_version"/>
+			<result>
+				<bits width="any"/>
+			</result>
+			<py traits="localcall ssa"/>
+		</op>
+
+		<op name="SYSCALL_SSA" placement="either" sized="false">
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="src_memory" kind="memory_version"/>
+			<result>
+				<bits width="any"/>
+			</result>
+			<py traits="syscall ssa"/>
+		</op>
+
+		<op name="INTRINSIC_SSA" placement="either" sized="false">
+			<operand name="intrinsic" kind="intrinsic"/>
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="src_memory" kind="memory_version"/>
+			<result>
+				<bits width="any"/>
+			</result>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="VAR_PHI" placement="statement" sized="false">
+			<operand name="dest" kind="ssa_variable" written="true"/>
+			<operand name="src" kind="ssa_variable_list"/>
+			<cpp>
+				<setter operand="src"/>
+			</cpp>
+			<py mixin="_DestVarWritten" traits="phi set_var"/>
+		</op>
+
+		<op name="MEM_PHI" builder="mem_phi">
+			<py>
+				<rename operand="dest_memory" to="dest"/>
+				<rename operand="src_memory" to="src"/>
+			</py>
+			<rust>
+				<rename operand="dest_memory" to="dest"/>
+				<rename operand="src_memory" to="src"/>
+			</rust>
+		</op>
+	</group>
+
+	<group title="Bit manipulation">
+		<op name="BSWAP"/>
+
+		<op name="POPCNT"/>
+
+		<op name="CLZ"/>
+
+		<op name="CTZ"/>
+
+		<op name="RBIT"/>
+
+		<op name="CLS"/>
+	</group>
+
+	<group title="Integer minimum, maximum and absolute value">
+		<op name="MINS"/>
+
+		<op name="MAXS"/>
+
+		<op name="MINU"/>
+
+		<op name="MAXU"/>
+
+		<op name="ABS"/>
+	</group>
+</il>

@@ -80,6 +80,10 @@ mod visitor {
                     print_indent(indent);
                     println!("int {:e}", float);
                 }
+                PossibleValueSet(values) => {
+                    print_indent(indent);
+                    println!("possible values {:?}", values);
+                }
                 Expr(expr) => print_il_expr(&expr, indent),
                 Var(var) => {
                     print_indent(indent);

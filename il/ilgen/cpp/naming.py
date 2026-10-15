@@ -1,8 +1,8 @@
 """How the C++ API names an IL level's accessors, setters, builders and builder parameters.
 
 An accessor's name is its kind's verb, then the value's role in CamelCase, then its kind's suffix. The verb is Get
-unless the kind gives another. A src operand of kind expr is GetSourceExpr. A rename can replace everything after the
-verb."""
+unless the kind gives another. A src operand of kind expr is GetSourceExpr. A rename can replace the role, or everything
+after the verb."""
 
 from dataclasses import dataclass
 
@@ -40,10 +40,10 @@ class Names:
 	def accessor(self, op, value):
 		verb = value.kind.cpp.verb
 		rename = op.cpp.renames.get(value.name)
-		if rename is not None:
-			return AccessorName(verb, rename, None)
+		if rename is not None and rename.to is not None:
+			return AccessorName(verb, rename.to, None)
 
-		role = camel(self.schema.name(value.name).role)
+		role = camel(rename.role if rename is not None else self.schema.name(value.name).role)
 		return AccessorName(verb, role + value.kind.cpp.suffix, role)
 
 	def getter(self, op, value):

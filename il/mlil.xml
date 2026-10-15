@@ -36,16 +36,7 @@
 	</shape>
 
 	<shape name="constant_data">
-		<operand name="constant_data" kind="constant_data">
-			<description>The constant data</description>
-		</operand>
-		<result>
-			<bits width="size"/>
-		</result>
-		<cpp base="ConstantDataInstruction"/>
-		<py base="ConstBase" trait="constant">
-			<param operand="constant_data" name="data"/>
-		</py>
+		<py base="ConstBase" trait="constant"/>
 	</shape>
 
 	<!-- VisitExprs visits a call's outputs before its parameters, though the call reads its parameters before it
@@ -298,20 +289,7 @@
 		<rust struct="Field"/>
 	</op>
 
-	<op name="PASS_BY_REF" shape="unary">
-		<description>Passes <ref name="src"/> to a call by reference, as the calling convention
-			requires. <ref name="src"/> is a pointer to the value. Only appears as a call's
-			parameter.</description>
-		<size>The size of the pointer in bytes</size>
-		<form>ref *<ref name="src"/></form>
-		<operand name="src">
-			<bits width="any"/>
-			<description>The address of the value being passed</description>
-		</operand>
-		<result>
-			<bits width="size"/>
-		</result>
-	</op>
+	<op name="PASS_BY_REF"/>
 
 	<op name="RETURN_BY_REF" shape="unary" placement="part">
 		<description>Receives a call's result in <ref name="src"/> through a pointer the caller
@@ -329,14 +307,7 @@
 
 	<op name="CONST"/>
 
-	<op name="CONST_DATA" shape="constant_data">
-		<description>Constant data that isn't a plain integer, such as a string or a value with known
-			extension.</description>
-		<form><ref name="constant_data"/></form>
-		<py operands="constant">
-			<alias name="constant" of="constant_data"/>
-		</py>
-	</op>
+	<op name="CONST_DATA"/>
 
 	<op name="CONST_PTR">
 		<py mixin="_ConstPtrString"/>
@@ -353,11 +324,7 @@
 		<rust struct="FloatConst"/>
 	</op>
 
-	<op name="IMPORT" builder="imported_address" shape="constant">
-		<description>The constant address <ref name="constant"/> of an imported symbol. Renders as the
-			symbol's name where one is known.</description>
-		<form>[<ref name="constant"/>]</form>
-	</op>
+	<op name="IMPORT"/>
 
 	<op name="ADD"/>
 

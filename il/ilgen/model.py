@@ -37,6 +37,7 @@ class CppKind:
 	encoder: str | None = None
 	settable: bool = False
 	version_setter: str | None = None
+	comparable: bool = True
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,7 @@ class RustKind:
 
 	suffix: str = ''
 	type: str | None = None
+	stem_type: str | None = None
 	implements: frozenset | None = None
 	decoder: str | None = None
 	field_suffix: str = ''
@@ -213,6 +215,7 @@ class Operand(Value):
 	signed: bool = False
 	is_listed: bool = True
 	visited: bool = True
+	ast_only: bool = False
 	description: ET.Element | None = None
 	accessors: list = field(default_factory=list)
 	# The pairs that combine this operand with another, in order.
@@ -384,6 +387,16 @@ class Builder:
 
 
 @dataclass(frozen=True)
+class CppRename:
+	"""A C++ accessor's rename."""
+
+	# Everything after the verb.
+	to: str | None
+	# The role, in place of names.xml's.
+	role: str | None
+
+
+@dataclass(frozen=True)
 class PyParam:
 	name: str | None
 	annotation: str | None
@@ -393,7 +406,7 @@ class PyParam:
 
 @dataclass(eq=False)
 class CppOp:
-	# {value name: the C++ accessor's name after its verb}
+	# {value name: CppRename}
 	renames: dict = field(default_factory=dict)
 	setters: list = field(default_factory=list)
 	usages: dict = field(default_factory=dict)
@@ -489,6 +502,8 @@ class Shape:
 	py: PyShape
 	# The stored values whose accessors the C++ base class implements, where it doesn't implement them all.
 	cpp_implements: list | None = None
+	# Whether CompareExprs orders the shape's sized ops by size before their values.
+	ordered_by_size: bool = True
 
 	@property
 	def stored_values(self):
@@ -627,6 +642,11 @@ class Schema:
 	slots: int
 	# Whether the level's instructions hold the flags they write.
 	flags: bool
+	# How the C++ API walks an instruction's children. With `visit`, VisitExprs recurses into each child. With
+	# `collect`, CollectSubExprs pushes them onto VisitExprs's stack.
+	walker: str
+	# Whether the C++ API orders the level's instructions.
+	ordered: bool
 	# {marker: RustMarker} for the LLIL Rust operation markers declared in llil.xml.
 	rust_markers: dict
 

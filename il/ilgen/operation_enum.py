@@ -39,7 +39,7 @@ def enumerators(schema):
 			body.append('')
 
 		if title is not None:
-			body.append(f'// {title}')
+			body += [f'// {line}' for line in title.split('\n')]
 
 		for op in ops:
 			enumerator = schema.level.op(op.name) + ('' if op is last else ',')

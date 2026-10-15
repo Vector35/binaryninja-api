@@ -74,7 +74,7 @@ class Accessors:
 		return f'{self.value_type(op, value)} {self.names.getter(op, value)}() const {{ return {self.read(value)}; }}'
 
 	def setters(self, op, value):
-		"""[Setter] for the version a value holds, a list the op's setters name, and a written list whose kind has a
+		"""[Setter] for the version a value holds, a value the op's setters name, and a written value whose kind has a
 		writer."""
 		location = value.location
 		if location is None:
@@ -106,11 +106,14 @@ class Accessors:
 
 		if value.name in op.cpp.setters or value.written and kind.cpp.writer is not None:
 			update = 'As' + kind.cpp.writer
-			if kind.holds_expressions:
+			if kind.holds_expressions and kind.is_list:
 				lists = (f'{self.level.stem}Instruction', 'ExprId')
 				return [setter(setter_name, items(item), 'exprs', update) for item in lists]
 
-			return [setter(setter_name, items(self.kinds.type(kind.item)), 'values', update)]
+			if kind.is_list:
+				return [setter(setter_name, items(self.kinds.type(kind.item)), 'values', update)]
+
+			return [setter(setter_name, self.value_type(op, value), value.name, update)]
 
 		if kind.version and role is not None:
 			return version_setter(kind, location.first)

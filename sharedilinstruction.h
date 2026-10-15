@@ -34,38 +34,6 @@
 namespace BINARYNINJA_NAMESPACE ::detail {
 
 
-template <typename Traits>
-struct ILInstructionOperandUsage
-{
-	using ILOperation = typename Traits::ILOperation;
-	using OperandUsage = typename Traits::OperandUsage;
-	static constexpr size_t MaxOperands = Traits::MaxOperands;
-
-	ILOperation op;
-	uint8_t count = 0;
-	OperandUsage usages[MaxOperands] = {};
-	uint8_t indices[MaxOperands] = {};
-
-	explicit constexpr ILInstructionOperandUsage(ILOperation op)
-		: op(op) {}
-
-	template <size_t N>
-	constexpr ILInstructionOperandUsage(ILOperation op, const OperandUsage (&ops)[N])
-		: op(op), count(N)
-	{
-		static_assert(N <= MaxOperands, "Too many operands for instruction");
-		std::copy(ops, ops + N, usages);
-
-		uint8_t index = 0;
-		for (size_t i = 0; i < N; i++)
-		{
-			indices[i] = index;
-			index += Traits::GetOperandIndexAdvance(ops[i], i);
-		}
-	}
-};
-
-
 // Lists the operands an operation reports and where it stores each one.
 template <typename ILOperation, typename Location, size_t MaxOperands>
 struct ILInstructionOperandLocations

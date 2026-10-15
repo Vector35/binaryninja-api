@@ -5,25 +5,26 @@
 		<py stem-type="Instruction" reader="expr" param="ExpressionIndex"/>
 		<rust suffix="expr">
 			<level name="llil" type="LowLevelILExpression&lt;'func, M, F, ValueExpr&gt;" decoder="expr"/>
-			<level name="mlil" type="MediumLevelExpressionIndex" implements="Copy Hash Eq" decoder="expr_index" lifter="expr" operand="Expr" lifted-type="MediumLevelILLiftedInstruction" lifted-boxed="true" lifted-implements=""/>
+			<level name="mlil" stem-type="ExpressionIndex" implements="Copy Hash Eq" decoder="expr_index" lifter="expr" operand="Expr" lifted-type="MediumLevelILLiftedInstruction" lifted-boxed="true" lifted-implements=""/>
+			<level name="hlil" stem-type="ExpressionIndex" implements="Copy Hash Eq" decoder="expr_index" lifter="expr" operand="Expr" lifted-type="HighLevelILLiftedInstruction" lifted-boxed="true" lifted-implements=""/>
 		</rust>
 	</kind>
 	<kind name="immediate">
 		<cpp type="int64_t" reader="Integer" operand="Integer" operand-type="uint64_t" arg="uint64_t" signed-arg="int64_t"/>
 		<py type="int" reader="int" param="int" default="0"/>
 		<rust type="u64" decoder="raw">
-			<level name="mlil" operand="Int"/>
+			<level name="mlil hlil" operand="Int"/>
 		</rust>
 	</kind>
 	<kind name="immediate_float">
 		<doc>The bits of a floating-point value as wide as the instruction's size.</doc>
 		<cpp type="int64_t" reader="Integer" operand="Integer" operand-type="uint64_t" arg="uint64_t"/>
 		<py type="Union[int, float]" reader="float" param="int">
-			<level name="mlil" type="float"/>
+			<level name="mlil hlil" type="float"/>
 		</py>
 		<rust>
 			<level name="llil" type="u64" decoder="raw"/>
-			<level name="mlil" type="f64" decoder="float" operand="Float"/>
+			<level name="mlil hlil" type="f64" decoder="float" operand="Float"/>
 		</rust>
 	</kind>
 	<kind name="index">
@@ -31,19 +32,35 @@
 		<py type="int" reader="int" param="int" default="0"/>
 		<rust type="u64" decoder="raw"/>
 	</kind>
+	<kind name="member_index">
+		<doc>The index of a member among a structure type's members, or -1 for none.</doc>
+		<cpp type="size_t" reader="Index" operand="Index"/>
+		<py type="Optional[int]" reader="member_index" param="int" default="0"/>
+		<rust>
+			<level name="hlil" type="Option&lt;usize&gt;" implements="Copy Hash Eq" decoder="member_index" operand="MemberIndex"/>
+		</rust>
+	</kind>
 	<kind name="target" label="true">
 		<cpp suffix="Target" type="size_t" reader="Index" operand="Index"/>
 		<py type="InstructionIndex" reader="int" construct="true"/>
 		<rust suffix="target">
 			<level name="llil" type="LowLevelILInstruction&lt;'func, M, F&gt;" decoder="instruction"/>
-			<level name="mlil" type="MediumLevelInstructionIndex" implements="Copy Hash Eq" decoder="instruction_index" operand="InstructionIndex"/>
+			<level name="mlil" stem-type="InstructionIndex" implements="Copy Hash Eq" decoder="instruction_index" operand="InstructionIndex"/>
+		</rust>
+	</kind>
+	<kind name="goto_label">
+		<doc>The identifier of the HLIL label a goto jumps to.</doc>
+		<cpp type="uint64_t" reader="Integer" operand="Index" operand-type="size_t" writer="Integer" settable="true"/>
+		<py type="GotoLabel" reader="label" param="int"/>
+		<rust>
+			<level name="hlil" type="u64" decoder="raw" lifted-type="GotoLabel" lifted-implements="Eq" lifter="goto_label" operand="Label"/>
 		</rust>
 	</kind>
 	<kind name="memory_version" version="true">
 		<cpp suffix="MemoryVersion" type="size_t" reader="Index" operand="Index" version-setter="MemoryVersion"/>
 		<py type="int" reader="int" param="int" default="0"/>
 		<rust suffix="memory_version" type="u64" decoder="raw">
-			<level name="mlil" operand="Int"/>
+			<level name="mlil hlil" operand="Int"/>
 		</rust>
 	</kind>
 	<kind name="ssa_version" version="true">
@@ -53,14 +70,14 @@
 	<kind name="intrinsic">
 		<cpp type="uint32_t" reader="Register" operand="Intrinsic">
 			<!-- Only LLIL instructions have a register reader. -->
-			<level name="mlil" reader="Integer" cast="true"/>
+			<level name="mlil hlil" reader="Integer" cast="true"/>
 		</cpp>
 		<py type="ILIntrinsic" reader="intrinsic" param="'architecture.IntrinsicType'" converter="self.arch.get_intrinsic_index">
-			<level name="mlil" type="'lowlevelil.ILIntrinsic'" detailed-type="ILIntrinsic"/>
+			<level name="mlil hlil" type="'lowlevelil.ILIntrinsic'" detailed-type="ILIntrinsic"/>
 		</py>
 		<rust>
 			<level name="llil" type="Option&lt;CoreIntrinsic&gt;" decoder="intrinsic"/>
-			<level name="mlil" type="u32" decoder="cast" lifted-type="CoreIntrinsic" lifted-implements="Copy Eq" lifter="intrinsic" operand="Intrinsic"/>
+			<level name="mlil hlil" type="u32" decoder="cast" lifted-type="CoreIntrinsic" lifted-implements="Copy Eq" lifter="intrinsic" operand="Intrinsic"/>
 		</rust>
 	</kind>
 	<kind name="register">
@@ -127,18 +144,21 @@
 		</rust>
 	</kind>
 	<kind name="possible_value_set" cached="true">
-		<cpp type="PossibleValueSet" reader="PossibleValueSet" operand="Constraint" reference="true" encoder="cached_value_set"/>
+		<cpp type="PossibleValueSet" reader="PossibleValueSet" operand="Constraint" reference="true" encoder="cached_value_set" comparable="false"/>
 		<py type="variable.PossibleValueSet" detailed-type="PossibleValueSet" reader="constraint" param="'variable.PossibleValueSet'" converter="self.cache_possible_value_set"/>
 		<rust>
 			<level name="llil" type="PossibleValueSet" decoder="cached_value_set"/>
-			<level name="mlil" type="usize" decoder="cast" field-suffix="_index" lifted-type="PossibleValueSet" lifted-implements="Eq" lifter="cached_value_set" operand="PossibleValueSet"/>
+			<level name="mlil hlil" type="usize" decoder="cast" field-suffix="_index" lifted-type="PossibleValueSet" lifted-implements="Eq" lifter="cached_value_set" operand="PossibleValueSet"/>
 		</rust>
 	</kind>
 	<kind name="variable">
 		<cpp suffix="Variable" type="Variable" reader="Variable" operand="Variable" reference="true" encoder="variable_identifier"/>
-		<py type="variable.Variable" detailed-type="Variable" reader="var" param="'variable.CoreVariable'" encoder="identifier"/>
+		<py type="variable.Variable" detailed-type="Variable" reader="var" encoder="identifier">
+			<level name="mlil" param="'variable.CoreVariable'"/>
+			<level name="hlil" param="'variable.Variable'"/>
+		</py>
 		<rust>
-			<level name="mlil" type="Variable" implements="Copy Hash Eq" decoder="variable" operand="Var"/>
+			<level name="mlil hlil" type="Variable" implements="Copy Hash Eq" decoder="variable" operand="Var"/>
 		</rust>
 	</kind>
 	<kind name="ssa_register" slots="2" ssa-of="register">
@@ -171,16 +191,18 @@
 	</kind>
 	<kind name="ssa_variable" slots="2" ssa-of="variable">
 		<cpp suffix="SSAVariable" type="SSAVariable" reader="SSAVariable" partial-reader="PartialSSAVariableSource" operand="SSAVariable" reference="true" encoder="ssa_variable" version-setter="SSAVersion"/>
-		<py type="SSAVariable" reader="var_ssa" reader-slots="2" shared-tag="var_ssa_dest_and_src" param="SSAVariable" encoder="ssa_variable"/>
+		<py type="SSAVariable" reader="var_ssa" reader-slots="2" shared-tag="var_ssa_dest_and_src" param="SSAVariable" encoder="ssa_variable">
+			<level name="hlil" type="'mediumlevelil.SSAVariable'" detailed-type="SSAVariable" param="'mediumlevelil.SSAVariable'"/>
+		</py>
 		<rust>
-			<level name="mlil" type="SSAVariable" implements="Copy Hash Eq" decoder="ssa_variable" operand="VarSsa"/>
+			<level name="mlil hlil" type="SSAVariable" implements="Copy Hash Eq" decoder="ssa_variable" operand="VarSsa"/>
 		</rust>
 	</kind>
 	<kind name="constant_data" slots="2">
-		<cpp type="ConstantData" reader="ConstantData" operand="ConstantData" reference="true" encoder="constant_data"/>
+		<cpp type="ConstantData" reader="ConstantData" operand="ConstantData" reference="true" encoder="constant_data" comparable="false"/>
 		<py type="variable.ConstantData" detailed-type="ConstantData" reader="constant_data" reader-slots="2" tag="ConstantData" param="'variable.ConstantData'" encoder="constant_data"/>
 		<rust>
-			<level name="mlil" decoder="constant_data" lifted-type="ConstantData" lifted-implements="Hash Eq" lifter="constant_data" operand="ConstantData"/>
+			<level name="mlil hlil" decoder="constant_data" lifted-type="ConstantData" lifted-implements="Hash Eq" lifter="constant_data" operand="ConstantData"/>
 		</rust>
 	</kind>
 	<kind name="label" slots="2" label="true"/>
@@ -188,11 +210,12 @@
 	<kind name="expr_list" list="expr">
 		<cpp suffix="Exprs" stem-type="InstructionList" reader="ExprList" operand="ExprList" adder="AddOperandList" writer="ExprList" settable="true"/>
 		<py reader="expr_list" adder="add_operand_list">
-			<level name="mlil" reader-slots="2"/>
+			<level name="mlil hlil" reader-slots="2"/>
 		</py>
 		<rust suffix="exprs">
 			<level name="llil" decoder="expr_list"/>
 			<level name="mlil" lifter="expr_list" operand="ExprList" lifted-type="Vec&lt;MediumLevelILLiftedInstruction&gt;" lifted-implements=""/>
+			<level name="hlil" lifter="expr_list" operand="ExprList" lifted-type="Vec&lt;HighLevelILLiftedInstruction&gt;" lifted-implements=""/>
 		</rust>
 	</kind>
 	<kind name="memory_version_list" list="memory_version">
@@ -202,7 +225,7 @@
 		</py>
 		<rust suffix="memory_versions">
 			<level name="llil" type="Vec&lt;usize&gt;" decoder="version_list"/>
-			<level name="mlil" lifter="version_list" operand="IntList"/>
+			<level name="mlil hlil" lifter="version_list" operand="IntList"/>
 		</rust>
 	</kind>
 	<kind name="variable_list" list="variable">
@@ -266,10 +289,10 @@
 		</rust>
 	</kind>
 	<kind name="ssa_variable_list" list="ssa_variable">
-		<cpp suffix="SSAVariables" stem-type="SSAVariableList" reader="SSAVariableList" operand="SSAVariableList" adder="AddSSAVariableList" writer="SSAVariableList"/>
+		<cpp suffix="SSAVariables" stem-type="SSAVariableList" reader="SSAVariableList" operand="SSAVariableList" adder="AddSSAVariableList" writer="SSAVariableList" settable="true"/>
 		<py reader="var_ssa_list" reader-slots="2"/>
 		<rust>
-			<level name="mlil" lifter="ssa_variable_list" operand="VarSsaList"/>
+			<level name="mlil hlil" lifter="ssa_variable_list" operand="VarSsaList"/>
 		</rust>
 	</kind>
 </kinds>

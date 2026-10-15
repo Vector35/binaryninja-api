@@ -1,5 +1,5 @@
-"""The Rust MLIL API. That's the operation structs and their lifted forms, the instruction kind enum with its
-decoding and lifting, the lifted kind enum, and the lifted instruction's name and operands.
+"""The Rust MLIL and HLIL APIs. That's the operation structs and their lifted forms, the instruction kind enum with
+its decoding and lifting, the lifted kind enum, and the lifted instruction's name and operands.
 
 An operation struct holds an op's values as stored. It holds expressions as indices, lists as the start and length of
 their items, and parts as the part's expression index. Its lifted form replaces each of those with the lifted value.
@@ -14,9 +14,10 @@ from ..patch import Region
 from .naming import Names
 from .shared import cached_value_set
 
-# The kinds.xml rust attributes MLIL reads.
+# The kinds.xml rust attributes MLIL and HLIL read.
 ATTRIBUTES = (
 	'type',
+	'stem-type',
 	'implements',
 	'decoder',
 	'field-suffix',
@@ -31,15 +32,16 @@ DERIVABLE = frozenset({'Copy', 'Hash', 'Eq'})
 # What the Rust primitives a struct stores implement. kinds.xml declares every other type's with implements and
 # lifted-implements.
 PRIMITIVES = {'u64': DERIVABLE, 'u32': DERIVABLE, 'i64': DERIVABLE, 'usize': DERIVABLE, 'f64': frozenset({'Copy'})}
-# The MLIL decoders that kinds.xml's rust elements name. {0} and {1} are the value's slots. Each decodes a stored
-# field of the kind's type, or gives several fields as (suffix, type, decode). A suffix of SIZE names the struct's size
-# field.
+# The MLIL and HLIL decoders that kinds.xml's rust elements name. {0} and {1} are the value's slots. Each decodes a
+# stored field of the kind's type, or gives several fields as (suffix, type, decode). A suffix of SIZE names the
+# struct's size field.
 DECODERS = {
 	'expr_index': '{type}::from(op.operands[{0}])',
 	'raw': 'op.operands[{0}]',
 	'cast': 'op.operands[{0}] as {type}',
 	'float': 'get_float(op.operands[{0}], op.size)',
 	'instruction_index': '{type}(op.operands[{0}] as usize)',
+	'member_index': 'get_member_index(op.operands[{0}])',
 	'variable': 'get_var(op.operands[{0}])',
 	'ssa_variable': 'get_var_ssa(op.operands[{0}], op.operands[{1}] as usize)',
 	# Core only stores valid reasons.
@@ -54,6 +56,7 @@ DECODERS = {
 # is the level's type stem.
 LIFTERS = {
 	'expr': 'self.lift_operand(op.{f})',
+	'goto_label': 'GotoLabel {{ function: self.function.function(), target: op.{f} }}',
 	'intrinsic': 'CoreIntrinsic::new(self.function.function().arch(), IntrinsicId(op.{f})).expect("Valid intrinsic")',
 	'cached_value_set': cached_value_set('{stem}', 'op.{f}_index'),
 	# The register value state is stored as its BNRegisterValueType.
@@ -173,7 +176,7 @@ class Kinds:
 		self.stored = {kind.name: self.stored_kind(kind) for kind in self.reported}
 
 	def type(self, kind):
-		return kind.rust.type
+		return self.level.stem + kind.rust.stem_type if kind.rust.stem_type is not None else kind.rust.type
 
 	@staticmethod
 	def lifted_type(kind):

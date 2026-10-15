@@ -1,8 +1,8 @@
 """How the Rust API names an IL level's kind enum variants, operation types, lifters and values.
 
-A variant is the op's name with each word capitalized. LLIL's operation markers and MLIL's operation structs are named
-after the variant unless an op names its own. LLIL names a value's accessor after its role, then its kind's suffix, such
-as dest_reg. MLIL names a struct's field after the value itself."""
+A variant is the op's name with each word capitalized. LLIL's operation markers and MLIL's and HLIL's operation
+structs are named after the variant unless an op names its own. LLIL names a value's accessor after its role, then its
+kind's suffix, such as dest_reg. MLIL and HLIL name a struct's field after the value itself."""
 
 from ..case import capitalized
 from ..model import SchemaError
@@ -23,11 +23,11 @@ class Names:
 		return op.rust.marker or self.variant(op)
 
 	def struct(self, op):
-		"""The MLIL operation struct the op's variant holds."""
+		"""The MLIL or HLIL operation struct the op's variant holds."""
 		return op.rust.struct or self.variant(op)
 
 	def lifted(self, op):
-		"""The MLIL lifted operation struct, where the op has one."""
+		"""The MLIL or HLIL lifted operation struct, where the op has one."""
 		return op.rust.lifted or 'Lifted' + self.struct(op)
 
 	@staticmethod
@@ -65,15 +65,15 @@ class Names:
 
 	@staticmethod
 	def field(op, value):
-		"""An MLIL operation struct's field for a value, which is the value's name unless the op renames it."""
+		"""An MLIL or HLIL operation struct's field for a value, which is the value's name unless the op renames it."""
 		if value.name in op.rust.unsuffixed:
 			raise SchemaError(f'{op.name}.{value.name}: suffix="false" renames an LLIL accessor, not a struct field')
 
 		return op.rust.renames.get(value.name, value.name)
 
 	def list_item(self, op, value):
-		"""The {item} in the names of an MLIL list's stored fields, first_{item} and num_{item}s. It's the op's name for
-		the list, or else names.xml's for the value."""
+		"""The {item} in the names of an MLIL or HLIL list's stored fields, first_{item} and num_{item}s. It's the op's
+		name for the list, or else names.xml's for the value."""
 		item = op.rust.lists.get(value.name) or self.schema.name(value.name).rust_item
 		if item is None:
 			raise SchemaError(f'{op.name}.{value.name}: a Rust list without an item name, in names.xml or the op')

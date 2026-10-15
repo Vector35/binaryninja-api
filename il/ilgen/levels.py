@@ -50,4 +50,5 @@ class Level:
 LEVELS = {
 	'llil': Level('llil', 'LowLevel', 'low_level_il'),
 	'mlil': Level('mlil', 'MediumLevel', 'medium_level_il', rust_structs=True),
+	'hlil': Level('hlil', 'HighLevel', 'high_level_il', rust_structs=True),
 }

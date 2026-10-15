@@ -229,6 +229,7 @@ extern "C" {
 		PPC_REG_GQR5,
 		PPC_REG_GQR6,
 		PPC_REG_GQR7,
+		PPC_REG_FPSCR,
 	};
 
 #ifndef __cplusplus

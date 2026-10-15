@@ -2624,7 +2624,10 @@ public:
 			PPC_REG_FR8, PPC_REG_FR9, PPC_REG_FR10, PPC_REG_FR11,
 			PPC_REG_FR12, PPC_REG_FR13,
 
-			PPC_REG_LR, PPC_REG_CTR,
+			// Calls may modify FP status and the unmodeled portion of XER.
+			// FPSCR contains some preserved control bits, but conservatively
+			// clobber the whole register until those are modeled separately.
+			PPC_REG_FPSCR, PPC_REG_XER, PPC_REG_LR, PPC_REG_CTR,
 		};
 	}
 

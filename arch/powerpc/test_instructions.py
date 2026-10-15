@@ -211,7 +211,7 @@ def test_trap_conditions(to, a, b):
     expected = bool((to & 16 and signed(a, 4) < signed(b, 4)) or
                     (to & 8 and signed(a, 4) > signed(b, 4)) or
                     (to & 4 and a == b) or (to & 2 and a < b) or (to & 1 and a > b))
-    assert ('trap', []) in events if expected else not events
+    assert (('trap', []) in events) == expected
 
 
 @pytest.mark.parametrize('arch_name', ARCHES)
@@ -225,7 +225,8 @@ def test_indexed_update_alias(arch_name, word, size, is_signed):
     value = (1 << (size * 8)) - 1
     regs, _, _, _ = evaluate(lift(word, arch_name), {'r4': base, 'r5': 0x20}, memory={base + 0x20: value})
     assert regs['r4'] == base + 0x20
-    assert regs['r5'] == (1 << (bn.Architecture[arch_name].address_size * 8)) - 1 if is_signed else regs['r5'] == value
+    expected = (1 << (bn.Architecture[arch_name].address_size * 8)) - 1 if is_signed else value
+    assert regs['r5'] == expected
 
 
 @pytest.mark.parametrize('arch_name', ('ppc64', 'ppc64_le'))
@@ -323,7 +324,7 @@ def test_scalar_fp_intrinsic_contract(arch_name, word, name):
         assert il[0].operation == bn.LowLevelILOperation.LLIL_INTRINSIC
         assert str(il[0].intrinsic) == name
         assert [str(out) for out in il[0].output] == ['f1', 'fpscr']
-        assert [p.size for p in il[0].params] == [8, 4]
+        assert [p.size for p in il[0].params] == [8, 8]
         def fp(op, params):
             assert op == name and params == [0x8000000000000000, 3]
             return [0x43e0000000000000, 0xa0000003]
@@ -392,3 +393,110 @@ def test_cr_field_moves(arch_name, field):
         # constant. Evaluate the actual function IL to check every CR bit.
         regs, _, _, _ = evaluate(bv.functions[0].lifted_il)
         assert regs['r3'] == 0xa & (0xf << (28 - 4 * field))
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('value', [0, 0x7f, 0xe00c007f, 0x40040035])
+def test_xer_roundtrip(arch_name, value):
+    arch = bn.Architecture[arch_name]
+    il = bn.LowLevelILFunction(arch)
+    order = 'little' if arch_name.endswith('_le') else 'big'
+    for i, word in enumerate([0x7c6103a6, 0x7c8102a6]):  # mtxer r3; mfxer r4
+        assert arch.get_instruction_low_level_il(word.to_bytes(4, order), 4 * i, il) == 4
+    il.finalize()
+    regs, flags, _, _ = evaluate(il, {'r3': value})
+    assert regs['r4'] == value
+    assert [flags[f] for f in ('xer_so', 'xer_ov', 'xer_ca')] == [(value >> bit) & 1 for bit in (31, 30, 29)]
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+def test_msr_variants_and_state(arch_name):
+    forms = []
+    for word, name, l in [(0x7c600124, '__mtmsr', 0), (0x7c610124, '__mtmsr', 1),
+                          (0x7c600164, '__mtmsrd', 0), (0x7c610164, '__mtmsrd', 1)]:
+        il = lift(word, arch_name)
+        forms.append(str(il[0]))
+        def msr(op, params):
+            assert op == name and params == [0x55, 0x77, l]
+            return [0xaa]
+        regs, _, _, _ = evaluate(il, {'msr': 0x55, 'r3': 0x77}, intrinsic=msr)
+        assert regs['msr'] == 0xaa
+        assert [str(o) for o in il[0].output] == ['msr']
+    assert len(set(forms)) == 4
+    regs, _, _, _ = evaluate(lift(0x7c6000a6, arch_name), {'msr': 0x99})
+    assert regs['r3'] == 0x99
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('word,name,params', [
+    (0x7c042fec, '__dcbz', [0x1020]), (0x7c242fec, '__dcbzl', [0x1020]),
+    (0x7c0428ac, '__dcbf', [0x1020, 0]), (0x7c6428ac, '__dcbf', [0x1020, 3]),
+    (0x7c0004ac, '__sync', []), (0x7c2004ac, '__lwsync', []),
+    (0x7c4004ac, '__ptesync', []), (0x7c0006ac, '__eieio', []),
+    (0x4c00012c, '__isync', []), (0x7c2006ac, '__mbar', [1]),
+])
+def test_memory_intrinsics(arch_name, word, name, params):
+    arch = bn.Architecture[arch_name]
+    il = lift(word, arch_name)
+    _, _, _, events = evaluate(il, {'r4': 0x1000, 'r5': 0x20})
+    assert events == [(name, params)]
+    assert arch.get_intrinsic_class(arch.get_intrinsic_index(name)) == bn.IntrinsicClass.MemoryIntrinsicClass
+    order = 'little' if arch_name.endswith('_le') else 'big'
+    with bn.BinaryView.new(word.to_bytes(4, order) + (0x4e800020).to_bytes(4, order)) as bv:
+        bv.add_function(0, plat=arch.standalone_platform)
+        bv.update_analysis_and_wait()
+        assert any(i.operation == bn.LowLevelILOperation.LLIL_MEMORY_INTRINSIC_SSA
+                   for b in bv.functions[0].llil.ssa_form for i in b)
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('word,name,args', [(0xfc20048e, '__mffs', [0x12345678a0000003]),
+                                         (0xfdfe0d8e, '__mtfsf', [0x12345678a0000003, 255, 0x42, 0, 0]),
+                                         (0xffff0d8e, '__mtfsf', [0x12345678a0000003, 255, 0x42, 1, 1]),
+                                         (0xfc20008c, '__mtfsb0', [0x12345678a0000003, 1]),
+                                         (0xfc20004c, '__mtfsb1', [0x12345678a0000003, 1])])
+def test_fpscr_system_state(arch_name, word, name, args):
+    def fpscr(op, params):
+        assert op == name and params == args
+        return [0x1234567850000000]
+    il = lift(word | 1, arch_name)
+    regs, flags, _, _ = evaluate(il, {'f1': 0x42, 'fpscr': 0x12345678a0000003}, {'eq': 1}, intrinsic=fpscr)
+    assert regs['f1' if name == '__mffs' else 'fpscr'] == 0x1234567850000000
+    expected = [1, 0, 1, 0] if name == '__mffs' else [0, 1, 0, 1]
+    assert [flags[f'cr1{f}'] for f in ('lt', 'gt', 'eq', 'so')] == expected
+    assert flags['eq'] == 1
+
+
+@pytest.mark.parametrize('arch_name', ('ppc64', 'ppc64_le'))
+@pytest.mark.parametrize('word', [0x7c642dd3, 0x7c642fd3, 0x7c642f53, 0x7c642f13,
+                                 0x7c642f57, 0x7c642f17, 0x7c642e16,
+                                 0x7c842828, 0x7c64292d, 0x7c610124,
+                                 0x7c8300f4, 0x7c8302f4, 0x7c8303f4, 0x7c832bf8,
+                                 0x7c8329f8, 0x7c6105e6, 0x7c6c42a6, 0x7c6d42a6,
+                                 0x7c641aa6, 0x7c641ba6, 0xfc20101f, 0xec20102d])
+def test_instruction_analysis_and_intrinsic_types(arch_name, word):
+    arch = bn.Architecture[arch_name]
+    il = lift(word, arch_name)
+    for i in range(len(il)):
+        insn = il[i]
+        if insn.operation != bn.LowLevelILOperation.LLIL_INTRINSIC: continue
+        info = arch.intrinsics[str(insn.intrinsic)]
+        assert len(insn.params) == len(info.inputs)
+        assert len(insn.output) == len(info.outputs)
+        assert [p.size for p in insn.params] == [p.type.width for p in info.inputs]
+    order = 'little' if arch_name.endswith('_le') else 'big'
+    with bn.BinaryView.new(word.to_bytes(4, order) + (0x4e800020).to_bytes(4, order)) as bv:
+        bv.add_function(0, plat=arch.standalone_platform)
+        bv.update_analysis_and_wait()
+        func = bv.functions[0]
+        assert len(func.llil) > 0 and len(func.mlil) > 0 and len(func.hlil) > 0
+
+
+@pytest.mark.parametrize('overflow', [False, True])
+def test_oe_preserves_xer_byte_count_and_ca32(overflow):
+    regs, flags, _, _ = evaluate(lift(0x7c642dd3),
+                                 {'r4': (1 << 62) if overflow else 2, 'r5': 4, 'xer': 0x4007f},
+                                 {'xer_so': 0, 'xer_ca': 1})
+    assert regs['xer'] & 0x4007f == 0x4007f
+    assert bool(regs['xer'] & (1 << 19)) == overflow
+    assert flags['xer_ca'] == 1

@@ -76,6 +76,9 @@ The existing `xer` register backs the bits not individually modeled as flags.
 the backing register and those flags. The new OE arithmetic also updates OV32
 while preserving byte count and CA32. Older arithmetic still has incomplete
 XER status modeling; these changes do not attempt an architecture-wide rewrite.
+The SVR4 calling convention conservatively treats FPSCR and the XER backing
+register as caller-saved. Some FPSCR control bits are nonvolatile, but preserving
+the entire register would incorrectly preserve volatile status across calls.
 
 ## Floating-point memory packing
 

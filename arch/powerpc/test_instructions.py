@@ -527,3 +527,10 @@ def test_fp_memory_bit_packing(arch_name, single, double):
 def test_single_store_is_not_arithmetic_rounding():
     _, _, memory, _ = evaluate(lift(0xd0240010), {'r4': 0x1000, 'f1': 0x3ff000001fffffff})
     assert memory[0x1010] == 0x3f800000
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+def test_call_clobbers_new_volatile_state(arch_name):
+    cc = bn.Architecture[arch_name].calling_conventions['svr4']
+    assert 'fpscr' in cc.caller_saved_regs
+    assert 'xer' in cc.caller_saved_regs

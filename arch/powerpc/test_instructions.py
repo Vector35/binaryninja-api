@@ -351,3 +351,44 @@ def test_fsel_record(value, selected):
     assert regs['f1'] == {3: 0x33, 4: 0x44}[selected]
     assert flags['eq'] == 1
     assert [flags[f'cr1{f}'] for f in ('lt', 'gt', 'eq', 'so')] == [0, 1, 0, 1]
+
+
+@pytest.mark.parametrize('arch_name', ('ppc64', 'ppc64_le'))
+@pytest.mark.parametrize('byte', range(8))
+@pytest.mark.parametrize('match', [False, True])
+def test_cmpeqb(arch_name, byte, match):
+    rb = (0x77 if match else 0x88) << (byte * 8)
+    _, flags, _, _ = evaluate(lift(0x7c0321c0, arch_name), {'r3': 0x77, 'r4': rb})
+    assert [flags[f] for f in ('lt', 'gt', 'eq', 'so')] == [0, int(match), 0, 0]
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('l', [0, 1])
+@pytest.mark.parametrize('value', [0x1f, 0x20, 0x30, 0x31, 0x40, 0x45, 0x50, 0x51])
+def test_cmprb(arch_name, l, value):
+    _, flags, _, _ = evaluate(lift(0x7c032180 | (l << 21), arch_name), {'r3': value, 'r4': 0x50403020})
+    expected = 0x20 <= value <= 0x30 or bool(l and 0x40 <= value <= 0x50)
+    assert [flags[f] for f in ('lt', 'gt', 'eq', 'so')] == [0, int(expected), 0, 0]
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('field', range(8))
+def test_cr_field_moves(arch_name, field):
+    mask = 0x80 >> field
+    word = 0x7c700026 | (mask << 12)  # mfocrf r3,mask
+    prefix = f'cr{field}' if field else ''
+    regs, _, _, _ = evaluate(lift(word, arch_name), flags={prefix + 'lt': 1, prefix + 'eq': 1})
+    assert regs['r3'] == 0xa << (28 - 4 * field)
+    order = 'little' if arch_name.endswith('_le') else 'big'
+    arch = bn.Architecture[arch_name]
+    store = 0x7c700120 | (mask << 12)  # mtocrf mask,r3
+    tokens, _ = arch.get_instruction_text(store.to_bytes(4, order), 0)
+    assert ''.join(str(t) for t in tokens).replace(' ', '') == f'mtocrf0x{mask:x},r3'
+    with bn.BinaryView.new((0x3860000a).to_bytes(4, order) + store.to_bytes(4, order)
+                          + word.to_bytes(4, order) + (0x4e800020).to_bytes(4, order)) as bv:
+        bv.add_function(0, plat=arch.standalone_platform)
+        bv.update_analysis_and_wait()
+        # Core flag dataflow need not fold a nonzero flagbit expression to a
+        # constant. Evaluate the actual function IL to check every CR bit.
+        regs, _, _, _ = evaluate(bv.functions[0].lifted_il)
+        assert regs['r3'] == 0xa & (0xf << (28 - 4 * field))

@@ -1,0 +1,12 @@
+# ruff style for the IL generator, which follows api/python in indenting with tabs.
+line-length = 120
+target-version = "py312"
+
+[lint]
+select = ["E4", "E7", "E9", "F", "W", "I"]
+# W191 warns about indenting with tabs, which this package does.
+ignore = ["W191"]
+
+[format]
+indent-style = "tab"
+quote-style = "preserve"

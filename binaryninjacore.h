@@ -649,12 +649,13 @@ extern "C"
 
 	BN_ENUM(uint8_t, BNLowLevelILOperation)
 	{
+		// BEGIN GENERATED llil-operations: from api/il, do not edit
 		LLIL_NOP,
-		LLIL_SET_REG,             // Not valid in SSA form (see LLIL_SET_REG_SSA)
-		LLIL_SET_REG_SPLIT,       // Not valid in SSA form (see LLIL_SET_REG_SPLIT_SSA)
-		LLIL_SET_FLAG,            // Not valid in SSA form (see LLIL_SET_FLAG_SSA)
-		LLIL_SET_REG_STACK_REL,   // Not valid in SSA form (see LLIL_SET_REG_STACK_REL_SSA)
-		LLIL_REG_STACK_PUSH,      // Not valid in SSA form (expanded)
+		LLIL_SET_REG,            // Not valid in SSA form (see LLIL_SET_REG_SSA)
+		LLIL_SET_REG_SPLIT,      // Not valid in SSA form (see LLIL_SET_REG_SPLIT_SSA)
+		LLIL_SET_FLAG,           // Not valid in SSA form (see LLIL_SET_FLAG_SSA)
+		LLIL_SET_REG_STACK_REL,  // Not valid in SSA form (see LLIL_SET_REG_STACK_REL_SSA)
+		LLIL_REG_STACK_PUSH,     // Not valid in SSA form (expanded)
 		LLIL_ASSERT,
 		LLIL_FORCE_VER,
 		LLIL_LOAD,                // Not valid in SSA form (see LLIL_LOAD_SSA)
@@ -665,9 +666,9 @@ extern "C"
 		LLIL_REG_SPLIT,           // Not valid in SSA form (see LLIL_REG_SPLIT_SSA)
 		LLIL_REG_STACK_REL,       // Not valid in SSA form (see LLIL_REG_STACK_REL_SSA)
 		LLIL_REG_STACK_POP,       // Not valid in SSA form (expanded)
-		LLIL_REG_STACK_FREE_REG,  // Not valid in SSA form (see LLIL_REG_STACK_FREE_REL_SSA,
+		LLIL_REG_STACK_FREE_REG,  // Not valid in SSA form (see LLIL_REG_STACK_FREE_REL_SSA or
 		                          // LLIL_REG_STACK_FREE_ABS_SSA)
-		LLIL_REG_STACK_FREE_REL,  // Not valid in SSA from (see LLIL_REG_STACK_FREE_REL_SSA)
+		LLIL_REG_STACK_FREE_REL,  // Not valid in SSA form (see LLIL_REG_STACK_FREE_REL_SSA)
 		LLIL_CONST,
 		LLIL_CONST_PTR,
 		LLIL_EXTERN_PTR,
@@ -766,8 +767,9 @@ extern "C"
 		LLIL_SET_REG_SPLIT_SSA,
 		LLIL_SET_REG_STACK_REL_SSA,
 		LLIL_SET_REG_STACK_ABS_SSA,
-		LLIL_REG_SPLIT_DEST_SSA,  // Only valid within an LLIL_SET_REG_SPLIT_SSA instruction
-		LLIL_REG_STACK_DEST_SSA,  // Only valid within LLIL_SET_REG_STACK_REL_SSA or LLIL_SET_REG_STACK_ABS_SSA
+		LLIL_REG_SPLIT_DEST_SSA,  // Only valid within LLIL_SET_REG_SPLIT_SSA
+		LLIL_REG_STACK_DEST_SSA,  // Only valid within LLIL_SET_REG_STACK_REL_SSA, LLIL_SET_REG_STACK_ABS_SSA,
+		                          // LLIL_REG_STACK_FREE_REL_SSA or LLIL_REG_STACK_FREE_ABS_SSA
 		LLIL_REG_SSA,
 		LLIL_REG_SSA_PARTIAL,
 		LLIL_REG_SPLIT_SSA,
@@ -783,13 +785,13 @@ extern "C"
 		LLIL_CALL_SSA,
 		LLIL_SYSCALL_SSA,
 		LLIL_TAILCALL_SSA,
-		LLIL_CALL_PARAM,  // Only valid within the LLIL_CALL_SSA, LLIL_SYSCALL_SSA, LLIL_INTRINSIC, LLIL_INTRINSIC_SSA,
-		                  // LLIL_MEMORY_INTRINSIC_SSA, LLIL_TAILCALL, LLIL_TAILCALL_SSA instructions
-		LLIL_CALL_STACK_SSA,           // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
-		LLIL_CALL_OUTPUT_SSA,          // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
-		LLIL_SEPARATE_PARAM_LIST_SSA,  // Only valid within the LLIL_CALL_PARAM instruction
-		LLIL_SHARED_PARAM_SLOT_SSA,    // Only valid within the LLIL_CALL_PARAM or LLIL_SEPARATE_PARAM_LIST_SSA instructions
-		LLIL_MEMORY_INTRINSIC_OUTPUT_SSA,  // Only valid within the LLIL_MEMORY_INTRINSIC_SSA instruction
+		LLIL_CALL_PARAM,       // Only valid within LLIL_INTRINSIC, LLIL_CALL_SSA, LLIL_SYSCALL_SSA, LLIL_TAILCALL_SSA,
+		                       // LLIL_INTRINSIC_SSA or LLIL_MEMORY_INTRINSIC_SSA
+		LLIL_CALL_STACK_SSA,   // Only valid within LLIL_CALL_SSA, LLIL_SYSCALL_SSA or LLIL_TAILCALL_SSA
+		LLIL_CALL_OUTPUT_SSA,  // Only valid within LLIL_CALL_SSA, LLIL_SYSCALL_SSA or LLIL_TAILCALL_SSA
+		LLIL_SEPARATE_PARAM_LIST_SSA,      // Only valid within LLIL_CALL_PARAM
+		LLIL_SHARED_PARAM_SLOT_SSA,        // Only valid within LLIL_SEPARATE_PARAM_LIST_SSA
+		LLIL_MEMORY_INTRINSIC_OUTPUT_SSA,  // Only valid within LLIL_MEMORY_INTRINSIC_SSA
 		LLIL_LOAD_SSA,
 		LLIL_STORE_SSA,
 		LLIL_INTRINSIC_SSA,
@@ -802,17 +804,18 @@ extern "C"
 		// Bit manipulation
 		LLIL_BSWAP,   // Reverse byte order of the whole value
 		LLIL_POPCNT,  // Population count (number of set bits)
-		LLIL_CLZ,     // Count leading zero bits; clz(0) == 8 * size
-		LLIL_CTZ,     // Count trailing zero bits; ctz(0) == 8 * size
+		LLIL_CLZ,     // Count leading zero bits, where clz(0) == 8 * size
+		LLIL_CTZ,     // Count trailing zero bits, where ctz(0) == 8 * size
 		LLIL_RBIT,    // Reverse bit order of the whole value
-		LLIL_CLS,     // Count leading sign bits; number of bits below the sign bit that match it
+		LLIL_CLS,     // Count the bits below the sign bit that match it
 
 		// Integer minimum, maximum and absolute value
-		LLIL_MINS,    // Signed minimum of left and right
-		LLIL_MAXS,    // Signed maximum of left and right
-		LLIL_MINU,    // Unsigned minimum of left and right
-		LLIL_MAXU,    // Unsigned maximum of left and right
-		LLIL_ABS      // Signed absolute value of src; abs(INT_MIN) == INT_MIN
+		LLIL_MINS,  // Signed minimum of left and right
+		LLIL_MAXS,  // Signed maximum of left and right
+		LLIL_MINU,  // Unsigned minimum of left and right
+		LLIL_MAXU,  // Unsigned maximum of left and right
+		LLIL_ABS    // Signed absolute value of src, where abs(INT_MIN) == INT_MIN
+		// END GENERATED llil-operations
 	};
 
 	BN_ENUM(uint8_t, BNLowLevelILFlagCondition)

@@ -14552,253 +14552,1346 @@ namespace BinaryNinja {
 		    uint32_t flags, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0);
 		ExprId AddInstruction(ExprId expr);
 
-		/*! No operation, this instruction does nothing.
+		// BEGIN GENERATED llil-builders: from api/il, do not edit
+		/*! Does nothing.
 
-			\param loc Optional IL Location this instruction was added from.
-			\return
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>nop</tt>
 		*/
 		ExprId Nop(const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Sets the register \c reg of size \c size to the expression \c value
+		/*! Sets register <tt>dest</tt> to <tt>src</tt>.
 
-			\param size Size of the register parameter in bytes
-			\param reg The register name
-			\param val An expression to set the register to
-			\param flags Which flags are set by this operation
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression <tt>reg = value</tt>
+		    \param size The size of <tt>src</tt> in bytes
+		    \param dest The register to set
+		    \param src The value to set it to
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>dest = src {\<flags\>}</tt>
 		*/
-		ExprId SetRegister(size_t size, uint32_t reg, ExprId val, uint32_t flags = 0,
+		ExprId SetRegister(size_t size, uint32_t dest, ExprId src, uint32_t flags = 0,
 		    const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Uses \c hi and \c lo as a single extended register setting \c hi:lo to the expression \c value .
+		/*! Sets the register pair <tt>hi</tt>:<tt>lo</tt> to <tt>src</tt>, a value twice the size of each
+		    register.
 
-			\param size Size of the register parameter in bytes
-			\param high The high register name
-			\param low The low register name
-			\param val An expression to set the split registers to
-			\param flags Which flags are set by this operation
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression <tt>hi:lo = value</tt>
+		    \param size The size of each register in bytes
+		    \param hi The register that receives the high half
+		    \param lo The register that receives the low half
+		    \param src The value to set the pair to
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>hi:lo = src {\<flags\>}</tt>
 		*/
-		ExprId SetRegisterSplit(size_t size, uint32_t high, uint32_t low, ExprId val, uint32_t flags = 0,
-		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SetRegisterSSA(
-		    size_t size, const SSARegister& reg, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SetRegisterSSAPartial(size_t size, const SSARegister& fullReg, uint32_t partialReg, ExprId val,
-		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SetRegisterSplitSSA(size_t size, const SSARegister& high, const SSARegister& low, ExprId val,
+		ExprId SetRegisterSplit(size_t size, uint32_t hi, uint32_t lo, ExprId src, uint32_t flags = 0,
 		    const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Sets the top-relative entry \c entry of size \c size in register stack \c reg_stack to the expression
-		 	\c value
+		/*! Sets flag <tt>dest</tt> to <tt>src</tt>.
 
-			\param size Size of the register parameter in bytes
-			\param regStack The register stack name
-			\param entry An expression for which stack entry to set
-			\param val An expression to set the entry to
-			\param flags Which flags are set by this operation
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression <tt>reg_stack[entry] = value</tt>
+		    \param dest The flag to set
+		    \param src The value to set it to
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>dest = src</tt>
 		*/
-		ExprId SetRegisterStackTopRelative(size_t size, uint32_t regStack, ExprId entry, ExprId val, uint32_t flags = 0,
+		ExprId SetFlag(uint32_t dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Sets the register stack entry at position <tt>dest</tt> from the top of <tt>destStack</tt> to
+		    <tt>src</tt>.
+
+		    \param size The size of <tt>src</tt> in bytes
+		    \param destStack The register stack
+		    \param dest The position of the entry, relative to the top of the stack
+		    \param src The value to set the entry to
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>destStack[dest] = src {\<flags\>}</tt>
+		*/
+		ExprId SetRegisterStackTopRelative(size_t size, uint32_t destStack, ExprId dest, ExprId src, uint32_t flags = 0,
 		    const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Pushes the expression \c value of size \c size onto the top of the register
-			stack \c reg_stack
+		/*! Pushes <tt>src</tt> onto the top of register stack <tt>destStack</tt>.
 
-			\param size Size of the register parameter in bytes
-			\param regStack The register stack name
-			\param val An expression to push
-			\param flags Which flags are set by this operation
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression <tt>reg_stack.push(value)</tt>
+		    \param size The size of <tt>src</tt> in bytes
+		    \param destStack The register stack
+		    \param src The value to push
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>destStack.push{\<flags\>}(src)</tt>
 		*/
-		ExprId RegisterStackPush(size_t size, uint32_t regStack, ExprId val, uint32_t flags = 0,
+		ExprId RegisterStackPush(size_t size, uint32_t destStack, ExprId src, uint32_t flags = 0,
 		    const ILSourceLocation& loc = ILSourceLocation());
 
-		ExprId SetRegisterStackTopRelativeSSA(size_t size, uint32_t regStack, size_t destVersion, size_t srcVersion,
-		    ExprId entry, const SSARegister& top, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SetRegisterStackAbsoluteSSA(size_t size, uint32_t regStack, size_t destVersion, size_t srcVersion,
-		    uint32_t reg, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
+		/*! Asserts that register <tt>src</tt> holds one of the values <tt>constraint</tt> allows. Core inserts
+		    it where a user has set possible values for <tt>src</tt>.
 
-		/*! Sets the flag \c flag to the ExpressionIndex \c value
-
-			\param flag Flag index
-			\param val An expression to set the flag to
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression <tt>FLAG.flag = value</tt>
+		    \param size The size of the register in bytes
+		    \param src The register to constrain
+		    \param constraint The values the register may hold
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ASSERT(src, constraint)</tt>
 		*/
-		ExprId SetFlag(uint32_t flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SetFlagSSA(const SSAFlag& flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Assert(size_t size, uint32_t src, const PossibleValueSet& constraint,
+		    const ILSourceLocation& loc = ILSourceLocation());
 
-		ExprId ForceVer(size_t size, uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ForceVerSSA(size_t size, SSARegister dst, SSARegister src, const ILSourceLocation& loc = ILSourceLocation());
+		/*! Gives register <tt>dest</tt> a new SSA version, as though it were assigned its own value. MLIL can
+		    then use this as a new variable definition site.
 
-		ExprId Assert(size_t size, uint32_t reg, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AssertSSA(size_t size, SSARegister reg, const PossibleValueSet& pvs, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Reads \c size bytes from the expression \c addr
-
-			\param size Number of bytes to read
-			\param addr The expression to read memory from
-			\param flags Flags set by this expression
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression \c [addr].size
+		    \param size The size of the register in bytes
+		    \param dest The register to give a new version
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>FORCE_VER(dest)</tt>
 		*/
-		ExprId Load(size_t size, ExprId addr, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId LoadSSA(
-		    size_t size, ExprId addr, size_t sourceMemoryVer, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForceVer(size_t size, uint32_t dest, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Writes \c size bytes to expression \c addr read from expression \c val
+		/*! Reads <tt>size</tt> bytes from memory at <tt>src</tt>.
 
-			\param size Number of bytes to write
-			\param addr The expression to write to
-			\param val The expression to be written
-			\param flags Which flags are set by this operation
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression <tt>[addr].size = value</tt>
+		    \param size The size of the result in bytes
+		    \param src The address to read from
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>[src].\<size\> {\<flags\>}</tt>
+		*/
+		ExprId Load(size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Writes the <tt>size</tt> bytes of <tt>src</tt> to memory at <tt>dest</tt>.
+
+		    \param size The size of <tt>src</tt> in bytes
+		    \param dest The address to write to
+		    \param src The value to write
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>[dest].\<size\> = src {\<flags\>}</tt>
 		*/
 		ExprId Store(
-		    size_t size, ExprId addr, ExprId val, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId StoreSSA(size_t size, ExprId addr, ExprId val, size_t newMemoryVer, size_t prevMemoryVer,
-		    const ILSourceLocation& loc = ILSourceLocation());
+		    size_t size, ExprId dest, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Writes \c size bytes from expression \c value to the stack, adjusting the stack by \c size .
+		/*! Writes <tt>src</tt> to the stack, adjusting the stack pointer by <tt>size</tt>.
 
-			\param size Number of bytes to write and adjust the stack by
-			\param val The expression to write
-			\param flags Flags set by this expression
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression \c push(value)
+		    \param size The size of <tt>src</tt> in bytes
+		    \param src The value to push
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>push.\<size\>{\<flags\>}(src)</tt>
 		*/
-		ExprId Push(size_t size, ExprId val, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Push(size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Reads \c size bytes from the stack, adjusting the stack by <code>size</code>.
+		/*! Reads <tt>size</tt> bytes from the stack, adjusting the stack pointer by <tt>size</tt>.
 
-			\param size Number of bytes to read from the stack
-			\param flags Flags set by this expression
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression \c pop
+		    \param size The size of the result in bytes
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>pop.\<size\>{\<flags\>}</tt>
 		*/
 		ExprId Pop(size_t size, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Returns a register of size \c size with name \c reg
+		/*! Reads register <tt>src</tt>.
 
-			\param size The size of the register in bytes
-			\param reg The name of the register
-			\param loc Optional IL Location this instruction was added from.
-			\return A register expression for the given register
+		    \param size The size of the result in bytes
+		    \param src The register to read
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>src</tt>
 		*/
-		ExprId Register(size_t size, uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterSSA(size_t size, const SSARegister& reg, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterSSAPartial(size_t size, const SSARegister& fullReg, uint32_t partialReg,
-		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Register(size_t size, uint32_t src, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Combines registers of size \c size with names \c hi and \c lo
+		/*! Reads the register pair <tt>hi</tt>:<tt>lo</tt> as one value, twice the size of each register.
 
-			\param size The size of the register in bytes
-			\param high Register holding high part of value
-			\param low Register holding low part of value
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression \c hi:lo
+		    \param size The size of each register in bytes
+		    \param hi The register holding the high half
+		    \param lo The register holding the low half
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>hi:lo</tt>
 		*/
-		ExprId RegisterSplit(
-		    size_t size, uint32_t high, uint32_t low, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterSplitSSA(size_t size, const SSARegister& high, const SSARegister& low,
-		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterSplit(size_t size, uint32_t hi, uint32_t lo, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Returns a register stack entry of size \c size at top-relative
-			location \c entry in register stack with name \c regStack
+		/*! Reads the register stack entry at position <tt>src</tt> from the top of <tt>srcStack</tt>.
 
-			\param size The size of the register in bytes
-			\param regStack The index of the register stack
-			\param entry An expression for which stack entry to fetch
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression \c reg_stack[entry]
+		    \param size The size of the result in bytes
+		    \param srcStack The register stack
+		    \param src The position of the entry, relative to the top of the stack
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>srcStack[src]</tt>
 		*/
 		ExprId RegisterStackTopRelative(
-		    size_t size, uint32_t regStack, ExprId entry, const ILSourceLocation& loc = ILSourceLocation());
+		    size_t size, uint32_t srcStack, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Returns the top entry of size \c size in register stack with name \c reg_stack , and
-			removes the entry from the stack
+		/*! Reads the top entry of register stack <tt>srcStack</tt> and removes it from the stack.
 
-			\param size The size of the register in bytes
-			\param regStack The index of the register stack
-			\param flags Any flags set by this expression
-			\param loc Optional IL Location this instruction was added from.
-			\return The expression \c reg_stack.pop
+		    \param size The size of the result in bytes
+		    \param srcStack The register stack
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>srcStack.pop{\<flags\>}</tt>
 		*/
 		ExprId RegisterStackPop(
-		    size_t size, uint32_t regStack, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		    size_t size, uint32_t srcStack, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 
+		/*! Frees register <tt>dest</tt> in its register stack, without changing which register is at the top of
+		    the stack.
 
-		ExprId RegisterStackFreeReg(uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
+		    \param dest The register to free
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>__free_slot(dest)</tt>
+		*/
+		ExprId RegisterStackFreeReg(uint32_t dest, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Frees the register stack entry at position <tt>dest</tt> from the top of <tt>destStack</tt>.
+
+		    \param destStack The register stack
+		    \param dest The position of the entry, relative to the top of the stack
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>__free_slot(destStack[dest])</tt>
+		*/
 		ExprId RegisterStackFreeTopRelative(
-		    uint32_t regStack, ExprId entry, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterStackTopRelativeSSA(size_t size, const SSARegisterStack& regStack, ExprId entry,
-		    const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterStackAbsoluteSSA(size_t size, const SSARegisterStack& regStack, uint32_t reg,
-		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterStackFreeTopRelativeSSA(uint32_t regStack, size_t destVersion, size_t srcVersion, ExprId entry,
-		    const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterStackFreeAbsoluteSSA(uint32_t regStack, size_t destVersion, size_t srcVersion, uint32_t reg,
-		    const ILSourceLocation& loc = ILSourceLocation());
+		    uint32_t destStack, ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Returns an expression for the constant integer \c value with size \c size
+		/*! An integer constant.
 
-			\param size The size of the constant in bytes
-			\param val Integer value of the constant
-			\param loc Optional IL Location this instruction was added from.
-			\return A constant expression of given value and size
+		    \param size The size of the result in bytes
+		    \param constant The value
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>constant</tt>
 		*/
-		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Const(size_t size, uint64_t constant, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Returns an expression for the constant pointer \c value with size \c size
+		/*! A constant pointer to address <tt>constant</tt>.
 
-			\param size The size of the pointer in bytes
-			\param val Address referenced by pointer
-			\param loc Optional IL Location this instruction was added from.
-			\return A constant pointer expression of given value and size
+		    \param size The size of the result in bytes
+		    \param constant The value
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>constant</tt>
 		*/
-		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ConstPointer(size_t size, uint64_t constant, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Returns an expression for the constant relocated pointer \c value with size \c size
+		/*! A constant pointer <tt>offset</tt> bytes from the relocated external address <tt>constant</tt>.
 
-			\param size The size of the pointer in bytes
-			\param val Address referenced by pointer
-			\param offset
-			\param loc Optional IL Location this instruction was added from.
-			\return A constant expression of given value and size
+		    \param size The size of the result in bytes
+		    \param constant The external address
+		    \param offset The offset from the external address, in bytes
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>(constant + offset)</tt>
 		*/
 		ExprId ExternPointer(
-		    size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
+		    size_t size, uint64_t constant, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Returns an expression for the constant raw binary floating point
-			value \c value with size \c size
+		/*! A floating point constant. <tt>constant</tt> holds the bits of its representation as an integer. The
+		    single and double precision builders take a floating point value and convert it themselves.
 
-		 	To clarify, \c value here is the representation of the float if its bits were instead interpreted as an integer.
-
-			A given float \e could be converted to an integer value like so:
-
-		 	\code{.cpp}
-		    union {
-				float floatValue;
-				uint32_t integerValue;
-				} bits;
-			bits.floatValue = val;
-		 	uint32_t myIntValueToPassToThisFunction = bits.integerValue;
-		 	\endcode
-
-		 	Do note this is exactly how FloatConstSingle and FloatConstDouble perform this conversion
-		 		(and thus, converting it yourself is \e typically redundant.)
-
-			\param size The size of the constant in bytes
-			\param val Integer value for the raw binary representation of the constant
-			\param loc Optional IL Location this instruction was added from.
-			\return A constant expression of given value and size
+		    \param size The size of the result in bytes
+		    \param constant The bits of the constant's representation, read as an integer
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>constant</tt>
 		*/
-		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConstRaw(size_t size, uint64_t constant, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Reads flag <tt>src</tt>.
+
+		    \param src The flag to read
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>src</tt>
+		*/
+		ExprId Flag(uint32_t src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! An integer holding the value of flag <tt>src</tt> at bit <tt>bit</tt>, with every other bit clear.
+
+		    \param size The size of the result in bytes
+		    \param src The flag to read
+		    \param bit The index of the bit that holds the flag's value
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>flagbit.\<size\>(src, bit)</tt>
+		*/
+		ExprId FlagBit(size_t size, uint32_t src, size_t bit, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Adds <tt>left</tt> and <tt>right</tt>. Without flags, renders as <tt>left + right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>add.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId Add(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Adds <tt>left</tt>, <tt>right</tt> and the carry <tt>carry</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param carry The carry in
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>adc.\<size\>{\<flags\>}(left, right, carry)</tt>
+		*/
+		ExprId AddCarry(size_t size, ExprId left, ExprId right, ExprId carry, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Subtracts <tt>right</tt> from <tt>left</tt>. Without flags, renders as <tt>left - right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>sub.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId Sub(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Subtracts <tt>right</tt> and the borrow <tt>carry</tt> from <tt>left</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param carry The carry in
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>sbb.\<size\>{\<flags\>}(left, right, carry)</tt>
+		*/
+		ExprId SubBorrow(size_t size, ExprId left, ExprId right, ExprId carry, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The bitwise and of <tt>left</tt> and <tt>right</tt>. Without flags, renders as
+		    <tt>left \& right</tt>, or as <tt>left \&\& right</tt> when <tt>size</tt> is 0.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>and.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId And(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The bitwise or of <tt>left</tt> and <tt>right</tt>. Without flags, renders as <tt>left | right</tt>,
+		    or as <tt>left || right</tt> when <tt>size</tt> is 0.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>or.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId Or(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The bitwise exclusive or of <tt>left</tt> and <tt>right</tt>. Without flags, renders as
+		    <tt>left ^ right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>xor.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId Xor(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Shifts <tt>left</tt> left by <tt>right</tt> bits. Without flags, renders as
+		    <tt>left \<\< right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>lsl.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId ShiftLeft(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Shifts <tt>left</tt> logically right by <tt>right</tt> bits. Without flags, renders as
+		    <tt>left u\>\> right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>lsr.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId LogicalShiftRight(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Shifts <tt>left</tt> arithmetically right by <tt>right</tt> bits. Without flags, renders as
+		    <tt>left s\>\> right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>asr.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId ArithShiftRight(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rotates <tt>left</tt> left by <tt>right</tt> bits.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>rol.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId RotateLeft(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rotates <tt>left</tt> left by <tt>right</tt> bits through the carry <tt>carry</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param carry The carry in
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>rlc.\<size\>{\<flags\>}(left, right, carry)</tt>
+		*/
+		ExprId RotateLeftCarry(size_t size, ExprId left, ExprId right, ExprId carry, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rotates <tt>left</tt> right by <tt>right</tt> bits.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ror.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId RotateRight(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rotates <tt>left</tt> right by <tt>right</tt> bits through the carry <tt>carry</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param carry The carry in
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>rrc.\<size\>{\<flags\>}(left, right, carry)</tt>
+		*/
+		ExprId RotateRightCarry(size_t size, ExprId left, ExprId right, ExprId carry, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Multiplies <tt>left</tt> by <tt>right</tt>. The operands and the result are all <tt>size</tt> bytes,
+		    so the upper half of the product is discarded. Without flags, renders as <tt>left * right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>mul.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId Mult(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Multiplies <tt>left</tt> by <tt>right</tt> as unsigned integers. The operands are <tt>size</tt>
+		    bytes and the result is <tt>2 * size</tt> bytes. The expression's size, which it renders with, is
+		    still <tt>size</tt>.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>mulu.dp.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId MultDoublePrecUnsigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Multiplies <tt>left</tt> by <tt>right</tt> as signed integers. The operands are <tt>size</tt> bytes
+		    and the result is <tt>2 * size</tt> bytes. The expression's size, which it renders with, is still
+		    <tt>size</tt>.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>muls.dp.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId MultDoublePrecSigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Divides <tt>left</tt> by <tt>right</tt> as unsigned integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>divu.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId DivUnsigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Divides <tt>left</tt> by <tt>right</tt> as unsigned integers. <tt>left</tt> is <tt>2 * size</tt>
+		    bytes, and <tt>right</tt> and the result are <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>divu.dp.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId DivDoublePrecUnsigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Divides <tt>left</tt> by <tt>right</tt> as signed integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>divs.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId DivSigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Divides <tt>left</tt> by <tt>right</tt> as signed integers. <tt>left</tt> is <tt>2 * size</tt>
+		    bytes, and <tt>right</tt> and the result are <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>divs.dp.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId DivDoublePrecSigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The remainder of dividing <tt>left</tt> by <tt>right</tt> as unsigned integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>modu.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId ModUnsigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The remainder of dividing <tt>left</tt> by <tt>right</tt> as unsigned integers. <tt>left</tt> is
+		    <tt>2 * size</tt> bytes, and <tt>right</tt> and the result are <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>modu.dp.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId ModDoublePrecUnsigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The remainder of dividing <tt>left</tt> by <tt>right</tt> as signed integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>mods.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId ModSigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The remainder of dividing <tt>left</tt> by <tt>right</tt> as signed integers. <tt>left</tt> is
+		    <tt>2 * size</tt> bytes, and <tt>right</tt> and the result are <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>mods.dp.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId ModDoublePrecSigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Negates <tt>src</tt> as a two's complement integer.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>neg.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId Neg(size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Inverts the bits of <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>not.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId Not(size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Sign-extends <tt>src</tt> to <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>sx.\<size\>(src)</tt>
+		*/
+		ExprId SignExtend(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Zero-extends <tt>src</tt> to <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>zx.\<size\>(src)</tt>
+		*/
+		ExprId ZeroExtend(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Truncates <tt>src</tt> to its low <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>(src).\<size\></tt>
+		*/
+		ExprId LowPart(size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Jumps to <tt>dest</tt>.
+
+		    \param dest The address to jump to
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>jump(dest)</tt>
+		*/
+		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Jumps to the target in <tt>targets</tt> chosen by the value of <tt>dest</tt>.
+
+		    \param dest The value that chooses the target
+		    \param targets The labels to jump to, keyed by the value of the destination that chooses each
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>jump(dest =\> targets)</tt>
+		*/
+		ExprId JumpTo(ExprId dest, const std::map<uint64_t, BNLowLevelILLabel*>& targets,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Calls <tt>dest</tt>. On architectures without a link register, this pushes the address of the next
+		    instruction onto the stack, then jumps to <tt>dest</tt>.
+
+		    \param dest The address to call
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>call(dest)</tt>
+		*/
+		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Calls <tt>dest</tt>, then once the callee returns, adds <tt>stackAdjustment</tt> to the stack
+		    pointer and adjusts the top of each register stack by its amount in <tt>regStackAdjustments</tt>.
+
+		    \param dest The address to call
+		    \param stackAdjustment The amount to add to the stack pointer once the callee returns
+		    \param regStackAdjustments The amount to move the top of each register stack by once the callee
+		    returns
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>call(dest), stack += stackAdjustment</tt>
+		*/
+		ExprId CallStackAdjust(ExprId dest, int64_t stackAdjustment,
+		    const std::map<uint32_t, int32_t>& regStackAdjustments = {},
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Jumps to <tt>dest</tt> as a tail call.
+
+		    \param dest The address to jump to
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>\<return\> tailcall(dest)</tt>
+		*/
+		ExprId TailCall(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Returns from the function by jumping to <tt>dest</tt>.
+
+		    \param dest The address to return to
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>\<return\> jump(dest)</tt>
+		*/
+		ExprId Return(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Marks a point that execution doesn't pass, such as after a call that doesn't return.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>noreturn</tt>
+		*/
+		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests the flag condition <tt>flagCondition</tt>, using semantic flag class <tt>semanticClass</tt>
+		    where given.
+
+		    \param flagCondition The condition to test
+		    \param semanticClass The semantic flag class
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>flagCondition</tt>
+		*/
+		ExprId FlagCondition(BNLowLevelILFlagCondition flagCondition, uint32_t semanticClass = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests semantic flag group <tt>semanticGroup</tt>.
+
+		    \param semanticGroup The semantic flag group
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>semanticGroup</tt>
+		*/
+		ExprId FlagGroup(uint32_t semanticGroup, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> equals <tt>right</tt>.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left == right</tt>
+		*/
+		ExprId CompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> doesn't equal <tt>right</tt>.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left != right</tt>
+		*/
+		ExprId CompareNotEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than <tt>right</tt> as signed integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left s\< right</tt>
+		*/
+		ExprId CompareSignedLessThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than <tt>right</tt> as unsigned integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left u\< right</tt>
+		*/
+		ExprId CompareUnsignedLessThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than or equal to <tt>right</tt> as signed integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left s\<= right</tt>
+		*/
+		ExprId CompareSignedLessEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than or equal to <tt>right</tt> as unsigned integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left u\<= right</tt>
+		*/
+		ExprId CompareUnsignedLessEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than or equal to <tt>right</tt> as signed integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left s\>= right</tt>
+		*/
+		ExprId CompareSignedGreaterEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than or equal to <tt>right</tt> as unsigned integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left u\>= right</tt>
+		*/
+		ExprId CompareUnsignedGreaterEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than <tt>right</tt> as signed integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left s\> right</tt>
+		*/
+		ExprId CompareSignedGreaterThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than <tt>right</tt> as unsigned integers.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left u\> right</tt>
+		*/
+		ExprId CompareUnsignedGreaterThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether bit <tt>right</tt> of <tt>left</tt> is set.
+
+		    \param size The size of <tt>left</tt> in bytes
+		    \param left The left operand
+		    \param right The index of the bit to test
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>test_bit(left, right)</tt>
+		*/
+		ExprId TestBit(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Converts <tt>src</tt> to the integer 1 if it's true, or 0 if it's false.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>src ? 1 : 0</tt>
+		*/
+		ExprId BoolToInt(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddOverflow(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Makes a system call.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>syscall</tt>
+		*/
+		ExprId SystemCall(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A processor breakpoint.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>breakpoint</tt>
+		*/
+		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A processor trap, or interrupt, with number <tt>vector</tt>.
+
+		    \param vector The trap number
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>trap(vector)</tt>
+		*/
+		ExprId Trap(int64_t vector, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Calls intrinsic <tt>intrinsic</tt> with <tt>params</tt>. An intrinsic is an architecture operation
+		    lifted as a call to a built-in function that doesn't exist in the binary. Its results go to
+		    <tt>output</tt>.
+
+		    \param output The registers and flags the intrinsic writes
+		    \param intrinsic The architecture intrinsic to call
+		    \param params The parameters
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>output = intrinsic{\<flags\>}(params)</tt>
+		*/
+		ExprId Intrinsic(const std::vector<RegisterOrFlag>& output, uint32_t intrinsic,
+		    const std::vector<ExprId>& params, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! An undefined value or operation. As a statement, it ends the basic block and leaves its outgoing
+		    edges undetermined.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>undefined</tt>
+		*/
+		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! An unimplemented instruction or value.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>unimplemented</tt>
+		*/
+		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A value that can't be known at analysis time, such as a flag that depends on runtime state. It
+		    doesn't produce the warning an unimplemented expression does.
+
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>unknown</tt>
+		*/
+		ExprId Unknown(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A reference to <tt>size</tt> bytes of memory at <tt>src</tt>, for an unimplemented operation.
+
+		    \param size The size of the result in bytes
+		    \param src The address referenced
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>unimplemented([src].\<size\>)</tt>
+		*/
+		ExprId UnimplementedMemoryRef(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A reference to <tt>size</tt> bytes of memory at <tt>src</tt>, whose value can't be known at analysis
+		    time. It doesn't produce the warning an unimplemented expression does.
+
+		    \param size The size of the result in bytes
+		    \param src The address referenced
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>unknown([src].\<size\>)</tt>
+		*/
+		ExprId UnknownMemoryRef(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Adds <tt>left</tt> and <tt>right</tt> as floating point values. Without flags, renders as
+		    <tt>left f+ right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>fadd.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId FloatAdd(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Subtracts <tt>right</tt> from <tt>left</tt> as floating point values. Without flags, renders as
+		    <tt>left f- right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>fsub.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId FloatSub(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Multiplies <tt>left</tt> by <tt>right</tt> as floating point values. Without flags, renders as
+		    <tt>left f* right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>fmul.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId FloatMult(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Divides <tt>left</tt> by <tt>right</tt> as floating point values. Without flags, renders as
+		    <tt>left f/ right</tt>.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>fdiv.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId FloatDiv(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The square root of the floating point value <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>sqrt{\<flags\>}(src)</tt>
+		*/
+		ExprId FloatSqrt(size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Negates the floating point value <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>fneg{\<flags\>}(src)</tt>
+		*/
+		ExprId FloatNeg(size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The absolute value of the floating point value <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>fabs{\<flags\>}(src)</tt>
+		*/
+		ExprId FloatAbs(size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Converts the floating point value <tt>src</tt> to an integer.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>int.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId FloatToInt(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Converts the integer <tt>src</tt> to a floating point value.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>float.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId IntToFloat(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Converts the floating point value <tt>src</tt> to a floating point value of <tt>size</tt> bytes.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>fconvert.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId FloatConvert(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rounds the floating point value <tt>src</tt> to the nearest integral value.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>roundint.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId RoundToInt(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rounds the floating point value <tt>src</tt> to an integral value, towards negative infinity.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>floor.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId Floor(size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rounds the floating point value <tt>src</tt> to an integral value, towards positive infinity.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ceil.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId Ceil(size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Rounds the floating point value <tt>src</tt> to an integral value, towards zero.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ftrunc.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId FloatTrunc(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> equals <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f== right</tt>
+		*/
+		ExprId FloatCompareEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> doesn't equal <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f!= right</tt>
+		*/
+		ExprId FloatCompareNotEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f\< right</tt>
+		*/
+		ExprId FloatCompareLessThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is less than or equal to <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f\<= right</tt>
+		*/
+		ExprId FloatCompareLessEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than or equal to <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f\>= right</tt>
+		*/
+		ExprId FloatCompareGreaterEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> is greater than <tt>right</tt> as floating point values.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>left f\> right</tt>
+		*/
+		ExprId FloatCompareGreaterThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> and <tt>right</tt> are ordered, which they are when neither is NaN.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>is_ordered.\<size\>(left, right)</tt>
+		*/
+		ExprId FloatCompareOrdered(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Tests whether <tt>left</tt> and <tt>right</tt> are unordered, which they are when either is NaN.
+
+		    \param size The size of <tt>left</tt> and <tt>right</tt> in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>is_unordered.\<size\>(left, right)</tt>
+		*/
+		ExprId FloatCompareUnordered(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterSSA(
+		    size_t size, const SSARegister& dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterSSAPartial(size_t size, const SSARegister& dest, uint32_t partial, ExprId src,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterSplitSSA(size_t size, const SSARegister& hiReg, const SSARegister& loReg, ExprId src,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterStackTopRelativeSSA(size_t size, uint32_t stack, size_t destVersion, size_t srcVersion,
+		    ExprId dest, const SSARegister& topReg, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterStackAbsoluteSSA(size_t size, uint32_t stack, size_t destVersion, size_t srcVersion,
+		    uint32_t dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterSSA(size_t size, const SSARegister& src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterSSAPartial(
+		    size_t size, const SSARegister& src, uint32_t partial, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterSplitSSA(size_t size, const SSARegister& hi, const SSARegister& lo,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackTopRelativeSSA(size_t size, const SSARegisterStack& srcStack, ExprId src,
+		    const SSARegister& topReg, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackAbsoluteSSA(size_t size, const SSARegisterStack& srcStack, uint32_t src,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeTopRelativeSSA(uint32_t stack, size_t destVersion, size_t srcVersion, ExprId dest,
+		    const SSARegister& topReg, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeAbsoluteSSA(uint32_t stack, size_t destVersion, size_t srcVersion, uint32_t dest,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetFlagSSA(const SSAFlag& dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssertSSA(size_t size, const SSARegister& src, const PossibleValueSet& constraint,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForceVerSSA(size_t size, const SSARegister& dest, const SSARegister& src,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FlagSSA(const SSAFlag& src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FlagBitSSA(
+		    size_t size, const SSAFlag& src, size_t bit, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
+		    const SSARegister& stackReg, size_t destMemory, size_t srcMemory,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SystemCallSSA(const std::vector<SSARegister>& output, const std::vector<ExprId>& params,
+		    const SSARegister& stackReg, size_t destMemory, size_t srcMemory,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
+		    const SSARegister& stackReg, size_t destMemory, size_t srcMemory,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SeparateParamListSSA(
+		    const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SharedParamSlotSSA(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LoadSSA(size_t size, ExprId src, size_t srcMemory, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId StoreSSA(size_t size, ExprId dest, ExprId src, size_t destMemory, size_t srcMemory,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId IntrinsicSSA(const std::vector<SSARegisterOrFlag>& output, uint32_t intrinsic,
+		    const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MemoryIntrinsicSSA(const std::vector<SSARegisterOrFlag>& output, uint32_t intrinsic,
+		    const std::vector<ExprId>& params, size_t destMemory, size_t srcMemory,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterPhi(const SSARegister& dest, const std::vector<SSARegister>& src,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackPhi(const SSARegisterStack& dest, const std::vector<SSARegisterStack>& src,
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FlagPhi(
+		    const SSAFlag& dest, const std::vector<SSAFlag>& src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MemoryPhi(
+		    size_t destMemory, const std::vector<size_t>& srcMemory, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Reverses the byte order of <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>bswap.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId ByteSwap(size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Counts the set bits in <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>popcnt.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId PopulationCount(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Counts the leading zero bits in <tt>src</tt>. The result is <tt>8 * size</tt> when <tt>src</tt> is
+		    zero.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>clz.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId CountLeadingZeros(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Counts the trailing zero bits in <tt>src</tt>. The result is <tt>8 * size</tt> when <tt>src</tt> is
+		    zero.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>ctz.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId CountTrailingZeros(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Reverses the bit order of <tt>src</tt>.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>rbit.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId ReverseBits(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Counts the bits below the sign bit of <tt>src</tt> that match it.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>cls.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId CountLeadingSigns(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The smaller of <tt>left</tt> and <tt>right</tt> as signed integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>mins.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId MinSigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The larger of <tt>left</tt> and <tt>right</tt> as signed integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>maxs.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId MaxSigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The smaller of <tt>left</tt> and <tt>right</tt> as unsigned integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>minu.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId MinUnsigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The larger of <tt>left</tt> and <tt>right</tt> as unsigned integers.
+
+		    \param size The size of the result in bytes
+		    \param left The left operand
+		    \param right The right operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>maxu.\<size\>{\<flags\>}(left, right)</tt>
+		*/
+		ExprId MaxUnsigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! The absolute value of <tt>src</tt> as a signed integer.
+
+		    \param size The size of the result in bytes
+		    \param src The operand
+		    \param flags The flag write type that selects the flags the operation sets
+		    \param loc The IL location this expression was added from
+		    \return The expression <tt>abs.\<size\>{\<flags\>}(src)</tt>
+		*/
+		ExprId AbsoluteValue(
+		    size_t size, ExprId src, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		// END GENERATED llil-builders
 
 		/*! Returns an expression for the single precision floating point value \c value
 
@@ -14815,1057 +15908,6 @@ namespace BinaryNinja {
 			\return A constant expression of given value and size
 		*/
 		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns a flag expression for the given flag index.
-
-			\param flag Flag index
-			\param loc Optional IL Location this expression was added from.
-			\return A flag expression for the given flag
-		*/
-		ExprId Flag(uint32_t flag, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FlagSSA(const SSAFlag& flag, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Sets the flag with index \c flag and size \c size to the constant integer value \c bit
-
-			\param size The size of the flag
-			\param flag Flag index
-			\param bitIndex Bit of the flag to set
-			\param loc Optional IL Location this expression was added from.
-			\return A constant expression of given value and size <tt>FLAG.reg = bit</tt>
-		*/
-		ExprId FlagBit(size_t size, uint32_t flag, size_t bitIndex, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FlagBitSSA(
-		    size_t size, const SSAFlag& flag, size_t bitIndex, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Adds expression \c a to expression \c b potentially setting flags \c flags and returning
-			an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return A constant expression of given value and size <tt>FLAG.reg = bit</tt>
-		*/
-		ExprId Add(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Adds with carry expression \c a to expression \c b potentially setting flags \c flags and
-			returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param carry Carry flag expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>adc.<size>{<flags>}(a, b, carry)</tt>
-		*/
-		ExprId AddCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0,
-		    const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Subtracts expression \c b from expression \c a potentially setting flags \c flags and returning
-			an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>sub.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId Sub(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Subtracts with borrow expression \c b from expression \c a potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param carry Carry flag expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>sbb.<size>{<flags>}(a, b, carry)</tt>
-		*/
-		ExprId SubBorrow(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0,
-		    const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Bitwise and's expression \c a and expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>and.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId And(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Bitwise or's expression \c a and expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>or.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId Or(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Xor's expression \c a with expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>xor.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId Xor(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Shifts left expression \c a by expression \c b from expression \c a potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>lsl.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId ShiftLeft(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Shifts logically right expression \c a by expression \c b potentially setting flags
-			\c flags and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>lsr.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId LogicalShiftRight(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Shifts arithmetic right expression \c a by expression \c b potentially setting flags
-			\c flags and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>asr.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId ArithShiftRight(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Bitwise rotates left expression \c a by expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>rol.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId RotateLeft(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Bitwise rotates left with carry expression \c a by expression \c b potentially setting
-			flags \c flags and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param carry Carry flag expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>rlc.<size>{<flags>}(a, b, carry)</tt>
-		*/
-		ExprId RotateLeftCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0,
-		    const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Bitwise rotates right expression \c a by expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>ror.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId RotateRight(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Bitwise rotates right with carry expression \c a by expression \c b potentially setting
-			flags \c flags and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param carry Carry flag expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>rrc.<size>{<flags>}(a, b, carry)</tt>
-		*/
-		ExprId RotateRightCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0,
-		    const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Multiplies expression \c a by expression \c b potentially setting flags \c flags and returning an
-			expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>mul.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId Mult(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Multiplies unsigned with double precision expression \c a by expression \c b
-			potentially setting flags \c flags and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>mulu.dp.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId MultDoublePrecUnsigned(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Multiplies signed with double precision expression \c a by expression \c b
-			potentially setting flags \c flags and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>muls.dp.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId MultDoublePrecSigned(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Unsigned divide expression \c a by expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>divu.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId DivUnsigned(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Unsigned double precision divide using expression \c a as
-			a single double precision register by expression \c b potentially  setting flags \c flags and returning an
-			expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>mods.dp.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId DivDoublePrecUnsigned(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Signed divide expression \c a by expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>divs.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId DivSigned(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Signed double precision divide using expression \c a as a
-			single double precision register by expression \c b potentially setting flags \c flags and returning an
-			expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>divs.dp.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId DivDoublePrecSigned(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Unsigned modulus expression \c a by expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>modu.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId ModUnsigned(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Unsigned double precision modulus using expression \c a as
-			a single double precision register by expression \c b potentially  setting flags \c flags and returning an
-			expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>modu.dp.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId ModDoublePrecUnsigned(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Signed modulus expression \c a by expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>mods.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId ModSigned(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Signed double precision modulus using expression \c a as a single
-			double precision register by expression \c b potentially  setting flags \c flags and returning an expression
-			of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>mods.dp.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId ModDoublePrecSigned(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Two's complement sign negation of expression \c value of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param a The expression to negate
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>neg.<size>{<flags>}(value)</tt>
-		*/
-		ExprId Neg(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Bitwise inverse of expression \c value of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param a The expression to bitwise invert
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>not.<size>{<flags>}(value)</tt>
-		*/
-		ExprId Not(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Reverse the byte order of expression \c value of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param a The expression to byte swap
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>bswap.<size>{<flags>}(value)</tt>
-		*/
-		ExprId ByteSwap(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Count the number of set bits in expression \c value of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param a The expression to count set bits in
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>popcnt.<size>{<flags>}(value)</tt>
-		*/
-		ExprId PopulationCount(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Count the number of leading zero bits in expression \c value of size \c size potentially setting flags.
-			The result is <tt>8 * size</tt> when \c value is zero.
-
-			\param size The size of the result in bytes
-			\param a The expression to count leading zeros in
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>clz.<size>{<flags>}(value)</tt>
-		*/
-		ExprId CountLeadingZeros(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Count the number of trailing zero bits in expression \c value of size \c size potentially setting flags.
-			The result is <tt>8 * size</tt> when \c value is zero.
-
-			\param size The size of the result in bytes
-			\param a The expression to count trailing zeros in
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>ctz.<size>{<flags>}(value)</tt>
-		*/
-		ExprId CountTrailingZeros(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Reverse the bit order of expression \c value of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param a The expression to bit reverse
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>rbit.<size>{<flags>}(value)</tt>
-		*/
-		ExprId ReverseBits(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Count the number of leading bits that match the sign bit in expression \c value of size \c size,
-			not counting the sign bit itself, potentially setting flags
-
-			\param size The size of the result in bytes
-			\param a The expression to count leading sign bits in
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>cls.<size>{<flags>}(value)</tt>
-		*/
-		ExprId CountLeadingSigns(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Signed minimum of expressions \c left and \c right of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param left The left expression
-			\param right The right expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>mins.<size>{<flags>}(left, right)</tt>
-		*/
-		ExprId MinSigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Signed maximum of expressions \c left and \c right of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param left The left expression
-			\param right The right expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>maxs.<size>{<flags>}(left, right)</tt>
-		*/
-		ExprId MaxSigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Unsigned minimum of expressions \c left and \c right of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param left The left expression
-			\param right The right expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>minu.<size>{<flags>}(left, right)</tt>
-		*/
-		ExprId MinUnsigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Unsigned maximum of expressions \c left and \c right of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param left The left expression
-			\param right The right expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>maxu.<size>{<flags>}(left, right)</tt>
-		*/
-		ExprId MaxUnsigned(size_t size, ExprId left, ExprId right, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Signed absolute value of expression \c value of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param a The expression to take the absolute value of
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>abs.<size>{<flags>}(value)</tt>
-		*/
-		ExprId AbsoluteValue(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Two's complement sign-extends the expression in \c value to \c size bytes
-
-			\param size The size of the result in bytes
-			\param a The expression to sign extend
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>sx.<size>(value)</tt>
-		*/
-		ExprId SignExtend(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Zero-extends the expression in \c value to \c size bytes
-
-			\param size The size of the result in bytes
-			\param a The expression to zero extend
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>sx.<size>(value)</tt>
-		*/
-		ExprId ZeroExtend(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Truncates \c value to \c size bytes
-
-			\param size The size of the result in bytes
-			\param a The expression to truncate
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>zx.<size>(value)</tt>
-		*/
-		ExprId LowPart(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns an expression which jumps (branches) to the expression \c dest
-
-			\param dest The expression to jump to
-			\param loc Optional IL Location this expression was added from.
-			\return The expression \c jump(dest)
-		*/
-		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId JumpTo(ExprId dest, const std::map<uint64_t, BNLowLevelILLabel*>& targets,
-		    const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns an expression which first pushes the address of the next instruction onto the stack then jumps
-			(branches) to the expression \c dest
-
-			\param dest The expression to call
-			\param loc Optional IL Location this expression was added from.
-			\return The expression \c call(dest)
-		*/
-		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns an expression which first pushes the address of the next instruction onto the stack
-			then jumps (branches) to the expression \c dest . After the function exits, \c stack_adjust is added to the
-			stack pointer register.
-
-			\param dest The expression to call
-			\param adjust Stack adjustment
-			\param regStackAdjust Register stack adjustment
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>call(dest), stack += stack_adjust</tt>
-		*/
-		ExprId CallStackAdjust(ExprId dest, int64_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
-		    const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns an expression which jumps (branches) to the expression \c dest
-
-			\param dest The expression to jump to
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>tailcall(dest)</tt>
-		*/
-		ExprId TailCall(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
-		    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
-		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SystemCallSSA(const std::vector<SSARegister>& output, const std::vector<ExprId>& params,
-		    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
-		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId TailCallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
-		    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
-		    const ILSourceLocation& loc = ILSourceLocation());
-
-		ExprId SeparateParamListSSA(
-			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SharedParamSlotSSA(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns an expression which jumps (branches) to the expression \c dest . \c ret is a special alias for
-			jump that makes the disassembler stop disassembling.
-
-			\param dest The expression to jump to
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>jump(dest)</tt>
-		*/
-		ExprId Return(size_t dest, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns an expression that halts disassembly
-
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>noreturn</tt>
-		*/
-		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns a flag_condition expression for the given LowLevelILFlagCondition
-
-			\param cond Flag condition expression to retrieve
-			\param semClass Optional semantic flag class
-			\param loc Optional IL Location this expression was added from.
-			\return A flag_condition expression
-		*/
-		ExprId FlagCondition(
-		    BNLowLevelILFlagCondition cond, uint32_t semClass = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns a flag_group expression for the given semantic flag group
-
-			\param semGroup Semantic flag group to access
-			\param loc Optional IL Location this expression was added from.
-			\return A flag_group expression
-		*/
-		ExprId FlagGroup(uint32_t semGroup, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns comparison expression of size \c size checking if expression \c a is equal to
-			expression \c b
-
-			\param size Size in bytes
-			\param a LHS of comparison
-			\param b RHS of comparison
-			\param loc Optional IL Location this expression was added from.
-			\return a comparison expression.
-		*/
-		ExprId CompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns comparison expression of size \c size checking if expression \c a is not equal to
-			expression \c b
-
-			\param size Size in bytes
-			\param a LHS of comparison
-			\param b RHS of comparison
-			\param loc Optional IL Location this expression was added from.
-			\return a comparison expression.
-		*/
-		ExprId CompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns comparison expression of size \c size checking if expression \c a is
-			signed less than expression \c b
-
-			\param size Size in bytes
-			\param a LHS of comparison
-			\param b RHS of comparison
-			\param loc Optional IL Location this expression was added from.
-			\return a comparison expression.
-		*/
-		ExprId CompareSignedLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns comparison expression of size \c size checking if expression \c a is
-			unsigned less than expression \c b
-
-			\param size Size in bytes
-			\param a LHS of comparison
-			\param b RHS of comparison
-			\param loc Optional IL Location this expression was added from.
-			\return a comparison expression.
-		*/
-		ExprId CompareUnsignedLessThan(
-		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns comparison expression of size \c size checking if expression \c a is
-			signed less than or equal to expression \c b
-
-			\param size Size in bytes
-			\param a LHS of comparison
-			\param b RHS of comparison
-			\param loc Optional IL Location this expression was added from.
-			\return a comparison expression.
-		*/
-		ExprId CompareSignedLessEqual(
-		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns comparison expression of size \c size checking if expression \c a is
-			unsigned less than or equal to expression \c b
-
-			\param size Size in bytes
-			\param a LHS of comparison
-			\param b RHS of comparison
-			\param loc Optional IL Location this expression was added from.
-			\return a comparison expression.
-		*/
-		ExprId CompareUnsignedLessEqual(
-		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns comparison expression of size \c size checking if expression \c a is
-			signed greater than or equal to expression \c b
-
-			\param size Size in bytes
-			\param a LHS of comparison
-			\param b RHS of comparison
-			\param loc Optional IL Location this expression was added from.
-			\return a comparison expression.
-		*/
-		ExprId CompareSignedGreaterEqual(
-		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns comparison expression of size \c size checking if expression \c a
-			is unsigned greater than or equal to expression \c b
-
-			\param size Size in bytes
-			\param a LHS of comparison
-			\param b RHS of comparison
-			\param loc Optional IL Location this expression was added from.
-			\return a comparison expression.
-		*/
-		ExprId CompareUnsignedGreaterEqual(
-		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns comparison expression of size \c size checking if expression \c a is
-			signed greater than or equal to expression \c b
-
-			\param size Size in bytes
-			\param a LHS of comparison
-			\param b RHS of comparison
-			\param loc Optional IL Location this expression was added from.
-			\return a comparison expression.
-		*/
-		ExprId CompareSignedGreaterThan(
-		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns comparison expression of size \c size checking if expression \c a is
-			unsigned greater than or equal to expression \c b
-
-			\param size Size in bytes
-			\param a LHS of comparison
-			\param b RHS of comparison
-			\param loc Optional IL Location this expression was added from.
-			\return a comparison expression.
-		*/
-		ExprId CompareUnsignedGreaterThan(
-		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId TestBit(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId BoolToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AddOverflow(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns a system call expression.
-
-			\param loc Optional IL Location this expression was added from.
-			\return System call expression.
-		*/
-		ExprId SystemCall(const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns an intrinsic expression. 'Intrinsics' are emitted and lifted as if they were builtin functions that
-			do not exist in the binary.
-
-			\param outputs Registers and/or flags set by this intrinsic call.
-			\param intrinsic Index of the intrinsic. <b>See also:</b> Architecture::GetIntrinsicName, Architecture::GetAllIntrinsics
-		    \param params Parameter items passed to this intrinsic
-			\param flags Flags
-			\param loc Optional IL Location this expression was added from.
-			\return An intrinsic expression.
-		*/
-		ExprId Intrinsic(const std::vector<RegisterOrFlag>& outputs, uint32_t intrinsic,
-		    const std::vector<ExprId>& params, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId IntrinsicSSA(const std::vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
-		    const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MemoryIntrinsicSSA(const std::vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
-		    const std::vector<ExprId>& params, size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns a processor breakpoint expression.
-
-			\param loc Optional IL Location this expression was added from.
-			\return A breakpoint expression.
-		*/
-		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns a processor trap (interrupt) expression of the given integer \c value .
-
-			\param num trap (interrupt) number
-			\param loc Optional IL Location this expression was added from.
-			\return A trap expression.
-		*/
-		ExprId Trap(int64_t num, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns the undefined expression. This should be used for instructions which perform functions but
-			aren't important for dataflow or partial emulation purposes.
-
-			\param loc Optional IL Location this expression was added from.
-			\return The Undefined expression
-		*/
-		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns the unimplemented expression. This should be used for instructions which aren't implemented.
-
-			\param loc Optional IL Location this expression was added from.
-			\return The unimplemented expression
-		*/
-		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns an unknown expression for values that are genuinely unknowable at analysis time
-			(e.g. runtime-dependent flags). Renders as "unknown" and suppresses unimplemented warnings.
-
-			\param loc Optional IL Location this expression was added from.
-			\return The unknown expression
-		*/
-		ExprId Unknown(const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! A memory reference to expression \c addr of size \c size with unimplemented operation.
-
-			\param size Size in bytes of the memory reference
-			\param addr Expression to reference memory
-			\param loc Optional IL Location this expression was added from.
-			\return The unimplemented memory reference expression.
-		*/
-		ExprId UnimplementedMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! A memory reference to expression \c addr of size \c size for a genuinely unknowable value.
-			Renders as "unknown" and suppresses unimplemented warnings.
-
-			\param size Size in bytes of the memory reference
-			\param addr Expression to reference memory
-			\param loc Optional IL Location this expression was added from.
-			\return The unknown memory reference expression.
-		*/
-		ExprId UnknownMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterPhi(const SSARegister& dest, const std::vector<SSARegister>& sources,
-		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterStackPhi(const SSARegisterStack& dest, const std::vector<SSARegisterStack>& sources,
-		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FlagPhi(
-		    const SSAFlag& dest, const std::vector<SSAFlag>& sources, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MemoryPhi(
-		    size_t dest, const std::vector<size_t>& sources, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Adds floating point expression \c a to expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>fadd.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId FloatAdd(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Subtracts floating point expression \c b from expression \c a potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>fsub.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId FloatSub(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Multiplies floating point expression \c a by expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>fmul.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId FloatMult(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Divides floating point expression \c a by expression \c b potentially setting flags \c flags
-			and returning an expression of \c size bytes.
-
-			\param size The size of the result in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>fdiv.<size>{<flags>}(a, b)</tt>
-		*/
-		ExprId FloatDiv(
-		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns the square root of floating point expression \c value of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param a The expression to calculate the square root of
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>sqrt.<size>{<flags>}(value)</tt>
-		*/
-		ExprId FloatSqrt(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns sign negation of floating point expression \c value of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param a The expression to negate
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>fneg.<size>{<flags>}(value)</tt>
-		*/
-		ExprId FloatNeg(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns absolute value of floating point expression \c value of size \c size potentially setting flags.
-
-			\param size The size of the result in bytes
-			\param a The expression to get the absolute value of
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>fabs.<size>{<flags>}(value)</tt>
-		*/
-		ExprId FloatAbs(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns integer value of floating point expression \c value of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param a The float expression to convert to an int
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>int.<size>{<flags>}(value)</tt>
-		*/
-		ExprId FloatToInt(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns floating point value of integer expression \c value of size \c size potentially setting flags
-
-			\param size The size of the result in bytes
-			\param a The float expression to convert to a float
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>float.<size>{<flags>}(value)</tt>
-		*/
-		ExprId IntToFloat(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatConvert(
-		    size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Rounds a floating point value to the nearest integer
-
-			\param size The size of the result in bytes
-			\param a The expression to round to the nearest integer
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>roundint.<size>{<flags>}(value)</tt>
-		*/
-		ExprId RoundToInt(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Rounds a floating point value to an integer, towards negative infinity
-
-			\param size The size of the result in bytes
-			\param a The expression to round down
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>roundint.<size>{<flags>}(value)</tt>
-		*/
-		ExprId Floor(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Rounds a floating point value to an integer, towards positive infinity
-
-			\param size The size of the result in bytes
-			\param a The expression to round up
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>roundint.<size>{<flags>}(value)</tt>
-		*/
-		ExprId Ceil(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Rounds a floating point value to an integer towards zero
-
-			\param size The size of the result in bytes
-			\param a The expression to truncate
-			\param flags Flags to set
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>roundint.<size>{<flags>}(value)</tt>
-		*/
-		ExprId FloatTrunc(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns floating point comparison expression of size \c size checking if
-			expression \c a is equal to expression \c b
-
-			\param size The size of the operands in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>a f== b</tt>
-		*/
-		ExprId FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns floating point comparison expression of size \c size checking if
-			expression \c a is not equal to expression \c b
-
-			\param size The size of the operands in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>a f!= b</tt>
-		*/
-		ExprId FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns floating point comparison expression of size \c size checking if
-			expression \c a is less than expression \c b
-
-			\param size The size of the operands in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>a f< b</tt>
-		*/
-		ExprId FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns floating point comparison expression of size \c size checking if
-			expression \c a is less than or equal to expression \c b
-
-			\param size The size of the operands in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>a f<= b</tt>
-		*/
-		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns floating point comparison expression of size \c size checking if
-			expression \c a is greater than or equal to expression \c b
-
-			\param size The size of the operands in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>a f>= b</tt>
-		*/
-		ExprId FloatCompareGreaterEqual(
-		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns floating point comparison expression of size \c size checking if
-			expression \c a is greater than expression \c b
-
-			\param size The size of the operands in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>a f> b</tt>
-		*/
-		ExprId FloatCompareGreaterThan(
-		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns floating point comparison expression of size \c size checking if
-			expression \c a is ordered relative to expression \c b
-
-			\param size The size of the operands in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>is_ordered(a, b)</tt>
-		*/
-		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-
-		/*! Returns floating point comparison expression of size \c size checking if
-			expression \c a is unordered relative to expression \c b
-
-			\param size The size of the operands in bytes
-			\param a LHS expression
-			\param b RHS expression
-			\param loc Optional IL Location this expression was added from.
-			\return The expression <tt>is_unordered(a, b)</tt>
-		*/
-		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
 		/*! Returns a goto expression which jumps to the provided LowLevelILLabel.
 

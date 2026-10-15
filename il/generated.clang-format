@@ -1,0 +1,38 @@
+# clang-format style for generated IL code.
+---
+Language: Cpp
+ColumnLimit: 120
+IndentWidth: 4
+TabWidth: 4
+UseTab: ForIndentation
+ContinuationIndentWidth: 4
+AlignAfterOpenBracket: DontAlign
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+IndentCaseLabels: false
+NamespaceIndentation: All
+AllowShortFunctionsOnASingleLine: Inline
+BreakTemplateDeclarations: Yes
+PointerAlignment: Left
+SpaceBeforeRangeBasedForLoopColon: true
+MaxEmptyLinesToKeep: 2
+KeepEmptyLinesAtTheStartOfBlocks: false
+SortIncludes: Never
+SpacesBeforeTrailingComments: 2
+IndentExternBlock: Indent
+# binaryninjacore.h declares its enums through BN_ENUM.
+Macros:
+  - 'BN_ENUM(type, name)=enum name : type'
+...

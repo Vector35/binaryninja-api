@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kinds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="il.xsd">
+	<kind name="expr" expression="true">
+		<cpp suffix="Expr" type="LowLevelILInstruction" reader="Expr" operand="Expr" arg="ExprId"/>
+		<py type="LowLevelILInstruction" reader="expr" param="ExpressionIndex"/>
+		<rust suffix="expr" type="LowLevelILExpression&lt;'func, M, F, ValueExpr&gt;" decoder="expr"/>
+	</kind>
+	<kind name="immediate">
+		<cpp type="int64_t" reader="Integer" operand="Integer" operand-type="uint64_t" arg="uint64_t" signed-arg="int64_t"/>
+		<py type="int" reader="int" param="int" default="0"/>
+		<rust type="u64" decoder="raw"/>
+	</kind>
+	<kind name="immediate_float">
+		<doc>The bits of a floating-point value as wide as the instruction's size.</doc>
+		<cpp type="int64_t" reader="Integer" operand="Integer" operand-type="uint64_t" arg="uint64_t"/>
+		<py type="Union[int, float]" reader="float" param="int"/>
+		<rust type="u64" decoder="raw"/>
+	</kind>
+	<kind name="index">
+		<cpp type="size_t" reader="Index" operand="Index"/>
+		<py type="int" reader="int" param="int" default="0"/>
+		<rust type="u64" decoder="raw"/>
+	</kind>
+	<kind name="target" label="true">
+		<cpp suffix="Target" type="size_t" reader="Index" operand="Index"/>
+		<py type="InstructionIndex" reader="int" construct="true"/>
+		<rust suffix="target" type="LowLevelILInstruction&lt;'func, M, F&gt;" decoder="instruction"/>
+	</kind>
+	<kind name="memory_version" version="true">
+		<cpp suffix="MemoryVersion" type="size_t" reader="Index" operand="Index" version-setter="MemoryVersion"/>
+		<py type="int" reader="int" param="int" default="0"/>
+		<rust suffix="memory_version" type="u64" decoder="raw"/>
+	</kind>
+	<kind name="ssa_version" version="true">
+		<cpp arg="size_t" version-setter="SSAVersion"/>
+	</kind>
+	<kind name="intrinsic">
+		<cpp type="uint32_t" reader="Register" operand="Intrinsic"/>
+		<py type="ILIntrinsic" reader="intrinsic" param="'architecture.IntrinsicType'" converter="self.arch.get_intrinsic_index"/>
+		<rust type="Option&lt;CoreIntrinsic&gt;" decoder="intrinsic"/>
+	</kind>
+	<kind name="register">
+		<cpp suffix="Register" type="uint32_t" reader="Register" operand="Register"/>
+		<py type="ILRegister" reader="reg" param="'architecture.RegisterType'" converter="self.arch.get_reg_index"/>
+		<rust suffix="reg" type="LowLevelILRegisterKind&lt;CoreRegister&gt;" decoder="register"/>
+	</kind>
+	<kind name="flag">
+		<cpp suffix="Flag" type="uint32_t" reader="Register" operand="Flag"/>
+		<py type="ILFlag" reader="flag" param="'architecture.FlagType'" converter="self.arch.get_flag_index"/>
+		<rust suffix="flag" type="CoreFlag" decoder="flag"/>
+	</kind>
+	<kind name="register_stack">
+		<cpp suffix="RegisterStack" type="uint32_t" reader="Register" operand="RegisterStack"/>
+		<py type="ILRegisterStack" reader="reg_stack" param="'architecture.RegisterStackType'" converter="self.arch.get_reg_stack_index"/>
+		<rust suffix="reg_stack" type="CoreRegisterStack" decoder="register_stack"/>
+	</kind>
+	<kind name="register_or_flag">
+		<cpp type="RegisterOrFlag"/>
+		<py type="Union[ILFlag, ILRegister]"/>
+		<rust type="IntrinsicOutput"/>
+	</kind>
+	<kind name="flag_condition">
+		<cpp type="BNLowLevelILFlagCondition" reader="FlagCondition" operand="FlagCondition"/>
+		<py type="LowLevelILFlagCondition" reader="cond" param="Union[str, LowLevelILFlagCondition, int]" converter="self._flag_condition_value"/>
+		<rust type="FlagCondition" decoder="flag_condition"/>
+	</kind>
+	<kind name="semantic_flag_class">
+		<cpp type="uint32_t" reader="Register" operand="SemanticFlagClass"/>
+		<py type="Optional[ILSemanticFlagClass]" reader="sem_class" param="'architecture.SemanticClassType'" param-optional="true" converter="self.arch.get_semantic_flag_class_index"/>
+		<rust type="Option&lt;CoreFlagClass&gt;" decoder="flag_class"/>
+	</kind>
+	<kind name="semantic_flag_group">
+		<cpp type="uint32_t" reader="Register" operand="SemanticFlagGroup"/>
+		<py type="ILSemanticFlagGroup" reader="sem_group" param="'architecture.SemanticGroupName'" converter="self.arch.get_semantic_flag_group_index"/>
+		<rust type="CoreFlagGroup" decoder="flag_group"/>
+	</kind>
+	<kind name="bool">
+		<cpp type="bool" reader="Integer" decoder="nonzero" verb="Is"/>
+		<py type="bool" reader="int" decoder="nonzero"/>
+		<rust type="bool" decoder="nonzero"/>
+	</kind>
+	<kind name="force_version_reason"/>
+	<kind name="possible_value_set" cached="true">
+		<cpp type="PossibleValueSet" reader="PossibleValueSet" operand="Constraint" reference="true" encoder="cached_value_set"/>
+		<py type="variable.PossibleValueSet" detailed-type="PossibleValueSet" reader="constraint" param="'variable.PossibleValueSet'" converter="self.cache_possible_value_set"/>
+		<rust type="PossibleValueSet" decoder="cached_value_set"/>
+	</kind>
+	<kind name="variable">
+		<cpp suffix="Variable"/>
+	</kind>
+	<kind name="ssa_register" slots="2" ssa-of="register">
+		<cpp suffix="SSARegister" type="SSARegister" reader="SSARegister" operand="SSARegister" reference="true" encoder="ssa_register" version-setter="SSAVersion"/>
+		<py type="SSARegister" reader="reg_ssa" reader-slots="2"/>
+		<rust suffix="reg" type="LowLevelILSSARegisterKind&lt;CoreRegister&gt;" decoder="ssa_register"/>
+	</kind>
+	<kind name="ssa_register_stack" slots="2" ssa-of="register_stack">
+		<cpp suffix="SSARegisterStack" type="SSARegisterStack" reader="SSARegisterStack" partial-reader="PartialSSARegisterStackSource" operand="SSARegisterStack" reference="true" encoder="ssa_register_stack" version-setter="SSAVersion"/>
+		<py type="SSARegisterStack" reader="reg_stack_ssa" reader-slots="2"/>
+		<rust suffix="reg_stack" type="LowLevelILSSARegisterStack&lt;CoreRegisterStack&gt;" decoder="ssa_register_stack"/>
+	</kind>
+	<kind name="ssa_flag" slots="2" ssa-of="flag">
+		<cpp suffix="SSAFlag" type="SSAFlag" reader="SSAFlag" operand="SSAFlag" reference="true" encoder="ssa_flag" version-setter="SSAVersion"/>
+		<py type="SSAFlag" reader="flag_ssa" reader-slots="2"/>
+		<rust suffix="flag" type="LowLevelILSSAFlag&lt;CoreFlag&gt;" decoder="ssa_flag"/>
+	</kind>
+	<kind name="ssa_register_or_flag" slots="2">
+		<cpp type="SSARegisterOrFlag"/>
+		<py type="SSARegisterOrFlag"/>
+		<rust type="SSAIntrinsicOutput"/>
+	</kind>
+	<kind name="ssa_variable" slots="2">
+		<cpp suffix="SSAVariable"/>
+	</kind>
+	<kind name="constant_data" slots="2"/>
+	<kind name="label" slots="2" label="true"/>
+	<kind name="register_stack_adjustment" slots="2"/>
+	<kind name="expr_list" list="expr">
+		<cpp suffix="Exprs" type="LowLevelILInstructionList" reader="ExprList" operand="ExprList" adder="AddOperandList"/>
+		<py reader="expr_list" adder="add_operand_list"/>
+		<rust suffix="exprs" decoder="expr_list"/>
+	</kind>
+	<kind name="memory_version_list" list="memory_version">
+		<cpp suffix="MemoryVersions" type="LowLevelILIndexList" reader="IndexList" operand="IndexList" adder="AddIndexList"/>
+		<py reader="int_list"/>
+		<rust suffix="memory_versions" type="Vec&lt;usize&gt;" decoder="version_list"/>
+	</kind>
+	<kind name="variable_list" list="variable">
+		<cpp suffix="Variables"/>
+	</kind>
+	<kind name="register_or_flag_list" list="register_or_flag">
+		<cpp suffix="RegisterOrFlagList" type="LowLevelILRegisterOrFlagList" reader="RegisterOrFlagList" operand="RegisterOrFlagList" adder="AddRegisterOrFlagList"/>
+		<py reader="reg_or_flag_list" param="List[Union[ILRegisterType, ILFlag, 'architecture.RegisterInfo']]" converter="self._register_or_flag_identifiers" adder="add_index_list"/>
+		<rust decoder="register_or_flag_list"/>
+	</kind>
+	<kind name="label_map" list="label">
+		<cpp type="LowLevelILIndexMap" reader="IndexMap" operand="IndexMap" key="uint64_t" value="BNLowLevelILLabel*" adder="AddLabelMap"/>
+		<py type="Dict[int, int]" reader="target_map" adder="add_label_map" param="Dict[int, 'LowLevelILLabel']"/>
+		<rust type="BTreeMap&lt;u64, LowLevelInstructionIndex&gt;" decoder="label_map"/>
+	</kind>
+	<kind name="register_stack_adjustments" list="register_stack_adjustment">
+		<cpp reader="RegisterStackAdjustments" operand="RegisterStackAdjustments" key="uint32_t" value="int32_t" encoder="flattened_map"/>
+		<py type="Dict['architecture.RegisterStackName', int]" detailed-type="Dict[RegisterStackName, int]" reader="reg_stack_adjust" param="Dict['architecture.RegisterStackType', int]" param-optional="true" converter="self._register_stack_adjustment_list" adder="add_index_list" item-slots="1"/>
+	</kind>
+	<kind name="ssa_register_list" list="ssa_register">
+		<cpp suffix="SSARegisters" type="LowLevelILSSARegisterList" reader="SSARegisterList" operand="SSARegisterList" adder="AddSSARegisterList" writer="SSARegisterList"/>
+		<py reader="reg_ssa_list"/>
+		<rust suffix="regs" decoder="ssa_register_list"/>
+	</kind>
+	<kind name="ssa_register_stack_list" list="ssa_register_stack">
+		<cpp suffix="SSARegisterStacks" type="LowLevelILSSARegisterStackList" reader="SSARegisterStackList" operand="SSARegisterStackList" adder="AddSSARegisterStackList"/>
+		<py reader="reg_stack_ssa_list"/>
+		<rust suffix="reg_stacks" decoder="ssa_register_stack_list"/>
+	</kind>
+	<kind name="ssa_flag_list" list="ssa_flag">
+		<cpp suffix="SSAFlags" type="LowLevelILSSAFlagList" reader="SSAFlagList" operand="SSAFlagList" adder="AddSSAFlagList"/>
+		<py reader="flag_ssa_list"/>
+		<rust suffix="flags" decoder="ssa_flag_list"/>
+	</kind>
+	<kind name="ssa_register_or_flag_list" list="ssa_register_or_flag">
+		<cpp suffix="SSARegisterOrFlagList" type="LowLevelILSSARegisterOrFlagList" reader="SSARegisterOrFlagList" operand="SSARegisterOrFlagList" adder="AddSSARegisterOrFlagList" writer="SSARegisterOrFlagList"/>
+		<py reader="reg_or_flag_ssa_list"/>
+		<rust decoder="ssa_register_or_flag_list"/>
+	</kind>
+	<kind name="ssa_variable_list" list="ssa_variable">
+		<cpp suffix="SSAVariables"/>
+	</kind>
+</kinds>

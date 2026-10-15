@@ -1,0 +1,1874 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<il xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="il.xsd" level="llil" slots="4" flags="true">
+	<shape name="binary">
+		<operand name="left">
+			<integer width="size"/>
+			<description>The left operand</description>
+		</operand>
+		<operand name="right">
+			<integer width="size"/>
+			<description>The right operand</description>
+		</operand>
+		<result>
+			<integer width="size"/>
+		</result>
+		<cpp base="TwoOperandInstruction"/>
+		<py base="BinaryBase" decodes="left right">
+			<param operand="left" name="a"/>
+			<param operand="right" name="b"/>
+		</py>
+		<rust marker="BinaryOp"/>
+	</shape>
+
+	<shape name="comparison">
+		<operand name="left">
+			<integer width="size"/>
+			<description>The left operand</description>
+		</operand>
+		<operand name="right">
+			<integer width="size"/>
+			<description>The right operand</description>
+		</operand>
+		<result>
+			<boolean/>
+		</result>
+		<cpp base="TwoOperandInstruction"/>
+		<py base="ComparisonBase" trait="comparison" decodes="left right">
+			<param operand="left" name="a"/>
+			<param operand="right" name="b"/>
+		</py>
+		<rust marker="Condition"/>
+	</shape>
+
+	<shape name="unary">
+		<operand name="src">
+			<integer width="size"/>
+			<description>The operand</description>
+		</operand>
+		<result>
+			<integer width="size"/>
+		</result>
+		<cpp base="OneOperandInstruction"/>
+		<py base="UnaryBase" decodes="src">
+			<param operand="src" name="value"/>
+		</py>
+		<rust marker="UnaryOp"/>
+	</shape>
+
+	<shape name="carry">
+		<operand name="left">
+			<integer width="size"/>
+			<description>The left operand</description>
+		</operand>
+		<operand name="right">
+			<integer width="size"/>
+			<description>The right operand</description>
+		</operand>
+		<operand name="carry">
+			<boolean/>
+			<description>The carry in</description>
+		</operand>
+		<result>
+			<integer width="size"/>
+		</result>
+		<cpp base="TwoOperandWithCarryInstruction"/>
+		<py base="CarryBase" decodes="left right carry">
+			<param operand="left" name="a"/>
+			<param operand="right" name="b"/>
+		</py>
+		<rust marker="BinaryOpCarry"/>
+	</shape>
+
+	<shape name="shift">
+		<operand name="left">
+			<integer width="size"/>
+			<description>The left operand</description>
+		</operand>
+		<operand name="right">
+			<integer width="any"/>
+			<description>The right operand</description>
+		</operand>
+		<result>
+			<integer width="size"/>
+		</result>
+		<cpp base="TwoOperandInstruction"/>
+		<py base="BinaryBase" decodes="left right">
+			<param operand="left" name="a"/>
+			<param operand="right" name="b"/>
+		</py>
+		<rust marker="BinaryOp">
+			<lift operand="right" width="size"/>
+		</rust>
+	</shape>
+
+	<shape name="rotate_carry">
+		<operand name="left">
+			<integer width="size"/>
+			<description>The left operand</description>
+		</operand>
+		<operand name="right">
+			<integer width="any"/>
+			<description>The right operand</description>
+		</operand>
+		<operand name="carry">
+			<boolean/>
+			<description>The carry in</description>
+		</operand>
+		<result>
+			<integer width="size"/>
+		</result>
+		<cpp base="TwoOperandWithCarryInstruction"/>
+		<py base="CarryBase" decodes="left right carry">
+			<param operand="left" name="a"/>
+			<param operand="right" name="b"/>
+		</py>
+		<rust marker="BinaryOpCarry">
+			<lift operand="right" width="size"/>
+		</rust>
+	</shape>
+
+	<shape name="double_precision_division">
+		<operand name="left">
+			<integer width="twice-size"/>
+			<description>The left operand</description>
+		</operand>
+		<operand name="right">
+			<integer width="size"/>
+			<description>The right operand</description>
+		</operand>
+		<result>
+			<integer width="size"/>
+		</result>
+		<cpp base="TwoOperandInstruction"/>
+		<py base="BinaryBase" decodes="left right">
+			<param operand="left" name="a"/>
+			<param operand="right" name="b"/>
+		</py>
+		<rust marker="BinaryOp"/>
+	</shape>
+
+	<shape name="float_binary">
+		<operand name="left">
+			<float width="size"/>
+			<description>The left operand</description>
+		</operand>
+		<operand name="right">
+			<float width="size"/>
+			<description>The right operand</description>
+		</operand>
+		<result>
+			<float width="size"/>
+		</result>
+		<cpp base="TwoOperandInstruction"/>
+		<py base="BinaryBase" decodes="left right">
+			<param operand="left" name="a"/>
+			<param operand="right" name="b"/>
+		</py>
+		<rust marker="BinaryOp"/>
+	</shape>
+
+	<shape name="float_comparison">
+		<operand name="left">
+			<float width="size"/>
+			<description>The left operand</description>
+		</operand>
+		<operand name="right">
+			<float width="size"/>
+			<description>The right operand</description>
+		</operand>
+		<result>
+			<boolean/>
+		</result>
+		<cpp base="TwoOperandInstruction"/>
+		<py base="ComparisonBase" trait="comparison" decodes="left right">
+			<param operand="left" name="a"/>
+			<param operand="right" name="b"/>
+		</py>
+		<rust marker="Condition"/>
+	</shape>
+
+	<shape name="float_unary">
+		<operand name="src">
+			<float width="size"/>
+			<description>The operand</description>
+		</operand>
+		<result>
+			<float width="size"/>
+		</result>
+		<cpp base="OneOperandInstruction"/>
+		<py base="UnaryBase" decodes="src">
+			<param operand="src" name="value"/>
+		</py>
+		<rust marker="UnaryOp"/>
+	</shape>
+
+	<shape name="constant">
+		<operand name="constant" kind="immediate">
+			<description>The value</description>
+		</operand>
+		<result>
+			<integer width="size"/>
+		</result>
+		<cpp base="ConstantInstruction"/>
+		<py base="ConstantBase" trait="constant" decodes="constant">
+			<param operand="constant" name="value"/>
+		</py>
+	</shape>
+
+	<rust-marker name="BinaryOp" as="as_binary_op">
+		<rename operand="left" suffix="false"/>
+		<rename operand="right" suffix="false"/>
+	</rust-marker>
+	<rust-marker name="BinaryOpCarry" as="as_binary_op_carry">
+		<rename operand="left" suffix="false"/>
+		<rename operand="right" suffix="false"/>
+		<rename operand="carry" suffix="false"/>
+	</rust-marker>
+	<rust-marker name="Call" handwritten="true">
+		<rename operand="dest" to="target"/>
+	</rust-marker>
+	<rust-marker name="CallSsa">
+		<rename operand="dest" to="target"/>
+		<rename operand="output_expr" suffix="false"/>
+	</rust-marker>
+	<rust-marker name="Condition" as="as_cmp_op">
+		<rename operand="left" suffix="false"/>
+		<rename operand="right" suffix="false"/>
+	</rust-marker>
+	<rust-marker name="Const">
+		<rename operand="constant" to="value"/>
+		<accessor name="value"/>
+	</rust-marker>
+	<rust-marker name="Extern">
+		<accessor name="value"/>
+	</rust-marker>
+	<rust-marker name="Flag" handwritten="true"/>
+	<rust-marker name="FlagBit" handwritten="true"/>
+	<rust-marker name="FloatConst">
+		<accessor name="float_value"/>
+	</rust-marker>
+	<rust-marker name="Intrinsic" handwritten="true">
+		<rename operand="output" to="outputs"/>
+		<rename operand="param" to="inputs"/>
+	</rust-marker>
+	<rust-marker name="NoArgs" handwritten="true"/>
+	<rust-marker name="RegPartialSsa">
+		<accessor name="source_reg"/>
+	</rust-marker>
+	<rust-marker name="SetRegPartialSsa">
+		<accessor name="dest_reg"/>
+	</rust-marker>
+	<rust-marker name="UnaryOp" as="as_unary_op">
+		<rename operand="src" to="operand"/>
+	</rust-marker>
+
+	<op name="NOP" placement="statement" sized="false">
+		<description>Does nothing.</description>
+		<form>nop</form>
+		<rust marker="NoArgs"/>
+	</op>
+
+	<op name="SET_REG" builder="set_register" placement="statement" flags="true" ssa-form="SET_REG_SSA">
+		<description>Sets register <ref name="dest"/> to <ref name="src"/>.</description>
+		<form><ref name="dest"/> = <ref name="src"/> <flags/></form>
+		<operand name="dest" kind="register" written="true">
+			<description>The register to set</description>
+		</operand>
+		<operand name="src">
+			<bits width="size"/>
+			<description>The value to set it to</description>
+		</operand>
+		<py builder="set_reg" traits="set_reg">
+			<param operand="dest" name="reg"/>
+			<param operand="src" name="value"/>
+		</py>
+	</op>
+
+	<op name="SET_REG_SPLIT" builder="set_register_split" placement="statement" flags="true" ssa-form="SET_REG_SPLIT_SSA">
+		<description>Sets the register pair <ref name="hi"/>:<ref name="lo"/> to <ref name="src"/>,
+			a value twice the size of each register.</description>
+		<size>The size of each register in bytes</size>
+		<form><ref name="hi"/>:<ref name="lo"/> = <ref name="src"/> <flags/></form>
+		<operand name="hi" kind="register" written="true">
+			<description>The register that receives the high half</description>
+		</operand>
+		<operand name="lo" kind="register" written="true">
+			<description>The register that receives the low half</description>
+		</operand>
+		<operand name="src">
+			<bits width="twice-size"/>
+			<description>The value to set the pair to</description>
+		</operand>
+		<py builder="set_reg_split" traits="set_reg">
+			<param operand="src" name="value"/>
+		</py>
+		<rust>
+			<rename operand="hi" to="dest_reg_high"/>
+			<rename operand="lo" to="dest_reg_low"/>
+		</rust>
+	</op>
+
+	<op name="SET_FLAG" placement="statement" sized="false" ssa-form="SET_FLAG_SSA">
+		<description>Sets flag <ref name="dest"/> to <ref name="src"/>.</description>
+		<form><ref name="dest"/> = <ref name="src"/></form>
+		<operand name="dest" kind="flag" written="true">
+			<description>The flag to set</description>
+		</operand>
+		<operand name="src">
+			<boolean/>
+			<description>The value to set it to</description>
+		</operand>
+		<py>
+			<param operand="dest" name="flag"/>
+			<param operand="src" name="value"/>
+		</py>
+	</op>
+
+	<op name="SET_REG_STACK_REL" builder="set_register_stack_top_relative" placement="statement" flags="true" ssa-form="SET_REG_STACK_REL_SSA">
+		<description>Sets the register stack entry at position <ref name="dest"/> from the top of
+			<ref name="dest_stack"/> to <ref name="src"/>.</description>
+		<form><ref name="dest_stack"/>[<ref name="dest"/>] = <ref name="src"/> <flags/></form>
+		<operand name="dest_stack" kind="register_stack" written="true">
+			<description>The register stack</description>
+		</operand>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The position of the entry, relative to the top of the stack</description>
+		</operand>
+		<operand name="src">
+			<bits width="size"/>
+			<description>The value to set the entry to</description>
+		</operand>
+		<py builder="set_reg_stack_top_relative" traits="register_stack">
+			<rename operand="dest_stack" to="stack"/>
+			<param operand="dest_stack" name="reg_stack"/>
+			<param operand="dest" name="entry"/>
+			<param operand="src" name="value"/>
+		</py>
+	</op>
+
+	<op name="REG_STACK_PUSH" builder="register_stack_push" placement="statement" flags="true" ssa-form="expanded">
+		<description>Pushes <ref name="src"/> onto the top of register stack <ref name="dest_stack"/>.</description>
+		<form><ref name="dest_stack"/>.push<flags/>(<ref name="src"/>)</form>
+		<operand name="dest_stack" kind="register_stack" written="true">
+			<description>The register stack</description>
+		</operand>
+		<operand name="src">
+			<bits width="size"/>
+			<description>The value to push</description>
+		</operand>
+		<py builder="reg_stack_push" traits="register_stack">
+			<rename operand="dest_stack" to="stack"/>
+			<param operand="dest_stack" name="reg_stack"/>
+			<param operand="src" name="value"/>
+		</py>
+	</op>
+
+	<op name="ASSERT" placement="statement">
+		<description>Asserts that register <ref name="src"/> holds one of the values
+			<ref name="constraint"/> allows. Core inserts it where a user has set possible values for
+			<ref name="src"/>.</description>
+		<size>The size of the register in bytes</size>
+		<form>ASSERT(<ref name="src"/>, <ref name="constraint"/>)</form>
+		<operand name="src" kind="register">
+			<description>The register to constrain</description>
+		</operand>
+		<operand name="constraint" kind="possible_value_set">
+			<description>The values the register may hold</description>
+		</operand>
+		<py builder="assert_expr"/>
+	</op>
+
+	<op name="FORCE_VER" placement="statement">
+		<description>Gives register <ref name="dest"/> a new SSA version, as though it were assigned
+			its own value. MLIL can then use this as a new variable definition site.</description>
+		<size>The size of the register in bytes</size>
+		<form>FORCE_VER(<ref name="dest"/>)</form>
+		<operand name="dest" kind="register" written="true">
+			<description>The register to give a new version</description>
+		</operand>
+		<rust variant="ForceVersion"/>
+	</op>
+
+	<op name="LOAD" shape="unary" flags="true" ssa-form="LOAD_SSA">
+		<description>Reads <ref name="size"/> bytes from memory at <ref name="src"/>.</description>
+		<form>[<ref name="src"/>]<size/> <flags/></form>
+		<operand name="src">
+			<integer width="any"/>
+			<description>The address to read from</description>
+		</operand>
+		<result>
+			<bits width="size"/>
+		</result>
+		<py traits="load">
+			<param operand="src" name="addr"/>
+		</py>
+		<rust marker="Load"/>
+	</op>
+
+	<op name="STORE" placement="statement" flags="true" ssa-form="STORE_SSA">
+		<description>Writes the <ref name="size"/> bytes of <ref name="src"/> to memory at
+			<ref name="dest"/>.</description>
+		<form>[<ref name="dest"/>]<size/> = <ref name="src"/> <flags/></form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The address to write to</description>
+		</operand>
+		<operand name="src">
+			<bits width="size"/>
+			<description>The value to write</description>
+		</operand>
+		<py traits="store">
+			<param operand="dest" name="addr"/>
+			<param operand="src" name="value"/>
+		</py>
+	</op>
+
+	<op name="PUSH" shape="unary" placement="statement" flags="true" ssa-form="expanded">
+		<description>Writes <ref name="src"/> to the stack, adjusting the stack pointer by
+			<ref name="size"/>.</description>
+		<form>push<size/><flags/>(<ref name="src"/>)</form>
+		<operand name="src">
+			<bits width="size"/>
+			<description>The value to push</description>
+		</operand>
+		<py traits="stack_operation">
+			<param operand="src" name="value"/>
+		</py>
+	</op>
+
+	<op name="POP" flags="true" ssa-form="expanded">
+		<description>Reads <ref name="size"/> bytes from the stack, adjusting the stack pointer by
+			<ref name="size"/>.</description>
+		<form>pop<size/><flags/></form>
+		<result>
+			<bits width="size"/>
+		</result>
+		<py traits="stack_operation"/>
+	</op>
+
+	<op name="REG" builder="register" ssa-form="REG_SSA">
+		<description>Reads register <ref name="src"/>.</description>
+		<form><ref name="src"/></form>
+		<operand name="src" kind="register">
+			<description>The register to read</description>
+		</operand>
+		<result>
+			<bits width="size"/>
+		</result>
+		<py builder="reg">
+			<param operand="src" name="reg"/>
+		</py>
+	</op>
+
+	<op name="REG_SPLIT" builder="register_split" ssa-form="REG_SPLIT_SSA">
+		<description>Reads the register pair <ref name="hi"/>:<ref name="lo"/> as one value, twice
+			the size of each register.</description>
+		<size>The size of each register in bytes</size>
+		<form><ref name="hi"/>:<ref name="lo"/></form>
+		<operand name="hi" kind="register">
+			<description>The register holding the high half</description>
+		</operand>
+		<operand name="lo" kind="register">
+			<description>The register holding the low half</description>
+		</operand>
+		<result>
+			<bits width="twice-size"/>
+		</result>
+		<py builder="reg_split"/>
+	</op>
+
+	<op name="REG_STACK_REL" builder="register_stack_top_relative" ssa-form="REG_STACK_REL_SSA">
+		<description>Reads the register stack entry at position <ref name="src"/> from the top of
+			<ref name="src_stack"/>.</description>
+		<form><ref name="src_stack"/>[<ref name="src"/>]</form>
+		<operand name="src_stack" kind="register_stack">
+			<description>The register stack</description>
+		</operand>
+		<operand name="src">
+			<integer width="any"/>
+			<description>The position of the entry, relative to the top of the stack</description>
+		</operand>
+		<result>
+			<bits width="size"/>
+		</result>
+		<py builder="reg_stack_top_relative" traits="register_stack">
+			<rename operand="src_stack" to="stack"/>
+			<param operand="src_stack" name="reg_stack"/>
+			<param operand="src" name="entry"/>
+		</py>
+	</op>
+
+	<op name="REG_STACK_POP" builder="register_stack_pop" flags="true" ssa-form="expanded">
+		<description>Reads the top entry of register stack <ref name="src_stack"/> and removes it
+			from the stack.</description>
+		<form><ref name="src_stack"/>.pop<flags/></form>
+		<operand name="src_stack" kind="register_stack">
+			<description>The register stack</description>
+		</operand>
+		<result>
+			<bits width="size"/>
+		</result>
+		<py builder="reg_stack_pop" traits="register_stack">
+			<rename operand="src_stack" to="stack"/>
+			<param operand="src_stack" name="reg_stack"/>
+		</py>
+	</op>
+
+	<op name="REG_STACK_FREE_REG" builder="register_stack_free_reg" placement="statement" sized="false" ssa-form="REG_STACK_FREE_REL_SSA REG_STACK_FREE_ABS_SSA">
+		<description>Frees register <ref name="dest"/> in its register stack, without changing which
+			register is at the top of the stack.</description>
+		<form>__free_slot(<ref name="dest"/>)</form>
+		<operand name="dest" kind="register">
+			<description>The register to free</description>
+		</operand>
+		<py builder="reg_stack_free_reg" traits="register_stack">
+			<param operand="dest" name="reg"/>
+		</py>
+	</op>
+
+	<op name="REG_STACK_FREE_REL" builder="register_stack_free_top_relative" placement="statement" sized="false" ssa-form="REG_STACK_FREE_REL_SSA">
+		<description>Frees the register stack entry at position <ref name="dest"/> from the top of
+			<ref name="dest_stack"/>.</description>
+		<form>__free_slot(<ref name="dest_stack"/>[<ref name="dest"/>])</form>
+		<operand name="dest_stack" kind="register_stack">
+			<description>The register stack</description>
+		</operand>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The position of the entry, relative to the top of the stack</description>
+		</operand>
+		<py builder="reg_stack_free_top_relative" traits="register_stack">
+			<rename operand="dest_stack" to="stack"/>
+			<param operand="dest_stack" name="reg_stack"/>
+			<param operand="dest" name="entry"/>
+		</py>
+	</op>
+
+	<op name="CONST" shape="constant">
+		<description>An integer constant.</description>
+		<form><ref name="constant"/></form>
+	</op>
+
+	<op name="CONST_PTR" builder="const_pointer" shape="constant">
+		<description>A constant pointer to address <ref name="constant"/>.</description>
+		<form><ref name="constant"/></form>
+		<rust marker="Const"/>
+	</op>
+
+	<op name="EXTERN_PTR" builder="extern_pointer" shape="constant">
+		<description>A constant pointer <ref name="offset"/> bytes from the relocated external
+			address <ref name="constant"/>.</description>
+		<form>(<ref name="constant"/> + <ref name="offset"/>)</form>
+		<operand name="constant" kind="immediate">
+			<description>The external address</description>
+		</operand>
+		<operand name="offset" kind="immediate">
+			<description>The offset from the external address, in bytes</description>
+		</operand>
+		<cpp>
+			<type operand="constant" is="size_t"/>
+			<type operand="offset" is="size_t"/>
+		</cpp>
+		<py>
+			<param operand="constant" name="value"/>
+		</py>
+		<rust marker="Extern">
+			<rename operand="constant" to="value"/>
+		</rust>
+	</op>
+
+	<op name="FLOAT_CONST" shape="constant">
+		<operand name="constant" kind="immediate_float">
+			<description>The bits of the constant's representation, read as an integer</description>
+		</operand>
+		<result>
+			<float width="size"/>
+		</result>
+		<builder name="float_const_raw">
+			<description>A floating point constant. <ref name="constant"/> holds the bits of its
+				representation as an integer. The single and double precision builders take a
+				floating point value and convert it themselves.</description>
+			<form><ref name="constant"/></form>
+		</builder>
+		<builder name="float_const_single" size="4" handwritten="true"/>
+		<builder name="float_const_double" size="8" handwritten="true"/>
+		<py traits="floating_point"/>
+		<rust>
+			<rename operand="constant" to="raw_value"/>
+		</rust>
+	</op>
+
+	<op name="FLAG" sized="false" ssa-form="FLAG_SSA">
+		<description>Reads flag <ref name="src"/>.</description>
+		<form><ref name="src"/></form>
+		<operand name="src" kind="flag">
+			<description>The flag to read</description>
+		</operand>
+		<result>
+			<boolean/>
+		</result>
+		<py>
+			<param operand="src" name="flag"/>
+		</py>
+	</op>
+
+	<op name="FLAG_BIT" ssa-form="FLAG_BIT_SSA">
+		<description>An integer holding the value of flag <ref name="src"/> at bit
+			<ref name="bit"/>, with every other bit clear.</description>
+		<form>flagbit<size/>(<ref name="src"/>, <ref name="bit"/>)</form>
+		<operand name="src" kind="flag">
+			<description>The flag to read</description>
+		</operand>
+		<operand name="bit" kind="index">
+			<description>The index of the bit that holds the flag's value</description>
+		</operand>
+		<result>
+			<integer width="size"/>
+		</result>
+		<py>
+			<param operand="src" name="flag"/>
+		</py>
+	</op>
+
+	<op name="ADD" flags="true" shape="binary">
+		<description>Adds <ref name="left"/> and <ref name="right"/>. Without flags, renders as
+			<code><ref name="left"/> + <ref name="right"/></code>.</description>
+		<form>add<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="ADC" builder="add_carry" shape="carry" flags="true">
+		<description>Adds <ref name="left"/>, <ref name="right"/> and the carry <ref name="carry"/>.</description>
+		<form>adc<size/><flags/>(<ref name="left"/>, <ref name="right"/>, <ref name="carry"/>)</form>
+	</op>
+
+	<op name="SUB" shape="binary" flags="true">
+		<description>Subtracts <ref name="right"/> from <ref name="left"/>. Without flags, renders as
+			<code><ref name="left"/> - <ref name="right"/></code>.</description>
+		<form>sub<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="SBB" builder="sub_borrow" shape="carry" flags="true">
+		<description>Subtracts <ref name="right"/> and the borrow <ref name="carry"/> from
+			<ref name="left"/>.</description>
+		<form>sbb<size/><flags/>(<ref name="left"/>, <ref name="right"/>, <ref name="carry"/>)</form>
+	</op>
+
+	<op name="AND" shape="binary" flags="true">
+		<description>The bitwise and of <ref name="left"/> and <ref name="right"/>. Without flags,
+			renders as <code><ref name="left"/> &amp; <ref name="right"/></code>, or as
+			<code><ref name="left"/> &amp;&amp; <ref name="right"/></code> when <ref name="size"/> is
+			0.</description>
+		<form>and<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py builder="and_expr" traits="arithmetic"/>
+	</op>
+
+	<op name="OR" shape="binary" flags="true">
+		<description>The bitwise or of <ref name="left"/> and <ref name="right"/>. Without flags,
+			renders as <code><ref name="left"/> | <ref name="right"/></code>, or as
+			<code><ref name="left"/> || <ref name="right"/></code> when <ref name="size"/> is
+			0.</description>
+		<form>or<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py builder="or_expr" traits="arithmetic"/>
+	</op>
+
+	<op name="XOR" shape="binary" flags="true">
+		<description>The bitwise exclusive or of <ref name="left"/> and <ref name="right"/>. Without
+			flags, renders as <code><ref name="left"/> ^ <ref name="right"/></code>.</description>
+		<form>xor<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py builder="xor_expr" traits="arithmetic"/>
+	</op>
+
+	<op name="LSL" builder="shift_left" shape="shift" flags="true">
+		<description>Shifts <ref name="left"/> left by <ref name="right"/> bits. Without flags,
+			renders as <code><ref name="left"/> &lt;&lt; <ref name="right"/></code>.</description>
+		<form>lsl<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="LSR" builder="logical_shift_right" shape="shift" flags="true">
+		<description>Shifts <ref name="left"/> logically right by <ref name="right"/> bits. Without
+			flags, renders as <code><ref name="left"/> u&gt;&gt; <ref name="right"/></code>.</description>
+		<form>lsr<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="ASR" builder="arith_shift_right" shape="shift" flags="true">
+		<description>Shifts <ref name="left"/> arithmetically right by <ref name="right"/> bits.
+			Without flags, renders as <code><ref name="left"/> s&gt;&gt; <ref name="right"/></code>.</description>
+		<form>asr<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="ROL" builder="rotate_left" shape="shift" flags="true">
+		<description>Rotates <ref name="left"/> left by <ref name="right"/> bits.</description>
+		<form>rol<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="RLC" builder="rotate_left_carry" shape="rotate_carry" flags="true">
+		<description>Rotates <ref name="left"/> left by <ref name="right"/> bits through the carry
+			<ref name="carry"/>.</description>
+		<form>rlc<size/><flags/>(<ref name="left"/>, <ref name="right"/>, <ref name="carry"/>)</form>
+	</op>
+
+	<op name="ROR" builder="rotate_right" shape="shift" flags="true">
+		<description>Rotates <ref name="left"/> right by <ref name="right"/> bits.</description>
+		<form>ror<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="RRC" builder="rotate_right_carry" shape="rotate_carry" flags="true">
+		<description>Rotates <ref name="left"/> right by <ref name="right"/> bits through the carry
+			<ref name="carry"/>.</description>
+		<form>rrc<size/><flags/>(<ref name="left"/>, <ref name="right"/>, <ref name="carry"/>)</form>
+	</op>
+
+	<op name="MUL" builder="mult" shape="binary" flags="true">
+		<description>Multiplies <ref name="left"/> by <ref name="right"/>. The operands and the result
+			are all <ref name="size"/> bytes, so the upper half of the product is discarded. Without
+			flags, renders as <code><ref name="left"/> * <ref name="right"/></code>.</description>
+		<form>mul<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="MULU_DP" builder="mult_double_prec_unsigned" shape="binary" flags="true">
+		<description>Multiplies <ref name="left"/> by <ref name="right"/> as unsigned integers. The
+			operands are <ref name="size"/> bytes and the result is <code>2 * <ref name="size"/></code>
+			bytes. The expression's size, which it renders with, is still <ref name="size"/>.</description>
+		<form>mulu.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<result>
+			<integer width="twice-size"/>
+		</result>
+		<py traits="double_precision"/>
+	</op>
+
+	<op name="MULS_DP" builder="mult_double_prec_signed" shape="binary" flags="true">
+		<description>Multiplies <ref name="left"/> by <ref name="right"/> as signed integers. The
+			operands are <ref name="size"/> bytes and the result is <code>2 * <ref name="size"/></code>
+			bytes. The expression's size, which it renders with, is still <ref name="size"/>.</description>
+		<form>muls.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<result>
+			<integer width="twice-size"/>
+		</result>
+		<py traits="double_precision signed"/>
+	</op>
+
+	<op name="DIVU" builder="div_unsigned" shape="binary" flags="true">
+		<description>Divides <ref name="left"/> by <ref name="right"/> as unsigned integers.</description>
+		<form>divu<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="DIVU_DP" builder="div_double_prec_unsigned" shape="double_precision_division" flags="true">
+		<description>Divides <ref name="left"/> by <ref name="right"/> as unsigned integers.
+			<ref name="left"/> is <code>2 * <ref name="size"/></code> bytes, and <ref name="right"/>
+			and the result are <ref name="size"/> bytes.</description>
+		<form>divu.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="double_precision"/>
+	</op>
+
+	<op name="DIVS" builder="div_signed" shape="binary" flags="true">
+		<description>Divides <ref name="left"/> by <ref name="right"/> as signed integers.</description>
+		<form>divs<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic signed"/>
+	</op>
+
+	<op name="DIVS_DP" builder="div_double_prec_signed" shape="double_precision_division" flags="true">
+		<description>Divides <ref name="left"/> by <ref name="right"/> as signed integers.
+			<ref name="left"/> is <code>2 * <ref name="size"/></code> bytes, and <ref name="right"/>
+			and the result are <ref name="size"/> bytes.</description>
+		<form>divs.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="double_precision signed"/>
+	</op>
+
+	<op name="MODU" builder="mod_unsigned" shape="binary" flags="true">
+		<description>The remainder of dividing <ref name="left"/> by <ref name="right"/> as unsigned
+			integers.</description>
+		<form>modu<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="MODU_DP" builder="mod_double_prec_unsigned" shape="double_precision_division" flags="true">
+		<description>The remainder of dividing <ref name="left"/> by <ref name="right"/> as unsigned
+			integers. <ref name="left"/> is <code>2 * <ref name="size"/></code> bytes, and
+			<ref name="right"/> and the result are <ref name="size"/> bytes.</description>
+		<form>modu.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="double_precision"/>
+	</op>
+
+	<op name="MODS" builder="mod_signed" shape="binary" flags="true">
+		<description>The remainder of dividing <ref name="left"/> by <ref name="right"/> as signed
+			integers.</description>
+		<form>mods<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="arithmetic signed"/>
+	</op>
+
+	<op name="MODS_DP" builder="mod_double_prec_signed" shape="double_precision_division" flags="true">
+		<description>The remainder of dividing <ref name="left"/> by <ref name="right"/> as signed
+			integers. <ref name="left"/> is <code>2 * <ref name="size"/></code> bytes, and
+			<ref name="right"/> and the result are <ref name="size"/> bytes.</description>
+		<form>mods.dp<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+		<py traits="double_precision signed"/>
+	</op>
+
+	<op name="NEG" shape="unary" flags="true">
+		<description>Negates <ref name="src"/> as a two's complement integer.</description>
+		<form>neg<size/><flags/>(<ref name="src"/>)</form>
+		<py builder="neg_expr" traits="arithmetic"/>
+	</op>
+
+	<op name="NOT" shape="unary" flags="true">
+		<description>Inverts the bits of <ref name="src"/>.</description>
+		<form>not<size/><flags/>(<ref name="src"/>)</form>
+		<py builder="not_expr" traits="arithmetic"/>
+	</op>
+
+	<op name="SX" builder="sign_extend" shape="unary" flags="true">
+		<description>Sign-extends <ref name="src"/> to <ref name="size"/> bytes.</description>
+		<form>sx<size/>(<ref name="src"/>)</form>
+		<operand name="src">
+			<integer width="below-size"/>
+		</operand>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="ZX" builder="zero_extend" shape="unary" flags="true">
+		<description>Zero-extends <ref name="src"/> to <ref name="size"/> bytes.</description>
+		<form>zx<size/>(<ref name="src"/>)</form>
+		<operand name="src">
+			<integer width="below-size"/>
+		</operand>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="LOW_PART" shape="unary" flags="true">
+		<description>Truncates <ref name="src"/> to its low <ref name="size"/> bytes.</description>
+		<form>(<ref name="src"/>)<size/></form>
+		<operand name="src">
+			<integer width="above-size"/>
+		</operand>
+		<py traits="arithmetic"/>
+	</op>
+
+	<op name="JUMP" placement="statement" sized="false">
+		<description>Jumps to <ref name="dest"/>.</description>
+		<form>jump(<ref name="dest"/>)</form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The address to jump to</description>
+		</operand>
+		<py traits="terminal"/>
+		<rust>
+			<rename operand="dest" to="target"/>
+		</rust>
+	</op>
+
+	<op name="JUMP_TO" placement="statement" sized="false">
+		<description>Jumps to the target in <ref name="targets"/> chosen by the value of <ref name="dest"/>.</description>
+		<form>jump(<ref name="dest"/> =&gt; <ref name="targets"/>)</form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The value that chooses the target</description>
+		</operand>
+		<operand name="targets" kind="label_map">
+			<description>The labels to jump to, keyed by the value of the destination that chooses each</description>
+		</operand>
+		<py traits="terminal"/>
+		<rust>
+			<rename operand="dest" to="target"/>
+			<rename operand="targets" to="target_list"/>
+		</rust>
+	</op>
+
+	<op name="CALL" placement="statement" sized="false">
+		<description>Calls <ref name="dest"/>. On architectures without a link register, this pushes
+			the address of the next instruction onto the stack, then jumps to
+			<ref name="dest"/>.</description>
+		<form>call(<ref name="dest"/>)</form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The address to call</description>
+		</operand>
+		<py traits="localcall"/>
+	</op>
+
+	<op name="CALL_STACK_ADJUST" placement="statement" sized="false">
+		<description>Calls <ref name="dest"/>, then once the callee returns, adds
+			<ref name="stack_adjustment"/> to the stack pointer and adjusts the top of each
+			register stack by its amount in <ref name="reg_stack_adjustments"/>.</description>
+		<form>call(<ref name="dest"/>), stack += <ref name="stack_adjustment"/></form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The address to call</description>
+		</operand>
+		<operand name="stack_adjustment" kind="immediate" signed="true">
+			<description>The amount to add to the stack pointer once the callee returns</description>
+		</operand>
+		<operand name="reg_stack_adjustments" kind="register_stack_adjustments">
+			<description>The amount to move the top of each register stack by once the callee returns</description>
+		</operand>
+		<builder>
+			<default operand="reg_stack_adjustments"/>
+		</builder>
+		<py traits="localcall">
+			<param operand="stack_adjustment" name="stack_adjust"/>
+		</py>
+		<rust variant="Call">
+			<rename operand="stack_adjustment" to="stack_adjust"/>
+		</rust>
+	</op>
+
+	<op name="TAILCALL" builder="tail_call" placement="statement" sized="false">
+		<description>Jumps to <ref name="dest"/> as a tail call.</description>
+		<form>&lt;return&gt; tailcall(<ref name="dest"/>)</form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The address to jump to</description>
+		</operand>
+		<py builder="tailcall" traits="tailcall"/>
+		<rust variant="TailCall" marker="Call"/>
+	</op>
+
+	<op name="RET" builder="return" placement="statement" sized="false">
+		<description>Returns from the function by jumping to <ref name="dest"/>.</description>
+		<form>&lt;return&gt; jump(<ref name="dest"/>)</form>
+		<operand name="dest">
+			<integer width="any"/>
+			<description>The address to return to</description>
+		</operand>
+		<py builder="ret" traits="return"/>
+		<rust>
+			<rename operand="dest" to="target"/>
+		</rust>
+	</op>
+
+	<op name="NORET" builder="no_return" placement="statement" sized="false">
+		<description>Marks a point that execution doesn't pass, such as after a call that doesn't
+			return.</description>
+		<form>noreturn</form>
+		<py builder="no_ret" traits="terminal"/>
+		<rust variant="NoRet" marker="NoArgs" lifter="no_ret"/>
+	</op>
+
+	<op name="IF" placement="statement" sized="false">
+		<operand name="condition">
+			<boolean/>
+		</operand>
+		<operand name="true" kind="target"/>
+		<operand name="false" kind="target"/>
+		<builder handwritten="true"/>
+		<py builder="if_expr" traits="control_flow">
+			<param operand="condition" name="operand"/>
+			<param operand="true" name="t"/>
+			<param operand="false" name="f"/>
+		</py>
+		<rust>
+			<rename operand="condition" suffix="false"/>
+		</rust>
+	</op>
+
+	<op name="GOTO" placement="statement" sized="false">
+		<operand name="dest" kind="target"/>
+		<builder handwritten="true"/>
+		<cpp>
+			<rename operand="dest" to="Target"/>
+		</cpp>
+		<py traits="terminal">
+			<param operand="dest" name="label"/>
+		</py>
+		<rust>
+			<rename operand="dest" to="target"/>
+		</rust>
+	</op>
+
+	<op name="FLAG_COND" builder="flag_condition" sized="false">
+		<doc>Valid only in Lifted IL</doc>
+		<description>Tests the flag condition <ref name="flag_condition"/>, using semantic flag class
+			<ref name="semantic_class"/> where given.</description>
+		<form><ref name="flag_condition"/></form>
+		<operand name="flag_condition" kind="flag_condition">
+			<description>The condition to test</description>
+		</operand>
+		<operand name="semantic_class" kind="semantic_flag_class">
+			<description>The semantic flag class</description>
+		</operand>
+		<result>
+			<boolean/>
+		</result>
+		<builder>
+			<default operand="semantic_class"/>
+		</builder>
+		<py>
+			<rename operand="flag_condition" to="condition"/>
+			<param operand="flag_condition" name="cond"/>
+			<param operand="semantic_class" name="sem_class"/>
+		</py>
+	</op>
+
+	<op name="FLAG_GROUP" sized="false">
+		<doc>Valid only in Lifted IL</doc>
+		<description>Tests semantic flag group <ref name="semantic_group"/>.</description>
+		<form><ref name="semantic_group"/></form>
+		<operand name="semantic_group" kind="semantic_flag_group">
+			<description>The semantic flag group</description>
+		</operand>
+		<result>
+			<boolean/>
+		</result>
+		<py>
+			<param operand="semantic_group" name="sem_group"/>
+		</py>
+		<rust>
+			<rename operand="semantic_group" to="flag_group"/>
+		</rust>
+	</op>
+
+	<op name="CMP_E" builder="compare_equal" shape="comparison">
+		<description>Tests whether <ref name="left"/> equals <ref name="right"/>.</description>
+		<form><ref name="left"/> == <ref name="right"/></form>
+	</op>
+
+	<op name="CMP_NE" builder="compare_not_equal" shape="comparison">
+		<description>Tests whether <ref name="left"/> doesn't equal <ref name="right"/>.</description>
+		<form><ref name="left"/> != <ref name="right"/></form>
+	</op>
+
+	<op name="CMP_SLT" builder="compare_signed_less_than" shape="comparison">
+		<description>Tests whether <ref name="left"/> is less than <ref name="right"/> as signed
+			integers.</description>
+		<form><ref name="left"/> s&lt; <ref name="right"/></form>
+		<py traits="signed"/>
+	</op>
+
+	<op name="CMP_ULT" builder="compare_unsigned_less_than" shape="comparison">
+		<description>Tests whether <ref name="left"/> is less than <ref name="right"/> as unsigned
+			integers.</description>
+		<form><ref name="left"/> u&lt; <ref name="right"/></form>
+	</op>
+
+	<op name="CMP_SLE" builder="compare_signed_less_equal" shape="comparison">
+		<description>Tests whether <ref name="left"/> is less than or equal to <ref name="right"/>
+			as signed integers.</description>
+		<form><ref name="left"/> s&lt;= <ref name="right"/></form>
+		<py traits="signed"/>
+	</op>
+
+	<op name="CMP_ULE" builder="compare_unsigned_less_equal" shape="comparison">
+		<description>Tests whether <ref name="left"/> is less than or equal to <ref name="right"/>
+			as unsigned integers.</description>
+		<form><ref name="left"/> u&lt;= <ref name="right"/></form>
+	</op>
+
+	<op name="CMP_SGE" builder="compare_signed_greater_equal" shape="comparison">
+		<description>Tests whether <ref name="left"/> is greater than or equal to <ref name="right"/>
+			as signed integers.</description>
+		<form><ref name="left"/> s&gt;= <ref name="right"/></form>
+		<py traits="signed"/>
+	</op>
+
+	<op name="CMP_UGE" builder="compare_unsigned_greater_equal" shape="comparison">
+		<description>Tests whether <ref name="left"/> is greater than or equal to <ref name="right"/>
+			as unsigned integers.</description>
+		<form><ref name="left"/> u&gt;= <ref name="right"/></form>
+	</op>
+
+	<op name="CMP_SGT" builder="compare_signed_greater_than" shape="comparison">
+		<description>Tests whether <ref name="left"/> is greater than <ref name="right"/> as signed
+			integers.</description>
+		<form><ref name="left"/> s&gt; <ref name="right"/></form>
+		<py traits="signed"/>
+	</op>
+
+	<op name="CMP_UGT" builder="compare_unsigned_greater_than" shape="comparison">
+		<description>Tests whether <ref name="left"/> is greater than <ref name="right"/> as unsigned
+			integers.</description>
+		<form><ref name="left"/> u&gt; <ref name="right"/></form>
+	</op>
+
+	<op name="TEST_BIT" shape="comparison">
+		<description>Tests whether bit <ref name="right"/> of <ref name="left"/> is set.</description>
+		<form>test_bit(<ref name="left"/>, <ref name="right"/>)</form>
+		<operand name="right">
+			<integer width="any"/>
+			<description>The index of the bit to test</description>
+		</operand>
+		<rust marker="BinaryOp">
+			<lift operand="right" width="size"/>
+		</rust>
+	</op>
+
+	<op name="BOOL_TO_INT" shape="unary">
+		<description>Converts <ref name="src"/> to the integer 1 if it's true, or 0 if it's false.</description>
+		<form><ref name="src"/> ? 1 : 0</form>
+		<operand name="src">
+			<boolean/>
+		</operand>
+		<py>
+			<param operand="src" name="a"/>
+		</py>
+		<rust>
+			<lift operand="src" width="any"/>
+		</rust>
+	</op>
+
+	<op name="ADD_OVERFLOW" shape="binary">
+		<result>
+			<boolean/>
+		</result>
+		<py no-builder="true" traits="arithmetic"/>
+	</op>
+
+	<op name="SYSCALL" builder="system_call" placement="statement" sized="false">
+		<description>Makes a system call.</description>
+		<form>syscall</form>
+		<py traits="syscall"/>
+	</op>
+
+	<op name="BP" builder="breakpoint" placement="statement" sized="false">
+		<description>A processor breakpoint.</description>
+		<form>breakpoint</form>
+		<py traits="terminal"/>
+		<rust marker="NoArgs"/>
+	</op>
+
+	<op name="TRAP" placement="statement" sized="false">
+		<description>A processor trap, or interrupt, with number <ref name="vector"/>.</description>
+		<form>trap(<ref name="vector"/>)</form>
+		<operand name="vector" kind="immediate" signed="true">
+			<description>The trap number</description>
+		</operand>
+		<py traits="terminal">
+			<param operand="vector" name="value"/>
+		</py>
+	</op>
+
+	<op name="INTRINSIC" placement="statement" sized="false" flags="true">
+		<description>Calls intrinsic <ref name="intrinsic"/> with <ref name="params"/>. An intrinsic is
+			an architecture operation lifted as a call to a built-in function that doesn't exist in the
+			binary. Its results go to <ref name="output"/>.</description>
+		<form><ref name="output"/> = <ref name="intrinsic"/><flags/>(<ref name="params"/>)</form>
+		<operand name="output" kind="register_or_flag_list" written="true">
+			<description>The registers and flags the intrinsic writes</description>
+		</operand>
+		<operand name="intrinsic" kind="intrinsic">
+			<description>The architecture intrinsic to call</description>
+		</operand>
+		<operand name="param" part="CALL_PARAM"/>
+		<py traits="intrinsic">
+			<param operand="output" name="outputs"/>
+		</py>
+	</op>
+
+	<op name="UNDEF" builder="undefined" placement="either" sized="false">
+		<description>An undefined value or operation. As a statement, it ends the basic block and
+			leaves its outgoing edges undetermined.</description>
+		<form>undefined</form>
+		<result>
+			<bits width="any"/>
+		</result>
+		<py traits="terminal"/>
+		<rust marker="NoArgs" lifter="undefined"/>
+	</op>
+
+	<op name="UNIMPL" placement="either" sized="false">
+		<operand name="unknown" kind="bool" listed="false"/>
+		<result>
+			<bits width="any"/>
+		</result>
+		<builder name="unimplemented">
+			<description>An unimplemented instruction or value.</description>
+			<form>unimplemented</form>
+			<fixed operand="unknown" value="0"/>
+		</builder>
+		<builder name="unknown">
+			<description>A value that can't be known at analysis time, such as a flag that depends on
+				runtime state. It doesn't produce the warning an unimplemented expression
+				does.</description>
+			<form>unknown</form>
+			<fixed operand="unknown" value="1"/>
+		</builder>
+		<rust marker="NoArgs">
+			<lifter builder="unimplemented" name="unimplemented"/>
+			<lifter builder="unknown" name="unknown"/>
+		</rust>
+	</op>
+
+	<op name="UNIMPL_MEM" shape="unary">
+		<operand name="src">
+			<integer width="any"/>
+			<description>The address referenced</description>
+		</operand>
+		<operand name="unknown" kind="bool" listed="false"/>
+		<result>
+			<bits width="size"/>
+		</result>
+		<builder name="unimplemented_memory_ref">
+			<description>A reference to <ref name="size"/> bytes of memory at <ref name="src"/>, for
+				an unimplemented operation.</description>
+			<form>unimplemented([<ref name="src"/>]<size/>)</form>
+			<fixed operand="unknown" value="0"/>
+		</builder>
+		<builder name="unknown_memory_ref">
+			<description>A reference to <ref name="size"/> bytes of memory at <ref name="src"/>,
+				whose value can't be known at analysis time. It doesn't produce the warning
+				an unimplemented expression does.</description>
+			<form>unknown([<ref name="src"/>]<size/>)</form>
+			<fixed operand="unknown" value="1"/>
+		</builder>
+		<py traits="memory">
+			<param operand="src" name="addr"/>
+		</py>
+		<rust marker="UnimplMem">
+			<rename operand="src" to="mem_expr"/>
+			<lifter builder="unimplemented_memory_ref" name="unimplemented_mem"/>
+			<lifter builder="unknown_memory_ref" name="unknown_mem"/>
+		</rust>
+	</op>
+
+	<group title="Floating point">
+		<op name="FADD" builder="float_add" shape="float_binary" flags="true">
+			<description>Adds <ref name="left"/> and <ref name="right"/> as floating point values.
+				Without flags, renders as <code><ref name="left"/> f+ <ref name="right"/></code>.</description>
+			<form>fadd<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+			<py traits="arithmetic floating_point"/>
+		</op>
+
+		<op name="FSUB" builder="float_sub" shape="float_binary" flags="true">
+			<description>Subtracts <ref name="right"/> from <ref name="left"/> as floating point
+				values. Without flags, renders as <code><ref name="left"/> f- <ref name="right"/></code>.</description>
+			<form>fsub<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+			<py traits="arithmetic floating_point"/>
+		</op>
+
+		<op name="FMUL" builder="float_mult" shape="float_binary" flags="true">
+			<description>Multiplies <ref name="left"/> by <ref name="right"/> as floating point
+				values. Without flags, renders as <code><ref name="left"/> f* <ref name="right"/></code>.</description>
+			<form>fmul<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+			<py traits="arithmetic floating_point"/>
+		</op>
+
+		<op name="FDIV" builder="float_div" shape="float_binary" flags="true">
+			<description>Divides <ref name="left"/> by <ref name="right"/> as floating point values.
+				Without flags, renders as <code><ref name="left"/> f/ <ref name="right"/></code>.</description>
+			<form>fdiv<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+			<py traits="arithmetic floating_point"/>
+		</op>
+
+		<op name="FSQRT" builder="float_sqrt" shape="float_unary" flags="true">
+			<description>The square root of the floating point value <ref name="src"/>.</description>
+			<form>sqrt<flags/>(<ref name="src"/>)</form>
+			<py traits="floating_point arithmetic"/>
+		</op>
+
+		<op name="FNEG" builder="float_neg" shape="float_unary" flags="true">
+			<description>Negates the floating point value <ref name="src"/>.</description>
+			<form>fneg<flags/>(<ref name="src"/>)</form>
+			<py traits="floating_point arithmetic"/>
+		</op>
+
+		<op name="FABS" builder="float_abs" shape="float_unary" flags="true">
+			<description>The absolute value of the floating point value <ref name="src"/>.</description>
+			<form>fabs<flags/>(<ref name="src"/>)</form>
+			<py traits="floating_point arithmetic"/>
+		</op>
+
+		<op name="FLOAT_TO_INT" shape="unary" flags="true">
+			<description>Converts the floating point value <ref name="src"/> to an integer.</description>
+			<form>int<size/><flags/>(<ref name="src"/>)</form>
+			<operand name="src">
+				<float width="any"/>
+			</operand>
+			<py traits="floating_point arithmetic"/>
+		</op>
+
+		<op name="INT_TO_FLOAT" shape="float_unary" flags="true">
+			<description>Converts the integer <ref name="src"/> to a floating point value.</description>
+			<form>float<size/><flags/>(<ref name="src"/>)</form>
+			<operand name="src">
+				<integer width="any"/>
+			</operand>
+			<py traits="floating_point arithmetic"/>
+		</op>
+
+		<op name="FLOAT_CONV" builder="float_convert" shape="float_unary" flags="true">
+			<description>Converts the floating point value <ref name="src"/> to a floating point value of
+				<ref name="size"/> bytes.</description>
+			<form>fconvert<size/><flags/>(<ref name="src"/>)</form>
+			<operand name="src">
+				<float width="any"/>
+			</operand>
+			<py traits="floating_point arithmetic"/>
+		</op>
+
+		<op name="ROUND_TO_INT" shape="float_unary" flags="true">
+			<description>Rounds the floating point value <ref name="src"/> to the nearest integral
+				value.</description>
+			<form>roundint<size/><flags/>(<ref name="src"/>)</form>
+			<py traits="floating_point arithmetic"/>
+		</op>
+
+		<op name="FLOOR" shape="float_unary" flags="true">
+			<description>Rounds the floating point value <ref name="src"/> to an integral value, towards
+				negative infinity.</description>
+			<form>floor<size/><flags/>(<ref name="src"/>)</form>
+			<py traits="floating_point arithmetic"/>
+		</op>
+
+		<op name="CEIL" shape="float_unary" flags="true">
+			<description>Rounds the floating point value <ref name="src"/> to an integral value, towards
+				positive infinity.</description>
+			<form>ceil<size/><flags/>(<ref name="src"/>)</form>
+			<py traits="floating_point arithmetic"/>
+		</op>
+
+		<op name="FTRUNC" builder="float_trunc" shape="float_unary" flags="true">
+			<description>Rounds the floating point value <ref name="src"/> to an integral value, towards
+				zero.</description>
+			<form>ftrunc<size/><flags/>(<ref name="src"/>)</form>
+			<py traits="floating_point arithmetic"/>
+		</op>
+
+		<op name="FCMP_E" builder="float_compare_equal" shape="float_comparison">
+			<description>Tests whether <ref name="left"/> equals <ref name="right"/> as floating point
+				values.</description>
+			<form><ref name="left"/> f== <ref name="right"/></form>
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FCMP_NE" builder="float_compare_not_equal" shape="float_comparison">
+			<description>Tests whether <ref name="left"/> doesn't equal <ref name="right"/> as floating
+				point values.</description>
+			<form><ref name="left"/> f!= <ref name="right"/></form>
+			<py traits="floating_point"/>
+			<rust variant="FcmpNE"/>
+		</op>
+
+		<op name="FCMP_LT" builder="float_compare_less_than" shape="float_comparison">
+			<description>Tests whether <ref name="left"/> is less than <ref name="right"/> as floating
+				point values.</description>
+			<form><ref name="left"/> f&lt; <ref name="right"/></form>
+			<py traits="floating_point"/>
+			<rust variant="FcmpLT"/>
+		</op>
+
+		<op name="FCMP_LE" builder="float_compare_less_equal" shape="float_comparison">
+			<description>Tests whether <ref name="left"/> is less than or equal to <ref name="right"/>
+				as floating point values.</description>
+			<form><ref name="left"/> f&lt;= <ref name="right"/></form>
+			<py traits="floating_point"/>
+			<rust variant="FcmpLE"/>
+		</op>
+
+		<op name="FCMP_GE" builder="float_compare_greater_equal" shape="float_comparison">
+			<description>Tests whether <ref name="left"/> is greater than or equal to <ref name="right"/>
+				as floating point values.</description>
+			<form><ref name="left"/> f&gt;= <ref name="right"/></form>
+			<py traits="floating_point"/>
+			<rust variant="FcmpGE"/>
+		</op>
+
+		<op name="FCMP_GT" builder="float_compare_greater_than" shape="float_comparison">
+			<description>Tests whether <ref name="left"/> is greater than <ref name="right"/> as floating
+				point values.</description>
+			<form><ref name="left"/> f&gt; <ref name="right"/></form>
+			<py traits="floating_point"/>
+			<rust variant="FcmpGT"/>
+		</op>
+
+		<op name="FCMP_O" builder="float_compare_ordered" shape="float_comparison">
+			<description>Tests whether <ref name="left"/> and <ref name="right"/> are ordered,
+				which they are when neither is NaN.</description>
+			<form>is_ordered<size/>(<ref name="left"/>, <ref name="right"/>)</form>
+			<py traits="floating_point"/>
+		</op>
+
+		<op name="FCMP_UO" builder="float_compare_unordered" shape="float_comparison">
+			<description>Tests whether <ref name="left"/> and <ref name="right"/> are unordered,
+				which they are when either is NaN.</description>
+			<form>is_unordered<size/>(<ref name="left"/>, <ref name="right"/>)</form>
+			<py traits="floating_point"/>
+			<rust variant="FcmpUO"/>
+		</op>
+	</group>
+
+	<group title="The following instructions are only used in SSA form" ssa-only="true">
+		<op name="SET_REG_SSA" builder="set_register_ssa" placement="statement">
+			<operand name="dest" kind="ssa_register" written="true"/>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<py traits="set_reg ssa"/>
+		</op>
+
+		<op name="SET_REG_SSA_PARTIAL" builder="set_register_ssa_partial" placement="statement">
+			<operand name="dest" kind="ssa_register" written="true"/>
+			<operand name="partial" kind="register"/>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<py traits="set_reg ssa">
+				<rename operand="dest" to="full_reg"/>
+				<rename operand="partial" to="dest"/>
+			</py>
+			<rust variant="SetRegPartialSsa"/>
+		</op>
+
+		<op name="SET_REG_SPLIT_SSA" builder="set_register_split_ssa" placement="statement">
+			<operand name="hi" part="REG_SPLIT_DEST_SSA">
+				<accessor name="hi_reg" operand="dest"/>
+			</operand>
+			<operand name="lo" part="REG_SPLIT_DEST_SSA">
+				<accessor name="lo_reg" operand="dest"/>
+			</operand>
+			<operand name="src">
+				<bits width="twice-size"/>
+			</operand>
+			<builder>
+				<part-size part="hi" size="size"/>
+				<part-size part="lo" size="size"/>
+			</builder>
+			<py operands="hi lo src" traits="set_reg ssa"/>
+			<rust>
+				<rename operand="hi" to="dest_expr_high"/>
+				<rename operand="lo" to="dest_expr_low"/>
+			</rust>
+		</op>
+
+		<op name="SET_REG_STACK_REL_SSA" builder="set_register_stack_top_relative_ssa" placement="statement">
+			<operand name="stack" part="REG_STACK_DEST_SSA"/>
+			<operand name="dest">
+				<integer width="any"/>
+			</operand>
+			<operand name="top" part="REG_SSA">
+				<accessor name="top_reg" operand="src"/>
+			</operand>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<builder>
+				<part-size part="stack" size="size"/>
+			</builder>
+			<py operands="stack dest top src" traits="register_stack ssa"/>
+		</op>
+
+		<op name="SET_REG_STACK_ABS_SSA" builder="set_register_stack_absolute_ssa" placement="statement">
+			<operand name="stack" part="REG_STACK_DEST_SSA"/>
+			<operand name="dest" kind="register" written="true"/>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<builder>
+				<part-size part="stack" size="size"/>
+			</builder>
+			<py operands="stack dest src" traits="register_stack ssa"/>
+		</op>
+
+		<op name="REG_SPLIT_DEST_SSA" placement="part">
+			<operand name="dest" kind="ssa_register" written="true"/>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="REG_STACK_DEST_SSA" placement="part" exposes="dest_stack src_stack">
+			<operand name="stack" kind="register_stack"/>
+			<operand name="dest_version" kind="ssa_version" written="true"/>
+			<operand name="src_version" kind="ssa_version"/>
+			<pair name="dest_stack" kind="ssa_register_stack" of="stack" version="dest_version"/>
+			<pair name="src_stack" kind="ssa_register_stack" of="stack" version="src_version"/>
+			<py traits="register_stack ssa">
+				<rename operand="dest_stack" to="dest"/>
+				<rename operand="src_stack" to="src"/>
+			</py>
+		</op>
+
+		<op name="REG_SSA" builder="register_ssa">
+			<operand name="src" kind="ssa_register"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="REG_SSA_PARTIAL" builder="register_ssa_partial">
+			<operand name="src" kind="ssa_register"/>
+			<operand name="partial" kind="register"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="ssa">
+				<rename operand="src" to="full_reg"/>
+				<rename operand="partial" to="src"/>
+			</py>
+			<rust variant="RegPartialSsa"/>
+		</op>
+
+		<op name="REG_SPLIT_SSA" builder="register_split_ssa">
+			<operand name="hi" kind="ssa_register"/>
+			<operand name="lo" kind="ssa_register"/>
+			<result>
+				<bits width="twice-size"/>
+			</result>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="REG_STACK_REL_SSA" builder="register_stack_top_relative_ssa">
+			<operand name="src_stack" kind="ssa_register_stack"/>
+			<operand name="src">
+				<integer width="any"/>
+			</operand>
+			<operand name="top" part="REG_SSA">
+				<accessor name="top_reg" operand="src"/>
+			</operand>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py operands="src_stack src top" traits="register_stack ssa">
+				<rename operand="src_stack" to="stack"/>
+			</py>
+		</op>
+
+		<op name="REG_STACK_ABS_SSA" builder="register_stack_absolute_ssa">
+			<operand name="src_stack" kind="ssa_register_stack"/>
+			<operand name="src" kind="register"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="register_stack ssa">
+				<rename operand="src_stack" to="stack"/>
+			</py>
+		</op>
+
+		<op name="REG_STACK_FREE_REL_SSA" builder="register_stack_free_top_relative_ssa" placement="statement" sized="false">
+			<operand name="stack" part="REG_STACK_DEST_SSA"/>
+			<operand name="dest">
+				<integer width="any"/>
+			</operand>
+			<operand name="top" part="REG_SSA">
+				<accessor name="top_reg" operand="src"/>
+			</operand>
+			<builder>
+				<part-size part="stack" size="0"/>
+			</builder>
+			<py operands="stack dest top" traits="register_stack ssa"/>
+		</op>
+
+		<op name="REG_STACK_FREE_ABS_SSA" builder="register_stack_free_absolute_ssa" placement="statement" sized="false">
+			<operand name="stack" part="REG_STACK_DEST_SSA"/>
+			<operand name="dest" kind="register"/>
+			<py operands="stack dest" traits="register_stack ssa"/>
+		</op>
+
+		<op name="SET_FLAG_SSA" placement="statement" sized="false">
+			<operand name="dest" kind="ssa_flag" written="true"/>
+			<operand name="src">
+				<boolean/>
+			</operand>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="ASSERT_SSA" placement="statement">
+			<operand name="src" kind="ssa_register"/>
+			<operand name="constraint" kind="possible_value_set"/>
+			<py traits="ssa"/>
+		</op>
+
+		<op name="FORCE_VER_SSA" placement="statement">
+			<operand name="dest" kind="ssa_register" written="true"/>
+			<operand name="src" kind="ssa_register"/>
+			<py traits="ssa"/>
+			<rust variant="ForceVersionSsa"/>
+		</op>
+
+		<op name="FLAG_SSA" sized="false">
+			<operand name="src" kind="ssa_flag"/>
+			<result>
+				<boolean/>
+			</result>
+			<py traits="ssa"/>
+			<rust variant="Flag"/>
+		</op>
+
+		<op name="FLAG_BIT_SSA">
+			<operand name="src" kind="ssa_flag"/>
+			<operand name="bit" kind="index"/>
+			<result>
+				<integer width="size"/>
+			</result>
+			<py traits="ssa"/>
+			<rust variant="FlagBit"/>
+		</op>
+
+		<op name="CALL_SSA" placement="statement" sized="false">
+			<operand name="output_expr" part="CALL_OUTPUT_SSA"/>
+			<operand name="dest">
+				<integer width="any"/>
+			</operand>
+			<operand name="stack" part="CALL_STACK_SSA"/>
+			<operand name="param" part="CALL_PARAM"/>
+			<builder params="output dest params stack_reg dest_memory src_memory"/>
+			<py operands="output dest stack params" traits="localcall ssa">
+				<rename operand="src_memory" to="stack_memory"/>
+			</py>
+		</op>
+
+		<op name="SYSCALL_SSA" builder="system_call_ssa" placement="statement" sized="false">
+			<operand name="output_expr" part="CALL_OUTPUT_SSA"/>
+			<operand name="stack" part="CALL_STACK_SSA"/>
+			<operand name="param" part="CALL_PARAM"/>
+			<builder params="output params stack_reg dest_memory src_memory"/>
+			<py operands="output stack_reg src_memory params" traits="syscall ssa">
+				<rename operand="src_memory" to="stack_memory"/>
+			</py>
+			<rust>
+				<rename operand="output_expr" suffix="false"/>
+			</rust>
+		</op>
+
+		<op name="TAILCALL_SSA" builder="tail_call_ssa" placement="statement" sized="false">
+			<operand name="output_expr" part="CALL_OUTPUT_SSA"/>
+			<operand name="dest">
+				<integer width="any"/>
+			</operand>
+			<operand name="stack" part="CALL_STACK_SSA"/>
+			<operand name="param" part="CALL_PARAM"/>
+			<builder params="output dest params stack_reg dest_memory src_memory"/>
+			<py operands="output dest stack params" traits="tailcall ssa">
+				<rename operand="src_memory" to="stack_memory"/>
+			</py>
+			<rust variant="TailCallSsa" marker="CallSsa"/>
+		</op>
+
+		<op name="CALL_PARAM" placement="part" exposes="params">
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+				<description>The parameters</description>
+			</operand>
+			<py mixin="_ParamListFormatting" traits="ssa">
+				<rename operand="params" to="src"/>
+			</py>
+			<rust variant="CallParamSsa"/>
+		</op>
+
+		<op name="CALL_STACK_SSA" placement="part" exposes="stack_reg src_memory">
+			<operand name="stack_reg" kind="ssa_register"/>
+			<operand name="src_memory" kind="memory_version"/>
+			<cpp>
+				<parent-usage operand="src_memory" name="StackMemoryVersion"/>
+			</cpp>
+			<py mixin="_CallStackSsaFormatting" traits="ssa">
+				<rename operand="stack_reg" to="src"/>
+			</py>
+			<rust>
+				<rename operand="stack_reg" to="source_reg"/>
+			</rust>
+		</op>
+
+		<op name="CALL_OUTPUT_SSA" placement="part" exposes="output dest_memory">
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="output" kind="ssa_register_list" written="true"/>
+			<cpp>
+				<parent-usage operand="dest_memory" name="OutputMemoryVersion"/>
+			</cpp>
+			<py mixin="_CallOutputSsaFormatting" traits="ssa">
+				<rename operand="output" to="dest"/>
+			</py>
+			<rust>
+				<rename operand="output" to="dest_regs"/>
+			</rust>
+		</op>
+
+		<op name="SEPARATE_PARAM_LIST_SSA" placement="part" sized="false" part-of="CALL_PARAM">
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<builder/>
+			<py mixin="_ParamListFormatting" traits="ssa">
+				<rename operand="params" to="src"/>
+			</py>
+		</op>
+
+		<op name="SHARED_PARAM_SLOT_SSA" placement="part" sized="false" part-of="SEPARATE_PARAM_LIST_SSA">
+			<operand name="params" kind="expr_list">
+				<bits width="any"/>
+			</operand>
+			<builder/>
+			<py mixin="_ParamListFormatting" traits="ssa">
+				<rename operand="params" to="src"/>
+			</py>
+		</op>
+
+		<op name="MEMORY_INTRINSIC_OUTPUT_SSA" placement="part" exposes="output dest_memory">
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="output" kind="ssa_register_or_flag_list" written="true"/>
+			<cpp>
+				<parent-usage operand="dest_memory" name="OutputMemoryVersion"/>
+				<parent-usage operand="output" name="OutputMemoryIntrinsic"/>
+			</cpp>
+			<py mixin="_MemoryIntrinsicOutputSsaFormatting" traits="ssa"/>
+		</op>
+
+		<op name="LOAD_SSA">
+			<operand name="src">
+				<integer width="any"/>
+			</operand>
+			<operand name="src_memory" kind="memory_version"/>
+			<result>
+				<bits width="size"/>
+			</result>
+			<py traits="load ssa"/>
+		</op>
+
+		<op name="STORE_SSA" placement="statement">
+			<operand name="dest">
+				<integer width="any"/>
+			</operand>
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="src_memory" kind="memory_version"/>
+			<operand name="src">
+				<bits width="size"/>
+			</operand>
+			<builder params="dest src dest_memory src_memory"/>
+			<py traits="store ssa"/>
+		</op>
+
+		<op name="INTRINSIC_SSA" placement="statement" sized="false">
+			<operand name="output" kind="ssa_register_or_flag_list" written="true"/>
+			<operand name="intrinsic" kind="intrinsic"/>
+			<operand name="param" part="CALL_PARAM"/>
+			<py traits="ssa"/>
+			<rust variant="Intrinsic"/>
+		</op>
+
+		<op name="MEMORY_INTRINSIC_SSA" placement="statement" sized="false">
+			<operand name="output_expr" part="MEMORY_INTRINSIC_OUTPUT_SSA"/>
+			<operand name="intrinsic" kind="intrinsic"/>
+			<operand name="param" part="CALL_PARAM"/>
+			<operand name="src_memory" kind="memory_version"/>
+			<builder params="output intrinsic params dest_memory src_memory"/>
+			<py operands="output intrinsic params dest_memory src_memory" traits="ssa"/>
+			<rust>
+				<rename operand="output_expr" suffix="false"/>
+			</rust>
+		</op>
+
+		<op name="REG_PHI" builder="register_phi" placement="statement" sized="false">
+			<operand name="dest" kind="ssa_register" written="true"/>
+			<operand name="src" kind="ssa_register_list"/>
+			<py traits="phi"/>
+		</op>
+
+		<op name="REG_STACK_PHI" builder="register_stack_phi" placement="statement" sized="false">
+			<operand name="dest" kind="ssa_register_stack" written="true"/>
+			<operand name="src" kind="ssa_register_stack_list"/>
+			<py traits="register_stack phi"/>
+		</op>
+
+		<op name="FLAG_PHI" placement="statement" sized="false">
+			<operand name="dest" kind="ssa_flag" written="true"/>
+			<operand name="src" kind="ssa_flag_list"/>
+			<py traits="phi"/>
+		</op>
+
+		<op name="MEM_PHI" builder="memory_phi" placement="statement" sized="false">
+			<operand name="dest_memory" kind="memory_version" written="true"/>
+			<operand name="src_memory" kind="memory_version_list"/>
+			<py traits="memory phi"/>
+			<rust>
+				<type operand="dest_memory" is="usize"/>
+			</rust>
+		</op>
+	</group>
+
+	<group title="Bit manipulation">
+		<op name="BSWAP" builder="byte_swap" shape="unary" flags="true">
+			<doc>Reverse byte order of the whole value</doc>
+			<description>Reverses the byte order of <ref name="src"/>.</description>
+			<form>bswap<size/><flags/>(<ref name="src"/>)</form>
+			<py traits="arithmetic"/>
+		</op>
+
+		<op name="POPCNT" builder="population_count" shape="unary" flags="true">
+			<doc>Population count (number of set bits)</doc>
+			<description>Counts the set bits in <ref name="src"/>.</description>
+			<form>popcnt<size/><flags/>(<ref name="src"/>)</form>
+			<py traits="arithmetic"/>
+		</op>
+
+		<op name="CLZ" builder="count_leading_zeros" shape="unary" flags="true">
+			<doc>Count leading zero bits, where clz(0) == 8 * size</doc>
+			<description>Counts the leading zero bits in <ref name="src"/>. The result is
+				<code>8 * <ref name="size"/></code> when <ref name="src"/> is zero.</description>
+			<form>clz<size/><flags/>(<ref name="src"/>)</form>
+			<py traits="arithmetic"/>
+		</op>
+
+		<op name="CTZ" builder="count_trailing_zeros" shape="unary" flags="true">
+			<doc>Count trailing zero bits, where ctz(0) == 8 * size</doc>
+			<description>Counts the trailing zero bits in <ref name="src"/>. The result is
+				<code>8 * <ref name="size"/></code> when <ref name="src"/> is zero.</description>
+			<form>ctz<size/><flags/>(<ref name="src"/>)</form>
+			<py traits="arithmetic"/>
+		</op>
+
+		<op name="RBIT" builder="reverse_bits" shape="unary" flags="true">
+			<doc>Reverse bit order of the whole value</doc>
+			<description>Reverses the bit order of <ref name="src"/>.</description>
+			<form>rbit<size/><flags/>(<ref name="src"/>)</form>
+			<py traits="arithmetic"/>
+		</op>
+
+		<op name="CLS" builder="count_leading_signs" shape="unary" flags="true">
+			<doc>Count the bits below the sign bit that match it</doc>
+			<description>Counts the bits below the sign bit of <ref name="src"/> that match it.</description>
+			<form>cls<size/><flags/>(<ref name="src"/>)</form>
+			<py traits="arithmetic"/>
+		</op>
+	</group>
+
+	<group title="Integer minimum, maximum and absolute value">
+		<op name="MINS" builder="min_signed" shape="binary" flags="true">
+			<doc>Signed minimum of left and right</doc>
+			<description>The smaller of <ref name="left"/> and <ref name="right"/> as signed
+				integers.</description>
+			<form>mins<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+			<py traits="arithmetic signed"/>
+			<rust variant="MinSigned" lifter="min_signed"/>
+		</op>
+
+		<op name="MAXS" builder="max_signed" shape="binary" flags="true">
+			<doc>Signed maximum of left and right</doc>
+			<description>The larger of <ref name="left"/> and <ref name="right"/> as signed
+				integers.</description>
+			<form>maxs<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+			<py traits="arithmetic signed"/>
+			<rust variant="MaxSigned" lifter="max_signed"/>
+		</op>
+
+		<op name="MINU" builder="min_unsigned" shape="binary" flags="true">
+			<doc>Unsigned minimum of left and right</doc>
+			<description>The smaller of <ref name="left"/> and <ref name="right"/> as unsigned
+				integers.</description>
+			<form>minu<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+			<py traits="arithmetic"/>
+			<rust variant="MinUnsigned" lifter="min_unsigned"/>
+		</op>
+
+		<op name="MAXU" builder="max_unsigned" shape="binary" flags="true">
+			<doc>Unsigned maximum of left and right</doc>
+			<description>The larger of <ref name="left"/> and <ref name="right"/> as unsigned
+				integers.</description>
+			<form>maxu<size/><flags/>(<ref name="left"/>, <ref name="right"/>)</form>
+			<py traits="arithmetic"/>
+			<rust variant="MaxUnsigned" lifter="max_unsigned"/>
+		</op>
+
+		<op name="ABS" builder="absolute_value" shape="unary" flags="true">
+			<doc>Signed absolute value of src, where abs(INT_MIN) == INT_MIN</doc>
+			<description>The absolute value of <ref name="src"/> as a signed integer.</description>
+			<form>abs<size/><flags/>(<ref name="src"/>)</form>
+			<py traits="arithmetic"/>
+		</op>
+	</group>
+</il>

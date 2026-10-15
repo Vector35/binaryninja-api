@@ -1,0 +1,7 @@
+# ruff style for generated IL code.
+line-length = 120
+target-version = "py312"
+
+[format]
+indent-style = "tab"
+quote-style = "preserve"

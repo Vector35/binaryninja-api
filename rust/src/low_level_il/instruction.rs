@@ -224,6 +224,7 @@ where
     }
 }
 
+// BEGIN GENERATED llil-instruction-kind: from api/il, do not edit
 #[derive(Debug)]
 pub enum LowLevelILInstructionKind<'func, M, F>
 where
@@ -232,46 +233,47 @@ where
 {
     Nop(Operation<'func, M, F, operation::NoArgs>),
     SetReg(Operation<'func, M, F, operation::SetReg>),
-    SetRegSsa(Operation<'func, M, F, operation::SetRegSsa>),
-    SetRegPartialSsa(Operation<'func, M, F, operation::SetRegPartialSsa>),
     SetRegSplit(Operation<'func, M, F, operation::SetRegSplit>),
-    SetRegSplitSsa(Operation<'func, M, F, operation::SetRegSplitSsa>),
     SetFlag(Operation<'func, M, F, operation::SetFlag>),
-    SetFlagSsa(Operation<'func, M, F, operation::SetFlagSsa>),
-    Store(Operation<'func, M, F, operation::Store>),
-    StoreSsa(Operation<'func, M, F, operation::StoreSsa>),
-    // TODO needs a real op
-    Push(Operation<'func, M, F, operation::UnaryOp>),
-
+    SetRegStackRel(Operation<'func, M, F, operation::SetRegStackRel>),
     RegStackPush(Operation<'func, M, F, operation::RegStackPush>),
+    Assert(Operation<'func, M, F, operation::Assert>),
+    ForceVersion(Operation<'func, M, F, operation::ForceVersion>),
+    Store(Operation<'func, M, F, operation::Store>),
+    Push(Operation<'func, M, F, operation::UnaryOp>),
     RegStackFreeReg(Operation<'func, M, F, operation::RegStackFreeReg>),
-
+    RegStackFreeRel(Operation<'func, M, F, operation::RegStackFreeRel>),
     Jump(Operation<'func, M, F, operation::Jump>),
     JumpTo(Operation<'func, M, F, operation::JumpTo>),
-
     Call(Operation<'func, M, F, operation::Call>),
-    CallSsa(Operation<'func, M, F, operation::CallSsa>),
     TailCall(Operation<'func, M, F, operation::Call>),
-    TailCallSsa(Operation<'func, M, F, operation::CallSsa>),
-
     Ret(Operation<'func, M, F, operation::Ret>),
     NoRet(Operation<'func, M, F, operation::NoArgs>),
-
     If(Operation<'func, M, F, operation::If>),
     Goto(Operation<'func, M, F, operation::Goto>),
-
     Syscall(Operation<'func, M, F, operation::Syscall>),
-    SyscallSsa(Operation<'func, M, F, operation::SyscallSsa>),
-    Intrinsic(Operation<'func, M, F, operation::Intrinsic>),
     Bp(Operation<'func, M, F, operation::NoArgs>),
     Trap(Operation<'func, M, F, operation::Trap>),
+    Intrinsic(Operation<'func, M, F, operation::Intrinsic>),
     Undef(Operation<'func, M, F, operation::NoArgs>),
-    Assert(Operation<'func, M, F, operation::Assert>),
+    Unimpl(Operation<'func, M, F, operation::NoArgs>),
+    SetRegSsa(Operation<'func, M, F, operation::SetRegSsa>),
+    SetRegPartialSsa(Operation<'func, M, F, operation::SetRegPartialSsa>),
+    SetRegSplitSsa(Operation<'func, M, F, operation::SetRegSplitSsa>),
+    SetRegStackRelSsa(Operation<'func, M, F, operation::SetRegStackRelSsa>),
+    SetRegStackAbsSsa(Operation<'func, M, F, operation::SetRegStackAbsSsa>),
+    RegStackFreeRelSsa(Operation<'func, M, F, operation::RegStackFreeRelSsa>),
+    RegStackFreeAbsSsa(Operation<'func, M, F, operation::RegStackFreeAbsSsa>),
+    SetFlagSsa(Operation<'func, M, F, operation::SetFlagSsa>),
     AssertSsa(Operation<'func, M, F, operation::AssertSsa>),
-    ForceVersion(Operation<'func, M, F, operation::ForceVersion>),
     ForceVersionSsa(Operation<'func, M, F, operation::ForceVersionSsa>),
-
+    CallSsa(Operation<'func, M, F, operation::CallSsa>),
+    SyscallSsa(Operation<'func, M, F, operation::SyscallSsa>),
+    TailCallSsa(Operation<'func, M, F, operation::CallSsa>),
+    StoreSsa(Operation<'func, M, F, operation::StoreSsa>),
+    MemoryIntrinsicSsa(Operation<'func, M, F, operation::MemoryIntrinsicSsa>),
     RegPhi(Operation<'func, M, F, operation::RegPhi>),
+    RegStackPhi(Operation<'func, M, F, operation::RegStackPhi>),
     FlagPhi(Operation<'func, M, F, operation::FlagPhi>),
     MemPhi(Operation<'func, M, F, operation::MemPhi>),
 
@@ -296,101 +298,121 @@ where
             LLIL_SET_REG => {
                 LowLevelILInstructionKind::SetReg(Operation::new(function, op, expr_index))
             }
+            LLIL_SET_REG_SPLIT => {
+                LowLevelILInstructionKind::SetRegSplit(Operation::new(function, op, expr_index))
+            }
+            LLIL_SET_FLAG => {
+                LowLevelILInstructionKind::SetFlag(Operation::new(function, op, expr_index))
+            }
+            LLIL_SET_REG_STACK_REL => {
+                LowLevelILInstructionKind::SetRegStackRel(Operation::new(function, op, expr_index))
+            }
+            LLIL_REG_STACK_PUSH => {
+                LowLevelILInstructionKind::RegStackPush(Operation::new(function, op, expr_index))
+            }
+            LLIL_ASSERT => {
+                LowLevelILInstructionKind::Assert(Operation::new(function, op, expr_index))
+            }
+            LLIL_FORCE_VER => {
+                LowLevelILInstructionKind::ForceVersion(Operation::new(function, op, expr_index))
+            }
+            LLIL_STORE => {
+                LowLevelILInstructionKind::Store(Operation::new(function, op, expr_index))
+            }
+            LLIL_PUSH => LowLevelILInstructionKind::Push(Operation::new(function, op, expr_index)),
+            LLIL_REG_STACK_FREE_REG => {
+                LowLevelILInstructionKind::RegStackFreeReg(Operation::new(function, op, expr_index))
+            }
+            LLIL_REG_STACK_FREE_REL => {
+                LowLevelILInstructionKind::RegStackFreeRel(Operation::new(function, op, expr_index))
+            }
+            LLIL_JUMP => LowLevelILInstructionKind::Jump(Operation::new(function, op, expr_index)),
+            LLIL_JUMP_TO => {
+                LowLevelILInstructionKind::JumpTo(Operation::new(function, op, expr_index))
+            }
+            LLIL_CALL | LLIL_CALL_STACK_ADJUST => {
+                LowLevelILInstructionKind::Call(Operation::new(function, op, expr_index))
+            }
+            LLIL_TAILCALL => {
+                LowLevelILInstructionKind::TailCall(Operation::new(function, op, expr_index))
+            }
+            LLIL_RET => LowLevelILInstructionKind::Ret(Operation::new(function, op, expr_index)),
+            LLIL_NORET => {
+                LowLevelILInstructionKind::NoRet(Operation::new(function, op, expr_index))
+            }
+            LLIL_IF => LowLevelILInstructionKind::If(Operation::new(function, op, expr_index)),
+            LLIL_GOTO => LowLevelILInstructionKind::Goto(Operation::new(function, op, expr_index)),
+            LLIL_SYSCALL => {
+                LowLevelILInstructionKind::Syscall(Operation::new(function, op, expr_index))
+            }
+            LLIL_BP => LowLevelILInstructionKind::Bp(Operation::new(function, op, expr_index)),
+            LLIL_TRAP => LowLevelILInstructionKind::Trap(Operation::new(function, op, expr_index)),
+            LLIL_INTRINSIC | LLIL_INTRINSIC_SSA => {
+                LowLevelILInstructionKind::Intrinsic(Operation::new(function, op, expr_index))
+            }
+            LLIL_UNDEF => {
+                LowLevelILInstructionKind::Undef(Operation::new(function, op, expr_index))
+            }
+            LLIL_UNIMPL => {
+                LowLevelILInstructionKind::Unimpl(Operation::new(function, op, expr_index))
+            }
             LLIL_SET_REG_SSA => {
                 LowLevelILInstructionKind::SetRegSsa(Operation::new(function, op, expr_index))
             }
             LLIL_SET_REG_SSA_PARTIAL => LowLevelILInstructionKind::SetRegPartialSsa(
                 Operation::new(function, op, expr_index),
             ),
-            LLIL_SET_REG_SPLIT => {
-                LowLevelILInstructionKind::SetRegSplit(Operation::new(function, op, expr_index))
-            }
             LLIL_SET_REG_SPLIT_SSA => {
                 LowLevelILInstructionKind::SetRegSplitSsa(Operation::new(function, op, expr_index))
             }
-            LLIL_SET_FLAG => {
-                LowLevelILInstructionKind::SetFlag(Operation::new(function, op, expr_index))
-            }
+            LLIL_SET_REG_STACK_REL_SSA => LowLevelILInstructionKind::SetRegStackRelSsa(
+                Operation::new(function, op, expr_index),
+            ),
+            LLIL_SET_REG_STACK_ABS_SSA => LowLevelILInstructionKind::SetRegStackAbsSsa(
+                Operation::new(function, op, expr_index),
+            ),
+            LLIL_REG_STACK_FREE_REL_SSA => LowLevelILInstructionKind::RegStackFreeRelSsa(
+                Operation::new(function, op, expr_index),
+            ),
+            LLIL_REG_STACK_FREE_ABS_SSA => LowLevelILInstructionKind::RegStackFreeAbsSsa(
+                Operation::new(function, op, expr_index),
+            ),
             LLIL_SET_FLAG_SSA => {
                 LowLevelILInstructionKind::SetFlagSsa(Operation::new(function, op, expr_index))
-            }
-            LLIL_STORE => {
-                LowLevelILInstructionKind::Store(Operation::new(function, op, expr_index))
-            }
-            LLIL_STORE_SSA => {
-                LowLevelILInstructionKind::StoreSsa(Operation::new(function, op, expr_index))
-            }
-            LLIL_PUSH => LowLevelILInstructionKind::Push(Operation::new(function, op, expr_index)),
-
-            LLIL_REG_STACK_PUSH => {
-                LowLevelILInstructionKind::RegStackPush(Operation::new(function, op, expr_index))
-            }
-            LLIL_REG_STACK_FREE_REG => {
-                LowLevelILInstructionKind::RegStackFreeReg(Operation::new(function, op, expr_index))
-            }
-
-            LLIL_JUMP => LowLevelILInstructionKind::Jump(Operation::new(function, op, expr_index)),
-            LLIL_JUMP_TO => {
-                LowLevelILInstructionKind::JumpTo(Operation::new(function, op, expr_index))
-            }
-
-            LLIL_CALL | LLIL_CALL_STACK_ADJUST => {
-                LowLevelILInstructionKind::Call(Operation::new(function, op, expr_index))
-            }
-            LLIL_CALL_SSA => {
-                LowLevelILInstructionKind::CallSsa(Operation::new(function, op, expr_index))
-            }
-            LLIL_TAILCALL => {
-                LowLevelILInstructionKind::TailCall(Operation::new(function, op, expr_index))
-            }
-            LLIL_TAILCALL_SSA => {
-                LowLevelILInstructionKind::TailCallSsa(Operation::new(function, op, expr_index))
-            }
-
-            LLIL_RET => LowLevelILInstructionKind::Ret(Operation::new(function, op, expr_index)),
-            LLIL_NORET => {
-                LowLevelILInstructionKind::NoRet(Operation::new(function, op, expr_index))
-            }
-
-            LLIL_IF => LowLevelILInstructionKind::If(Operation::new(function, op, expr_index)),
-            LLIL_GOTO => LowLevelILInstructionKind::Goto(Operation::new(function, op, expr_index)),
-
-            LLIL_SYSCALL => {
-                LowLevelILInstructionKind::Syscall(Operation::new(function, op, expr_index))
-            }
-            LLIL_SYSCALL_SSA => {
-                LowLevelILInstructionKind::SyscallSsa(Operation::new(function, op, expr_index))
-            }
-            LLIL_INTRINSIC | LLIL_INTRINSIC_SSA => {
-                LowLevelILInstructionKind::Intrinsic(Operation::new(function, op, expr_index))
-            }
-            LLIL_BP => LowLevelILInstructionKind::Bp(Operation::new(function, op, expr_index)),
-            LLIL_TRAP => LowLevelILInstructionKind::Trap(Operation::new(function, op, expr_index)),
-            LLIL_UNDEF => {
-                LowLevelILInstructionKind::Undef(Operation::new(function, op, expr_index))
-            }
-            LLIL_ASSERT => {
-                LowLevelILInstructionKind::Assert(Operation::new(function, op, expr_index))
             }
             LLIL_ASSERT_SSA => {
                 LowLevelILInstructionKind::AssertSsa(Operation::new(function, op, expr_index))
             }
-            LLIL_FORCE_VER => {
-                LowLevelILInstructionKind::ForceVersion(Operation::new(function, op, expr_index))
-            }
             LLIL_FORCE_VER_SSA => {
                 LowLevelILInstructionKind::ForceVersionSsa(Operation::new(function, op, expr_index))
             }
+            LLIL_CALL_SSA => {
+                LowLevelILInstructionKind::CallSsa(Operation::new(function, op, expr_index))
+            }
+            LLIL_SYSCALL_SSA => {
+                LowLevelILInstructionKind::SyscallSsa(Operation::new(function, op, expr_index))
+            }
+            LLIL_TAILCALL_SSA => {
+                LowLevelILInstructionKind::TailCallSsa(Operation::new(function, op, expr_index))
+            }
+            LLIL_STORE_SSA => {
+                LowLevelILInstructionKind::StoreSsa(Operation::new(function, op, expr_index))
+            }
+            LLIL_MEMORY_INTRINSIC_SSA => LowLevelILInstructionKind::MemoryIntrinsicSsa(
+                Operation::new(function, op, expr_index),
+            ),
             LLIL_REG_PHI => {
                 LowLevelILInstructionKind::RegPhi(Operation::new(function, op, expr_index))
             }
-            LLIL_MEM_PHI => {
-                LowLevelILInstructionKind::MemPhi(Operation::new(function, op, expr_index))
+            LLIL_REG_STACK_PHI => {
+                LowLevelILInstructionKind::RegStackPhi(Operation::new(function, op, expr_index))
             }
             LLIL_FLAG_PHI => {
                 LowLevelILInstructionKind::FlagPhi(Operation::new(function, op, expr_index))
             }
-
+            LLIL_MEM_PHI => {
+                LowLevelILInstructionKind::MemPhi(Operation::new(function, op, expr_index))
+            }
             _ => LowLevelILInstructionKind::Value(LowLevelILExpression::new(function, expr_index)),
         }
     }
@@ -411,50 +433,76 @@ where
 
         match self {
             SetReg(ref op) => visit!(&op.source_expr()),
+            SetRegSplit(ref op) => visit!(&op.source_expr()),
+            SetFlag(ref op) => visit!(&op.source_expr()),
+            SetRegStackRel(ref op) => {
+                visit!(&op.dest_expr());
+                visit!(&op.source_expr());
+            }
+            RegStackPush(ref op) => visit!(&op.source_expr()),
+            Store(ref op) => {
+                visit!(&op.dest_expr());
+                visit!(&op.source_expr());
+            }
+            Push(ref op) => visit!(&op.operand()),
+            RegStackFreeRel(ref op) => visit!(&op.dest_expr()),
+            Jump(ref op) => visit!(&op.target()),
+            JumpTo(ref op) => visit!(&op.target()),
+            Call(ref op) | TailCall(ref op) => visit!(&op.target()),
+            Ret(ref op) => visit!(&op.target()),
+            If(ref op) => visit!(&op.condition()),
+            Intrinsic(ref op) => visit!(&op.inputs()),
             SetRegSsa(ref op) => visit!(&op.source_expr()),
             SetRegPartialSsa(ref op) => visit!(&op.source_expr()),
-            SetRegSplit(ref op) => visit!(&op.source_expr()),
             SetRegSplitSsa(ref op) => {
                 visit!(&op.dest_expr_high());
                 visit!(&op.dest_expr_low());
                 visit!(&op.source_expr());
             }
-            SetFlag(ref op) => visit!(&op.source_expr()),
-            SetFlagSsa(ref op) => visit!(&op.source_expr()),
-            Store(ref op) => {
-                visit!(&op.dest_expr());
-                visit!(&op.source_expr());
-            }
-            StoreSsa(ref op) => {
-                visit!(&op.dest_expr());
-                visit!(&op.source_expr());
-            }
-            Push(ref op) => visit!(&op.operand()),
-            RegStackPush(ref op) => visit!(&op.source_expr()),
-            Jump(ref op) => visit!(&op.target()),
-            JumpTo(ref op) => visit!(&op.target()),
-            SyscallSsa(ref op) => {
-                visit!(&op.output_expr());
+            SetRegStackRelSsa(ref op) => {
                 visit!(&op.stack_expr());
-                visit!(&op.param_expr());
+                visit!(&op.dest_expr());
+                visit!(&op.top_expr());
+                visit!(&op.source_expr());
             }
-            Call(ref op) | TailCall(ref op) => visit!(&op.target()),
+            SetRegStackAbsSsa(ref op) => {
+                visit!(&op.stack_expr());
+                visit!(&op.source_expr());
+            }
+            RegStackFreeRelSsa(ref op) => {
+                visit!(&op.stack_expr());
+                visit!(&op.dest_expr());
+                visit!(&op.top_expr());
+            }
+            RegStackFreeAbsSsa(ref op) => visit!(&op.stack_expr()),
+            SetFlagSsa(ref op) => visit!(&op.source_expr()),
             CallSsa(ref op) | TailCallSsa(ref op) => {
                 visit!(&op.output_expr());
                 visit!(&op.target());
                 visit!(&op.stack_expr());
                 visit!(&op.param_expr());
             }
-            Ret(ref op) => visit!(&op.target()),
-            If(ref op) => visit!(&op.condition()),
-            Intrinsic(ref op) => visit!(&op.inputs()),
+            SyscallSsa(ref op) => {
+                visit!(&op.output_expr());
+                visit!(&op.stack_expr());
+                visit!(&op.param_expr());
+            }
+            StoreSsa(ref op) => {
+                visit!(&op.dest_expr());
+                visit!(&op.source_expr());
+            }
+            MemoryIntrinsicSsa(ref op) => {
+                visit!(&op.output_expr());
+                visit!(&op.param_expr());
+            }
             Value(e) => visit!(e),
             // Do not have any sub expressions.
-            Nop(_) | RegStackFreeReg(_) | NoRet(_) | Goto(_) | Syscall(_) | Bp(_) | Trap(_)
-            | Undef(_) | Assert(_) | AssertSsa(_) | ForceVersion(_) | ForceVersionSsa(_)
-            | RegPhi(_) | FlagPhi(_) | MemPhi(_) => {}
+            Nop(_) | Assert(_) | ForceVersion(_) | RegStackFreeReg(_) | NoRet(_) | Goto(_)
+            | Syscall(_) | Bp(_) | Trap(_) | Undef(_) | Unimpl(_) | AssertSsa(_)
+            | ForceVersionSsa(_) | RegPhi(_) | RegStackPhi(_) | FlagPhi(_) | MemPhi(_) => {}
         }
 
         VisitorAction::Sibling
     }
 }
+// END GENERATED llil-instruction-kind

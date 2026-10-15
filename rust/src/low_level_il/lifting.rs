@@ -943,13 +943,15 @@ impl<'a> LiftableLowLevelILWithSize<'a> for LowLevelILExpression<'a, Mutable, No
     ) -> LowLevelILMutableExpression<'a, Self::Result> {
         #[cfg(debug_assertions)]
         {
-            use crate::low_level_il::ExpressionHandler;
-            if let Some(expr_size) = expr.kind().size() {
-                if expr_size != _size {
+            use binaryninjacore_sys::BNGetLowLevelILByIndex;
+
+            let instr = unsafe { BNGetLowLevelILByIndex(il.handle, expr.index.0) };
+            if let Some(width) = result_width(instr.operation, instr.size) {
+                if width != _size {
                     tracing::warn!(
                         "il @ {:x} attempted to lift {} byte expression as {} bytes",
                         il.current_address(),
-                        expr_size,
+                        width,
                         _size
                     );
                 }
@@ -1071,190 +1073,20 @@ impl<'a> LiftableLowLevelILWithSize<'a> for ExpressionBuilder<'a, ValueExpr> {
     ) -> LowLevelILMutableExpression<'a, ValueExpr> {
         #[cfg(debug_assertions)]
         {
-            use binaryninjacore_sys::BNLowLevelILOperation::{LLIL_UNIMPL, LLIL_UNIMPL_MEM};
-
-            if expr.size != _size && ![LLIL_UNIMPL, LLIL_UNIMPL_MEM].contains(&expr.op) {
-                tracing::warn!(
-                    "il @ {:x} attempted to lift {} byte expression builder as {} bytes",
-                    il.current_address(),
-                    expr.size,
-                    _size
-                );
+            if let Some(width) = result_width(expr.op, expr.size) {
+                if width != _size {
+                    tracing::warn!(
+                        "il @ {:x} attempted to lift {} byte expression builder as {} bytes",
+                        il.current_address(),
+                        width,
+                        _size
+                    );
+                }
             }
         }
 
         LiftableLowLevelIL::lift(il, expr)
     }
-}
-
-macro_rules! no_arg_lifter {
-    ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name(&self) -> LowLevelILExpression<'_, Mutable, NonSSA, $result> {
-            use binaryninjacore_sys::BNLowLevelILAddExpr;
-            use binaryninjacore_sys::BNLowLevelILOperation::$op;
-
-            let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, $op, 0, 0, 0, 0, 0, 0) };
-
-            LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
-        }
-    };
-}
-
-macro_rules! sized_no_arg_lifter {
-    ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name(&self, size: usize) -> ExpressionBuilder<'_, $result> {
-            use binaryninjacore_sys::BNLowLevelILOperation::$op;
-
-            ExpressionBuilder {
-                function: self,
-                op: $op,
-                size,
-                flag_write: FlagWriteId(0),
-                op1: 0,
-                op2: 0,
-                op3: 0,
-                op4: 0,
-                _ty: PhantomData,
-            }
-        }
-    };
-}
-
-macro_rules! unsized_unary_op_lifter {
-    ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name<'a, E>(&'a self, expr: E) -> LowLevelILExpression<'a, Mutable, NonSSA, $result>
-        where
-            E: LiftableLowLevelIL<'a, Result = ValueExpr>,
-        {
-            use binaryninjacore_sys::BNLowLevelILAddExpr;
-            use binaryninjacore_sys::BNLowLevelILOperation::$op;
-
-            let expr = E::lift(self, expr);
-
-            let expr_idx = unsafe {
-                BNLowLevelILAddExpr(self.handle, $op, 0, 0, expr.index.0 as u64, 0, 0, 0)
-            };
-
-            LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
-        }
-    };
-}
-
-macro_rules! sized_unary_op_lifter {
-    ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name<'a, E>(&'a self, size: usize, expr: E) -> ExpressionBuilder<'a, $result>
-        where
-            E: LiftableLowLevelILWithSize<'a>,
-        {
-            use binaryninjacore_sys::BNLowLevelILOperation::$op;
-
-            let expr = E::lift_with_size(self, expr, size);
-
-            ExpressionBuilder {
-                function: self,
-                op: $op,
-                size,
-                flag_write: FlagWriteId(0),
-                op1: expr.index.0 as u64,
-                op2: 0,
-                op3: 0,
-                op4: 0,
-                _ty: PhantomData,
-            }
-        }
-    };
-}
-
-macro_rules! size_changing_unary_op_lifter {
-    ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name<'a, E>(&'a self, size: usize, expr: E) -> ExpressionBuilder<'a, $result>
-        where
-            E: LiftableLowLevelILWithSize<'a>,
-        {
-            use binaryninjacore_sys::BNLowLevelILOperation::$op;
-
-            let expr = E::lift(self, expr);
-
-            ExpressionBuilder {
-                function: self,
-                op: $op,
-                size,
-                flag_write: FlagWriteId(0),
-                op1: expr.index.0 as u64,
-                op2: 0,
-                op3: 0,
-                op4: 0,
-                _ty: PhantomData,
-            }
-        }
-    };
-}
-
-macro_rules! binary_op_lifter {
-    ($name:ident, $op:ident) => {
-        pub fn $name<'a, L, R>(
-            &'a self,
-            size: usize,
-            left: L,
-            right: R,
-        ) -> ExpressionBuilder<'a, ValueExpr>
-        where
-            L: LiftableLowLevelILWithSize<'a>,
-            R: LiftableLowLevelILWithSize<'a>,
-        {
-            use binaryninjacore_sys::BNLowLevelILOperation::$op;
-
-            let left = L::lift_with_size(self, left, size);
-            let right = R::lift_with_size(self, right, size);
-
-            ExpressionBuilder {
-                function: self,
-                op: $op,
-                size,
-                flag_write: FlagWriteId(0),
-                op1: left.index.0 as u64,
-                op2: right.index.0 as u64,
-                op3: 0,
-                op4: 0,
-                _ty: PhantomData,
-            }
-        }
-    };
-}
-
-macro_rules! binary_op_carry_lifter {
-    ($name:ident, $op:ident) => {
-        pub fn $name<'a, L, R, C>(
-            &'a self,
-            size: usize,
-            left: L,
-            right: R,
-            carry: C,
-        ) -> ExpressionBuilder<'a, ValueExpr>
-        where
-            L: LiftableLowLevelILWithSize<'a>,
-            R: LiftableLowLevelILWithSize<'a>,
-            C: LiftableLowLevelILWithSize<'a>,
-        {
-            use binaryninjacore_sys::BNLowLevelILOperation::$op;
-
-            let left = L::lift_with_size(self, left, size);
-            let right = R::lift_with_size(self, right, size);
-            let carry = C::lift_with_size(self, carry, 0);
-
-            ExpressionBuilder {
-                function: self,
-                op: $op,
-                size,
-                flag_write: FlagWriteId(0),
-                op1: left.index.0 as u64,
-                op2: right.index.0 as u64,
-                op3: carry.index.0 as u64,
-                op4: 0,
-                _ty: PhantomData,
-            }
-        }
-    };
 }
 
 impl LowLevelILMutableFunction {
@@ -1329,27 +1161,6 @@ impl LowLevelILMutableFunction {
         LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
-    no_arg_lifter!(unimplemented, LLIL_UNIMPL, ValueExpr);
-
-    pub fn unknown(&self) -> LowLevelILExpression<'_, Mutable, NonSSA, ValueExpr> {
-        use binaryninjacore_sys::BNLowLevelILAddExpr;
-        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_UNIMPL;
-
-        let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_UNIMPL, 0, 0, 1, 0, 0, 0) };
-
-        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
-    }
-    no_arg_lifter!(undefined, LLIL_UNDEF, ValueExpr);
-    no_arg_lifter!(nop, LLIL_NOP, VoidExpr);
-
-    no_arg_lifter!(no_ret, LLIL_NORET, VoidExpr);
-    no_arg_lifter!(syscall, LLIL_SYSCALL, VoidExpr);
-    no_arg_lifter!(bp, LLIL_BP, VoidExpr);
-
-    unsized_unary_op_lifter!(call, LLIL_CALL, VoidExpr);
-    unsized_unary_op_lifter!(tailcall, LLIL_TAILCALL, VoidExpr);
-    unsized_unary_op_lifter!(ret, LLIL_RET, VoidExpr);
-    unsized_unary_op_lifter!(jump, LLIL_JUMP, VoidExpr);
     // TODO: LLIL_JUMP_TO
 
     pub fn if_expr<'a: 'b, 'b, C>(
@@ -1601,55 +1412,6 @@ impl LowLevelILMutableFunction {
     FlagBit(usize, Flag<A>, u64),
     */
 
-    pub fn load<'a, E>(&'a self, size: usize, source_mem: E) -> ExpressionBuilder<'a, ValueExpr>
-    where
-        E: LiftableLowLevelIL<'a, Result = ValueExpr>,
-    {
-        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_LOAD;
-
-        let expr = E::lift(self, source_mem);
-
-        ExpressionBuilder {
-            function: self,
-            op: LLIL_LOAD,
-            size,
-            flag_write: FlagWriteId(0),
-            op1: expr.index.0 as u64,
-            op2: 0,
-            op3: 0,
-            op4: 0,
-            _ty: PhantomData,
-        }
-    }
-
-    pub fn store<'a, D, V>(
-        &'a self,
-        size: usize,
-        dest_mem: D,
-        value: V,
-    ) -> ExpressionBuilder<'a, VoidExpr>
-    where
-        D: LiftableLowLevelIL<'a, Result = ValueExpr>,
-        V: LiftableLowLevelILWithSize<'a>,
-    {
-        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_STORE;
-
-        let dest_mem = D::lift(self, dest_mem);
-        let value = V::lift_with_size(self, value, size);
-
-        ExpressionBuilder {
-            function: self,
-            op: LLIL_STORE,
-            size,
-            flag_write: FlagWriteId(0),
-            op1: dest_mem.index.0 as u64,
-            op2: value.index.0 as u64,
-            op3: 0,
-            op4: 0,
-            _ty: PhantomData,
-        }
-    }
-
     // TODO: Reposition arguments.
     pub fn intrinsic<'a, R, O, P>(
         &'a self,
@@ -1706,122 +1468,6 @@ impl LowLevelILMutableFunction {
             _ty: PhantomData,
         }
     }
-
-    sized_unary_op_lifter!(push, LLIL_PUSH, VoidExpr);
-    sized_no_arg_lifter!(pop, LLIL_POP, ValueExpr);
-
-    size_changing_unary_op_lifter!(unimplemented_mem, LLIL_UNIMPL_MEM, ValueExpr);
-
-    pub fn unknown_mem<'a, E>(&'a self, size: usize, expr: E) -> ExpressionBuilder<'a, ValueExpr>
-    where
-        E: LiftableLowLevelILWithSize<'a>,
-    {
-        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_UNIMPL_MEM;
-
-        let expr = E::lift(self, expr);
-
-        ExpressionBuilder {
-            function: self,
-            op: LLIL_UNIMPL_MEM,
-            size,
-            flag_write: FlagWriteId(0),
-            op1: expr.index.0 as u64,
-            op2: 1,
-            op3: 0,
-            op4: 0,
-            _ty: PhantomData,
-        }
-    }
-
-    sized_unary_op_lifter!(neg, LLIL_NEG, ValueExpr);
-    sized_unary_op_lifter!(not, LLIL_NOT, ValueExpr);
-    sized_unary_op_lifter!(bswap, LLIL_BSWAP, ValueExpr);
-    sized_unary_op_lifter!(popcnt, LLIL_POPCNT, ValueExpr);
-    sized_unary_op_lifter!(clz, LLIL_CLZ, ValueExpr);
-    sized_unary_op_lifter!(ctz, LLIL_CTZ, ValueExpr);
-    sized_unary_op_lifter!(rbit, LLIL_RBIT, ValueExpr);
-    sized_unary_op_lifter!(cls, LLIL_CLS, ValueExpr);
-    sized_unary_op_lifter!(abs, LLIL_ABS, ValueExpr);
-
-    size_changing_unary_op_lifter!(sx, LLIL_SX, ValueExpr);
-    size_changing_unary_op_lifter!(zx, LLIL_ZX, ValueExpr);
-    size_changing_unary_op_lifter!(low_part, LLIL_LOW_PART, ValueExpr);
-
-    binary_op_lifter!(add, LLIL_ADD);
-    binary_op_lifter!(add_overflow, LLIL_ADD_OVERFLOW);
-    binary_op_lifter!(sub, LLIL_SUB);
-    binary_op_lifter!(and, LLIL_AND);
-    binary_op_lifter!(or, LLIL_OR);
-    binary_op_lifter!(xor, LLIL_XOR);
-    binary_op_lifter!(lsl, LLIL_LSL);
-    binary_op_lifter!(lsr, LLIL_LSR);
-    binary_op_lifter!(asr, LLIL_ASR);
-
-    binary_op_lifter!(rol, LLIL_ROL);
-    binary_op_carry_lifter!(rlc, LLIL_RLC);
-    binary_op_lifter!(ror, LLIL_ROR);
-    binary_op_carry_lifter!(rrc, LLIL_RRC);
-    binary_op_lifter!(mul, LLIL_MUL);
-    binary_op_lifter!(muls_dp, LLIL_MULS_DP);
-    binary_op_lifter!(mulu_dp, LLIL_MULU_DP);
-    binary_op_lifter!(divs, LLIL_DIVS);
-    binary_op_lifter!(divu, LLIL_DIVU);
-    binary_op_lifter!(mods, LLIL_MODS);
-    binary_op_lifter!(modu, LLIL_MODU);
-    binary_op_lifter!(min_signed, LLIL_MINS);
-    binary_op_lifter!(max_signed, LLIL_MAXS);
-    binary_op_lifter!(min_unsigned, LLIL_MINU);
-    binary_op_lifter!(max_unsigned, LLIL_MAXU);
-
-    binary_op_carry_lifter!(adc, LLIL_ADC);
-    binary_op_carry_lifter!(sbb, LLIL_SBB);
-
-    /*
-    DivsDp(usize, Expr, Expr, Expr, Option<A::FlagWrite>),
-    DivuDp(usize, Expr, Expr, Expr, Option<A::FlagWrite>),
-    ModsDp(usize, Expr, Expr, Expr, Option<A::FlagWrite>),
-    ModuDp(usize, Expr, Expr, Expr, Option<A::FlagWrite>),
-    */
-
-    // FlagCond(u32), // TODO
-
-    binary_op_lifter!(cmp_e, LLIL_CMP_E);
-    binary_op_lifter!(cmp_ne, LLIL_CMP_NE);
-    binary_op_lifter!(cmp_slt, LLIL_CMP_SLT);
-    binary_op_lifter!(cmp_ult, LLIL_CMP_ULT);
-    binary_op_lifter!(cmp_sle, LLIL_CMP_SLE);
-    binary_op_lifter!(cmp_ule, LLIL_CMP_ULE);
-    binary_op_lifter!(cmp_sge, LLIL_CMP_SGE);
-    binary_op_lifter!(cmp_uge, LLIL_CMP_UGE);
-    binary_op_lifter!(cmp_sgt, LLIL_CMP_SGT);
-    binary_op_lifter!(cmp_ugt, LLIL_CMP_UGT);
-    binary_op_lifter!(test_bit, LLIL_TEST_BIT);
-
-    // TODO no flags
-    size_changing_unary_op_lifter!(bool_to_int, LLIL_BOOL_TO_INT, ValueExpr);
-
-    binary_op_lifter!(fadd, LLIL_FADD);
-    binary_op_lifter!(fsub, LLIL_FSUB);
-    binary_op_lifter!(fmul, LLIL_FMUL);
-    binary_op_lifter!(fdiv, LLIL_FDIV);
-    sized_unary_op_lifter!(fsqrt, LLIL_FSQRT, ValueExpr);
-    sized_unary_op_lifter!(fneg, LLIL_FNEG, ValueExpr);
-    sized_unary_op_lifter!(fabs, LLIL_FABS, ValueExpr);
-    size_changing_unary_op_lifter!(float_to_int, LLIL_FLOAT_TO_INT, ValueExpr);
-    size_changing_unary_op_lifter!(int_to_float, LLIL_INT_TO_FLOAT, ValueExpr);
-    size_changing_unary_op_lifter!(float_conv, LLIL_FLOAT_CONV, ValueExpr);
-    sized_unary_op_lifter!(round_to_int, LLIL_ROUND_TO_INT, ValueExpr);
-    sized_unary_op_lifter!(floor, LLIL_FLOOR, ValueExpr);
-    sized_unary_op_lifter!(ceil, LLIL_CEIL, ValueExpr);
-    sized_unary_op_lifter!(ftrunc, LLIL_FTRUNC, ValueExpr);
-    binary_op_lifter!(fcmp_e, LLIL_FCMP_E);
-    binary_op_lifter!(fcmp_ne, LLIL_FCMP_NE);
-    binary_op_lifter!(fcmp_lt, LLIL_FCMP_LT);
-    binary_op_lifter!(fcmp_le, LLIL_FCMP_LE);
-    binary_op_lifter!(fcmp_ge, LLIL_FCMP_GE);
-    binary_op_lifter!(fcmp_gt, LLIL_FCMP_GT);
-    binary_op_lifter!(fcmp_o, LLIL_FCMP_O);
-    binary_op_lifter!(fcmp_uo, LLIL_FCMP_UO);
 
     pub fn current_address(&self) -> u64 {
         use binaryninjacore_sys::BNLowLevelILGetCurrentAddress;
@@ -1970,3 +1616,2773 @@ impl Default for LowLevelILLabel {
         Self::new()
     }
 }
+
+// BEGIN GENERATED llil-lifters: from api/il, do not edit
+/// The width of the value an expression produces given its size field, or `None` where its width
+/// isn't tied to its size.
+#[cfg(debug_assertions)]
+pub(crate) fn result_width(op: BNLowLevelILOperation, size: usize) -> Option<usize> {
+    use binaryninjacore_sys::BNLowLevelILOperation::*;
+
+    match op {
+        LLIL_LOAD
+        | LLIL_POP
+        | LLIL_REG
+        | LLIL_REG_STACK_REL
+        | LLIL_REG_STACK_POP
+        | LLIL_CONST
+        | LLIL_CONST_PTR
+        | LLIL_EXTERN_PTR
+        | LLIL_FLOAT_CONST
+        | LLIL_FLAG_BIT
+        | LLIL_ADD
+        | LLIL_ADC
+        | LLIL_SUB
+        | LLIL_SBB
+        | LLIL_AND
+        | LLIL_OR
+        | LLIL_XOR
+        | LLIL_LSL
+        | LLIL_LSR
+        | LLIL_ASR
+        | LLIL_ROL
+        | LLIL_RLC
+        | LLIL_ROR
+        | LLIL_RRC
+        | LLIL_MUL
+        | LLIL_DIVU
+        | LLIL_DIVU_DP
+        | LLIL_DIVS
+        | LLIL_DIVS_DP
+        | LLIL_MODU
+        | LLIL_MODU_DP
+        | LLIL_MODS
+        | LLIL_MODS_DP
+        | LLIL_NEG
+        | LLIL_NOT
+        | LLIL_SX
+        | LLIL_ZX
+        | LLIL_LOW_PART
+        | LLIL_BOOL_TO_INT
+        | LLIL_UNIMPL_MEM
+        | LLIL_FADD
+        | LLIL_FSUB
+        | LLIL_FMUL
+        | LLIL_FDIV
+        | LLIL_FSQRT
+        | LLIL_FNEG
+        | LLIL_FABS
+        | LLIL_FLOAT_TO_INT
+        | LLIL_INT_TO_FLOAT
+        | LLIL_FLOAT_CONV
+        | LLIL_ROUND_TO_INT
+        | LLIL_FLOOR
+        | LLIL_CEIL
+        | LLIL_FTRUNC
+        | LLIL_REG_SSA
+        | LLIL_REG_SSA_PARTIAL
+        | LLIL_REG_STACK_REL_SSA
+        | LLIL_REG_STACK_ABS_SSA
+        | LLIL_FLAG_BIT_SSA
+        | LLIL_LOAD_SSA
+        | LLIL_BSWAP
+        | LLIL_POPCNT
+        | LLIL_CLZ
+        | LLIL_CTZ
+        | LLIL_RBIT
+        | LLIL_CLS
+        | LLIL_MINS
+        | LLIL_MAXS
+        | LLIL_MINU
+        | LLIL_MAXU
+        | LLIL_ABS => Some(size),
+        LLIL_REG_SPLIT | LLIL_MULU_DP | LLIL_MULS_DP | LLIL_REG_SPLIT_SSA => Some(size * 2),
+        LLIL_FLAG | LLIL_FLAG_COND | LLIL_FLAG_GROUP | LLIL_CMP_E | LLIL_CMP_NE | LLIL_CMP_SLT
+        | LLIL_CMP_ULT | LLIL_CMP_SLE | LLIL_CMP_ULE | LLIL_CMP_SGE | LLIL_CMP_UGE
+        | LLIL_CMP_SGT | LLIL_CMP_UGT | LLIL_TEST_BIT | LLIL_ADD_OVERFLOW | LLIL_FCMP_E
+        | LLIL_FCMP_NE | LLIL_FCMP_LT | LLIL_FCMP_LE | LLIL_FCMP_GE | LLIL_FCMP_GT
+        | LLIL_FCMP_O | LLIL_FCMP_UO | LLIL_FLAG_SSA => Some(0),
+        _ => None,
+    }
+}
+
+impl LowLevelILMutableFunction {
+    /// Does nothing.
+    ///
+    /// Returns the expression `nop`.
+    pub fn nop(&self) -> LowLevelILExpression<'_, Mutable, NonSSA, VoidExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_NOP;
+
+        let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_NOP, 0, 0, 0, 0, 0, 0) };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
+    /// Reads `size` bytes from memory at `src`.
+    ///
+    /// Returns the expression `[src].<size> {<flags>}`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn load<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_LOAD;
+
+        let src = Src::lift(self, src);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_LOAD,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Writes the `size` bytes of `src` to memory at `dest`.
+    ///
+    /// Returns the expression `[dest].<size> = src {<flags>}`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn store<'a, Dest, Src>(
+        &'a self,
+        size: usize,
+        dest: Dest,
+        src: Src,
+    ) -> ExpressionBuilder<'a, VoidExpr>
+    where
+        Dest: LiftableLowLevelIL<'a, Result = ValueExpr>,
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_STORE;
+
+        let dest = Dest::lift(self, dest);
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_STORE,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: dest.index.0 as u64,
+            op2: src.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Writes `src` to the stack, adjusting the stack pointer by `size`.
+    ///
+    /// Returns the expression `push.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn push<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, VoidExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_PUSH;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_PUSH,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Reads `size` bytes from the stack, adjusting the stack pointer by `size`.
+    ///
+    /// Returns the expression `pop.<size>{<flags>}`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn pop(&self, size: usize) -> ExpressionBuilder<'_, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_POP;
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_POP,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: 0,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Adds `left` and `right`. Without flags, renders as `left + right`.
+    ///
+    /// Returns the expression `add.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn add<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_ADD;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_ADD,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Adds `left`, `right` and the carry `carry`.
+    ///
+    /// Returns the expression `adc.<size>{<flags>}(left, right, carry)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn adc<'a, Left, Right, Carry>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+        carry: Carry,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+        Carry: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_ADC;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+        let carry = Carry::lift_with_size(self, carry, 0);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_ADC,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: carry.index.0 as u64,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Subtracts `right` from `left`. Without flags, renders as `left - right`.
+    ///
+    /// Returns the expression `sub.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn sub<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_SUB;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_SUB,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Subtracts `right` and the borrow `carry` from `left`.
+    ///
+    /// Returns the expression `sbb.<size>{<flags>}(left, right, carry)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn sbb<'a, Left, Right, Carry>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+        carry: Carry,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+        Carry: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_SBB;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+        let carry = Carry::lift_with_size(self, carry, 0);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_SBB,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: carry.index.0 as u64,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The bitwise and of `left` and `right`. Without flags, renders as `left & right`, or as
+    /// `left && right` when `size` is 0.
+    ///
+    /// Returns the expression `and.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn and<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_AND;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_AND,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The bitwise or of `left` and `right`. Without flags, renders as `left | right`, or as
+    /// `left || right` when `size` is 0.
+    ///
+    /// Returns the expression `or.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn or<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_OR;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_OR,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The bitwise exclusive or of `left` and `right`. Without flags, renders as `left ^ right`.
+    ///
+    /// Returns the expression `xor.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn xor<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_XOR;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_XOR,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Shifts `left` left by `right` bits. Without flags, renders as `left << right`.
+    ///
+    /// Returns the expression `lsl.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn lsl<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_LSL;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_LSL,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Shifts `left` logically right by `right` bits. Without flags, renders as `left u>> right`.
+    ///
+    /// Returns the expression `lsr.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn lsr<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_LSR;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_LSR,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Shifts `left` arithmetically right by `right` bits. Without flags, renders as `left s>> right`.
+    ///
+    /// Returns the expression `asr.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn asr<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_ASR;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_ASR,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Rotates `left` left by `right` bits.
+    ///
+    /// Returns the expression `rol.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn rol<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_ROL;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_ROL,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Rotates `left` left by `right` bits through the carry `carry`.
+    ///
+    /// Returns the expression `rlc.<size>{<flags>}(left, right, carry)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn rlc<'a, Left, Right, Carry>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+        carry: Carry,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+        Carry: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_RLC;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+        let carry = Carry::lift_with_size(self, carry, 0);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_RLC,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: carry.index.0 as u64,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Rotates `left` right by `right` bits.
+    ///
+    /// Returns the expression `ror.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn ror<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_ROR;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_ROR,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Rotates `left` right by `right` bits through the carry `carry`.
+    ///
+    /// Returns the expression `rrc.<size>{<flags>}(left, right, carry)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn rrc<'a, Left, Right, Carry>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+        carry: Carry,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+        Carry: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_RRC;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+        let carry = Carry::lift_with_size(self, carry, 0);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_RRC,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: carry.index.0 as u64,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Multiplies `left` by `right`. The operands and the result are all `size` bytes, so the upper half of
+    /// the product is discarded. Without flags, renders as `left * right`.
+    ///
+    /// Returns the expression `mul.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn mul<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_MUL;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_MUL,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Multiplies `left` by `right` as unsigned integers. The operands are `size` bytes and the result is
+    /// `2 * size` bytes. The expression's size, which it renders with, is still `size`.
+    ///
+    /// Returns the expression `mulu.dp.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn mulu_dp<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_MULU_DP;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_MULU_DP,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Multiplies `left` by `right` as signed integers. The operands are `size` bytes and the result is
+    /// `2 * size` bytes. The expression's size, which it renders with, is still `size`.
+    ///
+    /// Returns the expression `muls.dp.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn muls_dp<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_MULS_DP;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_MULS_DP,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Divides `left` by `right` as unsigned integers.
+    ///
+    /// Returns the expression `divu.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn divu<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_DIVU;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_DIVU,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Divides `left` by `right` as unsigned integers. `left` is `2 * size` bytes, and `right` and the
+    /// result are `size` bytes.
+    ///
+    /// Returns the expression `divu.dp.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn divu_dp<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_DIVU_DP;
+
+        let left = Left::lift_with_size(self, left, size * 2);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_DIVU_DP,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Divides `left` by `right` as signed integers.
+    ///
+    /// Returns the expression `divs.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn divs<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_DIVS;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_DIVS,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Divides `left` by `right` as signed integers. `left` is `2 * size` bytes, and `right` and the result
+    /// are `size` bytes.
+    ///
+    /// Returns the expression `divs.dp.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn divs_dp<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_DIVS_DP;
+
+        let left = Left::lift_with_size(self, left, size * 2);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_DIVS_DP,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The remainder of dividing `left` by `right` as unsigned integers.
+    ///
+    /// Returns the expression `modu.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn modu<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_MODU;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_MODU,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The remainder of dividing `left` by `right` as unsigned integers. `left` is `2 * size` bytes, and
+    /// `right` and the result are `size` bytes.
+    ///
+    /// Returns the expression `modu.dp.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn modu_dp<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_MODU_DP;
+
+        let left = Left::lift_with_size(self, left, size * 2);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_MODU_DP,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The remainder of dividing `left` by `right` as signed integers.
+    ///
+    /// Returns the expression `mods.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn mods<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_MODS;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_MODS,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The remainder of dividing `left` by `right` as signed integers. `left` is `2 * size` bytes, and
+    /// `right` and the result are `size` bytes.
+    ///
+    /// Returns the expression `mods.dp.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn mods_dp<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_MODS_DP;
+
+        let left = Left::lift_with_size(self, left, size * 2);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_MODS_DP,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Negates `src` as a two's complement integer.
+    ///
+    /// Returns the expression `neg.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn neg<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_NEG;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_NEG,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Inverts the bits of `src`.
+    ///
+    /// Returns the expression `not.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn not<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_NOT;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_NOT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Sign-extends `src` to `size` bytes.
+    ///
+    /// Returns the expression `sx.<size>(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn sx<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_SX;
+
+        let src = Src::lift(self, src);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_SX,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Zero-extends `src` to `size` bytes.
+    ///
+    /// Returns the expression `zx.<size>(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn zx<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_ZX;
+
+        let src = Src::lift(self, src);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_ZX,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Truncates `src` to its low `size` bytes.
+    ///
+    /// Returns the expression `(src).<size>`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn low_part<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_LOW_PART;
+
+        let src = Src::lift(self, src);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_LOW_PART,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Jumps to `dest`.
+    ///
+    /// Returns the expression `jump(dest)`.
+    pub fn jump<'a, Dest>(
+        &'a self,
+        dest: Dest,
+    ) -> LowLevelILExpression<'a, Mutable, NonSSA, VoidExpr>
+    where
+        Dest: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_JUMP;
+
+        let dest = Dest::lift(self, dest);
+
+        let expr_idx = unsafe {
+            BNLowLevelILAddExpr(self.handle, LLIL_JUMP, 0, 0, dest.index.0 as u64, 0, 0, 0)
+        };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
+    /// Calls `dest`. On architectures without a link register, this pushes the address of the next
+    /// instruction onto the stack, then jumps to `dest`.
+    ///
+    /// Returns the expression `call(dest)`.
+    pub fn call<'a, Dest>(
+        &'a self,
+        dest: Dest,
+    ) -> LowLevelILExpression<'a, Mutable, NonSSA, VoidExpr>
+    where
+        Dest: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CALL;
+
+        let dest = Dest::lift(self, dest);
+
+        let expr_idx = unsafe {
+            BNLowLevelILAddExpr(self.handle, LLIL_CALL, 0, 0, dest.index.0 as u64, 0, 0, 0)
+        };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
+    /// Jumps to `dest` as a tail call.
+    ///
+    /// Returns the expression `<return> tailcall(dest)`.
+    pub fn tailcall<'a, Dest>(
+        &'a self,
+        dest: Dest,
+    ) -> LowLevelILExpression<'a, Mutable, NonSSA, VoidExpr>
+    where
+        Dest: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_TAILCALL;
+
+        let dest = Dest::lift(self, dest);
+
+        let expr_idx = unsafe {
+            BNLowLevelILAddExpr(
+                self.handle,
+                LLIL_TAILCALL,
+                0,
+                0,
+                dest.index.0 as u64,
+                0,
+                0,
+                0,
+            )
+        };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
+    /// Returns from the function by jumping to `dest`.
+    ///
+    /// Returns the expression `<return> jump(dest)`.
+    pub fn ret<'a, Dest>(
+        &'a self,
+        dest: Dest,
+    ) -> LowLevelILExpression<'a, Mutable, NonSSA, VoidExpr>
+    where
+        Dest: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_RET;
+
+        let dest = Dest::lift(self, dest);
+
+        let expr_idx = unsafe {
+            BNLowLevelILAddExpr(self.handle, LLIL_RET, 0, 0, dest.index.0 as u64, 0, 0, 0)
+        };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
+    /// Marks a point that execution doesn't pass, such as after a call that doesn't return.
+    ///
+    /// Returns the expression `noreturn`.
+    pub fn no_ret(&self) -> LowLevelILExpression<'_, Mutable, NonSSA, VoidExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_NORET;
+
+        let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_NORET, 0, 0, 0, 0, 0, 0) };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
+    /// Tests whether `left` equals `right`.
+    ///
+    /// Returns the expression `left == right`.
+    pub fn cmp_e<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CMP_E;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CMP_E,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` doesn't equal `right`.
+    ///
+    /// Returns the expression `left != right`.
+    pub fn cmp_ne<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CMP_NE;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CMP_NE,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is less than `right` as signed integers.
+    ///
+    /// Returns the expression `left s< right`.
+    pub fn cmp_slt<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CMP_SLT;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CMP_SLT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is less than `right` as unsigned integers.
+    ///
+    /// Returns the expression `left u< right`.
+    pub fn cmp_ult<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CMP_ULT;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CMP_ULT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is less than or equal to `right` as signed integers.
+    ///
+    /// Returns the expression `left s<= right`.
+    pub fn cmp_sle<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CMP_SLE;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CMP_SLE,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is less than or equal to `right` as unsigned integers.
+    ///
+    /// Returns the expression `left u<= right`.
+    pub fn cmp_ule<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CMP_ULE;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CMP_ULE,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is greater than or equal to `right` as signed integers.
+    ///
+    /// Returns the expression `left s>= right`.
+    pub fn cmp_sge<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CMP_SGE;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CMP_SGE,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is greater than or equal to `right` as unsigned integers.
+    ///
+    /// Returns the expression `left u>= right`.
+    pub fn cmp_uge<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CMP_UGE;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CMP_UGE,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is greater than `right` as signed integers.
+    ///
+    /// Returns the expression `left s> right`.
+    pub fn cmp_sgt<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CMP_SGT;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CMP_SGT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is greater than `right` as unsigned integers.
+    ///
+    /// Returns the expression `left u> right`.
+    pub fn cmp_ugt<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CMP_UGT;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CMP_UGT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether bit `right` of `left` is set.
+    ///
+    /// Returns the expression `test_bit(left, right)`.
+    pub fn test_bit<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_TEST_BIT;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_TEST_BIT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Converts `src` to the integer 1 if it's true, or 0 if it's false.
+    ///
+    /// Returns the expression `src ? 1 : 0`.
+    pub fn bool_to_int<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_BOOL_TO_INT;
+
+        let src = Src::lift(self, src);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_BOOL_TO_INT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    pub fn add_overflow<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_ADD_OVERFLOW;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_ADD_OVERFLOW,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Makes a system call.
+    ///
+    /// Returns the expression `syscall`.
+    pub fn syscall(&self) -> LowLevelILExpression<'_, Mutable, NonSSA, VoidExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_SYSCALL;
+
+        let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_SYSCALL, 0, 0, 0, 0, 0, 0) };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
+    /// A processor breakpoint.
+    ///
+    /// Returns the expression `breakpoint`.
+    pub fn bp(&self) -> LowLevelILExpression<'_, Mutable, NonSSA, VoidExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_BP;
+
+        let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_BP, 0, 0, 0, 0, 0, 0) };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
+    /// An undefined value or operation. As a statement, it ends the basic block and leaves its outgoing
+    /// edges undetermined.
+    ///
+    /// Returns the expression `undefined`.
+    pub fn undefined(&self) -> LowLevelILExpression<'_, Mutable, NonSSA, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_UNDEF;
+
+        let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_UNDEF, 0, 0, 0, 0, 0, 0) };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
+    /// An unimplemented instruction or value.
+    ///
+    /// Returns the expression `unimplemented`.
+    pub fn unimplemented(&self) -> LowLevelILExpression<'_, Mutable, NonSSA, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_UNIMPL;
+
+        let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_UNIMPL, 0, 0, 0, 0, 0, 0) };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
+    /// A value that can't be known at analysis time, such as a flag that depends on runtime state. It
+    /// doesn't produce the warning an unimplemented expression does.
+    ///
+    /// Returns the expression `unknown`.
+    pub fn unknown(&self) -> LowLevelILExpression<'_, Mutable, NonSSA, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_UNIMPL;
+
+        let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_UNIMPL, 0, 0, 1, 0, 0, 0) };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
+    /// A reference to `size` bytes of memory at `src`, for an unimplemented operation.
+    ///
+    /// Returns the expression `unimplemented([src].<size>)`.
+    pub fn unimplemented_mem<'a, Src>(
+        &'a self,
+        size: usize,
+        src: Src,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_UNIMPL_MEM;
+
+        let src = Src::lift(self, src);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_UNIMPL_MEM,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// A reference to `size` bytes of memory at `src`, whose value can't be known at analysis time. It
+    /// doesn't produce the warning an unimplemented expression does.
+    ///
+    /// Returns the expression `unknown([src].<size>)`.
+    pub fn unknown_mem<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_UNIMPL_MEM;
+
+        let src = Src::lift(self, src);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_UNIMPL_MEM,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 1,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Adds `left` and `right` as floating point values. Without flags, renders as `left f+ right`.
+    ///
+    /// Returns the expression `fadd.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn fadd<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FADD;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FADD,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Subtracts `right` from `left` as floating point values. Without flags, renders as `left f- right`.
+    ///
+    /// Returns the expression `fsub.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn fsub<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FSUB;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FSUB,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Multiplies `left` by `right` as floating point values. Without flags, renders as `left f* right`.
+    ///
+    /// Returns the expression `fmul.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn fmul<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FMUL;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FMUL,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Divides `left` by `right` as floating point values. Without flags, renders as `left f/ right`.
+    ///
+    /// Returns the expression `fdiv.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn fdiv<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FDIV;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FDIV,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The square root of the floating point value `src`.
+    ///
+    /// Returns the expression `sqrt{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn fsqrt<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FSQRT;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FSQRT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Negates the floating point value `src`.
+    ///
+    /// Returns the expression `fneg{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn fneg<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FNEG;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FNEG,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The absolute value of the floating point value `src`.
+    ///
+    /// Returns the expression `fabs{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn fabs<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FABS;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FABS,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Converts the floating point value `src` to an integer.
+    ///
+    /// Returns the expression `int.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn float_to_int<'a, Src>(
+        &'a self,
+        size: usize,
+        src: Src,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLOAT_TO_INT;
+
+        let src = Src::lift(self, src);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FLOAT_TO_INT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Converts the integer `src` to a floating point value.
+    ///
+    /// Returns the expression `float.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn int_to_float<'a, Src>(
+        &'a self,
+        size: usize,
+        src: Src,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_INT_TO_FLOAT;
+
+        let src = Src::lift(self, src);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_INT_TO_FLOAT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Converts the floating point value `src` to a floating point value of `size` bytes.
+    ///
+    /// Returns the expression `fconvert.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn float_conv<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelIL<'a, Result = ValueExpr>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLOAT_CONV;
+
+        let src = Src::lift(self, src);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FLOAT_CONV,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Rounds the floating point value `src` to the nearest integral value.
+    ///
+    /// Returns the expression `roundint.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn round_to_int<'a, Src>(
+        &'a self,
+        size: usize,
+        src: Src,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_ROUND_TO_INT;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_ROUND_TO_INT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Rounds the floating point value `src` to an integral value, towards negative infinity.
+    ///
+    /// Returns the expression `floor.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn floor<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLOOR;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FLOOR,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Rounds the floating point value `src` to an integral value, towards positive infinity.
+    ///
+    /// Returns the expression `ceil.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn ceil<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CEIL;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CEIL,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Rounds the floating point value `src` to an integral value, towards zero.
+    ///
+    /// Returns the expression `ftrunc.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn ftrunc<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FTRUNC;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FTRUNC,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` equals `right` as floating point values.
+    ///
+    /// Returns the expression `left f== right`.
+    pub fn fcmp_e<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FCMP_E;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FCMP_E,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` doesn't equal `right` as floating point values.
+    ///
+    /// Returns the expression `left f!= right`.
+    pub fn fcmp_ne<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FCMP_NE;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FCMP_NE,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is less than `right` as floating point values.
+    ///
+    /// Returns the expression `left f< right`.
+    pub fn fcmp_lt<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FCMP_LT;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FCMP_LT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is less than or equal to `right` as floating point values.
+    ///
+    /// Returns the expression `left f<= right`.
+    pub fn fcmp_le<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FCMP_LE;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FCMP_LE,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is greater than or equal to `right` as floating point values.
+    ///
+    /// Returns the expression `left f>= right`.
+    pub fn fcmp_ge<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FCMP_GE;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FCMP_GE,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` is greater than `right` as floating point values.
+    ///
+    /// Returns the expression `left f> right`.
+    pub fn fcmp_gt<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FCMP_GT;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FCMP_GT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` and `right` are ordered, which they are when neither is NaN.
+    ///
+    /// Returns the expression `is_ordered.<size>(left, right)`.
+    pub fn fcmp_o<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FCMP_O;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FCMP_O,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Tests whether `left` and `right` are unordered, which they are when either is NaN.
+    ///
+    /// Returns the expression `is_unordered.<size>(left, right)`.
+    pub fn fcmp_uo<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FCMP_UO;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_FCMP_UO,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Reverses the byte order of `src`.
+    ///
+    /// Returns the expression `bswap.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn bswap<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_BSWAP;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_BSWAP,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Counts the set bits in `src`.
+    ///
+    /// Returns the expression `popcnt.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn popcnt<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_POPCNT;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_POPCNT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Counts the leading zero bits in `src`. The result is `8 * size` when `src` is zero.
+    ///
+    /// Returns the expression `clz.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn clz<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CLZ;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CLZ,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Counts the trailing zero bits in `src`. The result is `8 * size` when `src` is zero.
+    ///
+    /// Returns the expression `ctz.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn ctz<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CTZ;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CTZ,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Reverses the bit order of `src`.
+    ///
+    /// Returns the expression `rbit.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn rbit<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_RBIT;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_RBIT,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// Counts the bits below the sign bit of `src` that match it.
+    ///
+    /// Returns the expression `cls.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn cls<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CLS;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_CLS,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The smaller of `left` and `right` as signed integers.
+    ///
+    /// Returns the expression `mins.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn min_signed<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_MINS;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_MINS,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The larger of `left` and `right` as signed integers.
+    ///
+    /// Returns the expression `maxs.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn max_signed<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_MAXS;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_MAXS,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The smaller of `left` and `right` as unsigned integers.
+    ///
+    /// Returns the expression `minu.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn min_unsigned<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_MINU;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_MINU,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The larger of `left` and `right` as unsigned integers.
+    ///
+    /// Returns the expression `maxu.<size>{<flags>}(left, right)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn max_unsigned<'a, Left, Right>(
+        &'a self,
+        size: usize,
+        left: Left,
+        right: Right,
+    ) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Left: LiftableLowLevelILWithSize<'a>,
+        Right: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_MAXU;
+
+        let left = Left::lift_with_size(self, left, size);
+        let right = Right::lift_with_size(self, right, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_MAXU,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: left.index.0 as u64,
+            op2: right.index.0 as u64,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+
+    /// The absolute value of `src` as a signed integer.
+    ///
+    /// Returns the expression `abs.<size>{<flags>}(src)`.
+    ///
+    /// Set its flag write type with [`ExpressionBuilder::with_flag_write`].
+    pub fn abs<'a, Src>(&'a self, size: usize, src: Src) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        Src: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_ABS;
+
+        let src = Src::lift_with_size(self, src, size);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_ABS,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: src.index.0 as u64,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
+}
+// END GENERATED llil-lifters

@@ -22,7 +22,7 @@ use std::fmt::{Debug, Display};
 // requirements on load/store memory address sizes?
 // can reg/set_reg be used with sizes that differ from what is in BNRegisterInfo?
 
-use crate::architecture::{Architecture, Flag, RegisterId};
+use crate::architecture::{Architecture, Flag, RegisterId, RegisterStack};
 use crate::architecture::{CoreRegister, Register as ArchReg};
 use crate::function::Location;
 
@@ -308,6 +308,18 @@ pub struct LowLevelILSSAFlag<F: Flag> {
 impl<F: Flag> LowLevelILSSAFlag<F> {
     pub fn new(flag: F, version: u32) -> Self {
         Self { flag, version }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct LowLevelILSSARegisterStack<S: RegisterStack> {
+    pub reg_stack: S,
+    pub version: u32,
+}
+
+impl<S: RegisterStack> LowLevelILSSARegisterStack<S> {
+    pub fn new(reg_stack: S, version: u32) -> Self {
+        Self { reg_stack, version }
     }
 }
 

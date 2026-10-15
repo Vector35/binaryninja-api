@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<names xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="il.xsd">
+	<name name="bit" role="bit_index"/>
+	<name name="dest_memory" role="dest"/>
+	<name name="dest_stack" role="dest"/>
+	<name name="hi" role="high"/>
+	<name name="hi_reg" role="high"/>
+	<name name="lo" role="low"/>
+	<name name="lo_reg" role="low"/>
+	<name name="offset">
+		<cpp type="uint64_t"/>
+	</name>
+	<name name="output_exprs" role="output"/>
+	<name name="params" role="parameter">
+		<rust role="param"/>
+	</name>
+	<name name="prev" role="source"/>
+	<name name="reason" role="force_version_reason"/>
+	<name name="reg_stack_adjustments" role="register_stack_adjustments"/>
+	<name name="semantic_class" role="semantic_flag_class"/>
+	<name name="semantic_group" role="semantic_flag_group"/>
+	<name name="src" role="source"/>
+	<name name="src_memory" role="source"/>
+	<name name="src_stack" role="source"/>
+	<name name="stack_reg" role="stack"/>
+	<name name="top_reg" role="top"/>
+</names>

@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cstring>
 #include <array>
+#include <initializer_list>
 
 #include "sharedilinstruction.h"
 
@@ -54,61 +55,81 @@ struct OperandUsageType
 	}
 };
 
+// Lists the operands an operation reports and where it stores each one.
+template <size_t MaxOperands>
+struct InstructionOperandLocations
+{
+	BNLowLevelILOperation op;
+	uint8_t count = 0;
+	LowLevelILOperandLocation locations[MaxOperands] = {};
+
+	explicit constexpr InstructionOperandLocations(BNLowLevelILOperation op) : op(op) {}
+
+	template <size_t N>
+	constexpr InstructionOperandLocations(BNLowLevelILOperation op, const LowLevelILOperandLocation (&operands)[N]) :
+	    op(op), count(N)
+	{
+		static_assert(N <= MaxOperands, "Too many operands for instruction");
+		std::copy(operands, operands + N, locations);
+	}
+};
+
+// BEGIN GENERATED llil-operand-tables: from api/il, do not edit
 static constexpr std::array s_operandTypeForUsage = {
-	OperandUsageType{SourceExprLowLevelOperandUsage, ExprLowLevelOperand},
-	OperandUsageType{SourceRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
-	OperandUsageType{SourceRegisterStackLowLevelOperandUsage, RegisterStackLowLevelOperand},
-	OperandUsageType{SourceFlagLowLevelOperandUsage, FlagLowLevelOperand},
-	OperandUsageType{SourceSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
-	OperandUsageType{SourceSSARegisterStackLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
-	OperandUsageType{SourceSSAFlagLowLevelOperandUsage, SSAFlagLowLevelOperand},
-	OperandUsageType{DestExprLowLevelOperandUsage, ExprLowLevelOperand},
 	OperandUsageType{DestRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
-	OperandUsageType{DestRegisterStackLowLevelOperandUsage, RegisterStackLowLevelOperand},
+	OperandUsageType{SourceExprLowLevelOperandUsage, ExprLowLevelOperand},
+	OperandUsageType{HighRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
+	OperandUsageType{LowRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
 	OperandUsageType{DestFlagLowLevelOperandUsage, FlagLowLevelOperand},
-	OperandUsageType{DestSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
-	OperandUsageType{DestSSARegisterStackLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
-	OperandUsageType{DestSSAFlagLowLevelOperandUsage, SSAFlagLowLevelOperand},
-	OperandUsageType{SemanticFlagClassLowLevelOperandUsage, SemanticFlagClassLowLevelOperand},
-	OperandUsageType{SemanticFlagGroupLowLevelOperandUsage, SemanticFlagGroupLowLevelOperand},
-	OperandUsageType{PartialRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
-	OperandUsageType{PartialSSARegisterStackSourceLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
-	OperandUsageType{StackSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
-	OperandUsageType{StackMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
-	OperandUsageType{TopSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{DestRegisterStackLowLevelOperandUsage, RegisterStackLowLevelOperand},
+	OperandUsageType{DestExprLowLevelOperandUsage, ExprLowLevelOperand},
+	OperandUsageType{SourceRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
+	OperandUsageType{ConstraintLowLevelOperandUsage, ConstraintLowLevelOperand},
+	OperandUsageType{SourceRegisterStackLowLevelOperandUsage, RegisterStackLowLevelOperand},
+	OperandUsageType{ConstantLowLevelOperandUsage, IntegerLowLevelOperand},
+	OperandUsageType{OffsetLowLevelOperandUsage, IntegerLowLevelOperand},
+	OperandUsageType{SourceFlagLowLevelOperandUsage, FlagLowLevelOperand},
+	OperandUsageType{BitIndexLowLevelOperandUsage, IndexLowLevelOperand},
 	OperandUsageType{LeftExprLowLevelOperandUsage, ExprLowLevelOperand},
 	OperandUsageType{RightExprLowLevelOperandUsage, ExprLowLevelOperand},
 	OperandUsageType{CarryExprLowLevelOperandUsage, ExprLowLevelOperand},
-	OperandUsageType{ConditionExprLowLevelOperandUsage, ExprLowLevelOperand},
-	OperandUsageType{HighRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
-	OperandUsageType{HighSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
-	OperandUsageType{LowRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
-	OperandUsageType{LowSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
-	OperandUsageType{IntrinsicLowLevelOperandUsage, IntrinsicLowLevelOperand},
-	OperandUsageType{ConstantLowLevelOperandUsage, IntegerLowLevelOperand},
-	OperandUsageType{VectorLowLevelOperandUsage, IntegerLowLevelOperand},
+	OperandUsageType{TargetsLowLevelOperandUsage, IndexMapLowLevelOperand},
 	OperandUsageType{StackAdjustmentLowLevelOperandUsage, IntegerLowLevelOperand},
-	OperandUsageType{TargetLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{RegisterStackAdjustmentsLowLevelOperandUsage, RegisterStackAdjustmentsLowLevelOperand},
+	OperandUsageType{ConditionExprLowLevelOperandUsage, ExprLowLevelOperand},
 	OperandUsageType{TrueTargetLowLevelOperandUsage, IndexLowLevelOperand},
 	OperandUsageType{FalseTargetLowLevelOperandUsage, IndexLowLevelOperand},
-	OperandUsageType{BitIndexLowLevelOperandUsage, IndexLowLevelOperand},
-	OperandUsageType{SourceMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
-	OperandUsageType{DestMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{TargetLowLevelOperandUsage, IndexLowLevelOperand},
 	OperandUsageType{FlagConditionLowLevelOperandUsage, FlagConditionLowLevelOperand},
+	OperandUsageType{SemanticFlagClassLowLevelOperandUsage, SemanticFlagClassLowLevelOperand},
+	OperandUsageType{SemanticFlagGroupLowLevelOperandUsage, SemanticFlagGroupLowLevelOperand},
+	OperandUsageType{VectorLowLevelOperandUsage, IntegerLowLevelOperand},
+	OperandUsageType{OutputRegisterOrFlagListLowLevelOperandUsage, RegisterOrFlagListLowLevelOperand},
+	OperandUsageType{IntrinsicLowLevelOperandUsage, IntrinsicLowLevelOperand},
+	OperandUsageType{ParameterExprsLowLevelOperandUsage, ExprListLowLevelOperand},
+	OperandUsageType{DestSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{PartialRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
+	OperandUsageType{HighSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{LowSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{DestSSARegisterStackLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
+	OperandUsageType{PartialSSARegisterStackSourceLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
+	OperandUsageType{TopSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{SourceSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{SourceSSARegisterStackLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
+	OperandUsageType{DestSSAFlagLowLevelOperandUsage, SSAFlagLowLevelOperand},
+	OperandUsageType{SourceSSAFlagLowLevelOperandUsage, SSAFlagLowLevelOperand},
 	OperandUsageType{OutputSSARegistersLowLevelOperandUsage, SSARegisterListLowLevelOperand},
 	OperandUsageType{OutputMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
-	OperandUsageType{ParameterExprsLowLevelOperandUsage, ExprListLowLevelOperand},
+	OperandUsageType{StackSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{StackMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{SourceMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{DestMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{OutputSSARegisterOrFlagListLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
+	OperandUsageType{OutputMemoryIntrinsicLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
 	OperandUsageType{SourceSSARegistersLowLevelOperandUsage, SSARegisterListLowLevelOperand},
 	OperandUsageType{SourceSSARegisterStacksLowLevelOperandUsage, SSARegisterStackListLowLevelOperand},
 	OperandUsageType{SourceSSAFlagsLowLevelOperandUsage, SSAFlagListLowLevelOperand},
-	OperandUsageType{OutputRegisterOrFlagListLowLevelOperandUsage, RegisterOrFlagListLowLevelOperand},
-	OperandUsageType{OutputSSARegisterOrFlagListLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
-	OperandUsageType{OutputMemoryIntrinsicLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
 	OperandUsageType{SourceMemoryVersionsLowLevelOperandUsage, IndexListLowLevelOperand},
-	OperandUsageType{TargetsLowLevelOperandUsage, IndexMapLowLevelOperand},
-	OperandUsageType{RegisterStackAdjustmentsLowLevelOperandUsage, RegisterStackAdjustmentsLowLevelOperand},
-	OperandUsageType{OffsetLowLevelOperandUsage, IntegerLowLevelOperand},
-	OperandUsageType{ConstraintLowLevelOperandUsage, ConstraintLowLevelOperand}
 };
 
 static_assert(std::is_sorted(s_operandTypeForUsage.begin(), s_operandTypeForUsage.end()),
@@ -124,237 +145,197 @@ constexpr inline LowLevelILOperandType OperandTypeForUsage(LowLevelILOperandUsag
 }
 
 
-struct LowLevelILOperationTraits
-{
-	using ILOperation = BNLowLevelILOperation;
-	using OperandUsage = LowLevelILOperandUsage;
-	static constexpr size_t MaxOperands = 6;
+static constexpr size_t MaxOperands = 6;
+using OperandLocations = InstructionOperandLocations<MaxOperands>;
 
-	static constexpr bool OperandTypeRequiresTwoSlots(LowLevelILOperandType type)
-	{
-		switch (type)
-		{
-		case SSARegisterLowLevelOperand:
-		case SSARegisterStackLowLevelOperand:
-		case SSAFlagLowLevelOperand:
-		case IndexListLowLevelOperand:
-		case IndexMapLowLevelOperand:
-		case SSARegisterListLowLevelOperand:
-		case SSARegisterStackListLowLevelOperand:
-		case SSAFlagListLowLevelOperand:
-		case RegisterStackAdjustmentsLowLevelOperand:
-		case RegisterOrFlagListLowLevelOperand:
-		case SSARegisterOrFlagListLowLevelOperand:
-		case ExprListLowLevelOperand:
-			return true;
-		default:
-			return false;
-		}
-	}
-
-	static constexpr uint8_t GetOperandIndexAdvance(OperandUsage usage, size_t operandIndex)
-	{
-		// ParameterExprs at index 0 is a counted list and takes two slots
-		if (operandIndex == 0 && usage == ParameterExprsLowLevelOperandUsage)
-			return 2;
-
-		switch (usage)
-		{
-		// Subexpressions take one slot
-		case HighSSARegisterLowLevelOperandUsage:
-		case LowSSARegisterLowLevelOperandUsage:
-		case PartialSSARegisterStackSourceLowLevelOperandUsage:
-		case TopSSARegisterLowLevelOperandUsage:
-			return 1;
-
-		// ParameterExprs takes one slot when not at index 0
-		case ParameterExprsLowLevelOperandUsage:
-			return 1;
-
-		// The next operand follows at same index
-		case OutputSSARegistersLowLevelOperandUsage:
-		case StackSSARegisterLowLevelOperandUsage:
-		case DestSSARegisterStackLowLevelOperandUsage:
-		case OutputMemoryIntrinsicLowLevelOperandUsage:
-			return 0;
-
-		default:
-			return OperandTypeRequiresTwoSlots(OperandTypeForUsage(usage)) ? 2 : 1;
-		}
-	}
+static constexpr std::array s_operandLocations = {
+	OperandLocations{LLIL_NOP},
+	OperandLocations{LLIL_SET_REG, {{DestRegisterLowLevelOperandUsage, 0}, {SourceExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_SET_REG_SPLIT, {{HighRegisterLowLevelOperandUsage, 0}, {LowRegisterLowLevelOperandUsage, 1}, {SourceExprLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_SET_FLAG, {{DestFlagLowLevelOperandUsage, 0}, {SourceExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_SET_REG_STACK_REL, {{DestRegisterStackLowLevelOperandUsage, 0}, {DestExprLowLevelOperandUsage, 1}, {SourceExprLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_REG_STACK_PUSH, {{DestRegisterStackLowLevelOperandUsage, 0}, {SourceExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_ASSERT, {{SourceRegisterLowLevelOperandUsage, 0}, {ConstraintLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FORCE_VER, {{DestRegisterLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_LOAD, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_STORE, {{DestExprLowLevelOperandUsage, 0}, {SourceExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_PUSH, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_POP},
+	OperandLocations{LLIL_REG, {{SourceRegisterLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_REG_SPLIT, {{HighRegisterLowLevelOperandUsage, 0}, {LowRegisterLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_REG_STACK_REL, {{SourceRegisterStackLowLevelOperandUsage, 0}, {SourceExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_REG_STACK_POP, {{SourceRegisterStackLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_REG_STACK_FREE_REG, {{DestRegisterLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_REG_STACK_FREE_REL, {{DestRegisterStackLowLevelOperandUsage, 0}, {DestExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_CONST, {{ConstantLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_CONST_PTR, {{ConstantLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_EXTERN_PTR, {{ConstantLowLevelOperandUsage, 0}, {OffsetLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FLOAT_CONST, {{ConstantLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FLAG, {{SourceFlagLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FLAG_BIT, {{SourceFlagLowLevelOperandUsage, 0}, {BitIndexLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_ADD, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_ADC, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}, {CarryExprLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_SUB, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_SBB, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}, {CarryExprLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_AND, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_OR, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_XOR, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_LSL, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_LSR, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_ASR, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_ROL, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_RLC, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}, {CarryExprLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_ROR, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_RRC, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}, {CarryExprLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_MUL, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_MULU_DP, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_MULS_DP, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_DIVU, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_DIVU_DP, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_DIVS, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_DIVS_DP, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_MODU, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_MODU_DP, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_MODS, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_MODS_DP, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_NEG, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_NOT, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_SX, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_ZX, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_LOW_PART, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_JUMP, {{DestExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_JUMP_TO, {{DestExprLowLevelOperandUsage, 0}, {TargetsLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_CALL, {{DestExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_CALL_STACK_ADJUST, {{DestExprLowLevelOperandUsage, 0}, {StackAdjustmentLowLevelOperandUsage, 1}, {RegisterStackAdjustmentsLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_TAILCALL, {{DestExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_RET, {{DestExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_NORET},
+	OperandLocations{LLIL_IF, {{ConditionExprLowLevelOperandUsage, 0}, {TrueTargetLowLevelOperandUsage, 1}, {FalseTargetLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_GOTO, {{TargetLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FLAG_COND, {{FlagConditionLowLevelOperandUsage, 0}, {SemanticFlagClassLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FLAG_GROUP, {{SemanticFlagGroupLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_CMP_E, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_CMP_NE, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_CMP_SLT, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_CMP_ULT, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_CMP_SLE, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_CMP_ULE, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_CMP_SGE, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_CMP_UGE, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_CMP_SGT, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_CMP_UGT, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_TEST_BIT, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_BOOL_TO_INT, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_ADD_OVERFLOW, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_SYSCALL},
+	OperandLocations{LLIL_BP},
+	OperandLocations{LLIL_TRAP, {{VectorLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_INTRINSIC, {{OutputRegisterOrFlagListLowLevelOperandUsage, 0}, {IntrinsicLowLevelOperandUsage, 2}, {ParameterExprsLowLevelOperandUsage, 3, 0}}},
+	OperandLocations{LLIL_UNDEF},
+	OperandLocations{LLIL_UNIMPL},
+	OperandLocations{LLIL_UNIMPL_MEM, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FADD, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FSUB, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FMUL, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FDIV, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FSQRT, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FNEG, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FABS, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FLOAT_TO_INT, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_INT_TO_FLOAT, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FLOAT_CONV, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_ROUND_TO_INT, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FLOOR, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_CEIL, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FTRUNC, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FCMP_E, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FCMP_NE, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FCMP_LT, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FCMP_LE, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FCMP_GE, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FCMP_GT, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FCMP_O, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_FCMP_UO, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_SET_REG_SSA, {{DestSSARegisterLowLevelOperandUsage, 0}, {SourceExprLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_SET_REG_SSA_PARTIAL, {{DestSSARegisterLowLevelOperandUsage, 0}, {PartialRegisterLowLevelOperandUsage, 2}, {SourceExprLowLevelOperandUsage, 3}}},
+	OperandLocations{LLIL_SET_REG_SPLIT_SSA, {{HighSSARegisterLowLevelOperandUsage, 0, 0}, {LowSSARegisterLowLevelOperandUsage, 1, 0}, {SourceExprLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_SET_REG_STACK_REL_SSA, {{DestSSARegisterStackLowLevelOperandUsage, 0, 0}, {PartialSSARegisterStackSourceLowLevelOperandUsage, 0, 0, true}, {DestExprLowLevelOperandUsage, 1}, {TopSSARegisterLowLevelOperandUsage, 2, 0}, {SourceExprLowLevelOperandUsage, 3}}},
+	OperandLocations{LLIL_SET_REG_STACK_ABS_SSA, {{DestSSARegisterStackLowLevelOperandUsage, 0, 0}, {PartialSSARegisterStackSourceLowLevelOperandUsage, 0, 0, true}, {DestRegisterLowLevelOperandUsage, 1}, {SourceExprLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_REG_SPLIT_DEST_SSA, {{DestSSARegisterLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_REG_STACK_DEST_SSA, {{DestSSARegisterStackLowLevelOperandUsage, 0}, {PartialSSARegisterStackSourceLowLevelOperandUsage, 0, std::nullopt, true}}},
+	OperandLocations{LLIL_REG_SSA, {{SourceSSARegisterLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_REG_SSA_PARTIAL, {{SourceSSARegisterLowLevelOperandUsage, 0}, {PartialRegisterLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_REG_SPLIT_SSA, {{HighSSARegisterLowLevelOperandUsage, 0}, {LowSSARegisterLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_REG_STACK_REL_SSA, {{SourceSSARegisterStackLowLevelOperandUsage, 0}, {SourceExprLowLevelOperandUsage, 2}, {TopSSARegisterLowLevelOperandUsage, 3, 0}}},
+	OperandLocations{LLIL_REG_STACK_ABS_SSA, {{SourceSSARegisterStackLowLevelOperandUsage, 0}, {SourceRegisterLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_REG_STACK_FREE_REL_SSA, {{DestSSARegisterStackLowLevelOperandUsage, 0, 0}, {PartialSSARegisterStackSourceLowLevelOperandUsage, 0, 0, true}, {DestExprLowLevelOperandUsage, 1}, {TopSSARegisterLowLevelOperandUsage, 2, 0}}},
+	OperandLocations{LLIL_REG_STACK_FREE_ABS_SSA, {{DestSSARegisterStackLowLevelOperandUsage, 0, 0}, {PartialSSARegisterStackSourceLowLevelOperandUsage, 0, 0, true}, {DestRegisterLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_SET_FLAG_SSA, {{DestSSAFlagLowLevelOperandUsage, 0}, {SourceExprLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_ASSERT_SSA, {{SourceSSARegisterLowLevelOperandUsage, 0}, {ConstraintLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_FORCE_VER_SSA, {{DestSSARegisterLowLevelOperandUsage, 0}, {SourceSSARegisterLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_FLAG_SSA, {{SourceSSAFlagLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_FLAG_BIT_SSA, {{SourceSSAFlagLowLevelOperandUsage, 0}, {BitIndexLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_CALL_SSA, {{OutputSSARegistersLowLevelOperandUsage, 0, 1}, {OutputMemoryVersionLowLevelOperandUsage, 0, 0}, {DestExprLowLevelOperandUsage, 1}, {StackSSARegisterLowLevelOperandUsage, 2, 0}, {StackMemoryVersionLowLevelOperandUsage, 2, 2}, {ParameterExprsLowLevelOperandUsage, 3, 0}}},
+	OperandLocations{LLIL_SYSCALL_SSA, {{OutputSSARegistersLowLevelOperandUsage, 0, 1}, {OutputMemoryVersionLowLevelOperandUsage, 0, 0}, {StackSSARegisterLowLevelOperandUsage, 1, 0}, {StackMemoryVersionLowLevelOperandUsage, 1, 2}, {ParameterExprsLowLevelOperandUsage, 2, 0}}},
+	OperandLocations{LLIL_TAILCALL_SSA, {{OutputSSARegistersLowLevelOperandUsage, 0, 1}, {OutputMemoryVersionLowLevelOperandUsage, 0, 0}, {DestExprLowLevelOperandUsage, 1}, {StackSSARegisterLowLevelOperandUsage, 2, 0}, {StackMemoryVersionLowLevelOperandUsage, 2, 2}, {ParameterExprsLowLevelOperandUsage, 3, 0}}},
+	OperandLocations{LLIL_CALL_PARAM, {{ParameterExprsLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_CALL_STACK_SSA, {{StackSSARegisterLowLevelOperandUsage, 0}, {SourceMemoryVersionLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_CALL_OUTPUT_SSA, {{DestMemoryVersionLowLevelOperandUsage, 0}, {OutputSSARegistersLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_SEPARATE_PARAM_LIST_SSA, {{ParameterExprsLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_SHARED_PARAM_SLOT_SSA, {{ParameterExprsLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_MEMORY_INTRINSIC_OUTPUT_SSA, {{DestMemoryVersionLowLevelOperandUsage, 0}, {OutputSSARegisterOrFlagListLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_LOAD_SSA, {{SourceExprLowLevelOperandUsage, 0}, {SourceMemoryVersionLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_STORE_SSA, {{DestExprLowLevelOperandUsage, 0}, {DestMemoryVersionLowLevelOperandUsage, 1}, {SourceMemoryVersionLowLevelOperandUsage, 2}, {SourceExprLowLevelOperandUsage, 3}}},
+	OperandLocations{LLIL_INTRINSIC_SSA, {{OutputSSARegisterOrFlagListLowLevelOperandUsage, 0}, {IntrinsicLowLevelOperandUsage, 2}, {ParameterExprsLowLevelOperandUsage, 3, 0}}},
+	OperandLocations{LLIL_MEMORY_INTRINSIC_SSA, {{OutputMemoryIntrinsicLowLevelOperandUsage, 0, 1}, {OutputMemoryVersionLowLevelOperandUsage, 0, 0}, {IntrinsicLowLevelOperandUsage, 1}, {ParameterExprsLowLevelOperandUsage, 2, 0}, {SourceMemoryVersionLowLevelOperandUsage, 3}}},
+	OperandLocations{LLIL_REG_PHI, {{DestSSARegisterLowLevelOperandUsage, 0}, {SourceSSARegistersLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_REG_STACK_PHI, {{DestSSARegisterStackLowLevelOperandUsage, 0}, {SourceSSARegisterStacksLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_FLAG_PHI, {{DestSSAFlagLowLevelOperandUsage, 0}, {SourceSSAFlagsLowLevelOperandUsage, 2}}},
+	OperandLocations{LLIL_MEM_PHI, {{DestMemoryVersionLowLevelOperandUsage, 0}, {SourceMemoryVersionsLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_BSWAP, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_POPCNT, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_CLZ, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_CTZ, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_RBIT, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_CLS, {{SourceExprLowLevelOperandUsage, 0}}},
+	OperandLocations{LLIL_MINS, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_MAXS, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_MINU, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_MAXU, {{LeftExprLowLevelOperandUsage, 0}, {RightExprLowLevelOperandUsage, 1}}},
+	OperandLocations{LLIL_ABS, {{SourceExprLowLevelOperandUsage, 0}}},
 };
 
-using OperandUsage = detail::ILInstructionOperandUsage<LowLevelILOperationTraits>;
-static_assert(sizeof(OperandUsage) == 14);
+
+VALIDATE_INSTRUCTION_ORDER(s_operandLocations);
+// END GENERATED llil-operand-tables
 
 
-template <size_t N>
-static constexpr OperandUsage WithOperandIndices(OperandUsage usage, const uint8_t (&indices)[N])
+std::optional<LowLevelILOperandLocation> OperandLocationForUsage(
+    BNLowLevelILOperation operation, LowLevelILOperandUsage usage)
 {
-	std::copy(indices, indices + N, usage.indices);
-	return usage;
+	if (operation >= s_operandLocations.size())
+		return std::nullopt;
+	const auto& info = s_operandLocations[operation];
+	for (uint8_t i = 0; i < info.count; i++)
+	{
+		if (info.locations[i].usage == usage)
+			return info.locations[i];
+	}
+	return std::nullopt;
 }
 
 
-static constexpr std::array s_instructionOperandUsage = {
-	OperandUsage{LLIL_NOP},
-	OperandUsage{LLIL_SET_REG, {DestRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SET_REG_SPLIT, {HighRegisterLowLevelOperandUsage, LowRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SET_FLAG, {DestFlagLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SET_REG_STACK_REL, {DestRegisterStackLowLevelOperandUsage, DestExprLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_STACK_PUSH, {DestRegisterStackLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_ASSERT, {SourceRegisterLowLevelOperandUsage, ConstraintLowLevelOperandUsage}},
-	OperandUsage{LLIL_FORCE_VER, {DestRegisterLowLevelOperandUsage}},
-	OperandUsage{LLIL_LOAD, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_STORE, {DestExprLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_PUSH, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_POP},
-	OperandUsage{LLIL_REG, {SourceRegisterLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_SPLIT, {HighRegisterLowLevelOperandUsage, LowRegisterLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_STACK_REL, {SourceRegisterStackLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_STACK_POP, {SourceRegisterStackLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_STACK_FREE_REG, {DestRegisterLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_STACK_FREE_REL, {DestRegisterStackLowLevelOperandUsage, DestExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CONST, {ConstantLowLevelOperandUsage}},
-	OperandUsage{LLIL_CONST_PTR, {ConstantLowLevelOperandUsage}},
-	OperandUsage{LLIL_EXTERN_PTR, {ConstantLowLevelOperandUsage, OffsetLowLevelOperandUsage}},
-	OperandUsage{LLIL_FLOAT_CONST, {ConstantLowLevelOperandUsage}},
-	OperandUsage{LLIL_FLAG, {SourceFlagLowLevelOperandUsage}},
-	OperandUsage{LLIL_FLAG_BIT, {SourceFlagLowLevelOperandUsage, BitIndexLowLevelOperandUsage}},
-	OperandUsage{LLIL_ADD, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_ADC, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SUB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SBB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_AND, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_OR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_XOR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_LSL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_LSR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_ASR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_ROL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_RLC, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_ROR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_RRC, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_MUL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_MULU_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_MULS_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_DIVU, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_DIVU_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_DIVS, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_DIVS_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_MODU, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_MODU_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_MODS, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_MODS_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_NEG, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_NOT, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SX, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_ZX, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_LOW_PART, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_JUMP, {DestExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_JUMP_TO, {DestExprLowLevelOperandUsage, TargetsLowLevelOperandUsage}},
-	OperandUsage{LLIL_CALL, {DestExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CALL_STACK_ADJUST, {DestExprLowLevelOperandUsage, StackAdjustmentLowLevelOperandUsage, RegisterStackAdjustmentsLowLevelOperandUsage}},
-	OperandUsage{LLIL_TAILCALL, {DestExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_RET, {DestExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_NORET},
-	OperandUsage{LLIL_IF, {ConditionExprLowLevelOperandUsage, TrueTargetLowLevelOperandUsage, FalseTargetLowLevelOperandUsage}},
-	OperandUsage{LLIL_GOTO, {TargetLowLevelOperandUsage}},
-	OperandUsage{LLIL_FLAG_COND, {FlagConditionLowLevelOperandUsage, SemanticFlagClassLowLevelOperandUsage}},
-	OperandUsage{LLIL_FLAG_GROUP, {SemanticFlagGroupLowLevelOperandUsage}},
-	OperandUsage{LLIL_CMP_E, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CMP_NE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CMP_SLT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CMP_ULT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CMP_SLE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CMP_ULE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CMP_SGE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CMP_UGE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CMP_SGT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CMP_UGT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_TEST_BIT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_BOOL_TO_INT, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_ADD_OVERFLOW, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SYSCALL},
-	OperandUsage{LLIL_BP},
-	OperandUsage{LLIL_TRAP, {VectorLowLevelOperandUsage}},
-	OperandUsage{LLIL_INTRINSIC, {OutputRegisterOrFlagListLowLevelOperandUsage, IntrinsicLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
-	OperandUsage{LLIL_UNDEF},
-	OperandUsage{LLIL_UNIMPL},
-	OperandUsage{LLIL_UNIMPL_MEM, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FADD, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FSUB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FMUL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FDIV, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FSQRT, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FNEG, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FABS, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FLOAT_TO_INT, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_INT_TO_FLOAT, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FLOAT_CONV, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_ROUND_TO_INT, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FLOOR, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CEIL, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FTRUNC, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FCMP_E, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FCMP_NE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FCMP_LT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FCMP_LE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FCMP_GE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FCMP_GT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FCMP_O, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_FCMP_UO, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SET_REG_SSA, {DestSSARegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SET_REG_SSA_PARTIAL, {DestSSARegisterLowLevelOperandUsage, PartialRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SET_REG_SPLIT_SSA, {HighSSARegisterLowLevelOperandUsage, LowSSARegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SET_REG_STACK_REL_SSA, {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage, DestExprLowLevelOperandUsage, TopSSARegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_SET_REG_STACK_ABS_SSA, {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage, DestRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_SPLIT_DEST_SSA},
-	OperandUsage{LLIL_REG_STACK_DEST_SSA},
-	OperandUsage{LLIL_REG_SSA, {SourceSSARegisterLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_SSA_PARTIAL, {SourceSSARegisterLowLevelOperandUsage, PartialRegisterLowLevelOperandUsage}},
-	WithOperandIndices(OperandUsage{LLIL_REG_SPLIT_SSA, {HighSSARegisterLowLevelOperandUsage, LowSSARegisterLowLevelOperandUsage}}, {0, 2}),
-	OperandUsage{LLIL_REG_STACK_REL_SSA, {SourceSSARegisterStackLowLevelOperandUsage, SourceExprLowLevelOperandUsage, TopSSARegisterLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_STACK_ABS_SSA, {SourceSSARegisterStackLowLevelOperandUsage, SourceRegisterLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_STACK_FREE_REL_SSA, {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage, DestExprLowLevelOperandUsage, TopSSARegisterLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_STACK_FREE_ABS_SSA, {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage, DestRegisterLowLevelOperandUsage}},
-	OperandUsage{LLIL_SET_FLAG_SSA, {DestSSAFlagLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_ASSERT_SSA, {SourceSSARegisterLowLevelOperandUsage, ConstraintLowLevelOperandUsage}},
-	OperandUsage{LLIL_FORCE_VER_SSA, {DestSSARegisterLowLevelOperandUsage, SourceSSARegisterLowLevelOperandUsage}},
-	OperandUsage{LLIL_FLAG_SSA, {SourceSSAFlagLowLevelOperandUsage}},
-	OperandUsage{LLIL_FLAG_BIT_SSA, {SourceSSAFlagLowLevelOperandUsage, BitIndexLowLevelOperandUsage}},
-	OperandUsage{LLIL_CALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage, DestExprLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage, StackMemoryVersionLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
-	OperandUsage{LLIL_SYSCALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage, StackMemoryVersionLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
-	OperandUsage{LLIL_TAILCALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage, DestExprLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage, StackMemoryVersionLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
-	OperandUsage{LLIL_CALL_PARAM},
-	OperandUsage{LLIL_CALL_STACK_SSA},
-	OperandUsage{LLIL_CALL_OUTPUT_SSA},
-	OperandUsage{LLIL_SEPARATE_PARAM_LIST_SSA, {ParameterExprsLowLevelOperandUsage}},
-	OperandUsage{LLIL_SHARED_PARAM_SLOT_SSA, {ParameterExprsLowLevelOperandUsage}},
-	OperandUsage{LLIL_MEMORY_INTRINSIC_OUTPUT_SSA},
-	OperandUsage{LLIL_LOAD_SSA, {SourceExprLowLevelOperandUsage, SourceMemoryVersionLowLevelOperandUsage}},
-	OperandUsage{LLIL_STORE_SSA, {DestExprLowLevelOperandUsage, DestMemoryVersionLowLevelOperandUsage, SourceMemoryVersionLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_INTRINSIC_SSA, {OutputSSARegisterOrFlagListLowLevelOperandUsage, IntrinsicLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
-	OperandUsage{LLIL_MEMORY_INTRINSIC_SSA, {OutputMemoryIntrinsicLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage, IntrinsicLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage, SourceMemoryVersionLowLevelOperandUsage}},
-	OperandUsage{LLIL_REG_PHI, {DestSSARegisterLowLevelOperandUsage, SourceSSARegistersLowLevelOperandUsage}},
-	WithOperandIndices(OperandUsage{LLIL_REG_STACK_PHI, {DestSSARegisterStackLowLevelOperandUsage, SourceSSARegisterStacksLowLevelOperandUsage}}, {0, 2}),
-	OperandUsage{LLIL_FLAG_PHI, {DestSSAFlagLowLevelOperandUsage, SourceSSAFlagsLowLevelOperandUsage}},
-	OperandUsage{LLIL_MEM_PHI, {DestMemoryVersionLowLevelOperandUsage, SourceMemoryVersionsLowLevelOperandUsage}},
-	OperandUsage{LLIL_BSWAP, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_POPCNT, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CLZ, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CTZ, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_RBIT, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_CLS, {SourceExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_MINS, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_MAXS, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_MINU, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_MAXU, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-	OperandUsage{LLIL_ABS, {SourceExprLowLevelOperandUsage}},
-};
-
-
-VALIDATE_INSTRUCTION_ORDER(s_instructionOperandUsage);
+// Returns the instruction's operand for the first of `usages` it reports.
+LowLevelILOperand OperandForUsages(
+    const LowLevelILInstruction& instr, std::initializer_list<LowLevelILOperandUsage> usages)
+{
+	for (LowLevelILOperandUsage usage : usages)
+	{
+		if (std::optional<LowLevelILOperandLocation> location = OperandLocationForUsage(instr.operation, usage))
+			return LowLevelILOperand(instr, *location);
+	}
+	throw LowLevelILInstructionAccessException();
+}
 
 
 } // unnamed namespace
@@ -1155,11 +1136,21 @@ LowLevelILSSARegisterOrFlagList::operator vector<SSARegisterOrFlag>() const
 }
 
 
-LowLevelILOperand::LowLevelILOperand(
-    const LowLevelILInstruction& instr, LowLevelILOperandUsage usage, size_t operandIndex) :
-    m_instr(instr),
-    m_usage(usage), m_type(OperandTypeForUsage(usage)), m_operandIndex(operandIndex)
+LowLevelILOperand::LowLevelILOperand(const LowLevelILInstruction& instr, const LowLevelILOperandLocation& location) :
+    m_instr(instr), m_location(location), m_type(OperandTypeForUsage(location.usage))
 {
+}
+
+
+LowLevelILInstruction LowLevelILOperand::Holder() const
+{
+	return m_location.field ? m_instr.GetRawOperandAsExpr(m_location.slot) : m_instr;
+}
+
+
+size_t LowLevelILOperand::Slot() const
+{
+	return m_location.field.value_or(m_location.slot);
 }
 
 
@@ -1167,7 +1158,7 @@ uint64_t LowLevelILOperand::GetInteger() const
 {
 	if (m_type != IntegerLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsInteger(m_operandIndex);
+	return Holder().GetRawOperandAsInteger(Slot());
 }
 
 
@@ -1175,11 +1166,7 @@ size_t LowLevelILOperand::GetIndex() const
 {
 	if (m_type != IndexLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	if (m_usage == OutputMemoryVersionLowLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsIndex(0);
-	if (m_usage == StackMemoryVersionLowLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsIndex(2);
-	return m_instr.GetRawOperandAsIndex(m_operandIndex);
+	return Holder().GetRawOperandAsIndex(Slot());
 }
 
 
@@ -1187,7 +1174,7 @@ LowLevelILInstruction LowLevelILOperand::GetExpr() const
 {
 	if (m_type != ExprLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsExpr(m_operandIndex);
+	return Holder().GetRawOperandAsExpr(Slot());
 }
 
 
@@ -1195,7 +1182,7 @@ uint32_t LowLevelILOperand::GetRegister() const
 {
 	if (m_type != RegisterLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsRegister(m_operandIndex);
+	return Holder().GetRawOperandAsRegister(Slot());
 }
 
 
@@ -1203,7 +1190,7 @@ uint32_t LowLevelILOperand::GetRegisterStack() const
 {
 	if (m_type != RegisterStackLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsRegister(m_operandIndex);
+	return Holder().GetRawOperandAsRegister(Slot());
 }
 
 
@@ -1211,7 +1198,7 @@ uint32_t LowLevelILOperand::GetFlag() const
 {
 	if (m_type != FlagLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsRegister(m_operandIndex);
+	return Holder().GetRawOperandAsRegister(Slot());
 }
 
 
@@ -1219,7 +1206,7 @@ BNLowLevelILFlagCondition LowLevelILOperand::GetFlagCondition() const
 {
 	if (m_type != FlagConditionLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsFlagCondition(m_operandIndex);
+	return Holder().GetRawOperandAsFlagCondition(Slot());
 }
 
 
@@ -1227,7 +1214,7 @@ uint32_t LowLevelILOperand::GetSemanticFlagClass() const
 {
 	if (m_type != SemanticFlagClassLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsRegister(m_operandIndex);
+	return Holder().GetRawOperandAsRegister(Slot());
 }
 
 
@@ -1235,7 +1222,7 @@ uint32_t LowLevelILOperand::GetSemanticFlagGroup() const
 {
 	if (m_type != SemanticFlagGroupLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsRegister(m_operandIndex);
+	return Holder().GetRawOperandAsRegister(Slot());
 }
 
 
@@ -1243,7 +1230,7 @@ uint32_t LowLevelILOperand::GetIntrinsic() const
 {
 	if (m_type != IntrinsicLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsRegister(m_operandIndex);
+	return Holder().GetRawOperandAsRegister(Slot());
 }
 
 
@@ -1251,13 +1238,7 @@ SSARegister LowLevelILOperand::GetSSARegister() const
 {
 	if (m_type != SSARegisterLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	if (((m_usage == HighSSARegisterLowLevelOperandUsage) || (m_usage == LowSSARegisterLowLevelOperandUsage))
-	    && (m_instr.operation == LLIL_REG_SPLIT_SSA))
-		return m_instr.GetRawOperandAsSSARegister(m_operandIndex);
-	if ((m_usage == HighSSARegisterLowLevelOperandUsage) || (m_usage == LowSSARegisterLowLevelOperandUsage)
-	    || (m_usage == StackSSARegisterLowLevelOperandUsage) || (m_usage == TopSSARegisterLowLevelOperandUsage))
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSARegister(0);
-	return m_instr.GetRawOperandAsSSARegister(m_operandIndex);
+	return Holder().GetRawOperandAsSSARegister(Slot());
 }
 
 
@@ -1265,11 +1246,9 @@ SSARegisterStack LowLevelILOperand::GetSSARegisterStack() const
 {
 	if (m_type != SSARegisterStackLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	if ((m_usage == DestSSARegisterStackLowLevelOperandUsage) && (m_instr.operation != LLIL_REG_STACK_PHI))
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSARegisterStack(0);
-	if (m_usage == PartialSSARegisterStackSourceLowLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsPartialSSARegisterStackSource(0);
-	return m_instr.GetRawOperandAsSSARegisterStack(m_operandIndex);
+	if (m_location.partial)
+		return Holder().GetRawOperandAsPartialSSARegisterStackSource(Slot());
+	return Holder().GetRawOperandAsSSARegisterStack(Slot());
 }
 
 
@@ -1277,7 +1256,7 @@ SSAFlag LowLevelILOperand::GetSSAFlag() const
 {
 	if (m_type != SSAFlagLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsSSAFlag(m_operandIndex);
+	return Holder().GetRawOperandAsSSAFlag(Slot());
 }
 
 
@@ -1285,7 +1264,7 @@ LowLevelILIndexList LowLevelILOperand::GetIndexList() const
 {
 	if (m_type != IndexListLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsIndexList(m_operandIndex);
+	return Holder().GetRawOperandAsIndexList(Slot());
 }
 
 
@@ -1293,7 +1272,7 @@ LowLevelILIndexMap LowLevelILOperand::GetIndexMap() const
 {
 	if (m_type != IndexMapLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsIndexMap(m_operandIndex);
+	return Holder().GetRawOperandAsIndexMap(Slot());
 }
 
 
@@ -1301,9 +1280,7 @@ LowLevelILInstructionList LowLevelILOperand::GetExprList() const
 {
 	if (m_type != ExprListLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	if (m_operandIndex == 0)
-		return m_instr.GetRawOperandAsExprList(0);
-	return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsExprList(0);
+	return Holder().GetRawOperandAsExprList(Slot());
 }
 
 
@@ -1311,7 +1288,7 @@ LowLevelILRegisterOrFlagList LowLevelILOperand::GetRegisterOrFlagList() const
 {
 	if (m_type != RegisterOrFlagListLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsRegisterOrFlagList(m_operandIndex);
+	return Holder().GetRawOperandAsRegisterOrFlagList(Slot());
 }
 
 
@@ -1319,9 +1296,7 @@ LowLevelILSSARegisterList LowLevelILOperand::GetSSARegisterList() const
 {
 	if (m_type != SSARegisterListLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	if (m_usage == OutputSSARegistersLowLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSARegisterList(1);
-	return m_instr.GetRawOperandAsSSARegisterList(m_operandIndex);
+	return Holder().GetRawOperandAsSSARegisterList(Slot());
 }
 
 
@@ -1329,7 +1304,7 @@ LowLevelILSSARegisterStackList LowLevelILOperand::GetSSARegisterStackList() cons
 {
 	if (m_type != SSARegisterStackListLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsSSARegisterStackList(m_operandIndex);
+	return Holder().GetRawOperandAsSSARegisterStackList(Slot());
 }
 
 
@@ -1337,7 +1312,7 @@ LowLevelILSSAFlagList LowLevelILOperand::GetSSAFlagList() const
 {
 	if (m_type != SSAFlagListLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsSSAFlagList(m_operandIndex);
+	return Holder().GetRawOperandAsSSAFlagList(Slot());
 }
 
 
@@ -1345,7 +1320,7 @@ LowLevelILSSARegisterOrFlagList LowLevelILOperand::GetSSARegisterOrFlagList() co
 {
 	if (m_type != SSARegisterOrFlagListLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsSSARegisterOrFlagList(m_operandIndex);
+	return Holder().GetRawOperandAsSSARegisterOrFlagList(Slot());
 }
 
 
@@ -1353,7 +1328,15 @@ map<uint32_t, int32_t> LowLevelILOperand::GetRegisterStackAdjustments() const
 {
 	if (m_type != RegisterStackAdjustmentsLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsRegisterStackAdjustments(m_operandIndex);
+	return Holder().GetRawOperandAsRegisterStackAdjustments(Slot());
+}
+
+
+PossibleValueSet LowLevelILOperand::GetConstraint() const
+{
+	if (m_type != ConstraintLowLevelOperand)
+		throw LowLevelILInstructionAccessException();
+	return Holder().GetRawOperandAsPossibleValueSet(Slot());
 }
 
 
@@ -1361,18 +1344,13 @@ const LowLevelILOperand LowLevelILOperandList::ListIterator::operator*()
 {
 	if (index >= owner->m_count)
 		throw LowLevelILInstructionAccessException();
-	LowLevelILOperandUsage usage = owner->m_usages[index];
-	size_t operandIndex = owner->m_indices[index];
-	return LowLevelILOperand(owner->m_instr, usage, operandIndex);
+	return LowLevelILOperand(owner->m_instr, owner->m_locations[index]);
 }
 
 
-LowLevelILOperandList::LowLevelILOperandList(const LowLevelILInstruction& instr,
-    const LowLevelILOperandUsage* usages,
-    const uint8_t* indices,
-    uint8_t count) :
-    m_instr(instr),
-    m_usages(usages), m_indices(indices), m_count(count)
+LowLevelILOperandList::LowLevelILOperandList(
+    const LowLevelILInstruction& instr, const LowLevelILOperandLocation* locations, uint8_t count) :
+    m_instr(instr), m_locations(locations), m_count(count)
 {}
 
 
@@ -1404,9 +1382,7 @@ const LowLevelILOperand LowLevelILOperandList::operator[](size_t i) const
 {
 	if (i >= m_count)
 		throw LowLevelILInstructionAccessException();
-	LowLevelILOperandUsage usage = m_usages[i];
-	size_t operandIndex = m_indices[i];
-	return LowLevelILOperand(m_instr, usage, operandIndex);
+	return LowLevelILOperand(m_instr, m_locations[i]);
 }
 
 
@@ -1473,11 +1449,11 @@ LowLevelILInstruction::LowLevelILInstruction(const LowLevelILInstructionBase& in
 
 LowLevelILOperandList LowLevelILInstructionBase::GetOperands() const
 {
-	if (operation >= s_instructionOperandUsage.size())
+	if (operation >= s_operandLocations.size())
 		throw LowLevelILInstructionAccessException();
-	
-	const auto& info = s_instructionOperandUsage[operation];
-	return LowLevelILOperandList(*(const LowLevelILInstruction*)this, info.usages, info.indices, info.count);
+
+	const auto& info = s_operandLocations[operation];
+	return LowLevelILOperandList(*(const LowLevelILInstruction*)this, info.locations, info.count);
 }
 
 
@@ -1903,6 +1879,7 @@ void LowLevelILInstructionBase::ClearAttribute(BNILInstructionAttribute attribut
 }
 
 
+// BEGIN GENERATED llil-visit: from api/il, do not edit
 void LowLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const LowLevelILInstruction& expr)> func) const
 {
 	if (!func(*this))
@@ -1915,14 +1892,8 @@ void LowLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const LowLeve
 	case LLIL_SET_REG_SPLIT:
 		GetSourceExpr<LLIL_SET_REG_SPLIT>().VisitExprs(func);
 		break;
-	case LLIL_SET_REG_SSA:
-		GetSourceExpr<LLIL_SET_REG_SSA>().VisitExprs(func);
-		break;
-	case LLIL_SET_REG_SSA_PARTIAL:
-		GetSourceExpr<LLIL_SET_REG_SSA_PARTIAL>().VisitExprs(func);
-		break;
-	case LLIL_SET_REG_SPLIT_SSA:
-		GetSourceExpr<LLIL_SET_REG_SPLIT_SSA>().VisitExprs(func);
+	case LLIL_SET_FLAG:
+		GetSourceExpr<LLIL_SET_FLAG>().VisitExprs(func);
 		break;
 	case LLIL_SET_REG_STACK_REL:
 		GetDestExpr<LLIL_SET_REG_STACK_REL>().VisitExprs(func);
@@ -1931,18 +1902,15 @@ void LowLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const LowLeve
 	case LLIL_REG_STACK_PUSH:
 		GetSourceExpr<LLIL_REG_STACK_PUSH>().VisitExprs(func);
 		break;
-	case LLIL_SET_REG_STACK_REL_SSA:
-		GetDestExpr<LLIL_SET_REG_STACK_REL_SSA>().VisitExprs(func);
-		GetSourceExpr<LLIL_SET_REG_STACK_REL_SSA>().VisitExprs(func);
+	case LLIL_LOAD:
+		GetSourceExpr<LLIL_LOAD>().VisitExprs(func);
 		break;
-	case LLIL_SET_REG_STACK_ABS_SSA:
-		GetSourceExpr<LLIL_SET_REG_STACK_ABS_SSA>().VisitExprs(func);
+	case LLIL_STORE:
+		GetDestExpr<LLIL_STORE>().VisitExprs(func);
+		GetSourceExpr<LLIL_STORE>().VisitExprs(func);
 		break;
-	case LLIL_SET_FLAG:
-		GetSourceExpr<LLIL_SET_FLAG>().VisitExprs(func);
-		break;
-	case LLIL_SET_FLAG_SSA:
-		GetSourceExpr<LLIL_SET_FLAG_SSA>().VisitExprs(func);
+	case LLIL_PUSH:
+		GetSourceExpr<LLIL_PUSH>().VisitExprs(func);
 		break;
 	case LLIL_REG_STACK_REL:
 		GetSourceExpr<LLIL_REG_STACK_REL>().VisitExprs(func);
@@ -1950,34 +1918,130 @@ void LowLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const LowLeve
 	case LLIL_REG_STACK_FREE_REL:
 		GetDestExpr<LLIL_REG_STACK_FREE_REL>().VisitExprs(func);
 		break;
-	case LLIL_REG_STACK_REL_SSA:
-		GetSourceExpr<LLIL_REG_STACK_REL_SSA>().VisitExprs(func);
+	case LLIL_ADD:
+		GetLeftExpr<LLIL_ADD>().VisitExprs(func);
+		GetRightExpr<LLIL_ADD>().VisitExprs(func);
 		break;
-	case LLIL_REG_STACK_FREE_REL_SSA:
-		GetDestExpr<LLIL_REG_STACK_FREE_REL_SSA>().VisitExprs(func);
+	case LLIL_ADC:
+		GetLeftExpr<LLIL_ADC>().VisitExprs(func);
+		GetRightExpr<LLIL_ADC>().VisitExprs(func);
+		GetCarryExpr<LLIL_ADC>().VisitExprs(func);
 		break;
-	case LLIL_LOAD:
-		GetSourceExpr<LLIL_LOAD>().VisitExprs(func);
+	case LLIL_SUB:
+		GetLeftExpr<LLIL_SUB>().VisitExprs(func);
+		GetRightExpr<LLIL_SUB>().VisitExprs(func);
 		break;
-	case LLIL_LOAD_SSA:
-		GetSourceExpr<LLIL_LOAD_SSA>().VisitExprs(func);
+	case LLIL_SBB:
+		GetLeftExpr<LLIL_SBB>().VisitExprs(func);
+		GetRightExpr<LLIL_SBB>().VisitExprs(func);
+		GetCarryExpr<LLIL_SBB>().VisitExprs(func);
 		break;
-	case LLIL_STORE:
-		GetDestExpr<LLIL_STORE>().VisitExprs(func);
-		GetSourceExpr<LLIL_STORE>().VisitExprs(func);
+	case LLIL_AND:
+		GetLeftExpr<LLIL_AND>().VisitExprs(func);
+		GetRightExpr<LLIL_AND>().VisitExprs(func);
 		break;
-	case LLIL_STORE_SSA:
-		GetDestExpr<LLIL_STORE_SSA>().VisitExprs(func);
-		GetSourceExpr<LLIL_STORE_SSA>().VisitExprs(func);
+	case LLIL_OR:
+		GetLeftExpr<LLIL_OR>().VisitExprs(func);
+		GetRightExpr<LLIL_OR>().VisitExprs(func);
+		break;
+	case LLIL_XOR:
+		GetLeftExpr<LLIL_XOR>().VisitExprs(func);
+		GetRightExpr<LLIL_XOR>().VisitExprs(func);
+		break;
+	case LLIL_LSL:
+		GetLeftExpr<LLIL_LSL>().VisitExprs(func);
+		GetRightExpr<LLIL_LSL>().VisitExprs(func);
+		break;
+	case LLIL_LSR:
+		GetLeftExpr<LLIL_LSR>().VisitExprs(func);
+		GetRightExpr<LLIL_LSR>().VisitExprs(func);
+		break;
+	case LLIL_ASR:
+		GetLeftExpr<LLIL_ASR>().VisitExprs(func);
+		GetRightExpr<LLIL_ASR>().VisitExprs(func);
+		break;
+	case LLIL_ROL:
+		GetLeftExpr<LLIL_ROL>().VisitExprs(func);
+		GetRightExpr<LLIL_ROL>().VisitExprs(func);
+		break;
+	case LLIL_RLC:
+		GetLeftExpr<LLIL_RLC>().VisitExprs(func);
+		GetRightExpr<LLIL_RLC>().VisitExprs(func);
+		GetCarryExpr<LLIL_RLC>().VisitExprs(func);
+		break;
+	case LLIL_ROR:
+		GetLeftExpr<LLIL_ROR>().VisitExprs(func);
+		GetRightExpr<LLIL_ROR>().VisitExprs(func);
+		break;
+	case LLIL_RRC:
+		GetLeftExpr<LLIL_RRC>().VisitExprs(func);
+		GetRightExpr<LLIL_RRC>().VisitExprs(func);
+		GetCarryExpr<LLIL_RRC>().VisitExprs(func);
+		break;
+	case LLIL_MUL:
+		GetLeftExpr<LLIL_MUL>().VisitExprs(func);
+		GetRightExpr<LLIL_MUL>().VisitExprs(func);
+		break;
+	case LLIL_MULU_DP:
+		GetLeftExpr<LLIL_MULU_DP>().VisitExprs(func);
+		GetRightExpr<LLIL_MULU_DP>().VisitExprs(func);
+		break;
+	case LLIL_MULS_DP:
+		GetLeftExpr<LLIL_MULS_DP>().VisitExprs(func);
+		GetRightExpr<LLIL_MULS_DP>().VisitExprs(func);
+		break;
+	case LLIL_DIVU:
+		GetLeftExpr<LLIL_DIVU>().VisitExprs(func);
+		GetRightExpr<LLIL_DIVU>().VisitExprs(func);
+		break;
+	case LLIL_DIVU_DP:
+		GetLeftExpr<LLIL_DIVU_DP>().VisitExprs(func);
+		GetRightExpr<LLIL_DIVU_DP>().VisitExprs(func);
+		break;
+	case LLIL_DIVS:
+		GetLeftExpr<LLIL_DIVS>().VisitExprs(func);
+		GetRightExpr<LLIL_DIVS>().VisitExprs(func);
+		break;
+	case LLIL_DIVS_DP:
+		GetLeftExpr<LLIL_DIVS_DP>().VisitExprs(func);
+		GetRightExpr<LLIL_DIVS_DP>().VisitExprs(func);
+		break;
+	case LLIL_MODU:
+		GetLeftExpr<LLIL_MODU>().VisitExprs(func);
+		GetRightExpr<LLIL_MODU>().VisitExprs(func);
+		break;
+	case LLIL_MODU_DP:
+		GetLeftExpr<LLIL_MODU_DP>().VisitExprs(func);
+		GetRightExpr<LLIL_MODU_DP>().VisitExprs(func);
+		break;
+	case LLIL_MODS:
+		GetLeftExpr<LLIL_MODS>().VisitExprs(func);
+		GetRightExpr<LLIL_MODS>().VisitExprs(func);
+		break;
+	case LLIL_MODS_DP:
+		GetLeftExpr<LLIL_MODS_DP>().VisitExprs(func);
+		GetRightExpr<LLIL_MODS_DP>().VisitExprs(func);
+		break;
+	case LLIL_NEG:
+		GetSourceExpr<LLIL_NEG>().VisitExprs(func);
+		break;
+	case LLIL_NOT:
+		GetSourceExpr<LLIL_NOT>().VisitExprs(func);
+		break;
+	case LLIL_SX:
+		GetSourceExpr<LLIL_SX>().VisitExprs(func);
+		break;
+	case LLIL_ZX:
+		GetSourceExpr<LLIL_ZX>().VisitExprs(func);
+		break;
+	case LLIL_LOW_PART:
+		GetSourceExpr<LLIL_LOW_PART>().VisitExprs(func);
 		break;
 	case LLIL_JUMP:
 		GetDestExpr<LLIL_JUMP>().VisitExprs(func);
 		break;
 	case LLIL_JUMP_TO:
 		GetDestExpr<LLIL_JUMP_TO>().VisitExprs(func);
-		break;
-	case LLIL_IF:
-		GetConditionExpr<LLIL_IF>().VisitExprs(func);
 		break;
 	case LLIL_CALL:
 		GetDestExpr<LLIL_CALL>().VisitExprs(func);
@@ -1988,134 +2052,252 @@ void LowLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const LowLeve
 	case LLIL_TAILCALL:
 		GetDestExpr<LLIL_TAILCALL>().VisitExprs(func);
 		break;
-	case LLIL_CALL_SSA:
-		GetDestExpr<LLIL_CALL_SSA>().VisitExprs(func);
-		for (auto i : GetParameterExprs<LLIL_CALL_SSA>())
-			i.VisitExprs(func);
-		break;
-	case LLIL_SYSCALL_SSA:
-		for (auto i : GetParameterExprs<LLIL_SYSCALL_SSA>())
-			i.VisitExprs(func);
-		break;
-	case LLIL_TAILCALL_SSA:
-		GetDestExpr<LLIL_TAILCALL_SSA>().VisitExprs(func);
-		for (auto i : GetParameterExprs<LLIL_TAILCALL_SSA>())
-			i.VisitExprs(func);
-		break;
 	case LLIL_RET:
 		GetDestExpr<LLIL_RET>().VisitExprs(func);
 		break;
-	case LLIL_PUSH:
-	case LLIL_NEG:
-	case LLIL_NOT:
-	case LLIL_BSWAP:
-	case LLIL_POPCNT:
-	case LLIL_CLZ:
-	case LLIL_CTZ:
-	case LLIL_RBIT:
-	case LLIL_CLS:
-	case LLIL_ABS:
-	case LLIL_SX:
-	case LLIL_ZX:
-	case LLIL_LOW_PART:
-	case LLIL_BOOL_TO_INT:
-	case LLIL_UNIMPL_MEM:
-	case LLIL_FSQRT:
-	case LLIL_FNEG:
-	case LLIL_FABS:
-	case LLIL_FLOAT_TO_INT:
-	case LLIL_INT_TO_FLOAT:
-	case LLIL_FLOAT_CONV:
-	case LLIL_ROUND_TO_INT:
-	case LLIL_FLOOR:
-	case LLIL_CEIL:
-	case LLIL_FTRUNC:
-		AsOneOperand().GetSourceExpr().VisitExprs(func);
+	case LLIL_IF:
+		GetConditionExpr<LLIL_IF>().VisitExprs(func);
 		break;
-	case LLIL_ADD:
-	case LLIL_SUB:
-	case LLIL_AND:
-	case LLIL_OR:
-	case LLIL_XOR:
-	case LLIL_MINS:
-	case LLIL_MAXS:
-	case LLIL_MINU:
-	case LLIL_MAXU:
-	case LLIL_LSL:
-	case LLIL_LSR:
-	case LLIL_ASR:
-	case LLIL_ROL:
-	case LLIL_ROR:
-	case LLIL_MUL:
-	case LLIL_MULU_DP:
-	case LLIL_MULS_DP:
-	case LLIL_DIVU:
-	case LLIL_DIVS:
-	case LLIL_MODU:
-	case LLIL_MODS:
-	case LLIL_DIVU_DP:
-	case LLIL_DIVS_DP:
-	case LLIL_MODU_DP:
-	case LLIL_MODS_DP:
 	case LLIL_CMP_E:
-	case LLIL_CMP_NE:
-	case LLIL_CMP_SLT:
-	case LLIL_CMP_ULT:
-	case LLIL_CMP_SLE:
-	case LLIL_CMP_ULE:
-	case LLIL_CMP_SGE:
-	case LLIL_CMP_UGE:
-	case LLIL_CMP_SGT:
-	case LLIL_CMP_UGT:
-	case LLIL_TEST_BIT:
-	case LLIL_ADD_OVERFLOW:
-	case LLIL_FADD:
-	case LLIL_FSUB:
-	case LLIL_FMUL:
-	case LLIL_FDIV:
-	case LLIL_FCMP_E:
-	case LLIL_FCMP_NE:
-	case LLIL_FCMP_LT:
-	case LLIL_FCMP_LE:
-	case LLIL_FCMP_GE:
-	case LLIL_FCMP_GT:
-	case LLIL_FCMP_O:
-	case LLIL_FCMP_UO:
-		AsTwoOperand().GetLeftExpr().VisitExprs(func);
-		AsTwoOperand().GetRightExpr().VisitExprs(func);
+		GetLeftExpr<LLIL_CMP_E>().VisitExprs(func);
+		GetRightExpr<LLIL_CMP_E>().VisitExprs(func);
 		break;
-	case LLIL_ADC:
-	case LLIL_SBB:
-	case LLIL_RLC:
-	case LLIL_RRC:
-		AsTwoOperandWithCarry().GetLeftExpr().VisitExprs(func);
-		AsTwoOperandWithCarry().GetRightExpr().VisitExprs(func);
-		AsTwoOperandWithCarry().GetCarryExpr().VisitExprs(func);
+	case LLIL_CMP_NE:
+		GetLeftExpr<LLIL_CMP_NE>().VisitExprs(func);
+		GetRightExpr<LLIL_CMP_NE>().VisitExprs(func);
+		break;
+	case LLIL_CMP_SLT:
+		GetLeftExpr<LLIL_CMP_SLT>().VisitExprs(func);
+		GetRightExpr<LLIL_CMP_SLT>().VisitExprs(func);
+		break;
+	case LLIL_CMP_ULT:
+		GetLeftExpr<LLIL_CMP_ULT>().VisitExprs(func);
+		GetRightExpr<LLIL_CMP_ULT>().VisitExprs(func);
+		break;
+	case LLIL_CMP_SLE:
+		GetLeftExpr<LLIL_CMP_SLE>().VisitExprs(func);
+		GetRightExpr<LLIL_CMP_SLE>().VisitExprs(func);
+		break;
+	case LLIL_CMP_ULE:
+		GetLeftExpr<LLIL_CMP_ULE>().VisitExprs(func);
+		GetRightExpr<LLIL_CMP_ULE>().VisitExprs(func);
+		break;
+	case LLIL_CMP_SGE:
+		GetLeftExpr<LLIL_CMP_SGE>().VisitExprs(func);
+		GetRightExpr<LLIL_CMP_SGE>().VisitExprs(func);
+		break;
+	case LLIL_CMP_UGE:
+		GetLeftExpr<LLIL_CMP_UGE>().VisitExprs(func);
+		GetRightExpr<LLIL_CMP_UGE>().VisitExprs(func);
+		break;
+	case LLIL_CMP_SGT:
+		GetLeftExpr<LLIL_CMP_SGT>().VisitExprs(func);
+		GetRightExpr<LLIL_CMP_SGT>().VisitExprs(func);
+		break;
+	case LLIL_CMP_UGT:
+		GetLeftExpr<LLIL_CMP_UGT>().VisitExprs(func);
+		GetRightExpr<LLIL_CMP_UGT>().VisitExprs(func);
+		break;
+	case LLIL_TEST_BIT:
+		GetLeftExpr<LLIL_TEST_BIT>().VisitExprs(func);
+		GetRightExpr<LLIL_TEST_BIT>().VisitExprs(func);
+		break;
+	case LLIL_BOOL_TO_INT:
+		GetSourceExpr<LLIL_BOOL_TO_INT>().VisitExprs(func);
+		break;
+	case LLIL_ADD_OVERFLOW:
+		GetLeftExpr<LLIL_ADD_OVERFLOW>().VisitExprs(func);
+		GetRightExpr<LLIL_ADD_OVERFLOW>().VisitExprs(func);
 		break;
 	case LLIL_INTRINSIC:
-		for (auto i : GetParameterExprs<LLIL_INTRINSIC>())
-			i.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<LLIL_INTRINSIC>())
+			expr.VisitExprs(func);
 		break;
-	case LLIL_INTRINSIC_SSA:
-		for (auto i : GetParameterExprs<LLIL_INTRINSIC_SSA>())
-			i.VisitExprs(func);
+	case LLIL_UNIMPL_MEM:
+		GetSourceExpr<LLIL_UNIMPL_MEM>().VisitExprs(func);
 		break;
-	case LLIL_MEMORY_INTRINSIC_SSA:
-		for (auto i : GetParameterExprs<LLIL_MEMORY_INTRINSIC_SSA>())
-			i.VisitExprs(func);
+	case LLIL_FADD:
+		GetLeftExpr<LLIL_FADD>().VisitExprs(func);
+		GetRightExpr<LLIL_FADD>().VisitExprs(func);
+		break;
+	case LLIL_FSUB:
+		GetLeftExpr<LLIL_FSUB>().VisitExprs(func);
+		GetRightExpr<LLIL_FSUB>().VisitExprs(func);
+		break;
+	case LLIL_FMUL:
+		GetLeftExpr<LLIL_FMUL>().VisitExprs(func);
+		GetRightExpr<LLIL_FMUL>().VisitExprs(func);
+		break;
+	case LLIL_FDIV:
+		GetLeftExpr<LLIL_FDIV>().VisitExprs(func);
+		GetRightExpr<LLIL_FDIV>().VisitExprs(func);
+		break;
+	case LLIL_FSQRT:
+		GetSourceExpr<LLIL_FSQRT>().VisitExprs(func);
+		break;
+	case LLIL_FNEG:
+		GetSourceExpr<LLIL_FNEG>().VisitExprs(func);
+		break;
+	case LLIL_FABS:
+		GetSourceExpr<LLIL_FABS>().VisitExprs(func);
+		break;
+	case LLIL_FLOAT_TO_INT:
+		GetSourceExpr<LLIL_FLOAT_TO_INT>().VisitExprs(func);
+		break;
+	case LLIL_INT_TO_FLOAT:
+		GetSourceExpr<LLIL_INT_TO_FLOAT>().VisitExprs(func);
+		break;
+	case LLIL_FLOAT_CONV:
+		GetSourceExpr<LLIL_FLOAT_CONV>().VisitExprs(func);
+		break;
+	case LLIL_ROUND_TO_INT:
+		GetSourceExpr<LLIL_ROUND_TO_INT>().VisitExprs(func);
+		break;
+	case LLIL_FLOOR:
+		GetSourceExpr<LLIL_FLOOR>().VisitExprs(func);
+		break;
+	case LLIL_CEIL:
+		GetSourceExpr<LLIL_CEIL>().VisitExprs(func);
+		break;
+	case LLIL_FTRUNC:
+		GetSourceExpr<LLIL_FTRUNC>().VisitExprs(func);
+		break;
+	case LLIL_FCMP_E:
+		GetLeftExpr<LLIL_FCMP_E>().VisitExprs(func);
+		GetRightExpr<LLIL_FCMP_E>().VisitExprs(func);
+		break;
+	case LLIL_FCMP_NE:
+		GetLeftExpr<LLIL_FCMP_NE>().VisitExprs(func);
+		GetRightExpr<LLIL_FCMP_NE>().VisitExprs(func);
+		break;
+	case LLIL_FCMP_LT:
+		GetLeftExpr<LLIL_FCMP_LT>().VisitExprs(func);
+		GetRightExpr<LLIL_FCMP_LT>().VisitExprs(func);
+		break;
+	case LLIL_FCMP_LE:
+		GetLeftExpr<LLIL_FCMP_LE>().VisitExprs(func);
+		GetRightExpr<LLIL_FCMP_LE>().VisitExprs(func);
+		break;
+	case LLIL_FCMP_GE:
+		GetLeftExpr<LLIL_FCMP_GE>().VisitExprs(func);
+		GetRightExpr<LLIL_FCMP_GE>().VisitExprs(func);
+		break;
+	case LLIL_FCMP_GT:
+		GetLeftExpr<LLIL_FCMP_GT>().VisitExprs(func);
+		GetRightExpr<LLIL_FCMP_GT>().VisitExprs(func);
+		break;
+	case LLIL_FCMP_O:
+		GetLeftExpr<LLIL_FCMP_O>().VisitExprs(func);
+		GetRightExpr<LLIL_FCMP_O>().VisitExprs(func);
+		break;
+	case LLIL_FCMP_UO:
+		GetLeftExpr<LLIL_FCMP_UO>().VisitExprs(func);
+		GetRightExpr<LLIL_FCMP_UO>().VisitExprs(func);
+		break;
+	case LLIL_SET_REG_SSA:
+		GetSourceExpr<LLIL_SET_REG_SSA>().VisitExprs(func);
+		break;
+	case LLIL_SET_REG_SSA_PARTIAL:
+		GetSourceExpr<LLIL_SET_REG_SSA_PARTIAL>().VisitExprs(func);
+		break;
+	case LLIL_SET_REG_SPLIT_SSA:
+		GetSourceExpr<LLIL_SET_REG_SPLIT_SSA>().VisitExprs(func);
+		break;
+	case LLIL_SET_REG_STACK_REL_SSA:
+		GetDestExpr<LLIL_SET_REG_STACK_REL_SSA>().VisitExprs(func);
+		GetSourceExpr<LLIL_SET_REG_STACK_REL_SSA>().VisitExprs(func);
+		break;
+	case LLIL_SET_REG_STACK_ABS_SSA:
+		GetSourceExpr<LLIL_SET_REG_STACK_ABS_SSA>().VisitExprs(func);
+		break;
+	case LLIL_REG_STACK_REL_SSA:
+		GetSourceExpr<LLIL_REG_STACK_REL_SSA>().VisitExprs(func);
+		break;
+	case LLIL_REG_STACK_FREE_REL_SSA:
+		GetDestExpr<LLIL_REG_STACK_FREE_REL_SSA>().VisitExprs(func);
+		break;
+	case LLIL_SET_FLAG_SSA:
+		GetSourceExpr<LLIL_SET_FLAG_SSA>().VisitExprs(func);
+		break;
+	case LLIL_CALL_SSA:
+		GetDestExpr<LLIL_CALL_SSA>().VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<LLIL_CALL_SSA>())
+			expr.VisitExprs(func);
+		break;
+	case LLIL_SYSCALL_SSA:
+		for (const auto& expr : GetParameterExprs<LLIL_SYSCALL_SSA>())
+			expr.VisitExprs(func);
+		break;
+	case LLIL_TAILCALL_SSA:
+		GetDestExpr<LLIL_TAILCALL_SSA>().VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<LLIL_TAILCALL_SSA>())
+			expr.VisitExprs(func);
 		break;
 	case LLIL_SEPARATE_PARAM_LIST_SSA:
-		for (auto i : GetParameterExprs<LLIL_SEPARATE_PARAM_LIST_SSA>())
-			i.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<LLIL_SEPARATE_PARAM_LIST_SSA>())
+			expr.VisitExprs(func);
 		break;
 	case LLIL_SHARED_PARAM_SLOT_SSA:
-		for (auto i : GetParameterExprs<LLIL_SHARED_PARAM_SLOT_SSA>())
-			i.VisitExprs(func);
+		for (const auto& expr : GetParameterExprs<LLIL_SHARED_PARAM_SLOT_SSA>())
+			expr.VisitExprs(func);
+		break;
+	case LLIL_LOAD_SSA:
+		GetSourceExpr<LLIL_LOAD_SSA>().VisitExprs(func);
+		break;
+	case LLIL_STORE_SSA:
+		GetDestExpr<LLIL_STORE_SSA>().VisitExprs(func);
+		GetSourceExpr<LLIL_STORE_SSA>().VisitExprs(func);
+		break;
+	case LLIL_INTRINSIC_SSA:
+		for (const auto& expr : GetParameterExprs<LLIL_INTRINSIC_SSA>())
+			expr.VisitExprs(func);
+		break;
+	case LLIL_MEMORY_INTRINSIC_SSA:
+		for (const auto& expr : GetParameterExprs<LLIL_MEMORY_INTRINSIC_SSA>())
+			expr.VisitExprs(func);
+		break;
+	case LLIL_BSWAP:
+		GetSourceExpr<LLIL_BSWAP>().VisitExprs(func);
+		break;
+	case LLIL_POPCNT:
+		GetSourceExpr<LLIL_POPCNT>().VisitExprs(func);
+		break;
+	case LLIL_CLZ:
+		GetSourceExpr<LLIL_CLZ>().VisitExprs(func);
+		break;
+	case LLIL_CTZ:
+		GetSourceExpr<LLIL_CTZ>().VisitExprs(func);
+		break;
+	case LLIL_RBIT:
+		GetSourceExpr<LLIL_RBIT>().VisitExprs(func);
+		break;
+	case LLIL_CLS:
+		GetSourceExpr<LLIL_CLS>().VisitExprs(func);
+		break;
+	case LLIL_MINS:
+		GetLeftExpr<LLIL_MINS>().VisitExprs(func);
+		GetRightExpr<LLIL_MINS>().VisitExprs(func);
+		break;
+	case LLIL_MAXS:
+		GetLeftExpr<LLIL_MAXS>().VisitExprs(func);
+		GetRightExpr<LLIL_MAXS>().VisitExprs(func);
+		break;
+	case LLIL_MINU:
+		GetLeftExpr<LLIL_MINU>().VisitExprs(func);
+		GetRightExpr<LLIL_MINU>().VisitExprs(func);
+		break;
+	case LLIL_MAXU:
+		GetLeftExpr<LLIL_MAXU>().VisitExprs(func);
+		GetRightExpr<LLIL_MAXU>().VisitExprs(func);
+		break;
+	case LLIL_ABS:
+		GetSourceExpr<LLIL_ABS>().VisitExprs(func);
 		break;
 	default:
 		break;
 	}
 }
+// END GENERATED llil-visit
 
 
 ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest, const ILSourceLocation& sourceLocation) const
@@ -2124,831 +2306,1214 @@ ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest, const ILSourceLoc
 }
 
 
-ExprId LowLevelILInstruction::CopyTo(
-    LowLevelILFunction* dest, bn::base::function_ref<ExprId(const LowLevelILInstruction& subExpr)> subExprHandler, const ILSourceLocation& sourceLocation) const
+// Rebuilds a branch so it targets `dest`'s labels, because its targets are instruction indices in the source
+// function.
+static ExprId CopyBranchTo(const LowLevelILInstruction& instr, LowLevelILFunction* dest,
+	bn::base::function_ref<ExprId(const LowLevelILInstruction& subExpr)> subExprHandler, const ILSourceLocation& loc)
 {
-	vector<ExprId> params;
-	BNLowLevelILLabel* labelA;
-	BNLowLevelILLabel* labelB;
-
-	const auto& loc = sourceLocation.valid ? sourceLocation : ILSourceLocation{*this};
-
-	switch (operation)
+	switch (instr.operation)
 	{
-	case LLIL_NOP:
-		return dest->Nop(loc);
-	case LLIL_SET_REG:
-		return dest->SetRegister(
-		    size, GetDestRegister<LLIL_SET_REG>(), subExprHandler(GetSourceExpr<LLIL_SET_REG>()), flags, loc);
-	case LLIL_SET_REG_SPLIT:
-		return dest->SetRegisterSplit(size, GetHighRegister<LLIL_SET_REG_SPLIT>(), GetLowRegister<LLIL_SET_REG_SPLIT>(),
-		    subExprHandler(GetSourceExpr<LLIL_SET_REG_SPLIT>()), flags, loc);
-	case LLIL_SET_REG_SSA:
-		return dest->SetRegisterSSA(
-		    size, GetDestSSARegister<LLIL_SET_REG_SSA>(), subExprHandler(GetSourceExpr<LLIL_SET_REG_SSA>()), loc);
-	case LLIL_SET_REG_SSA_PARTIAL:
-		return dest->SetRegisterSSAPartial(size, GetDestSSARegister<LLIL_SET_REG_SSA_PARTIAL>(),
-		    GetPartialRegister<LLIL_SET_REG_SSA_PARTIAL>(), subExprHandler(GetSourceExpr<LLIL_SET_REG_SSA_PARTIAL>()),
-		    loc);
-	case LLIL_SET_REG_SPLIT_SSA:
-		return dest->SetRegisterSplitSSA(size, GetHighSSARegister<LLIL_SET_REG_SPLIT_SSA>(),
-		    GetLowSSARegister<LLIL_SET_REG_SPLIT_SSA>(), subExprHandler(GetSourceExpr<LLIL_SET_REG_SPLIT_SSA>()),
-		    loc);
-	case LLIL_SET_REG_STACK_REL:
-	{
-		ExprId destExpr = subExprHandler(GetDestExpr<LLIL_SET_REG_STACK_REL>());
-		ExprId source = subExprHandler(GetSourceExpr<LLIL_SET_REG_STACK_REL>());
-		return dest->SetRegisterStackTopRelative(
-		    size, GetDestRegisterStack<LLIL_SET_REG_STACK_REL>(), destExpr, source, flags, loc);
-	}
-	case LLIL_REG_STACK_PUSH:
-		return dest->RegisterStackPush(size, GetDestRegisterStack<LLIL_REG_STACK_PUSH>(),
-		    subExprHandler(GetSourceExpr<LLIL_REG_STACK_PUSH>()), flags, loc);
-	case LLIL_SET_REG_STACK_REL_SSA:
-	{
-		ExprId destExpr = subExprHandler(GetDestExpr<LLIL_SET_REG_STACK_REL_SSA>());
-		ExprId source = subExprHandler(GetSourceExpr<LLIL_SET_REG_STACK_REL_SSA>());
-		return dest->SetRegisterStackTopRelativeSSA(size,
-		    GetDestSSARegisterStack<LLIL_SET_REG_STACK_REL_SSA>().regStack,
-		    GetDestSSARegisterStack<LLIL_SET_REG_STACK_REL_SSA>().version,
-		    GetSourceSSARegisterStack<LLIL_SET_REG_STACK_REL_SSA>().version, destExpr,
-		    GetTopSSARegister<LLIL_SET_REG_STACK_REL_SSA>(), source, loc);
-	}
-	case LLIL_SET_REG_STACK_ABS_SSA:
-		return dest->SetRegisterStackAbsoluteSSA(size, GetDestSSARegisterStack<LLIL_SET_REG_STACK_ABS_SSA>().regStack,
-		    GetDestSSARegisterStack<LLIL_SET_REG_STACK_ABS_SSA>().version,
-		    GetSourceSSARegisterStack<LLIL_SET_REG_STACK_ABS_SSA>().version,
-		    GetDestRegister<LLIL_SET_REG_STACK_ABS_SSA>(), subExprHandler(GetSourceExpr<LLIL_SET_REG_STACK_ABS_SSA>()),
-		    loc);
-	case LLIL_SET_FLAG:
-		return dest->SetFlag(GetDestFlag<LLIL_SET_FLAG>(), subExprHandler(GetSourceExpr<LLIL_SET_FLAG>()), loc);
-	case LLIL_SET_FLAG_SSA:
-		return dest->SetFlagSSA(
-		    GetDestSSAFlag<LLIL_SET_FLAG_SSA>(), subExprHandler(GetSourceExpr<LLIL_SET_FLAG_SSA>()), loc);
-	case LLIL_FORCE_VER:
-		return dest->ForceVer(size, GetDestRegister<LLIL_FORCE_VER>(), loc);
-	case LLIL_FORCE_VER_SSA:
-		return dest->ForceVerSSA(size, GetDestSSARegister<LLIL_FORCE_VER_SSA>(), GetSourceSSARegister<LLIL_FORCE_VER_SSA>(), loc);
-	case LLIL_ASSERT:
-		return dest->Assert(size, GetSourceRegister<LLIL_ASSERT>(), GetConstraint<LLIL_ASSERT>(), loc);
-	case LLIL_ASSERT_SSA:
-		return dest->AssertSSA(size, GetSourceSSARegister<LLIL_ASSERT_SSA>(), GetConstraint<LLIL_ASSERT_SSA>(), loc);
-	case LLIL_LOAD:
-		return dest->Load(size, subExprHandler(GetSourceExpr<LLIL_LOAD>()), flags, loc);
-	case LLIL_LOAD_SSA:
-		return dest->LoadSSA(
-		    size, subExprHandler(GetSourceExpr<LLIL_LOAD_SSA>()), GetSourceMemoryVersion<LLIL_LOAD_SSA>(), loc);
-	case LLIL_STORE:
-	{
-		ExprId destExpr = subExprHandler(GetDestExpr<LLIL_STORE>());
-		ExprId source = subExprHandler(GetSourceExpr<LLIL_STORE>());
-		return dest->Store(size, destExpr, source, flags, loc);
-	}
-	case LLIL_STORE_SSA:
-	{
-		ExprId destExpr = subExprHandler(GetDestExpr<LLIL_STORE_SSA>());
-		ExprId source = subExprHandler(GetSourceExpr<LLIL_STORE_SSA>());
-		return dest->StoreSSA(size, destExpr, source, GetDestMemoryVersion<LLIL_STORE_SSA>(),
-		    GetSourceMemoryVersion<LLIL_STORE_SSA>(), loc);
-	}
-	case LLIL_REG:
-		return dest->Register(size, GetSourceRegister<LLIL_REG>(), loc);
-	case LLIL_REG_SSA:
-		return dest->RegisterSSA(size, GetSourceSSARegister<LLIL_REG_SSA>(), loc);
-	case LLIL_REG_SSA_PARTIAL:
-		return dest->RegisterSSAPartial(
-		    size, GetSourceSSARegister<LLIL_REG_SSA_PARTIAL>(), GetPartialRegister<LLIL_REG_SSA_PARTIAL>(), loc);
-	case LLIL_REG_SPLIT:
-		return dest->RegisterSplit(size, GetHighRegister<LLIL_REG_SPLIT>(), GetLowRegister<LLIL_REG_SPLIT>(), loc);
-	case LLIL_REG_SPLIT_SSA:
-		return dest->RegisterSplitSSA(
-		    size, GetHighSSARegister<LLIL_REG_SPLIT_SSA>(), GetLowSSARegister<LLIL_REG_SPLIT_SSA>(), loc);
-	case LLIL_REG_STACK_REL:
-		return dest->RegisterStackTopRelative(size, GetSourceRegisterStack<LLIL_REG_STACK_REL>(),
-		    subExprHandler(GetSourceExpr<LLIL_REG_STACK_REL>()), loc);
-	case LLIL_REG_STACK_POP:
-		return dest->RegisterStackPop(size, GetSourceRegisterStack<LLIL_REG_STACK_POP>(), flags, loc);
-	case LLIL_REG_STACK_FREE_REG:
-		return dest->RegisterStackFreeReg(GetDestRegister<LLIL_REG_STACK_FREE_REG>(), loc);
-	case LLIL_REG_STACK_FREE_REL:
-		return dest->RegisterStackFreeTopRelative(GetDestRegisterStack<LLIL_REG_STACK_FREE_REL>(),
-		    subExprHandler(GetDestExpr<LLIL_REG_STACK_FREE_REL>()), loc);
-	case LLIL_REG_STACK_REL_SSA:
-		return dest->RegisterStackTopRelativeSSA(size, GetSourceSSARegisterStack<LLIL_REG_STACK_REL_SSA>(),
-		    subExprHandler(GetSourceExpr<LLIL_REG_STACK_REL_SSA>()), GetTopSSARegister<LLIL_REG_STACK_REL_SSA>(),
-		    loc);
-	case LLIL_REG_STACK_ABS_SSA:
-		return dest->RegisterStackAbsoluteSSA(size, GetSourceSSARegisterStack<LLIL_REG_STACK_ABS_SSA>(),
-		    GetSourceRegister<LLIL_REG_STACK_ABS_SSA>(), loc);
-	case LLIL_REG_STACK_FREE_REL_SSA:
-		return dest->RegisterStackFreeTopRelativeSSA(GetDestSSARegisterStack<LLIL_REG_STACK_FREE_REL_SSA>().regStack,
-		    GetDestSSARegisterStack<LLIL_REG_STACK_FREE_REL_SSA>().version,
-		    GetSourceSSARegisterStack<LLIL_REG_STACK_FREE_REL_SSA>().version,
-		    subExprHandler(GetDestExpr<LLIL_REG_STACK_FREE_REL_SSA>()),
-		    GetTopSSARegister<LLIL_REG_STACK_FREE_REL_SSA>(), loc);
-	case LLIL_REG_STACK_FREE_ABS_SSA:
-		return dest->RegisterStackFreeAbsoluteSSA(GetDestSSARegisterStack<LLIL_REG_STACK_FREE_ABS_SSA>().regStack,
-		    GetDestSSARegisterStack<LLIL_REG_STACK_FREE_ABS_SSA>().version,
-		    GetSourceSSARegisterStack<LLIL_REG_STACK_FREE_ABS_SSA>().version,
-		    GetDestRegister<LLIL_REG_STACK_FREE_ABS_SSA>(), loc);
-	case LLIL_FLAG:
-		return dest->Flag(GetSourceFlag<LLIL_FLAG>(), loc);
-	case LLIL_FLAG_SSA:
-		return dest->FlagSSA(GetSourceSSAFlag<LLIL_FLAG_SSA>(), loc);
-	case LLIL_FLAG_BIT:
-		return dest->FlagBit(size, GetSourceFlag<LLIL_FLAG_BIT>(), GetBitIndex<LLIL_FLAG_BIT>(), loc);
-	case LLIL_FLAG_BIT_SSA:
-		return dest->FlagBitSSA(size, GetSourceSSAFlag<LLIL_FLAG_BIT_SSA>(), GetBitIndex<LLIL_FLAG_BIT_SSA>(), loc);
-	case LLIL_JUMP:
-		return dest->Jump(subExprHandler(GetDestExpr<LLIL_JUMP>()), loc);
-	case LLIL_CALL:
-		return dest->Call(subExprHandler(GetDestExpr<LLIL_CALL>()), loc);
-	case LLIL_CALL_STACK_ADJUST:
-		return dest->CallStackAdjust(subExprHandler(GetDestExpr<LLIL_CALL_STACK_ADJUST>()),
-		    GetStackAdjustment<LLIL_CALL_STACK_ADJUST>(), GetRegisterStackAdjustments<LLIL_CALL_STACK_ADJUST>(), loc);
-	case LLIL_TAILCALL:
-		return dest->TailCall(subExprHandler(GetDestExpr<LLIL_TAILCALL>()), loc);
-	case LLIL_RET:
-		return dest->Return(subExprHandler(GetDestExpr<LLIL_RET>()), loc);
 	case LLIL_JUMP_TO:
 	{
-		map<uint64_t, BNLowLevelILLabel*> labelList;
-		for (auto target : GetTargets<LLIL_JUMP_TO>())
+		map<uint64_t, BNLowLevelILLabel*> labels;
+		for (auto target : instr.GetTargets<LLIL_JUMP_TO>())
 		{
-			labelA = dest->GetLabelForSourceInstruction(target.second);
-			if (!labelA)
-				return dest->Jump(subExprHandler(GetDestExpr<LLIL_JUMP_TO>()), loc);
-			labelList[target.first] = labelA;
+			BNLowLevelILLabel* label = dest->GetLabelForSourceInstruction(target.second);
+			if (!label)
+				return dest->Jump(subExprHandler(instr.GetDestExpr<LLIL_JUMP_TO>()), loc);
+			labels[target.first] = label;
 		}
-		return dest->JumpTo(subExprHandler(GetDestExpr<LLIL_JUMP_TO>()), labelList, loc);
+		return dest->JumpTo(subExprHandler(instr.GetDestExpr<LLIL_JUMP_TO>()), labels, loc);
 	}
 	case LLIL_GOTO:
-		labelA = dest->GetLabelForSourceInstruction(GetTarget<LLIL_GOTO>());
-		if (!labelA)
+	{
+		BNLowLevelILLabel* label = dest->GetLabelForSourceInstruction(instr.GetTarget<LLIL_GOTO>());
+		if (!label)
 		{
-			return dest->Jump(dest->ConstPointer(function->GetArchitecture()->GetAddressSize(),
-			                      function->GetInstruction(GetTarget<LLIL_GOTO>()).address),
-			    loc);
+			return dest->Jump(dest->ConstPointer(instr.function->GetArchitecture()->GetAddressSize(),
+				instr.function->GetInstruction(instr.GetTarget<LLIL_GOTO>()).address), loc);
 		}
-		return dest->Goto(*labelA, loc);
+		return dest->Goto(*label, loc);
+	}
 	case LLIL_IF:
-		labelA = dest->GetLabelForSourceInstruction(GetTrueTarget<LLIL_IF>());
-		labelB = dest->GetLabelForSourceInstruction(GetFalseTarget<LLIL_IF>());
-		if ((!labelA) || (!labelB))
+	{
+		BNLowLevelILLabel* trueLabel = dest->GetLabelForSourceInstruction(instr.GetTrueTarget<LLIL_IF>());
+		BNLowLevelILLabel* falseLabel = dest->GetLabelForSourceInstruction(instr.GetFalseTarget<LLIL_IF>());
+		if (!trueLabel || !falseLabel)
 			return dest->Undefined(loc);
-		return dest->If(subExprHandler(GetConditionExpr<LLIL_IF>()), *labelA, *labelB, loc);
-	case LLIL_FLAG_COND:
-		return dest->FlagCondition(GetFlagCondition<LLIL_FLAG_COND>(), GetSemanticFlagClass<LLIL_FLAG_COND>(), loc);
-	case LLIL_FLAG_GROUP:
-		return dest->FlagGroup(GetSemanticFlagGroup<LLIL_FLAG_GROUP>(), loc);
-	case LLIL_TRAP:
-		return dest->Trap(GetVector<LLIL_TRAP>(), loc);
-	case LLIL_CALL_SSA:
-		for (auto i : GetParameterExprs<LLIL_CALL_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->CallSSA(GetOutputSSARegisters<LLIL_CALL_SSA>(), subExprHandler(GetDestExpr<LLIL_CALL_SSA>()),
-		    params, GetStackSSARegister<LLIL_CALL_SSA>(), GetDestMemoryVersion<LLIL_CALL_SSA>(),
-		    GetSourceMemoryVersion<LLIL_CALL_SSA>(), loc);
-	case LLIL_SYSCALL_SSA:
-		for (auto i : GetParameterExprs<LLIL_SYSCALL_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->SystemCallSSA(GetOutputSSARegisters<LLIL_SYSCALL_SSA>(), params,
-		    GetStackSSARegister<LLIL_SYSCALL_SSA>(), GetDestMemoryVersion<LLIL_SYSCALL_SSA>(),
-		    GetSourceMemoryVersion<LLIL_SYSCALL_SSA>(), loc);
-	case LLIL_TAILCALL_SSA:
-		for (auto i : GetParameterExprs<LLIL_TAILCALL_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->TailCallSSA(GetOutputSSARegisters<LLIL_TAILCALL_SSA>(),
-		    subExprHandler(GetDestExpr<LLIL_TAILCALL_SSA>()), params, GetStackSSARegister<LLIL_TAILCALL_SSA>(),
-		    GetDestMemoryVersion<LLIL_TAILCALL_SSA>(), GetSourceMemoryVersion<LLIL_TAILCALL_SSA>(), loc);
-	case LLIL_REG_PHI:
-		return dest->RegisterPhi(GetDestSSARegister<LLIL_REG_PHI>(), GetSourceSSARegisters<LLIL_REG_PHI>(), loc);
-	case LLIL_REG_STACK_PHI:
-		return dest->RegisterStackPhi(
-		    GetDestSSARegisterStack<LLIL_REG_STACK_PHI>(), GetSourceSSARegisterStacks<LLIL_REG_STACK_PHI>(), loc);
-	case LLIL_FLAG_PHI:
-		return dest->FlagPhi(GetDestSSAFlag<LLIL_FLAG_PHI>(), GetSourceSSAFlags<LLIL_FLAG_PHI>(), loc);
-	case LLIL_MEM_PHI:
-		return dest->MemoryPhi(GetDestMemoryVersion<LLIL_MEM_PHI>(), GetSourceMemoryVersions<LLIL_MEM_PHI>(), loc);
-	case LLIL_CONST:
-		return dest->Const(size, GetConstant<LLIL_CONST>(), loc);
-	case LLIL_CONST_PTR:
-		return dest->ConstPointer(size, GetConstant<LLIL_CONST_PTR>(), loc);
-	case LLIL_EXTERN_PTR:
-		return dest->ExternPointer(size, GetConstant<LLIL_EXTERN_PTR>(), GetOffset<LLIL_EXTERN_PTR>(), loc);
-	case LLIL_FLOAT_CONST:
-		return dest->FloatConstRaw(size, GetConstant<LLIL_FLOAT_CONST>(), loc);
-	case LLIL_POP:
-	case LLIL_NORET:
-	case LLIL_SYSCALL:
-	case LLIL_BP:
-	case LLIL_UNDEF:
-		return dest->AddExprWithLocation(operation, loc, size, flags);
-	case LLIL_UNIMPL:
-		return dest->AddExprWithLocation(operation, loc, size, flags, GetRawOperandAsInteger(0));
-	case LLIL_UNIMPL_MEM:
-		return dest->AddExprWithLocation(operation, loc, size, flags, subExprHandler(AsOneOperand().GetSourceExpr()), GetRawOperandAsInteger(1));
-	case LLIL_PUSH:
-	case LLIL_NEG:
-	case LLIL_NOT:
-	case LLIL_BSWAP:
-	case LLIL_POPCNT:
-	case LLIL_CLZ:
-	case LLIL_CTZ:
-	case LLIL_RBIT:
-	case LLIL_CLS:
-	case LLIL_ABS:
-	case LLIL_SX:
-	case LLIL_ZX:
-	case LLIL_LOW_PART:
-	case LLIL_BOOL_TO_INT:
-	case LLIL_FSQRT:
-	case LLIL_FNEG:
-	case LLIL_FABS:
-	case LLIL_FLOAT_TO_INT:
-	case LLIL_INT_TO_FLOAT:
-	case LLIL_FLOAT_CONV:
-	case LLIL_ROUND_TO_INT:
-	case LLIL_FLOOR:
-	case LLIL_CEIL:
-	case LLIL_FTRUNC:
-		return dest->AddExprWithLocation(operation, loc, size, flags, subExprHandler(AsOneOperand().GetSourceExpr()));
-	case LLIL_ADD:
-	case LLIL_SUB:
-	case LLIL_AND:
-	case LLIL_OR:
-	case LLIL_XOR:
-	case LLIL_MINS:
-	case LLIL_MAXS:
-	case LLIL_MINU:
-	case LLIL_MAXU:
-	case LLIL_LSL:
-	case LLIL_LSR:
-	case LLIL_ASR:
-	case LLIL_ROL:
-	case LLIL_ROR:
-	case LLIL_MUL:
-	case LLIL_MULU_DP:
-	case LLIL_MULS_DP:
-	case LLIL_DIVU:
-	case LLIL_DIVS:
-	case LLIL_MODU:
-	case LLIL_MODS:
-	case LLIL_DIVU_DP:
-	case LLIL_DIVS_DP:
-	case LLIL_MODU_DP:
-	case LLIL_MODS_DP:
-	case LLIL_CMP_E:
-	case LLIL_CMP_NE:
-	case LLIL_CMP_SLT:
-	case LLIL_CMP_ULT:
-	case LLIL_CMP_SLE:
-	case LLIL_CMP_ULE:
-	case LLIL_CMP_SGE:
-	case LLIL_CMP_UGE:
-	case LLIL_CMP_SGT:
-	case LLIL_CMP_UGT:
-	case LLIL_TEST_BIT:
-	case LLIL_ADD_OVERFLOW:
-	case LLIL_FADD:
-	case LLIL_FSUB:
-	case LLIL_FMUL:
-	case LLIL_FDIV:
-	case LLIL_FCMP_E:
-	case LLIL_FCMP_NE:
-	case LLIL_FCMP_LT:
-	case LLIL_FCMP_LE:
-	case LLIL_FCMP_GE:
-	case LLIL_FCMP_GT:
-	case LLIL_FCMP_O:
-	case LLIL_FCMP_UO:
-	{
-		ExprId left = subExprHandler(AsTwoOperand().GetLeftExpr());
-		ExprId right = subExprHandler(AsTwoOperand().GetRightExpr());
-		return dest->AddExprWithLocation(operation, loc, size, flags, left, right);
+		return dest->If(subExprHandler(instr.GetConditionExpr<LLIL_IF>()), *trueLabel, *falseLabel, loc);
 	}
-	case LLIL_ADC:
-	case LLIL_SBB:
-	case LLIL_RLC:
-	case LLIL_RRC:
-	{
-		ExprId left = subExprHandler(AsTwoOperandWithCarry().GetLeftExpr());
-		ExprId right = subExprHandler(AsTwoOperandWithCarry().GetRightExpr());
-		ExprId carry = subExprHandler(AsTwoOperandWithCarry().GetCarryExpr());
-		return dest->AddExprWithLocation(operation, loc, size, flags, left, right, carry);
-	}
-	case LLIL_INTRINSIC:
-		for (auto i : GetParameterExprs<LLIL_INTRINSIC>())
-			params.push_back(subExprHandler(i));
-		return dest->Intrinsic(
-		    GetOutputRegisterOrFlagList<LLIL_INTRINSIC>(), GetIntrinsic<LLIL_INTRINSIC>(), params, flags, loc);
-	case LLIL_INTRINSIC_SSA:
-		for (auto i : GetParameterExprs<LLIL_INTRINSIC_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->IntrinsicSSA(
-		    GetOutputSSARegisterOrFlagList<LLIL_INTRINSIC_SSA>(), GetIntrinsic<LLIL_INTRINSIC_SSA>(), params, loc);
-	case LLIL_MEMORY_INTRINSIC_SSA:
-		for (auto i : GetParameterExprs<LLIL_MEMORY_INTRINSIC_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->MemoryIntrinsicSSA(GetOutputSSARegisterOrFlagList<LLIL_MEMORY_INTRINSIC_SSA>(), GetIntrinsic<LLIL_MEMORY_INTRINSIC_SSA>(),
-			params, GetDestMemoryVersion<LLIL_MEMORY_INTRINSIC_SSA>(), GetSourceMemoryVersion<LLIL_MEMORY_INTRINSIC_SSA>(), loc);
-	case LLIL_SEPARATE_PARAM_LIST_SSA:
-		for (auto i : GetParameterExprs<LLIL_SEPARATE_PARAM_LIST_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->SeparateParamListSSA(params, loc);
-	case LLIL_SHARED_PARAM_SLOT_SSA:
-		for (auto i : GetParameterExprs<LLIL_SHARED_PARAM_SLOT_SSA>())
-			params.push_back(subExprHandler(i));
-		return dest->SharedParamSlotSSA(params, loc);
 	default:
 		throw LowLevelILInstructionAccessException();
 	}
 }
 
+// BEGIN GENERATED llil-copy: from api/il, do not edit
+static ExprId CopyOperandList(LowLevelILFunction* dest, const LowLevelILInstruction& instr, size_t operand)
+{
+	vector<uint64_t> items = instr.function->GetOperandList(instr.exprIndex, operand);
+	return dest->AddIndexList(vector<size_t>(items.begin(), items.end()));
+}
+
+
+ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest,
+    bn::base::function_ref<ExprId(const LowLevelILInstruction& subExpr)> subExprHandler,
+    const ILSourceLocation& sourceLocation) const
+{
+	const auto& loc = sourceLocation.valid ? sourceLocation : ILSourceLocation{*this};
+	switch (operation)
+	{
+	case LLIL_JUMP_TO:
+	case LLIL_IF:
+	case LLIL_GOTO:
+		return CopyBranchTo(*this, dest, subExprHandler, loc);
+	case LLIL_NOP:
+		return dest->AddExprWithLocation(LLIL_NOP, loc, size, flags);
+	case LLIL_SET_REG:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_SET_REG, loc, size, flags, GetRawOperandAsInteger(0), srcCopy);
+	}
+	case LLIL_SET_REG_SPLIT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(
+		    LLIL_SET_REG_SPLIT, loc, size, flags, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1), srcCopy);
+	}
+	case LLIL_SET_FLAG:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_SET_FLAG, loc, size, flags, GetRawOperandAsInteger(0), srcCopy);
+	}
+	case LLIL_SET_REG_STACK_REL:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(1));
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(
+		    LLIL_SET_REG_STACK_REL, loc, size, flags, GetRawOperandAsInteger(0), destCopy, srcCopy);
+	}
+	case LLIL_REG_STACK_PUSH:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_REG_STACK_PUSH, loc, size, flags, GetRawOperandAsInteger(0), srcCopy);
+	}
+	case LLIL_ASSERT:
+		return dest->AddExprWithLocation(LLIL_ASSERT, loc, size, flags, GetRawOperandAsInteger(0),
+		    dest->CachePossibleValueSet(GetRawOperandAsPossibleValueSet(1)));
+	case LLIL_FORCE_VER:
+		return dest->AddExprWithLocation(LLIL_FORCE_VER, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_LOAD:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_LOAD, loc, size, flags, srcCopy);
+	}
+	case LLIL_STORE:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_STORE, loc, size, flags, destCopy, srcCopy);
+	}
+	case LLIL_PUSH:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_PUSH, loc, size, flags, srcCopy);
+	}
+	case LLIL_POP:
+		return dest->AddExprWithLocation(LLIL_POP, loc, size, flags);
+	case LLIL_REG:
+		return dest->AddExprWithLocation(LLIL_REG, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_REG_SPLIT:
+		return dest->AddExprWithLocation(
+		    LLIL_REG_SPLIT, loc, size, flags, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case LLIL_REG_STACK_REL:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_REG_STACK_REL, loc, size, flags, GetRawOperandAsInteger(0), srcCopy);
+	}
+	case LLIL_REG_STACK_POP:
+		return dest->AddExprWithLocation(LLIL_REG_STACK_POP, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_REG_STACK_FREE_REG:
+		return dest->AddExprWithLocation(LLIL_REG_STACK_FREE_REG, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_REG_STACK_FREE_REL:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(
+		    LLIL_REG_STACK_FREE_REL, loc, size, flags, GetRawOperandAsInteger(0), destCopy);
+	}
+	case LLIL_CONST:
+		return dest->AddExprWithLocation(LLIL_CONST, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_CONST_PTR:
+		return dest->AddExprWithLocation(LLIL_CONST_PTR, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_EXTERN_PTR:
+		return dest->AddExprWithLocation(
+		    LLIL_EXTERN_PTR, loc, size, flags, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case LLIL_FLOAT_CONST:
+		return dest->AddExprWithLocation(LLIL_FLOAT_CONST, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_FLAG:
+		return dest->AddExprWithLocation(LLIL_FLAG, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_FLAG_BIT:
+		return dest->AddExprWithLocation(
+		    LLIL_FLAG_BIT, loc, size, flags, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case LLIL_ADD:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_ADD, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_ADC:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		ExprId carryCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(LLIL_ADC, loc, size, flags, leftCopy, rightCopy, carryCopy);
+	}
+	case LLIL_SUB:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_SUB, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_SBB:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		ExprId carryCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(LLIL_SBB, loc, size, flags, leftCopy, rightCopy, carryCopy);
+	}
+	case LLIL_AND:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_AND, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_OR:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_OR, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_XOR:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_XOR, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_LSL:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_LSL, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_LSR:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_LSR, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_ASR:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_ASR, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_ROL:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_ROL, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_RLC:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		ExprId carryCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(LLIL_RLC, loc, size, flags, leftCopy, rightCopy, carryCopy);
+	}
+	case LLIL_ROR:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_ROR, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_RRC:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		ExprId carryCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(LLIL_RRC, loc, size, flags, leftCopy, rightCopy, carryCopy);
+	}
+	case LLIL_MUL:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_MUL, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_MULU_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_MULU_DP, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_MULS_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_MULS_DP, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_DIVU:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_DIVU, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_DIVU_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_DIVU_DP, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_DIVS:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_DIVS, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_DIVS_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_DIVS_DP, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_MODU:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_MODU, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_MODU_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_MODU_DP, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_MODS:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_MODS, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_MODS_DP:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_MODS_DP, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_NEG:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_NEG, loc, size, flags, srcCopy);
+	}
+	case LLIL_NOT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_NOT, loc, size, flags, srcCopy);
+	}
+	case LLIL_SX:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_SX, loc, size, flags, srcCopy);
+	}
+	case LLIL_ZX:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_ZX, loc, size, flags, srcCopy);
+	}
+	case LLIL_LOW_PART:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_LOW_PART, loc, size, flags, srcCopy);
+	}
+	case LLIL_JUMP:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_JUMP, loc, size, flags, destCopy);
+	}
+	case LLIL_CALL:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_CALL, loc, size, flags, destCopy);
+	}
+	case LLIL_CALL_STACK_ADJUST:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_CALL_STACK_ADJUST, loc, size, flags, destCopy, GetRawOperandAsInteger(1),
+		    GetRawOperandAsInteger(2), CopyOperandList(dest, *this, 2));
+	}
+	case LLIL_TAILCALL:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_TAILCALL, loc, size, flags, destCopy);
+	}
+	case LLIL_RET:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_RET, loc, size, flags, destCopy);
+	}
+	case LLIL_NORET:
+		return dest->AddExprWithLocation(LLIL_NORET, loc, size, flags);
+	case LLIL_FLAG_COND:
+		return dest->AddExprWithLocation(
+		    LLIL_FLAG_COND, loc, size, flags, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case LLIL_FLAG_GROUP:
+		return dest->AddExprWithLocation(LLIL_FLAG_GROUP, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_CMP_E:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_CMP_E, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_CMP_NE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_CMP_NE, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_CMP_SLT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_CMP_SLT, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_CMP_ULT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_CMP_ULT, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_CMP_SLE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_CMP_SLE, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_CMP_ULE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_CMP_ULE, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_CMP_SGE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_CMP_SGE, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_CMP_UGE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_CMP_UGE, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_CMP_SGT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_CMP_SGT, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_CMP_UGT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_CMP_UGT, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_TEST_BIT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_TEST_BIT, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_BOOL_TO_INT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_BOOL_TO_INT, loc, size, flags, srcCopy);
+	}
+	case LLIL_ADD_OVERFLOW:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_ADD_OVERFLOW, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_SYSCALL:
+		return dest->AddExprWithLocation(LLIL_SYSCALL, loc, size, flags);
+	case LLIL_BP:
+		return dest->AddExprWithLocation(LLIL_BP, loc, size, flags);
+	case LLIL_TRAP:
+		return dest->AddExprWithLocation(LLIL_TRAP, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_INTRINSIC:
+	{
+		LowLevelILInstruction param = GetRawOperandAsExpr(3);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(0))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(LLIL_CALL_PARAM, loc, param.size, param.flags,
+		    paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		return dest->AddExprWithLocation(LLIL_INTRINSIC, loc, size, flags, GetRawOperandAsInteger(0),
+		    CopyOperandList(dest, *this, 0), GetRawOperandAsInteger(2), paramCopy);
+	}
+	case LLIL_UNDEF:
+		return dest->AddExprWithLocation(LLIL_UNDEF, loc, size, flags);
+	case LLIL_UNIMPL:
+		return dest->AddExprWithLocation(LLIL_UNIMPL, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_UNIMPL_MEM:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_UNIMPL_MEM, loc, size, flags, srcCopy, GetRawOperandAsInteger(1));
+	}
+	case LLIL_FADD:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FADD, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_FSUB:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FSUB, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_FMUL:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FMUL, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_FDIV:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FDIV, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_FSQRT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_FSQRT, loc, size, flags, srcCopy);
+	}
+	case LLIL_FNEG:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_FNEG, loc, size, flags, srcCopy);
+	}
+	case LLIL_FABS:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_FABS, loc, size, flags, srcCopy);
+	}
+	case LLIL_FLOAT_TO_INT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_FLOAT_TO_INT, loc, size, flags, srcCopy);
+	}
+	case LLIL_INT_TO_FLOAT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_INT_TO_FLOAT, loc, size, flags, srcCopy);
+	}
+	case LLIL_FLOAT_CONV:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_FLOAT_CONV, loc, size, flags, srcCopy);
+	}
+	case LLIL_ROUND_TO_INT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_ROUND_TO_INT, loc, size, flags, srcCopy);
+	}
+	case LLIL_FLOOR:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_FLOOR, loc, size, flags, srcCopy);
+	}
+	case LLIL_CEIL:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_CEIL, loc, size, flags, srcCopy);
+	}
+	case LLIL_FTRUNC:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_FTRUNC, loc, size, flags, srcCopy);
+	}
+	case LLIL_FCMP_E:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FCMP_E, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_FCMP_NE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FCMP_NE, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_FCMP_LT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FCMP_LT, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_FCMP_LE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FCMP_LE, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_FCMP_GE:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FCMP_GE, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_FCMP_GT:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FCMP_GT, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_FCMP_O:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FCMP_O, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_FCMP_UO:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_FCMP_UO, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_SET_REG_SSA:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(
+		    LLIL_SET_REG_SSA, loc, size, flags, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1), srcCopy);
+	}
+	case LLIL_SET_REG_SSA_PARTIAL:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(3));
+		return dest->AddExprWithLocation(LLIL_SET_REG_SSA_PARTIAL, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), srcCopy);
+	}
+	case LLIL_SET_REG_SPLIT_SSA:
+	{
+		LowLevelILInstruction hi = GetRawOperandAsExpr(0);
+		ExprId hiCopy = dest->AddExprWithLocation(LLIL_REG_SPLIT_DEST_SSA, loc, hi.size, hi.flags,
+		    hi.GetRawOperandAsInteger(0), hi.GetRawOperandAsInteger(1));
+		LowLevelILInstruction lo = GetRawOperandAsExpr(1);
+		ExprId loCopy = dest->AddExprWithLocation(LLIL_REG_SPLIT_DEST_SSA, loc, lo.size, lo.flags,
+		    lo.GetRawOperandAsInteger(0), lo.GetRawOperandAsInteger(1));
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(LLIL_SET_REG_SPLIT_SSA, loc, size, flags, hiCopy, loCopy, srcCopy);
+	}
+	case LLIL_SET_REG_STACK_REL_SSA:
+	{
+		LowLevelILInstruction stack = GetRawOperandAsExpr(0);
+		ExprId stackCopy = dest->AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, stack.size, stack.flags,
+		    stack.GetRawOperandAsInteger(0), stack.GetRawOperandAsInteger(1), stack.GetRawOperandAsInteger(2));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(1));
+		LowLevelILInstruction top = GetRawOperandAsExpr(2);
+		ExprId topCopy = dest->AddExprWithLocation(
+		    LLIL_REG_SSA, loc, top.size, top.flags, top.GetRawOperandAsInteger(0), top.GetRawOperandAsInteger(1));
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(3));
+		return dest->AddExprWithLocation(
+		    LLIL_SET_REG_STACK_REL_SSA, loc, size, flags, stackCopy, destCopy, topCopy, srcCopy);
+	}
+	case LLIL_SET_REG_STACK_ABS_SSA:
+	{
+		LowLevelILInstruction stack = GetRawOperandAsExpr(0);
+		ExprId stackCopy = dest->AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, stack.size, stack.flags,
+		    stack.GetRawOperandAsInteger(0), stack.GetRawOperandAsInteger(1), stack.GetRawOperandAsInteger(2));
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(
+		    LLIL_SET_REG_STACK_ABS_SSA, loc, size, flags, stackCopy, GetRawOperandAsInteger(1), srcCopy);
+	}
+	case LLIL_REG_SSA:
+		return dest->AddExprWithLocation(
+		    LLIL_REG_SSA, loc, size, flags, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case LLIL_REG_SSA_PARTIAL:
+		return dest->AddExprWithLocation(LLIL_REG_SSA_PARTIAL, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2));
+	case LLIL_REG_SPLIT_SSA:
+		return dest->AddExprWithLocation(LLIL_REG_SPLIT_SSA, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), GetRawOperandAsInteger(3));
+	case LLIL_REG_STACK_REL_SSA:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(2));
+		LowLevelILInstruction top = GetRawOperandAsExpr(3);
+		ExprId topCopy = dest->AddExprWithLocation(
+		    LLIL_REG_SSA, loc, top.size, top.flags, top.GetRawOperandAsInteger(0), top.GetRawOperandAsInteger(1));
+		return dest->AddExprWithLocation(LLIL_REG_STACK_REL_SSA, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), srcCopy, topCopy);
+	}
+	case LLIL_REG_STACK_ABS_SSA:
+		return dest->AddExprWithLocation(LLIL_REG_STACK_ABS_SSA, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2));
+	case LLIL_REG_STACK_FREE_REL_SSA:
+	{
+		LowLevelILInstruction stack = GetRawOperandAsExpr(0);
+		ExprId stackCopy = dest->AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, stack.size, stack.flags,
+		    stack.GetRawOperandAsInteger(0), stack.GetRawOperandAsInteger(1), stack.GetRawOperandAsInteger(2));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(1));
+		LowLevelILInstruction top = GetRawOperandAsExpr(2);
+		ExprId topCopy = dest->AddExprWithLocation(
+		    LLIL_REG_SSA, loc, top.size, top.flags, top.GetRawOperandAsInteger(0), top.GetRawOperandAsInteger(1));
+		return dest->AddExprWithLocation(LLIL_REG_STACK_FREE_REL_SSA, loc, size, flags, stackCopy, destCopy, topCopy);
+	}
+	case LLIL_REG_STACK_FREE_ABS_SSA:
+	{
+		LowLevelILInstruction stack = GetRawOperandAsExpr(0);
+		ExprId stackCopy = dest->AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, stack.size, stack.flags,
+		    stack.GetRawOperandAsInteger(0), stack.GetRawOperandAsInteger(1), stack.GetRawOperandAsInteger(2));
+		return dest->AddExprWithLocation(
+		    LLIL_REG_STACK_FREE_ABS_SSA, loc, size, flags, stackCopy, GetRawOperandAsInteger(1));
+	}
+	case LLIL_SET_FLAG_SSA:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(2));
+		return dest->AddExprWithLocation(
+		    LLIL_SET_FLAG_SSA, loc, size, flags, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1), srcCopy);
+	}
+	case LLIL_ASSERT_SSA:
+		return dest->AddExprWithLocation(LLIL_ASSERT_SSA, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), dest->CachePossibleValueSet(GetRawOperandAsPossibleValueSet(2)));
+	case LLIL_FORCE_VER_SSA:
+		return dest->AddExprWithLocation(LLIL_FORCE_VER_SSA, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), GetRawOperandAsInteger(3));
+	case LLIL_FLAG_SSA:
+		return dest->AddExprWithLocation(
+		    LLIL_FLAG_SSA, loc, size, flags, GetRawOperandAsInteger(0), GetRawOperandAsInteger(1));
+	case LLIL_FLAG_BIT_SSA:
+		return dest->AddExprWithLocation(LLIL_FLAG_BIT_SSA, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2));
+	case LLIL_CALL_SSA:
+	{
+		LowLevelILInstruction outputExpr = GetRawOperandAsExpr(0);
+		ExprId outputExprCopy = dest->AddExprWithLocation(LLIL_CALL_OUTPUT_SSA, loc, outputExpr.size, outputExpr.flags,
+		    outputExpr.GetRawOperandAsInteger(0), outputExpr.GetRawOperandAsInteger(1),
+		    CopyOperandList(dest, outputExpr, 1));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(1));
+		LowLevelILInstruction stack = GetRawOperandAsExpr(2);
+		ExprId stackCopy = dest->AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, stack.size, stack.flags,
+		    stack.GetRawOperandAsInteger(0), stack.GetRawOperandAsInteger(1), stack.GetRawOperandAsInteger(2));
+		LowLevelILInstruction param = GetRawOperandAsExpr(3);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(0))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(LLIL_CALL_PARAM, loc, param.size, param.flags,
+		    paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		return dest->AddExprWithLocation(
+		    LLIL_CALL_SSA, loc, size, flags, outputExprCopy, destCopy, stackCopy, paramCopy);
+	}
+	case LLIL_SYSCALL_SSA:
+	{
+		LowLevelILInstruction outputExpr = GetRawOperandAsExpr(0);
+		ExprId outputExprCopy = dest->AddExprWithLocation(LLIL_CALL_OUTPUT_SSA, loc, outputExpr.size, outputExpr.flags,
+		    outputExpr.GetRawOperandAsInteger(0), outputExpr.GetRawOperandAsInteger(1),
+		    CopyOperandList(dest, outputExpr, 1));
+		LowLevelILInstruction stack = GetRawOperandAsExpr(1);
+		ExprId stackCopy = dest->AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, stack.size, stack.flags,
+		    stack.GetRawOperandAsInteger(0), stack.GetRawOperandAsInteger(1), stack.GetRawOperandAsInteger(2));
+		LowLevelILInstruction param = GetRawOperandAsExpr(2);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(0))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(LLIL_CALL_PARAM, loc, param.size, param.flags,
+		    paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		return dest->AddExprWithLocation(LLIL_SYSCALL_SSA, loc, size, flags, outputExprCopy, stackCopy, paramCopy);
+	}
+	case LLIL_TAILCALL_SSA:
+	{
+		LowLevelILInstruction outputExpr = GetRawOperandAsExpr(0);
+		ExprId outputExprCopy = dest->AddExprWithLocation(LLIL_CALL_OUTPUT_SSA, loc, outputExpr.size, outputExpr.flags,
+		    outputExpr.GetRawOperandAsInteger(0), outputExpr.GetRawOperandAsInteger(1),
+		    CopyOperandList(dest, outputExpr, 1));
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(1));
+		LowLevelILInstruction stack = GetRawOperandAsExpr(2);
+		ExprId stackCopy = dest->AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, stack.size, stack.flags,
+		    stack.GetRawOperandAsInteger(0), stack.GetRawOperandAsInteger(1), stack.GetRawOperandAsInteger(2));
+		LowLevelILInstruction param = GetRawOperandAsExpr(3);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(0))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(LLIL_CALL_PARAM, loc, param.size, param.flags,
+		    paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		return dest->AddExprWithLocation(
+		    LLIL_TAILCALL_SSA, loc, size, flags, outputExprCopy, destCopy, stackCopy, paramCopy);
+	}
+	case LLIL_SEPARATE_PARAM_LIST_SSA:
+	{
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(
+		    LLIL_SEPARATE_PARAM_LIST_SSA, loc, size, flags, paramsCopy.size(), dest->AddOperandList(paramsCopy));
+	}
+	case LLIL_SHARED_PARAM_SLOT_SSA:
+	{
+		vector<ExprId> paramsCopy;
+		for (const auto& expr : GetRawOperandAsExprList(0))
+			paramsCopy.push_back(subExprHandler(expr));
+		return dest->AddExprWithLocation(
+		    LLIL_SHARED_PARAM_SLOT_SSA, loc, size, flags, paramsCopy.size(), dest->AddOperandList(paramsCopy));
+	}
+	case LLIL_LOAD_SSA:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_LOAD_SSA, loc, size, flags, srcCopy, GetRawOperandAsInteger(1));
+	}
+	case LLIL_STORE_SSA:
+	{
+		ExprId destCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(3));
+		return dest->AddExprWithLocation(
+		    LLIL_STORE_SSA, loc, size, flags, destCopy, GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), srcCopy);
+	}
+	case LLIL_INTRINSIC_SSA:
+	{
+		LowLevelILInstruction param = GetRawOperandAsExpr(3);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(0))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(LLIL_CALL_PARAM, loc, param.size, param.flags,
+		    paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		return dest->AddExprWithLocation(LLIL_INTRINSIC_SSA, loc, size, flags, GetRawOperandAsInteger(0),
+		    CopyOperandList(dest, *this, 0), GetRawOperandAsInteger(2), paramCopy);
+	}
+	case LLIL_MEMORY_INTRINSIC_SSA:
+	{
+		LowLevelILInstruction outputExpr = GetRawOperandAsExpr(0);
+		ExprId outputExprCopy = dest->AddExprWithLocation(LLIL_MEMORY_INTRINSIC_OUTPUT_SSA, loc, outputExpr.size,
+		    outputExpr.flags, outputExpr.GetRawOperandAsInteger(0), outputExpr.GetRawOperandAsInteger(1),
+		    CopyOperandList(dest, outputExpr, 1));
+		LowLevelILInstruction param = GetRawOperandAsExpr(2);
+		vector<ExprId> paramParamsCopy;
+		for (const auto& expr : param.GetRawOperandAsExprList(0))
+			paramParamsCopy.push_back(subExprHandler(expr));
+		ExprId paramCopy = dest->AddExprWithLocation(LLIL_CALL_PARAM, loc, param.size, param.flags,
+		    paramParamsCopy.size(), dest->AddOperandList(paramParamsCopy));
+		return dest->AddExprWithLocation(LLIL_MEMORY_INTRINSIC_SSA, loc, size, flags, outputExprCopy,
+		    GetRawOperandAsInteger(1), paramCopy, GetRawOperandAsInteger(3));
+	}
+	case LLIL_REG_PHI:
+		return dest->AddExprWithLocation(LLIL_REG_PHI, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), CopyOperandList(dest, *this, 2));
+	case LLIL_REG_STACK_PHI:
+		return dest->AddExprWithLocation(LLIL_REG_STACK_PHI, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), CopyOperandList(dest, *this, 2));
+	case LLIL_FLAG_PHI:
+		return dest->AddExprWithLocation(LLIL_FLAG_PHI, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), GetRawOperandAsInteger(2), CopyOperandList(dest, *this, 2));
+	case LLIL_MEM_PHI:
+		return dest->AddExprWithLocation(LLIL_MEM_PHI, loc, size, flags, GetRawOperandAsInteger(0),
+		    GetRawOperandAsInteger(1), CopyOperandList(dest, *this, 1));
+	case LLIL_BSWAP:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_BSWAP, loc, size, flags, srcCopy);
+	}
+	case LLIL_POPCNT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_POPCNT, loc, size, flags, srcCopy);
+	}
+	case LLIL_CLZ:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_CLZ, loc, size, flags, srcCopy);
+	}
+	case LLIL_CTZ:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_CTZ, loc, size, flags, srcCopy);
+	}
+	case LLIL_RBIT:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_RBIT, loc, size, flags, srcCopy);
+	}
+	case LLIL_CLS:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_CLS, loc, size, flags, srcCopy);
+	}
+	case LLIL_MINS:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_MINS, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_MAXS:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_MAXS, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_MINU:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_MINU, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_MAXU:
+	{
+		ExprId leftCopy = subExprHandler(GetRawOperandAsExpr(0));
+		ExprId rightCopy = subExprHandler(GetRawOperandAsExpr(1));
+		return dest->AddExprWithLocation(LLIL_MAXU, loc, size, flags, leftCopy, rightCopy);
+	}
+	case LLIL_ABS:
+	{
+		ExprId srcCopy = subExprHandler(GetRawOperandAsExpr(0));
+		return dest->AddExprWithLocation(LLIL_ABS, loc, size, flags, srcCopy);
+	}
+	default:
+		throw LowLevelILInstructionAccessException();
+	}
+}
+// END GENERATED llil-copy
+
 
 bool LowLevelILInstruction::GetOperandIndexForUsage(LowLevelILOperandUsage usage, size_t& operandIndex) const
 {
-	if (operation >= s_instructionOperandUsage.size())
+	std::optional<LowLevelILOperandLocation> location = OperandLocationForUsage(operation, usage);
+	if (!location)
 		return false;
-	
-	const auto& info = s_instructionOperandUsage[operation];
-	for (uint8_t i = 0; i < info.count; i++)
-	{
-		if (info.usages[i] == usage)
-		{
-			operandIndex = info.indices[i];
-			return true;
-		}
-	}
-	return false;
+
+	operandIndex = location->partial && !location->field ? location->slot + 2 : location->slot;
+	return true;
 }
 
 
-LowLevelILInstruction LowLevelILInstruction::GetSourceExpr() const
+// BEGIN GENERATED llil-instruction-getters: from api/il, do not edit
+size_t LowLevelILInstruction::GetBitIndex() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceExprLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetSourceRegister() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceRegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetSourceRegisterStack() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceRegisterStackLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetSourceFlag() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceFlagLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-SSARegister LowLevelILInstruction::GetSourceSSARegister() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceSSARegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSARegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-SSARegisterStack LowLevelILInstruction::GetSourceSSARegisterStack() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(PartialSSARegisterStackSourceLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsPartialSSARegisterStackSource(0);
-	if (GetOperandIndexForUsage(SourceSSARegisterStackLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSARegisterStack(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-SSAFlag LowLevelILInstruction::GetSourceSSAFlag() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceSSAFlagLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSAFlag(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-LowLevelILInstruction LowLevelILInstruction::GetDestExpr() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestExprLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetDestRegister() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestRegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetDestRegisterStack() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestRegisterStackLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetDestFlag() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestFlagLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-SSARegister LowLevelILInstruction::GetDestSSARegister() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestSSARegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSARegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-SSARegisterStack LowLevelILInstruction::GetDestSSARegisterStack() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestSSARegisterStackLowLevelOperandUsage, operandIndex))
-	{
-		if (operation == LLIL_REG_STACK_PHI)
-			return GetRawOperandAsSSARegisterStack(operandIndex);
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegisterStack(0);
-	}
-	throw LowLevelILInstructionAccessException();
-}
-
-
-SSAFlag LowLevelILInstruction::GetDestSSAFlag() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestSSAFlagLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSAFlag(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetSemanticFlagClass() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SemanticFlagClassLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetSemanticFlagGroup() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SemanticFlagGroupLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetPartialRegister() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(PartialRegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-SSARegister LowLevelILInstruction::GetStackSSARegister() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(StackSSARegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(0);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-SSARegister LowLevelILInstruction::GetTopSSARegister() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(TopSSARegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(0);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-LowLevelILInstruction LowLevelILInstruction::GetLeftExpr() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(LeftExprLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-LowLevelILInstruction LowLevelILInstruction::GetRightExpr() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(RightExprLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {BitIndexLowLevelOperandUsage}).GetIndex();
 }
 
 
 LowLevelILInstruction LowLevelILInstruction::GetCarryExpr() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(CarryExprLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {CarryExprLowLevelOperandUsage}).GetExpr();
 }
 
 
 LowLevelILInstruction LowLevelILInstruction::GetConditionExpr() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(ConditionExprLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetHighRegister() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(HighRegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-SSARegister LowLevelILInstruction::GetHighSSARegister() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(HighSSARegisterLowLevelOperandUsage, operandIndex))
-	{
-		if (operation == LLIL_REG_SPLIT_SSA)
-			return GetRawOperandAsSSARegister(operandIndex);
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(0);
-	}
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetLowRegister() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(LowRegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-SSARegister LowLevelILInstruction::GetLowSSARegister() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(LowSSARegisterLowLevelOperandUsage, operandIndex))
-	{
-		if (operation == LLIL_REG_SPLIT_SSA)
-			return GetRawOperandAsSSARegister(operandIndex);
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(0);
-	}
-	throw LowLevelILInstructionAccessException();
-}
-
-
-uint32_t LowLevelILInstruction::GetIntrinsic() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(IntrinsicLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegister(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {ConditionExprLowLevelOperandUsage}).GetExpr();
 }
 
 
 int64_t LowLevelILInstruction::GetConstant() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(ConstantLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsInteger(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {ConstantLowLevelOperandUsage}).GetInteger();
 }
 
 
-uint64_t LowLevelILInstruction::GetOffset() const
+PossibleValueSet LowLevelILInstruction::GetConstraint() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(OffsetLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsInteger(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {ConstraintLowLevelOperandUsage}).GetConstraint();
 }
 
 
-int64_t LowLevelILInstruction::GetVector() const
+LowLevelILInstruction LowLevelILInstruction::GetDestExpr() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(VectorLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsInteger(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {DestExprLowLevelOperandUsage}).GetExpr();
 }
 
 
-int64_t LowLevelILInstruction::GetStackAdjustment() const
+uint32_t LowLevelILInstruction::GetDestFlag() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(StackAdjustmentLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsInteger(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-size_t LowLevelILInstruction::GetTarget() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(TargetLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-size_t LowLevelILInstruction::GetTrueTarget() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(TrueTargetLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-size_t LowLevelILInstruction::GetFalseTarget() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(FalseTargetLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-size_t LowLevelILInstruction::GetBitIndex() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(BitIndexLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
-	throw LowLevelILInstructionAccessException();
-}
-
-
-size_t LowLevelILInstruction::GetSourceMemoryVersion() const
-{
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceMemoryVersionLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
-	if (GetOperandIndexForUsage(StackMemoryVersionLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsIndex(2);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {DestFlagLowLevelOperandUsage}).GetFlag();
 }
 
 
 size_t LowLevelILInstruction::GetDestMemoryVersion() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(DestMemoryVersionLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
-	if (GetOperandIndexForUsage(OutputMemoryVersionLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsIndex(0);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {OutputMemoryVersionLowLevelOperandUsage, DestMemoryVersionLowLevelOperandUsage})
+	    .GetIndex();
+}
+
+
+uint32_t LowLevelILInstruction::GetDestRegister() const
+{
+	return OperandForUsages(*this, {DestRegisterLowLevelOperandUsage}).GetRegister();
+}
+
+
+uint32_t LowLevelILInstruction::GetDestRegisterStack() const
+{
+	return OperandForUsages(*this, {DestRegisterStackLowLevelOperandUsage}).GetRegisterStack();
+}
+
+
+SSAFlag LowLevelILInstruction::GetDestSSAFlag() const
+{
+	return OperandForUsages(*this, {DestSSAFlagLowLevelOperandUsage}).GetSSAFlag();
+}
+
+
+SSARegister LowLevelILInstruction::GetDestSSARegister() const
+{
+	return OperandForUsages(*this, {DestSSARegisterLowLevelOperandUsage}).GetSSARegister();
+}
+
+
+SSARegisterStack LowLevelILInstruction::GetDestSSARegisterStack() const
+{
+	return OperandForUsages(*this, {DestSSARegisterStackLowLevelOperandUsage}).GetSSARegisterStack();
+}
+
+
+size_t LowLevelILInstruction::GetFalseTarget() const
+{
+	return OperandForUsages(*this, {FalseTargetLowLevelOperandUsage}).GetIndex();
 }
 
 
 BNLowLevelILFlagCondition LowLevelILInstruction::GetFlagCondition() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(FlagConditionLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsFlagCondition(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {FlagConditionLowLevelOperandUsage}).GetFlagCondition();
 }
 
 
-LowLevelILSSARegisterList LowLevelILInstruction::GetOutputSSARegisters() const
+uint32_t LowLevelILInstruction::GetHighRegister() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(OutputSSARegistersLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegisterList(1);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {HighRegisterLowLevelOperandUsage}).GetRegister();
 }
 
 
-LowLevelILInstructionList LowLevelILInstruction::GetParameterExprs() const
+SSARegister LowLevelILInstruction::GetHighSSARegister() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(ParameterExprsLowLevelOperandUsage, operandIndex))
-	{
-		if (operandIndex == 0)
-			return GetRawOperandAsExprList(0);
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsExprList(0);
-	}
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {HighSSARegisterLowLevelOperandUsage}).GetSSARegister();
 }
 
 
-LowLevelILSSARegisterList LowLevelILInstruction::GetSourceSSARegisters() const
+uint32_t LowLevelILInstruction::GetIntrinsic() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceSSARegistersLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSARegisterList(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {IntrinsicLowLevelOperandUsage}).GetIntrinsic();
 }
 
 
-LowLevelILSSARegisterStackList LowLevelILInstruction::GetSourceSSARegisterStacks() const
+LowLevelILInstruction LowLevelILInstruction::GetLeftExpr() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceSSARegisterStacksLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSARegisterStackList(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {LeftExprLowLevelOperandUsage}).GetExpr();
 }
 
 
-LowLevelILSSAFlagList LowLevelILInstruction::GetSourceSSAFlags() const
+uint32_t LowLevelILInstruction::GetLowRegister() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceSSAFlagsLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSAFlagList(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {LowRegisterLowLevelOperandUsage}).GetRegister();
+}
+
+
+SSARegister LowLevelILInstruction::GetLowSSARegister() const
+{
+	return OperandForUsages(*this, {LowSSARegisterLowLevelOperandUsage}).GetSSARegister();
+}
+
+
+uint64_t LowLevelILInstruction::GetOffset() const
+{
+	return OperandForUsages(*this, {OffsetLowLevelOperandUsage}).GetInteger();
 }
 
 
 LowLevelILRegisterOrFlagList LowLevelILInstruction::GetOutputRegisterOrFlagList() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(OutputRegisterOrFlagListLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegisterOrFlagList(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {OutputRegisterOrFlagListLowLevelOperandUsage}).GetRegisterOrFlagList();
 }
 
 
 LowLevelILSSARegisterOrFlagList LowLevelILInstruction::GetOutputSSARegisterOrFlagList() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(OutputSSARegisterOrFlagListLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsSSARegisterOrFlagList(operandIndex);
-	if (GetOperandIndexForUsage(OutputMemoryIntrinsicLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegisterOrFlagList(1);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(
+	    *this, {OutputSSARegisterOrFlagListLowLevelOperandUsage, OutputMemoryIntrinsicLowLevelOperandUsage})
+	    .GetSSARegisterOrFlagList();
 }
 
 
-LowLevelILIndexList LowLevelILInstruction::GetSourceMemoryVersions() const
+LowLevelILSSARegisterList LowLevelILInstruction::GetOutputSSARegisters() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(SourceMemoryVersionsLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndexList(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {OutputSSARegistersLowLevelOperandUsage}).GetSSARegisterList();
 }
 
 
-LowLevelILIndexMap LowLevelILInstruction::GetTargets() const
+LowLevelILInstructionList LowLevelILInstruction::GetParameterExprs() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(TargetsLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndexMap(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {ParameterExprsLowLevelOperandUsage}).GetExprList();
+}
+
+
+uint32_t LowLevelILInstruction::GetPartialRegister() const
+{
+	return OperandForUsages(*this, {PartialRegisterLowLevelOperandUsage}).GetRegister();
 }
 
 
 map<uint32_t, int32_t> LowLevelILInstruction::GetRegisterStackAdjustments() const
 {
-	size_t operandIndex;
-	if (GetOperandIndexForUsage(RegisterStackAdjustmentsLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsRegisterStackAdjustments(operandIndex);
-	throw LowLevelILInstructionAccessException();
+	return OperandForUsages(*this, {RegisterStackAdjustmentsLowLevelOperandUsage}).GetRegisterStackAdjustments();
 }
 
 
+LowLevelILInstruction LowLevelILInstruction::GetRightExpr() const
+{
+	return OperandForUsages(*this, {RightExprLowLevelOperandUsage}).GetExpr();
+}
+
+
+uint32_t LowLevelILInstruction::GetSemanticFlagClass() const
+{
+	return OperandForUsages(*this, {SemanticFlagClassLowLevelOperandUsage}).GetSemanticFlagClass();
+}
+
+
+uint32_t LowLevelILInstruction::GetSemanticFlagGroup() const
+{
+	return OperandForUsages(*this, {SemanticFlagGroupLowLevelOperandUsage}).GetSemanticFlagGroup();
+}
+
+
+LowLevelILInstruction LowLevelILInstruction::GetSourceExpr() const
+{
+	return OperandForUsages(*this, {SourceExprLowLevelOperandUsage}).GetExpr();
+}
+
+
+uint32_t LowLevelILInstruction::GetSourceFlag() const
+{
+	return OperandForUsages(*this, {SourceFlagLowLevelOperandUsage}).GetFlag();
+}
+
+
+size_t LowLevelILInstruction::GetSourceMemoryVersion() const
+{
+	return OperandForUsages(*this, {StackMemoryVersionLowLevelOperandUsage, SourceMemoryVersionLowLevelOperandUsage})
+	    .GetIndex();
+}
+
+
+LowLevelILIndexList LowLevelILInstruction::GetSourceMemoryVersions() const
+{
+	return OperandForUsages(*this, {SourceMemoryVersionsLowLevelOperandUsage}).GetIndexList();
+}
+
+
+uint32_t LowLevelILInstruction::GetSourceRegister() const
+{
+	return OperandForUsages(*this, {SourceRegisterLowLevelOperandUsage}).GetRegister();
+}
+
+
+uint32_t LowLevelILInstruction::GetSourceRegisterStack() const
+{
+	return OperandForUsages(*this, {SourceRegisterStackLowLevelOperandUsage}).GetRegisterStack();
+}
+
+
+SSAFlag LowLevelILInstruction::GetSourceSSAFlag() const
+{
+	return OperandForUsages(*this, {SourceSSAFlagLowLevelOperandUsage}).GetSSAFlag();
+}
+
+
+LowLevelILSSAFlagList LowLevelILInstruction::GetSourceSSAFlags() const
+{
+	return OperandForUsages(*this, {SourceSSAFlagsLowLevelOperandUsage}).GetSSAFlagList();
+}
+
+
+SSARegister LowLevelILInstruction::GetSourceSSARegister() const
+{
+	return OperandForUsages(*this, {SourceSSARegisterLowLevelOperandUsage}).GetSSARegister();
+}
+
+
+SSARegisterStack LowLevelILInstruction::GetSourceSSARegisterStack() const
+{
+	return OperandForUsages(
+	    *this, {PartialSSARegisterStackSourceLowLevelOperandUsage, SourceSSARegisterStackLowLevelOperandUsage})
+	    .GetSSARegisterStack();
+}
+
+
+LowLevelILSSARegisterStackList LowLevelILInstruction::GetSourceSSARegisterStacks() const
+{
+	return OperandForUsages(*this, {SourceSSARegisterStacksLowLevelOperandUsage}).GetSSARegisterStackList();
+}
+
+
+LowLevelILSSARegisterList LowLevelILInstruction::GetSourceSSARegisters() const
+{
+	return OperandForUsages(*this, {SourceSSARegistersLowLevelOperandUsage}).GetSSARegisterList();
+}
+
+
+int64_t LowLevelILInstruction::GetStackAdjustment() const
+{
+	return OperandForUsages(*this, {StackAdjustmentLowLevelOperandUsage}).GetInteger();
+}
+
+
+SSARegister LowLevelILInstruction::GetStackSSARegister() const
+{
+	return OperandForUsages(*this, {StackSSARegisterLowLevelOperandUsage}).GetSSARegister();
+}
+
+
+size_t LowLevelILInstruction::GetTarget() const
+{
+	return OperandForUsages(*this, {TargetLowLevelOperandUsage}).GetIndex();
+}
+
+
+LowLevelILIndexMap LowLevelILInstruction::GetTargets() const
+{
+	return OperandForUsages(*this, {TargetsLowLevelOperandUsage}).GetIndexMap();
+}
+
+
+SSARegister LowLevelILInstruction::GetTopSSARegister() const
+{
+	return OperandForUsages(*this, {TopSSARegisterLowLevelOperandUsage}).GetSSARegister();
+}
+
+
+size_t LowLevelILInstruction::GetTrueTarget() const
+{
+	return OperandForUsages(*this, {TrueTargetLowLevelOperandUsage}).GetIndex();
+}
+
+
+int64_t LowLevelILInstruction::GetVector() const
+{
+	return OperandForUsages(*this, {VectorLowLevelOperandUsage}).GetInteger();
+}
+
+
+bool LowLevelILInstruction::IsUnknown() const
+{
+	switch (operation)
+	{
+	case LLIL_UNIMPL:
+		return IsUnknown<LLIL_UNIMPL>();
+	case LLIL_UNIMPL_MEM:
+		return IsUnknown<LLIL_UNIMPL_MEM>();
+	default:
+		throw LowLevelILInstructionAccessException();
+	}
+}
+// END GENERATED llil-instruction-getters
+
+// BEGIN GENERATED llil-builders: from api/il, do not edit
 ExprId LowLevelILFunction::Nop(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_NOP, loc, 0, 0);
@@ -2956,136 +3521,67 @@ ExprId LowLevelILFunction::Nop(const ILSourceLocation& loc)
 
 
 ExprId LowLevelILFunction::SetRegister(
-    size_t size, uint32_t reg, ExprId val, uint32_t flags, const ILSourceLocation& loc)
+    size_t size, uint32_t dest, ExprId src, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SET_REG, loc, size, flags, reg, val);
+	return AddExprWithLocation(LLIL_SET_REG, loc, size, flags, dest, src);
 }
 
 
 ExprId LowLevelILFunction::SetRegisterSplit(
-    size_t size, uint32_t high, uint32_t low, ExprId val, uint32_t flags, const ILSourceLocation& loc)
+    size_t size, uint32_t hi, uint32_t lo, ExprId src, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SET_REG_SPLIT, loc, size, flags, high, low, val);
+	return AddExprWithLocation(LLIL_SET_REG_SPLIT, loc, size, flags, hi, lo, src);
 }
 
 
-ExprId LowLevelILFunction::SetRegisterSSA(size_t size, const SSARegister& reg, ExprId val, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::SetFlag(uint32_t dest, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SET_REG_SSA, loc, size, 0, reg.reg, reg.version, val);
-}
-
-
-ExprId LowLevelILFunction::SetRegisterSSAPartial(
-    size_t size, const SSARegister& fullReg, uint32_t partialReg, ExprId val, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_SET_REG_SSA_PARTIAL, loc, size, 0, fullReg.reg, fullReg.version, partialReg, val);
-}
-
-
-ExprId LowLevelILFunction::SetRegisterSplitSSA(
-    size_t size, const SSARegister& high, const SSARegister& low, ExprId val, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_SET_REG_SPLIT_SSA, loc, size, 0,
-	    AddExprWithLocation(LLIL_REG_SPLIT_DEST_SSA, loc, size, 0, high.reg, high.version),
-	    AddExprWithLocation(LLIL_REG_SPLIT_DEST_SSA, loc, size, 0, low.reg, low.version), val);
+	return AddExprWithLocation(LLIL_SET_FLAG, loc, 0, 0, dest, src);
 }
 
 
 ExprId LowLevelILFunction::SetRegisterStackTopRelative(
-    size_t size, uint32_t regStack, ExprId entry, ExprId val, uint32_t flags, const ILSourceLocation& loc)
+    size_t size, uint32_t destStack, ExprId dest, ExprId src, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SET_REG_STACK_REL, loc, size, flags, regStack, entry, val);
+	return AddExprWithLocation(LLIL_SET_REG_STACK_REL, loc, size, flags, destStack, dest, src);
 }
 
 
 ExprId LowLevelILFunction::RegisterStackPush(
-    size_t size, uint32_t regStack, ExprId val, uint32_t flags, const ILSourceLocation& loc)
+    size_t size, uint32_t destStack, ExprId src, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_REG_STACK_PUSH, loc, size, flags, regStack, val);
+	return AddExprWithLocation(LLIL_REG_STACK_PUSH, loc, size, flags, destStack, src);
 }
 
 
-ExprId LowLevelILFunction::SetRegisterStackTopRelativeSSA(size_t size, uint32_t regStack, size_t destVersion,
-    size_t srcVersion, ExprId entry, const SSARegister& top, ExprId val, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::Assert(
+    size_t size, uint32_t src, const PossibleValueSet& constraint, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SET_REG_STACK_REL_SSA, loc, size, 0,
-	    AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, size, 0, regStack, destVersion, srcVersion), entry,
-	    AddExprWithLocation(LLIL_REG_SSA, loc, 0, 0, top.reg, top.version), val);
+	return AddExprWithLocation(LLIL_ASSERT, loc, size, 0, src, CachePossibleValueSet(constraint));
 }
 
 
-ExprId LowLevelILFunction::SetRegisterStackAbsoluteSSA(size_t size, uint32_t regStack, size_t destVersion,
-    size_t srcVersion, uint32_t reg, ExprId val, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::ForceVer(size_t size, uint32_t dest, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SET_REG_STACK_ABS_SSA, loc, size, 0,
-	    AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, size, 0, regStack, destVersion, srcVersion), reg, val);
+	return AddExprWithLocation(LLIL_FORCE_VER, loc, size, 0, dest);
 }
 
 
-ExprId LowLevelILFunction::SetFlag(uint32_t flag, ExprId val, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::Load(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SET_FLAG, loc, 0, 0, flag, val);
+	return AddExprWithLocation(LLIL_LOAD, loc, size, flags, src);
 }
 
 
-ExprId LowLevelILFunction::SetFlagSSA(const SSAFlag& flag, ExprId val, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::Store(size_t size, ExprId dest, ExprId src, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SET_FLAG_SSA, loc, 0, 0, flag.flag, flag.version, val);
+	return AddExprWithLocation(LLIL_STORE, loc, size, flags, dest, src);
 }
 
 
-ExprId LowLevelILFunction::ForceVer(size_t size, uint32_t reg, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::Push(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FORCE_VER, loc, size, 0, reg);
-}
-
-
-ExprId LowLevelILFunction::ForceVerSSA(size_t size, SSARegister dst, SSARegister src, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FORCE_VER_SSA, loc, size, 0, dst.reg, dst.version, src.reg, src.version);
-}
-
-
-ExprId LowLevelILFunction::Assert(size_t size, uint32_t reg, const PossibleValueSet& pvs, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_ASSERT, loc, size, 0, reg, CachePossibleValueSet(pvs));
-}
-
-
-ExprId LowLevelILFunction::AssertSSA(size_t size, SSARegister src, const PossibleValueSet& pvs, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_ASSERT_SSA, loc, size, 0, src.reg, src.version, CachePossibleValueSet(pvs));
-}
-
-
-ExprId LowLevelILFunction::Load(size_t size, ExprId addr, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_LOAD, loc, size, flags, addr);
-}
-
-
-ExprId LowLevelILFunction::LoadSSA(size_t size, ExprId addr, size_t sourceMemoryVer, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_LOAD_SSA, loc, size, 0, addr, sourceMemoryVer);
-}
-
-
-ExprId LowLevelILFunction::Store(size_t size, ExprId addr, ExprId val, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_STORE, loc, size, flags, addr, val);
-}
-
-
-ExprId LowLevelILFunction::StoreSSA(
-    size_t size, ExprId addr, ExprId val, size_t newMemoryVer, size_t prevMemoryVer, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_STORE_SSA, loc, size, 0, addr, newMemoryVer, prevMemoryVer, val);
-}
-
-
-ExprId LowLevelILFunction::Push(size_t size, ExprId val, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_PUSH, loc, size, flags, val);
+	return AddExprWithLocation(LLIL_PUSH, loc, size, flags, src);
 }
 
 
@@ -3095,118 +3591,906 @@ ExprId LowLevelILFunction::Pop(size_t size, uint32_t flags, const ILSourceLocati
 }
 
 
-ExprId LowLevelILFunction::Register(size_t size, uint32_t reg, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::Register(size_t size, uint32_t src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_REG, loc, size, 0, reg);
+	return AddExprWithLocation(LLIL_REG, loc, size, 0, src);
 }
 
 
-ExprId LowLevelILFunction::RegisterSSA(size_t size, const SSARegister& reg, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::RegisterSplit(size_t size, uint32_t hi, uint32_t lo, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_REG_SSA, loc, size, 0, reg.reg, reg.version);
-}
-
-
-ExprId LowLevelILFunction::RegisterSSAPartial(
-    size_t size, const SSARegister& fullReg, uint32_t partialReg, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_REG_SSA_PARTIAL, loc, size, 0, fullReg.reg, fullReg.version, partialReg);
-}
-
-
-ExprId LowLevelILFunction::RegisterSplit(size_t size, uint32_t high, uint32_t low, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_REG_SPLIT, loc, size, 0, high, low);
-}
-
-
-ExprId LowLevelILFunction::RegisterSplitSSA(
-    size_t size, const SSARegister& high, const SSARegister& low, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_REG_SPLIT_SSA, loc, size, 0, high.reg, high.version, low.reg, low.version);
+	return AddExprWithLocation(LLIL_REG_SPLIT, loc, size, 0, hi, lo);
 }
 
 
 ExprId LowLevelILFunction::RegisterStackTopRelative(
-    size_t size, uint32_t regStack, ExprId entry, const ILSourceLocation& loc)
+    size_t size, uint32_t srcStack, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_REG_STACK_REL, loc, size, 0, regStack, entry);
+	return AddExprWithLocation(LLIL_REG_STACK_REL, loc, size, 0, srcStack, src);
 }
 
 
-ExprId LowLevelILFunction::RegisterStackPop(size_t size, uint32_t regStack, uint32_t flags, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::RegisterStackPop(size_t size, uint32_t srcStack, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_REG_STACK_POP, loc, size, flags, regStack);
+	return AddExprWithLocation(LLIL_REG_STACK_POP, loc, size, flags, srcStack);
 }
 
 
-ExprId LowLevelILFunction::RegisterStackFreeReg(uint32_t reg, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::RegisterStackFreeReg(uint32_t dest, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_REG_STACK_FREE_REG, loc, 0, 0, reg);
+	return AddExprWithLocation(LLIL_REG_STACK_FREE_REG, loc, 0, 0, dest);
 }
 
 
-ExprId LowLevelILFunction::RegisterStackFreeTopRelative(uint32_t regStack, ExprId entry, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::RegisterStackFreeTopRelative(uint32_t destStack, ExprId dest, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_REG_STACK_FREE_REL, loc, 0, 0, regStack, entry);
+	return AddExprWithLocation(LLIL_REG_STACK_FREE_REL, loc, 0, 0, destStack, dest);
+}
+
+
+ExprId LowLevelILFunction::Const(size_t size, uint64_t constant, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CONST, loc, size, 0, constant);
+}
+
+
+ExprId LowLevelILFunction::ConstPointer(size_t size, uint64_t constant, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CONST_PTR, loc, size, 0, constant);
+}
+
+
+ExprId LowLevelILFunction::ExternPointer(size_t size, uint64_t constant, uint64_t offset, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_EXTERN_PTR, loc, size, 0, constant, offset);
+}
+
+
+ExprId LowLevelILFunction::FloatConstRaw(size_t size, uint64_t constant, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLOAT_CONST, loc, size, 0, constant);
+}
+
+
+ExprId LowLevelILFunction::Flag(uint32_t src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLAG, loc, 0, 0, src);
+}
+
+
+ExprId LowLevelILFunction::FlagBit(size_t size, uint32_t src, size_t bit, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLAG_BIT, loc, size, 0, src, bit);
+}
+
+
+ExprId LowLevelILFunction::Add(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ADD, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::AddCarry(
+    size_t size, ExprId left, ExprId right, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ADC, loc, size, flags, left, right, carry);
+}
+
+
+ExprId LowLevelILFunction::Sub(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SUB, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::SubBorrow(
+    size_t size, ExprId left, ExprId right, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SBB, loc, size, flags, left, right, carry);
+}
+
+
+ExprId LowLevelILFunction::And(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_AND, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::Or(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_OR, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::Xor(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_XOR, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::ShiftLeft(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_LSL, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::LogicalShiftRight(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_LSR, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::ArithShiftRight(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ASR, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::RotateLeft(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ROL, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::RotateLeftCarry(
+    size_t size, ExprId left, ExprId right, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_RLC, loc, size, flags, left, right, carry);
+}
+
+
+ExprId LowLevelILFunction::RotateRight(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ROR, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::RotateRightCarry(
+    size_t size, ExprId left, ExprId right, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_RRC, loc, size, flags, left, right, carry);
+}
+
+
+ExprId LowLevelILFunction::Mult(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MUL, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::MultDoublePrecUnsigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MULU_DP, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::MultDoublePrecSigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MULS_DP, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::DivUnsigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_DIVU, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::DivDoublePrecUnsigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_DIVU_DP, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::DivSigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_DIVS, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::DivDoublePrecSigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_DIVS_DP, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::ModUnsigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MODU, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::ModDoublePrecUnsigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MODU_DP, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::ModSigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MODS, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::ModDoublePrecSigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MODS_DP, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::Neg(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_NEG, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::Not(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_NOT, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::SignExtend(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SX, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::ZeroExtend(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ZX, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::LowPart(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_LOW_PART, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::Jump(ExprId dest, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_JUMP, loc, 0, 0, dest);
+}
+
+
+ExprId LowLevelILFunction::JumpTo(
+    ExprId dest, const map<uint64_t, BNLowLevelILLabel*>& targets, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_JUMP_TO, loc, 0, 0, dest, targets.size() * 2, AddLabelMap(targets));
+}
+
+
+ExprId LowLevelILFunction::Call(ExprId dest, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CALL, loc, 0, 0, dest);
+}
+
+
+ExprId LowLevelILFunction::CallStackAdjust(ExprId dest, int64_t stackAdjustment,
+    const map<uint32_t, int32_t>& regStackAdjustments, const ILSourceLocation& loc)
+{
+	vector<size_t> regStackAdjustmentsList;
+	regStackAdjustmentsList.reserve(regStackAdjustments.size() * 2);
+	for (auto& i : regStackAdjustments)
+	{
+		regStackAdjustmentsList.push_back(i.first);
+		regStackAdjustmentsList.push_back(i.second);
+	}
+	return AddExprWithLocation(LLIL_CALL_STACK_ADJUST, loc, 0, 0, dest, stackAdjustment, regStackAdjustmentsList.size(),
+	    AddIndexList(regStackAdjustmentsList));
+}
+
+
+ExprId LowLevelILFunction::TailCall(ExprId dest, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_TAILCALL, loc, 0, 0, dest);
+}
+
+
+ExprId LowLevelILFunction::Return(ExprId dest, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_RET, loc, 0, 0, dest);
+}
+
+
+ExprId LowLevelILFunction::NoReturn(const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_NORET, loc, 0, 0);
+}
+
+
+ExprId LowLevelILFunction::FlagCondition(
+    BNLowLevelILFlagCondition flagCondition, uint32_t semanticClass, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLAG_COND, loc, 0, 0, flagCondition, semanticClass);
+}
+
+
+ExprId LowLevelILFunction::FlagGroup(uint32_t semanticGroup, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLAG_GROUP, loc, 0, 0, semanticGroup);
+}
+
+
+ExprId LowLevelILFunction::CompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CMP_E, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::CompareNotEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CMP_NE, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::CompareSignedLessThan(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CMP_SLT, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::CompareUnsignedLessThan(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CMP_ULT, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::CompareSignedLessEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CMP_SLE, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::CompareUnsignedLessEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CMP_ULE, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::CompareSignedGreaterEqual(
+    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CMP_SGE, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::CompareUnsignedGreaterEqual(
+    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CMP_UGE, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::CompareSignedGreaterThan(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CMP_SGT, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::CompareUnsignedGreaterThan(
+    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CMP_UGT, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::TestBit(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_TEST_BIT, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::BoolToInt(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_BOOL_TO_INT, loc, size, 0, src);
+}
+
+
+ExprId LowLevelILFunction::AddOverflow(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ADD_OVERFLOW, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::SystemCall(const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SYSCALL, loc, 0, 0);
+}
+
+
+ExprId LowLevelILFunction::Breakpoint(const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_BP, loc, 0, 0);
+}
+
+
+ExprId LowLevelILFunction::Trap(int64_t vector, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_TRAP, loc, 0, 0, vector);
+}
+
+
+ExprId LowLevelILFunction::Intrinsic(const vector<RegisterOrFlag>& output, uint32_t intrinsic,
+    const vector<ExprId>& params, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_INTRINSIC, loc, 0, flags, output.size(), AddRegisterOrFlagList(output), intrinsic,
+	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
+}
+
+
+ExprId LowLevelILFunction::Undefined(const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_UNDEF, loc, 0, 0);
+}
+
+
+ExprId LowLevelILFunction::Unimplemented(const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_UNIMPL, loc, 0, 0, 0);
+}
+
+
+ExprId LowLevelILFunction::Unknown(const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_UNIMPL, loc, 0, 0, 1);
+}
+
+
+ExprId LowLevelILFunction::UnimplementedMemoryRef(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_UNIMPL_MEM, loc, size, 0, src, 0);
+}
+
+
+ExprId LowLevelILFunction::UnknownMemoryRef(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_UNIMPL_MEM, loc, size, 0, src, 1);
+}
+
+
+ExprId LowLevelILFunction::FloatAdd(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FADD, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::FloatSub(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FSUB, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::FloatMult(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FMUL, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::FloatDiv(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FDIV, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::FloatSqrt(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FSQRT, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::FloatNeg(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FNEG, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::FloatAbs(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FABS, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::FloatToInt(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLOAT_TO_INT, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::IntToFloat(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_INT_TO_FLOAT, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::FloatConvert(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLOAT_CONV, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::RoundToInt(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ROUND_TO_INT, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::Floor(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLOOR, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::Ceil(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CEIL, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::FloatTrunc(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FTRUNC, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_E, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareNotEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_NE, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareLessThan(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_LT, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareLessEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_LE, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareGreaterEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_GE, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareGreaterThan(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_GT, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareOrdered(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_O, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::FloatCompareUnordered(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FCMP_UO, loc, size, 0, left, right);
+}
+
+
+ExprId LowLevelILFunction::SetRegisterSSA(size_t size, const SSARegister& dest, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SET_REG_SSA, loc, size, 0, dest.reg, dest.version, src);
+}
+
+
+ExprId LowLevelILFunction::SetRegisterSSAPartial(
+    size_t size, const SSARegister& dest, uint32_t partial, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SET_REG_SSA_PARTIAL, loc, size, 0, dest.reg, dest.version, partial, src);
+}
+
+
+ExprId LowLevelILFunction::SetRegisterSplitSSA(
+    size_t size, const SSARegister& hiReg, const SSARegister& loReg, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SET_REG_SPLIT_SSA, loc, size, 0,
+	    AddExprWithLocation(LLIL_REG_SPLIT_DEST_SSA, loc, size, 0, hiReg.reg, hiReg.version),
+	    AddExprWithLocation(LLIL_REG_SPLIT_DEST_SSA, loc, size, 0, loReg.reg, loReg.version), src);
+}
+
+
+ExprId LowLevelILFunction::SetRegisterStackTopRelativeSSA(size_t size, uint32_t stack, size_t destVersion,
+    size_t srcVersion, ExprId dest, const SSARegister& topReg, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SET_REG_STACK_REL_SSA, loc, size, 0,
+	    AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, size, 0, stack, destVersion, srcVersion), dest,
+	    AddExprWithLocation(LLIL_REG_SSA, loc, 0, 0, topReg.reg, topReg.version), src);
+}
+
+
+ExprId LowLevelILFunction::SetRegisterStackAbsoluteSSA(size_t size, uint32_t stack, size_t destVersion,
+    size_t srcVersion, uint32_t dest, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SET_REG_STACK_ABS_SSA, loc, size, 0,
+	    AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, size, 0, stack, destVersion, srcVersion), dest, src);
+}
+
+
+ExprId LowLevelILFunction::RegisterSSA(size_t size, const SSARegister& src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_REG_SSA, loc, size, 0, src.reg, src.version);
+}
+
+
+ExprId LowLevelILFunction::RegisterSSAPartial(
+    size_t size, const SSARegister& src, uint32_t partial, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_REG_SSA_PARTIAL, loc, size, 0, src.reg, src.version, partial);
+}
+
+
+ExprId LowLevelILFunction::RegisterSplitSSA(
+    size_t size, const SSARegister& hi, const SSARegister& lo, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_REG_SPLIT_SSA, loc, size, 0, hi.reg, hi.version, lo.reg, lo.version);
 }
 
 
 ExprId LowLevelILFunction::RegisterStackTopRelativeSSA(
-    size_t size, const SSARegisterStack& regStack, ExprId entry, const SSARegister& top, const ILSourceLocation& loc)
+    size_t size, const SSARegisterStack& srcStack, ExprId src, const SSARegister& topReg, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_REG_STACK_REL_SSA, loc, size, 0, regStack.regStack, regStack.version, entry,
-	    AddExprWithLocation(LLIL_REG_SSA, loc, 0, 0, top.reg, top.version));
+	return AddExprWithLocation(LLIL_REG_STACK_REL_SSA, loc, size, 0, srcStack.regStack, srcStack.version, src,
+	    AddExprWithLocation(LLIL_REG_SSA, loc, 0, 0, topReg.reg, topReg.version));
 }
 
 
 ExprId LowLevelILFunction::RegisterStackAbsoluteSSA(
-    size_t size, const SSARegisterStack& regStack, uint32_t reg, const ILSourceLocation& loc)
+    size_t size, const SSARegisterStack& srcStack, uint32_t src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_REG_STACK_ABS_SSA, loc, size, 0, regStack.regStack, regStack.version, reg);
+	return AddExprWithLocation(LLIL_REG_STACK_ABS_SSA, loc, size, 0, srcStack.regStack, srcStack.version, src);
 }
 
 
-ExprId LowLevelILFunction::RegisterStackFreeTopRelativeSSA(uint32_t regStack, size_t destVersion, size_t srcVersion,
-    ExprId entry, const SSARegister& top, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::RegisterStackFreeTopRelativeSSA(uint32_t stack, size_t destVersion, size_t srcVersion,
+    ExprId dest, const SSARegister& topReg, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_FREE_REL_SSA, loc, 0, 0,
-	    AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, 0, 0, regStack, destVersion, srcVersion), entry,
-	    AddExprWithLocation(LLIL_REG_SSA, loc, 0, 0, top.reg, top.version));
+	    AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, 0, 0, stack, destVersion, srcVersion), dest,
+	    AddExprWithLocation(LLIL_REG_SSA, loc, 0, 0, topReg.reg, topReg.version));
 }
 
 
 ExprId LowLevelILFunction::RegisterStackFreeAbsoluteSSA(
-    uint32_t regStack, size_t destVersion, size_t srcVersion, uint32_t reg, const ILSourceLocation& loc)
+    uint32_t stack, size_t destVersion, size_t srcVersion, uint32_t dest, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_FREE_ABS_SSA, loc, 0, 0,
-	    AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, 0, 0, regStack, destVersion, srcVersion), reg);
+	    AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, 0, 0, stack, destVersion, srcVersion), dest);
 }
 
 
-ExprId LowLevelILFunction::Const(size_t size, uint64_t val, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::SetFlagSSA(const SSAFlag& dest, ExprId src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CONST, loc, size, 0, val);
+	return AddExprWithLocation(LLIL_SET_FLAG_SSA, loc, 0, 0, dest.flag, dest.version, src);
 }
 
 
-ExprId LowLevelILFunction::ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::AssertSSA(
+    size_t size, const SSARegister& src, const PossibleValueSet& constraint, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CONST_PTR, loc, size, 0, val);
+	return AddExprWithLocation(LLIL_ASSERT_SSA, loc, size, 0, src.reg, src.version, CachePossibleValueSet(constraint));
 }
 
 
-ExprId LowLevelILFunction::ExternPointer(size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::ForceVerSSA(
+    size_t size, const SSARegister& dest, const SSARegister& src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_EXTERN_PTR, loc, size, 0, val, offset);
+	return AddExprWithLocation(LLIL_FORCE_VER_SSA, loc, size, 0, dest.reg, dest.version, src.reg, src.version);
 }
 
 
-ExprId LowLevelILFunction::FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::FlagSSA(const SSAFlag& src, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FLOAT_CONST, loc, size, 0, val);
+	return AddExprWithLocation(LLIL_FLAG_SSA, loc, 0, 0, src.flag, src.version);
 }
 
+
+ExprId LowLevelILFunction::FlagBitSSA(size_t size, const SSAFlag& src, size_t bit, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLAG_BIT_SSA, loc, size, 0, src.flag, src.version, bit);
+}
+
+
+ExprId LowLevelILFunction::CallSSA(const vector<SSARegister>& output, ExprId dest, const vector<ExprId>& params,
+    const SSARegister& stackReg, size_t destMemory, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CALL_SSA, loc, 0, 0,
+	    AddExprWithLocation(LLIL_CALL_OUTPUT_SSA, loc, 0, 0, destMemory, output.size() * 2, AddSSARegisterList(output)),
+	    dest, AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, 0, 0, stackReg.reg, stackReg.version, srcMemory),
+	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
+}
+
+
+ExprId LowLevelILFunction::SystemCallSSA(const vector<SSARegister>& output, const vector<ExprId>& params,
+    const SSARegister& stackReg, size_t destMemory, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SYSCALL_SSA, loc, 0, 0,
+	    AddExprWithLocation(LLIL_CALL_OUTPUT_SSA, loc, 0, 0, destMemory, output.size() * 2, AddSSARegisterList(output)),
+	    AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, 0, 0, stackReg.reg, stackReg.version, srcMemory),
+	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
+}
+
+
+ExprId LowLevelILFunction::TailCallSSA(const vector<SSARegister>& output, ExprId dest, const vector<ExprId>& params,
+    const SSARegister& stackReg, size_t destMemory, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_TAILCALL_SSA, loc, 0, 0,
+	    AddExprWithLocation(LLIL_CALL_OUTPUT_SSA, loc, 0, 0, destMemory, output.size() * 2, AddSSARegisterList(output)),
+	    dest, AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, 0, 0, stackReg.reg, stackReg.version, srcMemory),
+	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
+}
+
+
+ExprId LowLevelILFunction::SeparateParamListSSA(const vector<ExprId>& params, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SEPARATE_PARAM_LIST_SSA, loc, 0, 0, params.size(), AddOperandList(params));
+}
+
+
+ExprId LowLevelILFunction::SharedParamSlotSSA(const vector<ExprId>& params, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SHARED_PARAM_SLOT_SSA, loc, 0, 0, params.size(), AddOperandList(params));
+}
+
+
+ExprId LowLevelILFunction::LoadSSA(size_t size, ExprId src, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_LOAD_SSA, loc, size, 0, src, srcMemory);
+}
+
+
+ExprId LowLevelILFunction::StoreSSA(
+    size_t size, ExprId dest, ExprId src, size_t destMemory, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_STORE_SSA, loc, size, 0, dest, destMemory, srcMemory, src);
+}
+
+
+ExprId LowLevelILFunction::IntrinsicSSA(const vector<SSARegisterOrFlag>& output, uint32_t intrinsic,
+    const vector<ExprId>& params, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_INTRINSIC_SSA, loc, 0, 0, output.size() * 2, AddSSARegisterOrFlagList(output),
+	    intrinsic, AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
+}
+
+
+ExprId LowLevelILFunction::MemoryIntrinsicSSA(const vector<SSARegisterOrFlag>& output, uint32_t intrinsic,
+    const vector<ExprId>& params, size_t destMemory, size_t srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MEMORY_INTRINSIC_SSA, loc, 0, 0,
+	    AddExprWithLocation(LLIL_MEMORY_INTRINSIC_OUTPUT_SSA, loc, 0, 0, destMemory, output.size() * 2,
+	        AddSSARegisterOrFlagList(output)),
+	    intrinsic, AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)), srcMemory);
+}
+
+
+ExprId LowLevelILFunction::RegisterPhi(
+    const SSARegister& dest, const vector<SSARegister>& src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(
+	    LLIL_REG_PHI, loc, 0, 0, dest.reg, dest.version, src.size() * 2, AddSSARegisterList(src));
+}
+
+
+ExprId LowLevelILFunction::RegisterStackPhi(
+    const SSARegisterStack& dest, const vector<SSARegisterStack>& src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(
+	    LLIL_REG_STACK_PHI, loc, 0, 0, dest.regStack, dest.version, src.size() * 2, AddSSARegisterStackList(src));
+}
+
+
+ExprId LowLevelILFunction::FlagPhi(const SSAFlag& dest, const vector<SSAFlag>& src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_FLAG_PHI, loc, 0, 0, dest.flag, dest.version, src.size() * 2, AddSSAFlagList(src));
+}
+
+
+ExprId LowLevelILFunction::MemoryPhi(size_t destMemory, const vector<size_t>& srcMemory, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MEM_PHI, loc, 0, 0, destMemory, srcMemory.size(), AddIndexList(srcMemory));
+}
+
+
+ExprId LowLevelILFunction::ByteSwap(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_BSWAP, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::PopulationCount(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_POPCNT, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::CountLeadingZeros(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CLZ, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::CountTrailingZeros(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CTZ, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::ReverseBits(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_RBIT, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::CountLeadingSigns(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CLS, loc, size, flags, src);
+}
+
+
+ExprId LowLevelILFunction::MinSigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MINS, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::MaxSigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MAXS, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::MinUnsigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MINU, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::MaxUnsigned(
+    size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MAXU, loc, size, flags, left, right);
+}
+
+
+ExprId LowLevelILFunction::AbsoluteValue(size_t size, ExprId src, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ABS, loc, size, flags, src);
+}
+// END GENERATED llil-builders
 
 ExprId LowLevelILFunction::FloatConstSingle(float val, const ILSourceLocation& loc)
 {
@@ -3230,706 +4514,6 @@ ExprId LowLevelILFunction::FloatConstDouble(double val, const ILSourceLocation& 
 	bits.f = val;
 	return AddExprWithLocation(LLIL_FLOAT_CONST, loc, 8, 0, bits.i);
 }
-
-
-ExprId LowLevelILFunction::Flag(uint32_t flag, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FLAG, loc, 0, 0, flag);
-}
-
-
-ExprId LowLevelILFunction::FlagSSA(const SSAFlag& flag, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FLAG_SSA, loc, 0, 0, flag.flag, flag.version);
-}
-
-
-ExprId LowLevelILFunction::FlagBit(size_t size, uint32_t flag, size_t bitIndex, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FLAG_BIT, loc, size, 0, flag, bitIndex);
-}
-
-
-ExprId LowLevelILFunction::FlagBitSSA(size_t size, const SSAFlag& flag, size_t bitIndex, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FLAG_BIT_SSA, loc, size, 0, flag.flag, flag.version, bitIndex);
-}
-
-
-ExprId LowLevelILFunction::Add(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_ADD, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::AddCarry(
-    size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_ADC, loc, size, flags, a, b, carry);
-}
-
-
-ExprId LowLevelILFunction::Sub(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_SUB, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::SubBorrow(
-    size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_SBB, loc, size, flags, a, b, carry);
-}
-
-
-ExprId LowLevelILFunction::And(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_AND, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::Or(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_OR, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::Xor(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_XOR, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::ShiftLeft(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_LSL, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::LogicalShiftRight(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_LSR, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::ArithShiftRight(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_ASR, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::RotateLeft(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_ROL, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::RotateLeftCarry(
-    size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_RLC, loc, size, flags, a, b, carry);
-}
-
-
-ExprId LowLevelILFunction::RotateRight(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_ROR, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::RotateRightCarry(
-    size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_RRC, loc, size, flags, a, b, carry);
-}
-
-
-ExprId LowLevelILFunction::Mult(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MUL, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::MultDoublePrecUnsigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MULU_DP, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::MultDoublePrecSigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MULS_DP, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::DivUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_DIVU, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::DivDoublePrecUnsigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_DIVU_DP, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::DivSigned(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_DIVS, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::DivDoublePrecSigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_DIVS_DP, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::ModUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MODU, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::ModDoublePrecUnsigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MODU_DP, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::ModSigned(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MODS, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::ModDoublePrecSigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MODS_DP, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::Neg(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_NEG, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::Not(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_NOT, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::ByteSwap(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_BSWAP, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::PopulationCount(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_POPCNT, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::CountLeadingZeros(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CLZ, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::CountTrailingZeros(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CTZ, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::ReverseBits(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_RBIT, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::CountLeadingSigns(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CLS, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::MinSigned(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MINS, loc, size, flags, left, right);
-}
-
-
-ExprId LowLevelILFunction::MaxSigned(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MAXS, loc, size, flags, left, right);
-}
-
-
-ExprId LowLevelILFunction::MinUnsigned(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MINU, loc, size, flags, left, right);
-}
-
-
-ExprId LowLevelILFunction::MaxUnsigned(size_t size, ExprId left, ExprId right, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MAXU, loc, size, flags, left, right);
-}
-
-
-ExprId LowLevelILFunction::AbsoluteValue(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_ABS, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::SignExtend(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_SX, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::ZeroExtend(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_ZX, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::LowPart(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_LOW_PART, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::Jump(ExprId dest, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_JUMP, loc, 0, 0, dest);
-}
-
-
-ExprId LowLevelILFunction::JumpTo(
-    ExprId dest, const map<uint64_t, BNLowLevelILLabel*>& targets, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_JUMP_TO, loc, 0, 0, dest, targets.size() * 2, AddLabelMap(targets));
-}
-
-
-ExprId LowLevelILFunction::Call(ExprId dest, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CALL, loc, 0, 0, dest);
-}
-
-
-ExprId LowLevelILFunction::CallStackAdjust(
-    ExprId dest, int64_t adjust, const map<uint32_t, int32_t>& regStackAdjust, const ILSourceLocation& loc)
-{
-	vector<size_t> list;
-	list.reserve(regStackAdjust.size() * 2);
-	for (auto& i : regStackAdjust)
-	{
-		list.push_back(i.first);
-		list.push_back(i.second);
-	}
-	return AddExprWithLocation(LLIL_CALL_STACK_ADJUST, loc, 0, 0, dest, adjust, list.size(), AddIndexList(list));
-}
-
-
-ExprId LowLevelILFunction::TailCall(ExprId dest, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_TAILCALL, loc, 0, 0, dest);
-}
-
-
-ExprId LowLevelILFunction::CallSSA(const vector<SSARegister>& output, ExprId dest, const vector<ExprId>& params,
-    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CALL_SSA, loc, 0, 0,
-	    AddExprWithLocation(
-	        LLIL_CALL_OUTPUT_SSA, loc, 0, 0, newMemoryVer, output.size() * 2, AddSSARegisterList(output)),
-	    dest, AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, 0, 0, stack.reg, stack.version, prevMemoryVer),
-	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
-}
-
-
-ExprId LowLevelILFunction::SystemCallSSA(const vector<SSARegister>& output, const vector<ExprId>& params,
-    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_SYSCALL_SSA, loc, 0, 0,
-	    AddExprWithLocation(
-	        LLIL_CALL_OUTPUT_SSA, loc, 0, 0, newMemoryVer, output.size() * 2, AddSSARegisterList(output)),
-	    AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, 0, 0, stack.reg, stack.version, prevMemoryVer),
-	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
-}
-
-
-ExprId LowLevelILFunction::TailCallSSA(const vector<SSARegister>& output, ExprId dest, const vector<ExprId>& params,
-    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_TAILCALL_SSA, loc, 0, 0,
-	    AddExprWithLocation(
-	        LLIL_CALL_OUTPUT_SSA, loc, 0, 0, newMemoryVer, output.size() * 2, AddSSARegisterList(output)),
-	    dest, AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, 0, 0, stack.reg, stack.version, prevMemoryVer),
-	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
-}
-
-
-ExprId LowLevelILFunction::SeparateParamListSSA(const vector<ExprId>& params, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_SEPARATE_PARAM_LIST_SSA, loc, 0, 0, params.size(), AddOperandList(params));
-}
-
-
-ExprId LowLevelILFunction::SharedParamSlotSSA(const vector<ExprId>& params, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_SHARED_PARAM_SLOT_SSA, loc, 0, 0, params.size(), AddOperandList(params));
-}
-
-
-ExprId LowLevelILFunction::Return(size_t dest, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_RET, loc, 0, 0, dest);
-}
-
-
-ExprId LowLevelILFunction::NoReturn(const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_NORET, loc, 0, 0);
-}
-
-
-ExprId LowLevelILFunction::FlagCondition(BNLowLevelILFlagCondition cond, uint32_t semClass, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FLAG_COND, loc, 0, 0, (ExprId)cond, semClass);
-}
-
-
-ExprId LowLevelILFunction::FlagGroup(uint32_t semGroup, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FLAG_GROUP, loc, 0, 0, semGroup);
-}
-
-
-ExprId LowLevelILFunction::CompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CMP_E, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::CompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CMP_NE, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::CompareSignedLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CMP_SLT, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::CompareUnsignedLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CMP_ULT, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::CompareSignedLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CMP_SLE, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::CompareUnsignedLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CMP_ULE, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::CompareSignedGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CMP_SGE, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::CompareUnsignedGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CMP_UGE, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::CompareSignedGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CMP_SGT, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::CompareUnsignedGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CMP_UGT, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::TestBit(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_TEST_BIT, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::BoolToInt(size_t size, ExprId a, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_BOOL_TO_INT, loc, size, 0, a);
-}
-
-ExprId LowLevelILFunction::AddOverflow(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_ADD_OVERFLOW, loc, size, 0, left, right);
-}
-
-ExprId LowLevelILFunction::SystemCall(const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_SYSCALL, loc, 0, 0);
-}
-
-
-ExprId LowLevelILFunction::Intrinsic(const vector<RegisterOrFlag>& outputs, uint32_t intrinsic,
-    const vector<ExprId>& params, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_INTRINSIC, loc, 0, flags, outputs.size(), AddRegisterOrFlagList(outputs), intrinsic,
-	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
-}
-
-
-ExprId LowLevelILFunction::IntrinsicSSA(const vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
-    const vector<ExprId>& params, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_INTRINSIC_SSA, loc, 0, 0, outputs.size() * 2, AddSSARegisterOrFlagList(outputs),
-	    intrinsic, AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
-}
-
-
-ExprId LowLevelILFunction::MemoryIntrinsicSSA(const vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic, const vector<ExprId>& params,
-    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MEMORY_INTRINSIC_SSA, loc, 0, 0,
-		AddExprWithLocation(LLIL_MEMORY_INTRINSIC_OUTPUT_SSA, loc, 0, 0, newMemVersion, outputs.size() * 2, AddSSARegisterOrFlagList(outputs)),
-		intrinsic, AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)), prevMemVersion);
-}
-
-
-ExprId LowLevelILFunction::Breakpoint(const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_BP, loc, 0, 0);
-}
-
-
-ExprId LowLevelILFunction::Trap(int64_t num, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_TRAP, loc, 0, 0, num);
-}
-
-
-ExprId LowLevelILFunction::Undefined(const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_UNDEF, loc, 0, 0);
-}
-
-
-ExprId LowLevelILFunction::Unimplemented(const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_UNIMPL, loc, 0, 0, 0);
-}
-
-
-ExprId LowLevelILFunction::Unknown(const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_UNIMPL, loc, 0, 0, 1);
-}
-
-
-ExprId LowLevelILFunction::UnimplementedMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_UNIMPL_MEM, loc, size, 0, addr, 0);
-}
-
-
-ExprId LowLevelILFunction::UnknownMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_UNIMPL_MEM, loc, size, 0, addr, 1);
-}
-
-
-ExprId LowLevelILFunction::RegisterPhi(
-    const SSARegister& dest, const vector<SSARegister>& sources, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(
-	    LLIL_REG_PHI, loc, 0, 0, dest.reg, dest.version, sources.size() * 2, AddSSARegisterList(sources));
-}
-
-
-ExprId LowLevelILFunction::RegisterStackPhi(
-    const SSARegisterStack& dest, const vector<SSARegisterStack>& sources, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_REG_STACK_PHI, loc, 0, 0, dest.regStack, dest.version, sources.size() * 2,
-	    AddSSARegisterStackList(sources));
-}
-
-
-ExprId LowLevelILFunction::FlagPhi(const SSAFlag& dest, const vector<SSAFlag>& sources, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(
-	    LLIL_FLAG_PHI, loc, 0, 0, dest.flag, dest.version, sources.size() * 2, AddSSAFlagList(sources));
-}
-
-
-ExprId LowLevelILFunction::MemoryPhi(size_t dest, const vector<size_t>& sources, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_MEM_PHI, loc, 0, 0, dest, sources.size(), AddIndexList(sources));
-}
-
-
-ExprId LowLevelILFunction::FloatAdd(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FADD, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::FloatSub(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FSUB, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::FloatMult(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FMUL, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::FloatDiv(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FDIV, loc, size, flags, a, b);
-}
-
-
-ExprId LowLevelILFunction::FloatSqrt(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FSQRT, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::FloatNeg(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FNEG, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::FloatAbs(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FABS, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::FloatToInt(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FLOAT_TO_INT, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::IntToFloat(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_INT_TO_FLOAT, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::FloatConvert(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FLOAT_CONV, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::RoundToInt(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_ROUND_TO_INT, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::Floor(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FLOOR, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::Ceil(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_CEIL, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::FloatTrunc(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FTRUNC, loc, size, flags, a);
-}
-
-
-ExprId LowLevelILFunction::FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FCMP_E, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FCMP_NE, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FCMP_LT, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FCMP_LE, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FCMP_GE, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FCMP_GT, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FCMP_O, loc, size, 0, a, b);
-}
-
-
-ExprId LowLevelILFunction::FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(LLIL_FCMP_UO, loc, size, 0, a, b);
-}
-
 
 fmt::format_context::iterator fmt::formatter<LowLevelILInstruction>::format(const LowLevelILInstruction& obj, format_context& ctx) const
 {

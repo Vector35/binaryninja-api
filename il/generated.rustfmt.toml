@@ -1,0 +1,2 @@
+# Empty, so rustfmt uses its defaults, as cargo fmt does for the Rust API. Passing this file stops rustfmt from
+# reading any other configuration.

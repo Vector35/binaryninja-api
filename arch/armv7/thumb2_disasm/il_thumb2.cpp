@@ -2268,23 +2268,23 @@ ExprId GetCondition(LowLevelILFunction& il, uint32_t cond)
 {
 	switch (cond)
 	{
-	 	case armv7::COND_EQ: return il.FlagCondition(LLFC_E);
-	 	case armv7::COND_NE: return il.FlagCondition(LLFC_NE);
-	 	case armv7::COND_CS: return il.FlagCondition(LLFC_UGE);
-	 	case armv7::COND_CC: return il.FlagCondition(LLFC_ULT);
-	 	case armv7::COND_MI: return il.FlagCondition(LLFC_NEG);
-	 	case armv7::COND_PL: return il.FlagCondition(LLFC_POS);
-	 	case armv7::COND_VS: return il.FlagCondition(LLFC_O);
-	 	case armv7::COND_VC: return il.FlagCondition(LLFC_NO);
-	 	case armv7::COND_HI: return il.FlagCondition(LLFC_UGT);
-	 	case armv7::COND_LS: return il.FlagCondition(LLFC_ULE);
-	 	case armv7::COND_GE: return il.FlagCondition(LLFC_SGE);
-	 	case armv7::COND_LT: return il.FlagCondition(LLFC_SLT);
-	 	case armv7::COND_GT: return il.FlagCondition(LLFC_SGT);
-	 	case armv7::COND_LE: return il.FlagCondition(LLFC_SLE);
-	 	case armv7::COND_NONE: return il.Const(0, 1); //Always branch
-		default:
-			return il.Const(0, 0); //Never branch
+	case armv7::COND_EQ: return il.FlagGroup(IL_FLAG_GROUP_EQ);
+	case armv7::COND_NE: return il.FlagGroup(IL_FLAG_GROUP_NE);
+	case armv7::COND_CS: return il.FlagGroup(IL_FLAG_GROUP_CS);
+	case armv7::COND_CC: return il.FlagGroup(IL_FLAG_GROUP_CC);
+	case armv7::COND_MI: return il.FlagGroup(IL_FLAG_GROUP_MI);
+	case armv7::COND_PL: return il.FlagGroup(IL_FLAG_GROUP_PL);
+	case armv7::COND_VS: return il.FlagGroup(IL_FLAG_GROUP_VS);
+	case armv7::COND_VC: return il.FlagGroup(IL_FLAG_GROUP_VC);
+	case armv7::COND_HI: return il.FlagGroup(IL_FLAG_GROUP_HI);
+	case armv7::COND_LS: return il.FlagGroup(IL_FLAG_GROUP_LS);
+	case armv7::COND_GE: return il.FlagGroup(IL_FLAG_GROUP_GE);
+	case armv7::COND_LT: return il.FlagGroup(IL_FLAG_GROUP_LT);
+	case armv7::COND_GT: return il.FlagGroup(IL_FLAG_GROUP_GT);
+	case armv7::COND_LE: return il.FlagGroup(IL_FLAG_GROUP_LE);
+	case armv7::COND_NONE: return il.Const(0, 1); //Always branch
+	default:
+		return il.Const(0, 0); //Never branch
 	}
 }
 

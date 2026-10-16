@@ -15,6 +15,24 @@
 #define IL_FLAGWRITE_CNZ 3
 #define IL_FLAGWRITE_FLOAT_COMPARE 4
 
+#define IL_FLAG_CLASS_INT 1
+#define IL_FLAG_CLASS_FLOAT 2
+
+#define IL_FLAG_GROUP_EQ 1
+#define IL_FLAG_GROUP_NE 2
+#define IL_FLAG_GROUP_CS 3
+#define IL_FLAG_GROUP_CC 4
+#define IL_FLAG_GROUP_MI 5
+#define IL_FLAG_GROUP_PL 6
+#define IL_FLAG_GROUP_VS 7
+#define IL_FLAG_GROUP_VC 8
+#define IL_FLAG_GROUP_HI 9
+#define IL_FLAG_GROUP_LS 10
+#define IL_FLAG_GROUP_GE 11
+#define IL_FLAG_GROUP_LT 12
+#define IL_FLAG_GROUP_GT 13
+#define IL_FLAG_GROUP_LE 14
+
 struct decomp_result;
 
 enum Armv7Intrinsic : uint32_t

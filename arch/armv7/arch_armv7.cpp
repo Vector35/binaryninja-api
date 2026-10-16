@@ -3016,6 +3016,110 @@ string ArmCommonArchitecture::GetFlagWriteTypeName(uint32_t flags)
 	}
 }
 
+vector<uint32_t> ArmCommonArchitecture::GetAllSemanticFlagClasses()
+{
+	return {IL_FLAG_CLASS_INT, IL_FLAG_CLASS_FLOAT};
+}
+
+
+string ArmCommonArchitecture::GetSemanticFlagClassName(uint32_t semClass)
+{
+	switch (semClass)
+	{
+	case IL_FLAG_CLASS_INT: return "int";
+	case IL_FLAG_CLASS_FLOAT: return "float";
+	default: return "";
+	}
+}
+
+
+uint32_t ArmCommonArchitecture::GetSemanticClassForFlagWriteType(uint32_t writeType)
+{
+	return writeType == IL_FLAGWRITE_FLOAT_COMPARE ? IL_FLAG_CLASS_FLOAT : IL_FLAG_CLASS_INT;
+}
+
+
+vector<uint32_t> ArmCommonArchitecture::GetAllSemanticFlagGroups()
+{
+	return {IL_FLAG_GROUP_EQ, IL_FLAG_GROUP_NE, IL_FLAG_GROUP_CS, IL_FLAG_GROUP_CC,
+		IL_FLAG_GROUP_MI, IL_FLAG_GROUP_PL, IL_FLAG_GROUP_VS, IL_FLAG_GROUP_VC,
+		IL_FLAG_GROUP_HI, IL_FLAG_GROUP_LS, IL_FLAG_GROUP_GE, IL_FLAG_GROUP_LT,
+		IL_FLAG_GROUP_GT, IL_FLAG_GROUP_LE};
+}
+
+
+string ArmCommonArchitecture::GetSemanticFlagGroupName(uint32_t semGroup)
+{
+	switch (semGroup)
+	{
+	case IL_FLAG_GROUP_EQ: return "eq";
+	case IL_FLAG_GROUP_NE: return "ne";
+	case IL_FLAG_GROUP_CS: return "cs";
+	case IL_FLAG_GROUP_CC: return "cc";
+	case IL_FLAG_GROUP_MI: return "mi";
+	case IL_FLAG_GROUP_PL: return "pl";
+	case IL_FLAG_GROUP_VS: return "vs";
+	case IL_FLAG_GROUP_VC: return "vc";
+	case IL_FLAG_GROUP_HI: return "hi";
+	case IL_FLAG_GROUP_LS: return "ls";
+	case IL_FLAG_GROUP_GE: return "ge";
+	case IL_FLAG_GROUP_LT: return "lt";
+	case IL_FLAG_GROUP_GT: return "gt";
+	case IL_FLAG_GROUP_LE: return "le";
+	default: return "";
+	}
+}
+
+
+map<uint32_t, BNLowLevelILFlagCondition> ArmCommonArchitecture::GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup)
+{
+	// VFP sets NZCV to 1000, 0110, 0010, or 0011 for less, equal,
+	// greater, or unordered. Only map conditions exactly represented by
+	// an IL floating comparison; conditions including unordered outcomes
+	// such as LT (N != V) must keep their architectural flag expression.
+	switch (semGroup)
+	{
+	case IL_FLAG_GROUP_EQ: return {{IL_FLAG_CLASS_INT, LLFC_E}, {IL_FLAG_CLASS_FLOAT, LLFC_FE}};
+	case IL_FLAG_GROUP_NE: return {{IL_FLAG_CLASS_INT, LLFC_NE}, {IL_FLAG_CLASS_FLOAT, LLFC_FNE}};
+	case IL_FLAG_GROUP_CS: return {{IL_FLAG_CLASS_INT, LLFC_UGE}};
+	case IL_FLAG_GROUP_CC: return {{IL_FLAG_CLASS_INT, LLFC_ULT}, {IL_FLAG_CLASS_FLOAT, LLFC_FLT}};
+	case IL_FLAG_GROUP_MI: return {{IL_FLAG_CLASS_INT, LLFC_NEG}, {IL_FLAG_CLASS_FLOAT, LLFC_FLT}};
+	case IL_FLAG_GROUP_PL: return {{IL_FLAG_CLASS_INT, LLFC_POS}};
+	case IL_FLAG_GROUP_VS: return {{IL_FLAG_CLASS_INT, LLFC_O}, {IL_FLAG_CLASS_FLOAT, LLFC_FUO}};
+	case IL_FLAG_GROUP_VC: return {{IL_FLAG_CLASS_INT, LLFC_NO}, {IL_FLAG_CLASS_FLOAT, LLFC_FO}};
+	case IL_FLAG_GROUP_HI: return {{IL_FLAG_CLASS_INT, LLFC_UGT}};
+	case IL_FLAG_GROUP_LS: return {{IL_FLAG_CLASS_INT, LLFC_ULE}, {IL_FLAG_CLASS_FLOAT, LLFC_FLE}};
+	case IL_FLAG_GROUP_GE: return {{IL_FLAG_CLASS_INT, LLFC_SGE}, {IL_FLAG_CLASS_FLOAT, LLFC_FGE}};
+	case IL_FLAG_GROUP_LT: return {{IL_FLAG_CLASS_INT, LLFC_SLT}};
+	case IL_FLAG_GROUP_GT: return {{IL_FLAG_CLASS_INT, LLFC_SGT}, {IL_FLAG_CLASS_FLOAT, LLFC_FGT}};
+	case IL_FLAG_GROUP_LE: return {{IL_FLAG_CLASS_INT, LLFC_SLE}};
+	default: return {};
+	}
+}
+
+
+vector<uint32_t> ArmCommonArchitecture::GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup)
+{
+	auto conditions = GetFlagConditionsForSemanticFlagGroup(semGroup);
+	auto condition = conditions.find(IL_FLAG_CLASS_INT);
+	if (condition == conditions.end())
+		return {};
+	return GetFlagsRequiredForFlagCondition(condition->second, IL_FLAG_CLASS_INT);
+}
+
+
+size_t ArmCommonArchitecture::GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il)
+{
+	// When definitions are mixed or have no exact semantic mapping, expand
+	// the original hardware condition using its integer NZCV flag roles.
+	auto conditions = GetFlagConditionsForSemanticFlagGroup(semGroup);
+	auto condition = conditions.find(IL_FLAG_CLASS_INT);
+	if (condition == conditions.end())
+		return il.Unimplemented();
+	return GetFlagConditionLowLevelIL(condition->second, IL_FLAG_CLASS_INT, il);
+}
+
+
 BNFlagRole ArmCommonArchitecture::GetFlagRole(uint32_t flag, uint32_t)
 {
 	switch (flag)
@@ -3094,7 +3198,7 @@ size_t ArmCommonArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, s
 		case IL_FLAG_Z:
 			return il.FloatCompareEqual(size, lhs, rhs);
 		case IL_FLAG_C:
-			return il.Not(1, il.FloatCompareLessThan(size, lhs, rhs));
+			return il.Not(0, il.FloatCompareLessThan(size, lhs, rhs));
 		case IL_FLAG_V:
 			return il.FloatCompareUnordered(size, lhs, rhs);
 		default:

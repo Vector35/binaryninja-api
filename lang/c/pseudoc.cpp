@@ -1,3 +1,5 @@
+#include <bit>
+#include <cmath>
 #include <inttypes.h>
 #include "pseudoc.h"
 #include "highlevelilinstruction.h"
@@ -1339,35 +1341,30 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 	case HLIL_FLOAT_CONST:
 		[&]() {
 			const auto constant = instr.GetConstant<HLIL_FLOAT_CONST>();
-			if (instr.size == 4)
-			{
-				char valueStr[64];
-				union
-				{
-					float f;
-					uint32_t i;
-				} bits{};
-				bits.i = constant;
-				snprintf(valueStr, sizeof(valueStr), "%.9gf", bits.f);
-				tokens.Append(FloatingPointToken, InstructionAddressTokenContext, valueStr, instr.address);
-			}
-			else if (instr.size == 8)
-			{
-				char valueStr[64];
-				union
-				{
-					double f;
-					uint64_t i;
-				} bits{};
-				bits.i = constant;
-				snprintf(valueStr, sizeof(valueStr), "%.17g", bits.f);
-				string s = valueStr;
-				if ((s.find('.') == string::npos) && (s.find('e') == string::npos))
-					s += ".0";
-				tokens.Append(FloatingPointToken, InstructionAddressTokenContext, s, instr.address);
-			}
-			else
-			{
+			auto emit = [&](auto value) {
+				string text;
+				if (std::isfinite(value)) {
+					text = fmt::format("{:#}", value);
+					if constexpr (std::is_same_v<decltype(value), float>) {
+						text += "f";
+					}
+				} else {
+					text = std::isnan(value) ? "NAN" : "INFINITY";
+					if (std::signbit(value)) {
+						text = "-" + text;
+					}
+					if constexpr (std::is_same_v<decltype(value), double>) {
+						text = "((double)" + text + ")";
+					}
+				}
+				tokens.Append(FloatingPointToken, InstructionAddressTokenContext, text, instr.address);
+			};
+
+			if (instr.size == 4) {
+				emit(std::bit_cast<float>(static_cast<uint32_t>(constant)));
+			} else if (instr.size == 8) {
+				emit(std::bit_cast<double>(constant));
+			} else {
 				tokens.AppendIntegerTextToken(instr, constant, 8);
 			}
 

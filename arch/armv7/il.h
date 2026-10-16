@@ -267,3 +267,4 @@ bool GetLowLevelILForThumbInstruction(BinaryNinja::Architecture* arch,
 void SetupThumbConditionalInstructionIL(BinaryNinja::LowLevelILFunction& il, BinaryNinja::LowLevelILLabel& trueLabel,
     BinaryNinja::LowLevelILLabel& falseLabel, uint32_t cond);
 BinaryNinja::ExprId GetCondition(BinaryNinja::LowLevelILFunction& il, uint32_t cond);
+void PreserveLoadPairAddress(BinaryNinja::LowLevelILFunction& il, BinaryNinja::ExprId address, uint32_t firstDest);

@@ -39,6 +39,13 @@ def vmlal_expected(size, unsigned):
 
 test_cases = \
 [
+    # ldrd r0, r1, [r0, #0x18] -- preserve the base before the first load
+    ('A', b'\xd8\x01\xc0\xe1', 'LLIL_SET_REG.d(temp0,LLIL_REG.d(r0)); LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x18)))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x18)),LLIL_CONST.d(0x4))))'),
+    ('T', b'\xd0\xe9\x06\x01', 'LLIL_SET_REG.d(temp0,LLIL_REG.d(r0)); LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x18)))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x18)),LLIL_CONST.d(0x4))))'),
+    # ldrexd r0, r1, [r0] -- the shared pair-load paths also preserve the address
+    ('A', b'\x9f\x0f\xb0\xe1', 'LLIL_INTRINSIC([],SetExclusiveMonitors,[LLIL_ADD.d(LLIL_REG.d(r0),LLIL_CONST.d(0x0)),LLIL_CONST.b(0x8)]); LLIL_SET_REG.d(temp0,LLIL_REG.d(r0)); LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x0)))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x0)),LLIL_CONST.d(0x4))))'),
+    ('T', b'\xd0\xe8\x7f\x01', 'LLIL_SET_REG.d(temp0,LLIL_REG.d(r0)); LLIL_INTRINSIC([],SetExclusiveMonitors,[LLIL_REG.d(temp0),LLIL_CONST.b(0x8)]); LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_REG.d(temp0))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x4))))'),
+
     # vzip.8 d0, d1
     ('A', b'\x81\x01\xb2\xf3', 'LLIL_INTRINSIC([d0,d1],__vzip,[LLIL_CONST.b(0x8),LLIL_REG.q(d0),LLIL_REG.q(d1)])'),
     # it eq; vzipeq.16 q15, q14

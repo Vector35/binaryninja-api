@@ -6596,43 +6596,21 @@ uint32_t armv7_floating_point_data_processing(uint32_t instructionValue, Instruc
 				{
 					case 0:
 						{
-							static OperandClass immMap[2] = {FIMM32, FIMM64};
-							instruction->operands[0].cls = REG;
-							if (decode.com.opc3 == 1)
+							/* opc3 == 1 is VMOV (register), opc3 == 3 is VABS; both take a register source */
+							instruction->operation = (decode.com.opc3 == 1) ? ARMV7_VMOV : ARMV7_VABS;
+							if (decode.vmla.sz == 0)
 							{
-								instruction->operation = ARMV7_VMOV;
-								if (decode.vmla.sz == 0)
-								{
-									instruction->operands[0].reg = (Register)(REG_D0 + ((decode.vmla.vd << 1) | decode.vmla.d));
-									instruction->operands[1].cls = immMap[decode.vmla.sz];
-									instruction->operands[1].imm =
-										VFPExpandImm32(decode.vmla.vn << 4 | decode.vmla.vm);
-								}
-								else
-								{
-									instruction->operands[0].reg = (Register)(REG_Q0 + (((decode.vmla.d << 4) | decode.vmla.vd) >> 1));
-									instruction->operands[1].cls = immMap[decode.vmla.sz];
-									instruction->operands[1].imm64 =
-										VFPExpandImm64(decode.vmla.vn << 4 | decode.vmla.vm);
-								}
+								instruction->operands[0].cls = REG;
+								instruction->operands[0].reg = (Register)(REG_S0 + ((decode.vmla.vd << 1) | decode.vmla.d));
+								instruction->operands[1].cls = REG;
+								instruction->operands[1].reg = (Register)(REG_S0 + ((decode.vmla.vm << 1) | decode.vmla.m));
 							}
 							else
 							{
-								instruction->operation = ARMV7_VABS;
-								if (decode.vmla.sz == 0)
-								{
-									instruction->operands[0].cls = REG;
-									instruction->operands[0].reg = (Register)(REG_S0 + ((decode.vmla.vd << 1) | decode.vmla.d));
-									instruction->operands[1].cls = REG;
-									instruction->operands[1].reg = (Register)(REG_S0 + ((decode.vmla.vm << 1) | decode.vmla.m));
-								}
-								else
-								{
-									instruction->operands[0].cls = REG;
-									instruction->operands[0].reg = (Register)(REG_D0 + ((decode.vmla.d << 4) | decode.vmla.vd));
-									instruction->operands[1].cls = REG;
-									instruction->operands[1].reg = (Register)(REG_D0 + ((decode.vmla.m << 4) | decode.vmla.vm));
-								}
+								instruction->operands[0].cls = REG;
+								instruction->operands[0].reg = (Register)(REG_D0 + ((decode.vmla.d << 4) | decode.vmla.vd));
+								instruction->operands[1].cls = REG;
+								instruction->operands[1].reg = (Register)(REG_D0 + ((decode.vmla.m << 4) | decode.vmla.vm));
 							}
 						}
 						break;

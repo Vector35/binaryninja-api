@@ -1558,6 +1558,24 @@ static void LoadExclusive(
 }
 
 
+void PreserveLoadPairAddress(LowLevelILFunction& il, ExprId address, uint32_t firstDest)
+{
+	std::vector<ExprId> reads;
+	il.GetExpr(address).VisitExprs([&](const LowLevelILInstruction& expr) {
+		if (expr.operation == LLIL_REG && expr.GetSourceRegister<LLIL_REG>() == firstDest)
+			reads.push_back(expr.exprIndex);
+		return true;
+	});
+	if (reads.empty())
+		return;
+
+	// The second load must use the address from before the first destination is written.
+	il.AddInstruction(il.SetRegister(4, LLIL_TEMP(0), il.Register(4, firstDest)));
+	for (ExprId read : reads)
+		il.ReplaceExpr(read, il.Register(4, LLIL_TEMP(0)));
+}
+
+
 static void LoadPair(
 		Architecture* arch,
 		LowLevelILFunction& il,
@@ -1566,24 +1584,22 @@ static void LoadPair(
 		InstructionOperand& src,
 		size_t addr)
 {
-	ExprId address, value;
+	ExprId address;
 	size_t dstSize = get_register_size(dst1.reg);
 
 	if (src.cls == MEM_PRE_IDX || src.cls == MEM_POST_IDX)
 		address = ILREG(src);
 	else
 		address = ReadAddress(il, src, addr);
-	value = il.Load(dstSize * 2, address);
-
 	if (src.cls == MEM_PRE_IDX)
 		il.AddInstruction(SetRegisterOrBranch(il, src.reg, ReadAddress(il, src, addr)));
 
-	ExprId setReg;
-	if (arch->GetEndianness() == LittleEndian)
-		setReg = il.SetRegisterSplit(dstSize, dst2.reg, dst1.reg, value);
-	else
-		setReg = il.SetRegisterSplit(dstSize, dst1.reg, dst2.reg, value);
-	il.AddInstruction(setReg);
+	uint32_t firstDest = arch->GetEndianness() == LittleEndian ? dst1.reg : dst2.reg;
+	uint32_t secondDest = arch->GetEndianness() == LittleEndian ? dst2.reg : dst1.reg;
+	PreserveLoadPairAddress(il, address, firstDest);
+	il.AddInstruction(il.SetRegister(dstSize, firstDest, il.Load(dstSize, address)));
+	il.AddInstruction(il.SetRegister(dstSize, secondDest,
+		il.Load(dstSize, il.Add(4, address, il.Const(4, dstSize)))));
 
 	if (src.cls == MEM_POST_IDX)
 		il.AddInstruction(SetRegisterOrBranch(il, src.reg, ReadAddress(il, src, addr)));

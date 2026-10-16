@@ -2838,6 +2838,7 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		uint32_t rt2 = GetRegisterByIndex(instr->fields[instr->format->operands[1].field0]);
 
 		mem = GetMemoryAddress(il, instr, 2, 4, instr->format->operandCount != 4);
+		PreserveLoadPairAddress(il, mem, arch->GetEndianness() == LittleEndian ? rt : rt2);
 		if (instr->mnem == armv7::ARMV7_LDREXD)
 			il.AddInstruction(il.Intrinsic({}, ARMV7_INTRIN_SET_EXCLUSIVE_MONITORS, { mem, il.Const(1, 8) }));
 		if (arch->GetEndianness() == LittleEndian)

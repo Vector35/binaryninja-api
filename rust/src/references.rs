@@ -2,7 +2,10 @@
 use crate::architecture::CoreArchitecture;
 use crate::function::Function;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Ref};
-use binaryninjacore_sys::{BNFreeCodeReferences, BNFreeDataReferences, BNReferenceSource};
+use binaryninjacore_sys::{
+    BNCodeXref, BNDataXref, BNFreeCodeReferences, BNFreeCodeXrefs, BNFreeDataReferences,
+    BNFreeDataXrefs, BNReferenceSource,
+};
 
 /// A struct representing a single code cross-reference.
 #[derive(Debug)]
@@ -19,7 +22,7 @@ impl CodeReference {
                 false => Some(unsafe { Function::from_raw(value.func) }.to_owned()),
                 true => None,
             },
-            arch: match value.func.is_null() {
+            arch: match value.arch.is_null() {
                 false => Some(unsafe { CoreArchitecture::from_raw(value.arch) }),
                 true => None,
             },
@@ -108,5 +111,57 @@ unsafe impl CoreArrayProviderInner for DataReference {
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         DataReference { address: *raw }
+    }
+}
+
+/// A reference made by code, from the instruction at `source` to the address `target`.
+#[derive(Debug)]
+pub struct CodeXref {
+    pub source: CodeReference,
+    pub target: u64,
+}
+
+impl CoreArrayProvider for CodeXref {
+    type Raw = BNCodeXref;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for CodeXref {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeCodeXrefs(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        CodeXref {
+            source: CodeReference::from_raw(&raw.source),
+            target: raw.target,
+        }
+    }
+}
+
+/// A reference made by data, from the address `source` to the address `target`.
+#[derive(Debug)]
+pub struct DataXref {
+    pub source: u64,
+    pub target: u64,
+}
+
+impl CoreArrayProvider for DataXref {
+    type Raw = BNDataXref;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for DataXref {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeDataXrefs(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        DataXref {
+            source: raw.source,
+            target: raw.target,
+        }
     }
 }

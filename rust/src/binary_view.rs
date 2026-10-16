@@ -44,7 +44,7 @@ use crate::platform::Platform;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::rc::*;
-use crate::references::{CodeReference, DataReference};
+use crate::references::{CodeReference, CodeXref, DataReference, DataXref};
 use crate::relocation::Relocation;
 use crate::section::{Section, SectionBuilder};
 use crate::segment::{Segment, SegmentBuilder};
@@ -2483,6 +2483,22 @@ impl BinaryView {
         }
     }
 
+    /// Retrieves the references made by code to a given [Range], each with its source and target.
+    pub fn incoming_code_refs(&self, range: Range<u64>) -> Array<CodeXref> {
+        unsafe {
+            let mut count = 0;
+            let handle = BNGetIncomingCodeReferences(
+                self.handle,
+                range.start,
+                range.end - range.start,
+                &mut count,
+                false,
+                0,
+            );
+            Array::new(handle, count, ())
+        }
+    }
+
     /// Retrieves a list of addresses pointed to by a given address.
     pub fn code_refs_from_addr(&self, addr: u64, func: Option<&Function>) -> Vec<u64> {
         unsafe {
@@ -2494,6 +2510,30 @@ impl BinaryView {
             let res = std::slice::from_raw_parts(addresses, count).to_vec();
             BNFreeAddressList(addresses);
             res
+        }
+    }
+
+    /// Retrieves the references made by code in a given [Range], each with its source and target.
+    ///
+    /// With `func`, only references made by that function are returned. Otherwise references
+    /// made by every function with code in the range are returned.
+    pub fn outgoing_code_refs(
+        &self,
+        range: Range<u64>,
+        func: Option<&Function>,
+    ) -> Array<CodeXref> {
+        unsafe {
+            let mut count = 0;
+            let handle = BNGetOutgoingCodeReferences(
+                self.handle,
+                range.start,
+                range.end - range.start,
+                func.map(|f| f.handle).unwrap_or(std::ptr::null_mut()),
+                &mut count,
+                false,
+                0,
+            );
+            Array::new(handle, count, ())
         }
     }
 
@@ -2522,11 +2562,43 @@ impl BinaryView {
         }
     }
 
+    /// Retrieves the references made by data to a given [Range], each with its source and target.
+    pub fn incoming_data_refs(&self, range: Range<u64>) -> Array<DataXref> {
+        unsafe {
+            let mut count = 0;
+            let handle = BNGetIncomingDataReferences(
+                self.handle,
+                range.start,
+                range.end - range.start,
+                &mut count,
+                false,
+                0,
+            );
+            Array::new(handle, count, ())
+        }
+    }
+
     /// Retrieves a list of [DataReference]s originating from a given address.
     pub fn data_refs_from_addr(&self, addr: u64) -> Array<DataReference> {
         unsafe {
             let mut count = 0;
             let handle = BNGetDataReferencesFrom(self.handle, addr, &mut count);
+            Array::new(handle, count, ())
+        }
+    }
+
+    /// Retrieves the references made by data in a given [Range], each with its source and target.
+    pub fn outgoing_data_refs(&self, range: Range<u64>) -> Array<DataXref> {
+        unsafe {
+            let mut count = 0;
+            let handle = BNGetOutgoingDataReferences(
+                self.handle,
+                range.start,
+                range.end - range.start,
+                &mut count,
+                false,
+                0,
+            );
             Array::new(handle, count, ())
         }
     }

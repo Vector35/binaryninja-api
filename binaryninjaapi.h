@@ -5098,6 +5098,30 @@ namespace BinaryNinja {
 		Ref<Function> func;
 		Ref<Architecture> arch;
 		uint64_t addr;
+
+		BNReferenceSource ToAPIStruct() const;
+		static ReferenceSource FromAPIStruct(const BNReferenceSource* source);
+		static void FreeAPIStruct(BNReferenceSource* source);
+	};
+
+	struct CodeXref
+	{
+		ReferenceSource source;
+		uint64_t target;
+
+		BNCodeXref ToAPIStruct() const;
+		static CodeXref FromAPIStruct(const BNCodeXref* ref);
+		static void FreeAPIStruct(BNCodeXref* ref);
+	};
+
+	struct DataXref
+	{
+		uint64_t source;
+		uint64_t target;
+
+		BNDataXref ToAPIStruct() const;
+		static DataXref FromAPIStruct(const BNDataXref* ref);
+		static void FreeAPIStruct(BNDataXref* ref);
 	};
 
 	struct TypeFieldReference
@@ -6698,6 +6722,47 @@ namespace BinaryNinja {
 		    \return List of virtual addresses referenced by this address
 		*/
 		std::vector<uint64_t> GetDataReferencesFrom(uint64_t addr, uint64_t len);
+
+		/*! Get references made by code (instructions) to a range of addresses, each with its source and target
+
+		    \param addr Start of the range
+		    \param len Length of the range
+		    \param maxItems Optional maximum number of items to fetch
+		    \return References whose target is in the range
+		*/
+		std::vector<CodeXref> GetIncomingCodeReferences(
+			uint64_t addr, uint64_t len, std::optional<size_t> maxItems = std::nullopt);
+
+		/*! Get references made by data ('DataVariables') to a range of addresses, each with its source and target
+
+		    \param addr Start of the range
+		    \param len Length of the range
+		    \param maxItems Optional maximum number of items to fetch
+		    \return References whose target is in the range
+		*/
+		std::vector<DataXref> GetIncomingDataReferences(
+			uint64_t addr, uint64_t len, std::optional<size_t> maxItems = std::nullopt);
+
+		/*! Get references made by code (instructions) in a range of addresses, each with its source and target
+
+		    \param addr Start of the range
+		    \param len Length of the range
+		    \param func Function whose references are returned, or nullptr for every function with code in the range
+		    \param maxItems Optional maximum number of items to fetch
+		    \return References whose source is in the range
+		*/
+		std::vector<CodeXref> GetOutgoingCodeReferences(uint64_t addr, uint64_t len, Ref<Function> func = nullptr,
+			std::optional<size_t> maxItems = std::nullopt);
+
+		/*! Get references made by data ('DataVariables') in a range of addresses, each with its source and target
+
+		    \param addr Start of the range
+		    \param len Length of the range
+		    \param maxItems Optional maximum number of items to fetch
+		    \return References whose source is in the range
+		*/
+		std::vector<DataXref> GetOutgoingDataReferences(
+			uint64_t addr, uint64_t len, std::optional<size_t> maxItems = std::nullopt);
 
 
 		/*! Add an auto Data Reference from a virtual address to another virtual address

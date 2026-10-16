@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 189
+#define BN_CURRENT_CORE_ABI_VERSION 190
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -2636,6 +2636,18 @@ extern "C"
 		BNArchitecture* arch;
 		uint64_t addr;
 	} BNReferenceSource;
+
+	typedef struct BNCodeXref
+	{
+		BNReferenceSource source;
+		uint64_t target;
+	} BNCodeXref;
+
+	typedef struct BNDataXref
+	{
+		uint64_t source;
+		uint64_t target;
+	} BNDataXref;
 
 	typedef struct BNTypeFieldReference
 	{
@@ -6313,6 +6325,16 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t* BNGetDataReferencesFrom(BNBinaryView* view, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI uint64_t* BNGetDataReferencesFromInRange(
 	    BNBinaryView* view, uint64_t addr, uint64_t len, size_t* count);
+	BINARYNINJACOREAPI BNCodeXref* BNGetIncomingCodeReferences(
+		BNBinaryView* view, uint64_t addr, uint64_t len, size_t* count, bool limit, size_t maxItems);
+	BINARYNINJACOREAPI BNDataXref* BNGetIncomingDataReferences(
+		BNBinaryView* view, uint64_t addr, uint64_t len, size_t* count, bool limit, size_t maxItems);
+	BINARYNINJACOREAPI BNCodeXref* BNGetOutgoingCodeReferences(BNBinaryView* view, uint64_t addr, uint64_t len,
+		BNFunction* func, size_t* count, bool limit, size_t maxItems);
+	BINARYNINJACOREAPI BNDataXref* BNGetOutgoingDataReferences(
+		BNBinaryView* view, uint64_t addr, uint64_t len, size_t* count, bool limit, size_t maxItems);
+	BINARYNINJACOREAPI void BNFreeCodeXrefs(BNCodeXref* refs, size_t count);
+	BINARYNINJACOREAPI void BNFreeDataXrefs(BNDataXref* refs, size_t count);
 	BINARYNINJACOREAPI void BNAddDataReference(BNBinaryView* view, uint64_t fromAddr, uint64_t toAddr);
 	BINARYNINJACOREAPI void BNRemoveDataReference(BNBinaryView* view, uint64_t fromAddr, uint64_t toAddr);
 	BINARYNINJACOREAPI void BNAddUserDataReference(BNBinaryView* view, uint64_t fromAddr, uint64_t toAddr);

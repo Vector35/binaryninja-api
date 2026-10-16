@@ -16,7 +16,8 @@
 //! analysis and decompilation.
 //!
 //! For more information see the [`Architecture`] trait and the [`CoreArchitecture`] structure for
-//! querying already registered architectures.
+//! querying already registered architectures. To override selected behavior of an existing
+//! architecture, implement [`ArchitectureHook`] and call [`register_architecture_hook`].
 
 // RegisterInfo purge
 use binaryninjacore_sys::*;
@@ -52,7 +53,7 @@ use crate::relocation::{CustomRelocationHandlerHandle, RelocationHandler};
 use crate::basic_block::BasicBlock;
 use crate::confidence::Conf;
 use crate::logger::Logger;
-use crate::low_level_il::expression::ValueExpr;
+use crate::low_level_il::expression::{LowLevelExpressionIndex, ValueExpr};
 use crate::low_level_il::lifting::{
     get_default_flag_cond_llil, get_default_flag_write_llil, LowLevelILFlagWriteOp,
 };
@@ -61,6 +62,7 @@ use crate::low_level_il::{LowLevelILMutableExpression, LowLevelILMutableFunction
 pub mod basic_block;
 pub mod branches;
 pub mod flag;
+pub mod hook;
 pub mod instruction;
 pub mod intrinsic;
 pub mod register;
@@ -71,6 +73,7 @@ pub use basic_block::*;
 pub use binaryninjacore_sys::BNLinearSweepAnalysisCapability as LinearSweepAnalysisCapability;
 pub use branches::*;
 pub use flag::*;
+pub use hook::{register_architecture_hook, ArchitectureHook};
 pub use instruction::*;
 pub use intrinsic::*;
 pub use register::*;
@@ -811,6 +814,13 @@ impl CoreArchitecture {
         CoreArchitecture { handle }
     }
 
+    /// Selects the architecture for `addr` and applies its address normalization in place.
+    /// For example, ARM uses the low address bit to select Thumb mode, then clears that bit.
+    pub fn associated_arch_by_addr_mut(&self, addr: &mut u64) -> CoreArchitecture {
+        let handle = unsafe { BNGetAssociatedArchitectureByAddress(self.handle, addr) };
+        CoreArchitecture { handle }
+    }
+
     pub fn list_all() -> CoreArchitectureList {
         let mut count: usize = 0;
         let archs = unsafe { BNGetArchitectureList(&mut count) };
@@ -893,9 +903,8 @@ impl Architecture for CoreArchitecture {
         unsafe { BNGetArchitectureOpcodeDisplayLength(self.handle) }
     }
 
-    fn associated_arch_by_addr(&self, addr: u64) -> CoreArchitecture {
-        let handle = unsafe { BNGetAssociatedArchitectureByAddress(self.handle, addr as *mut _) };
-        CoreArchitecture { handle }
+    fn associated_arch_by_addr(&self, mut addr: u64) -> CoreArchitecture {
+        self.associated_arch_by_addr_mut(&mut addr)
     }
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
@@ -1020,12 +1029,29 @@ impl Architecture for CoreArchitecture {
 
     fn flag_write_llil<'a>(
         &self,
-        _flag: Self::Flag,
-        _flag_write: Self::FlagWrite,
-        _op: LowLevelILFlagWriteOp<Self::Register>,
-        _il: &'a LowLevelILMutableFunction,
+        flag: Self::Flag,
+        flag_write: Self::FlagWrite,
+        op: LowLevelILFlagWriteOp<Self::Register>,
+        il: &'a LowLevelILMutableFunction,
     ) -> Option<LowLevelILMutableExpression<'a, ValueExpr>> {
-        None
+        let (size, operation) = op.size_and_op();
+        let (count, mut operands) = op.raw_operands();
+        let index = unsafe {
+            BNGetArchitectureFlagWriteLowLevelIL(
+                self.handle,
+                operation,
+                size,
+                flag_write.id().0,
+                flag.id().0,
+                operands.as_mut_ptr(),
+                count,
+                il.handle,
+            )
+        };
+        Some(LowLevelILMutableExpression::new(
+            il,
+            LowLevelExpressionIndex(index),
+        ))
     }
 
     fn flags_required_for_flag_condition(
@@ -1058,19 +1084,36 @@ impl Architecture for CoreArchitecture {
 
     fn flag_cond_llil<'a>(
         &self,
-        _cond: FlagCondition,
-        _class: Option<Self::FlagClass>,
-        _il: &'a LowLevelILMutableFunction,
+        cond: FlagCondition,
+        class: Option<Self::FlagClass>,
+        il: &'a LowLevelILMutableFunction,
     ) -> Option<LowLevelILMutableExpression<'a, ValueExpr>> {
-        None
+        let index = unsafe {
+            BNGetArchitectureFlagConditionLowLevelIL(
+                self.handle,
+                cond,
+                class.map_or(0, |class| class.id().0),
+                il.handle,
+            )
+        };
+        Some(LowLevelILMutableExpression::new(
+            il,
+            LowLevelExpressionIndex(index),
+        ))
     }
 
     fn flag_group_llil<'a>(
         &self,
-        _group: Self::FlagGroup,
-        _il: &'a LowLevelILMutableFunction,
+        group: Self::FlagGroup,
+        il: &'a LowLevelILMutableFunction,
     ) -> Option<LowLevelILMutableExpression<'a, ValueExpr>> {
-        None
+        let index = unsafe {
+            BNGetArchitectureSemanticFlagGroupLowLevelIL(self.handle, group.id().0, il.handle)
+        };
+        Some(LowLevelILMutableExpression::new(
+            il,
+            LowLevelExpressionIndex(index),
+        ))
     }
 
     fn registers_all(&self) -> Vec<CoreRegister> {
@@ -1279,6 +1322,10 @@ impl Architecture for CoreArchitecture {
 
             intrinsics
         }
+    }
+
+    fn intrinsic_class(&self, id: IntrinsicId) -> BNIntrinsicClass {
+        unsafe { BNGetArchitectureIntrinsicClass(self.handle, id.0) }
     }
 
     fn intrinsic_from_id(&self, id: IntrinsicId) -> Option<CoreIntrinsic> {
@@ -1553,10 +1600,19 @@ where
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
 {
-    register_architecture_impl(name, func, |_| {})
+    register_architecture_impl(ArchitectureRegistration::New(name), func, |_| {})
 }
 
-fn register_architecture_impl<A, F, C>(name: &str, func: F, customize: C) -> &'static A
+enum ArchitectureRegistration<'a> {
+    New(&'a str),
+    Hook(CoreArchitecture),
+}
+
+fn register_architecture_impl<A, F, C>(
+    registration: ArchitectureRegistration<'_>,
+    func: F,
+    customize: C,
+) -> &'static A
 where
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
@@ -2190,7 +2246,7 @@ where
             .unwrap_or(0)
     }
 
-    extern "C" fn cb_flag_write_llil<A>(
+    extern "C" fn cb_flag_write_llil<A, const IS_HOOK: bool>(
         ctxt: *mut c_void,
         op: BNLowLevelILOperation,
         size: usize,
@@ -2204,19 +2260,37 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let flag_write = custom_arch.flag_write_from_id(FlagWriteId(flag_write));
-        let flag = custom_arch.flag_from_id(FlagId(flag));
+        let flag_write_type = custom_arch.flag_write_from_id(FlagWriteId(flag_write));
+        let flag_value = custom_arch.flag_from_id(FlagId(flag));
         let operands = unsafe { std::slice::from_raw_parts(operands_raw, operand_count) };
         let lifter = unsafe {
             LowLevelILMutableFunction::from_raw_with_arch(il, Some(*custom_arch.as_ref()))
         };
 
-        if let (Some(flag_write), Some(flag)) = (flag_write, flag) {
+        if let (Some(flag_write_type), Some(flag_value)) = (flag_write_type, flag_value) {
             if let Some(op) = LowLevelILFlagWriteOp::from_op(custom_arch, size, op, operands) {
-                if let Some(expr) = custom_arch.flag_write_llil(flag, flag_write, op, &lifter) {
+                if let Some(expr) =
+                    custom_arch.flag_write_llil(flag_value, flag_write_type, op, &lifter)
+                {
                     // TODO verify that returned expr is a bool value
                     return expr.index.0;
                 }
+            } else if IS_HOOK {
+                // Hook AsRef points to the previous implementation. Preserve native semantics
+                // for operations absent from LowLevelILFlagWriteOp (e.g. LLIL_FSUB), passing
+                // the original operation, IDs and operands through without conversion.
+                return unsafe {
+                    BNGetArchitectureFlagWriteLowLevelIL(
+                        custom_arch.as_ref().handle,
+                        op,
+                        size,
+                        flag_write,
+                        flag,
+                        operands_raw,
+                        operand_count,
+                        il,
+                    )
+                };
             } else {
                 tracing::warn!(
                     "unable to unpack flag write op: {:?} with {} operands",
@@ -2225,7 +2299,7 @@ where
                 );
             }
 
-            let role = flag.role(flag_write.class());
+            let role = flag_value.role(flag_write_type.class());
 
             unsafe {
                 BNGetDefaultArchitectureFlagWriteLowLevelIL(
@@ -2726,8 +2800,6 @@ where
         custom_arch.skip_and_return_value(data, addr, val)
     }
 
-    let name = name.to_cstr();
-
     let uninit_arch = ArchitectureBuilder {
         arch: MaybeUninit::zeroed(),
         func: Some(func),
@@ -2782,7 +2854,10 @@ where
         getFlagsWrittenByFlagWriteType: Some(cb_flags_written_by_write_type::<A>),
         getSemanticClassForFlagWriteType: Some(cb_semantic_class_for_flag_write_type::<A>),
 
-        getFlagWriteLowLevelIL: Some(cb_flag_write_llil::<A>),
+        getFlagWriteLowLevelIL: match registration {
+            ArchitectureRegistration::New(_) => Some(cb_flag_write_llil::<A, false>),
+            ArchitectureRegistration::Hook(_) => Some(cb_flag_write_llil::<A, true>),
+        },
         getFlagConditionLowLevelIL: Some(cb_flag_cond_llil::<A>),
         getSemanticFlagGroupLowLevelIL: Some(cb_flag_group_llil::<A>),
 
@@ -2825,8 +2900,23 @@ where
     customize(&mut custom_arch);
 
     unsafe {
-        let res = BNRegisterArchitecture(name.as_ptr(), &mut custom_arch as *mut _);
-        assert!(!res.is_null());
+        match registration {
+            ArchitectureRegistration::Hook(base) => {
+                // Hook registration swaps the callbacks and returns the previous implementation.
+                // Unlike BNRegisterArchitecture, it does not invoke the init callback.
+                let previous = BNRegisterArchitectureHook(base.handle, &mut custom_arch);
+                assert!(!previous.is_null());
+                cb_init::<A, F>(raw.cast(), previous);
+                // Finalization queries our callbacks to rebuild the register/flag caches, so the
+                // Rust implementation must be fully initialized before this call.
+                BNFinalizeArchitectureHook(base.handle);
+            }
+            ArchitectureRegistration::New(name) => {
+                let name = name.to_cstr();
+                let res = BNRegisterArchitecture(name.as_ptr(), &mut custom_arch);
+                assert!(!res.is_null());
+            }
+        }
 
         (*raw).arch.assume_init_mut()
     }
@@ -2901,7 +2991,7 @@ where
         true
     }
 
-    register_architecture_impl(name, func, |custom_arch| {
+    register_architecture_impl(ArchitectureRegistration::New(name), func, |custom_arch| {
         custom_arch.freeFunctionArchContext = Some(cb_free_function_arch_context_typed::<A>);
         custom_arch.getInstructionTextWithContext =
             Some(cb_get_instruction_text_with_context_typed::<A>);

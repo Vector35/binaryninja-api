@@ -21,7 +21,10 @@
 #include "binaryninjaapi.h"
 #include "mediumlevelilinstruction.h"
 #include "highlevelilinstruction.h"
+#include <algorithm>
 #include <cstring>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "ffi.h"
 
@@ -736,6 +739,209 @@ Ref<LanguageRepresentationFunction> Function::GetLanguageRepresentationIfAvailab
 	if (!function)
 		return nullptr;
 	return new CoreLanguageRepresentationFunction(function);
+}
+
+
+double Function::GetCyclomaticComplexity() const { return BNGetFunctionCyclomaticComplexity(m_object); }
+double Function::GetInstructionCountComplexity() const { return BNGetFunctionInstructionCountComplexity(m_object); }
+double Function::GetTokenCountComplexity() const { return BNGetFunctionTokenCountComplexity(m_object); }
+double Function::GetBranchDensityComplexity() const { return BNGetFunctionBranchDensityComplexity(m_object); }
+double Function::GetHalsteadComplexity() const { return BNGetFunctionHalsteadComplexity(m_object); }
+double Function::GetNestingDepthComplexity() const { return BNGetFunctionNestingDepthComplexity(m_object); }
+double Function::GetCognitiveComplexity() const { return BNGetFunctionCognitiveComplexity(m_object); }
+
+
+double Function::GetCompositeComplexity() const
+{
+	// Default weights used to blend the individual primitives into a single score. Tuned so that
+	// a small, simple function scores in the single digits and a deeply nested, branchy function
+	// scores in the hundreds. Callers who want different behavior should call the primitives
+	// directly and combine them with their own weights.
+	const double cyclomaticWeight = 0.25;
+	const double instructionCountWeight = 0.05;
+	const double branchDensityWeight = 10.0;
+	const double halsteadWeight = 0.05;
+	const double nestingDepthWeight = 2.0;
+	const double cognitiveWeight = 0.5;
+
+	return cyclomaticWeight * GetCyclomaticComplexity() +
+		instructionCountWeight * GetInstructionCountComplexity() +
+		branchDensityWeight * GetBranchDensityComplexity() +
+		halsteadWeight * GetHalsteadComplexity() +
+		nestingDepthWeight * GetNestingDepthComplexity() +
+		cognitiveWeight * GetCognitiveComplexity();
+}
+
+
+namespace {
+
+	// MLIL call-like operations whose "dest" operand may resolve to a callee.
+	const unordered_set<BNMediumLevelILOperation> g_mlilCallOperations = {
+		MLIL_CALL, MLIL_CALL_UNTYPED, MLIL_CALL_SSA, MLIL_CALL_UNTYPED_SSA,
+		MLIL_TAILCALL, MLIL_TAILCALL_UNTYPED, MLIL_TAILCALL_SSA, MLIL_TAILCALL_UNTYPED_SSA
+	};
+
+	// Syscalls target a syscall number, not an address - always treated as "external" (opaque).
+	const unordered_set<BNMediumLevelILOperation> g_mlilSyscallOperations = {
+		MLIL_SYSCALL, MLIL_SYSCALL_SSA, MLIL_SYSCALL_UNTYPED, MLIL_SYSCALL_UNTYPED_SSA
+	};
+
+	// Symbol types whose implementation isn't in this binary (imports/thunks/library stubs) - we
+	// can see that a call goes there, but not what happens once it does.
+	const unordered_set<BNSymbolType> g_externalSymbolTypes = {
+		ImportAddressSymbol, ImportedFunctionSymbol, ExternalSymbol, LibraryFunctionSymbol
+	};
+
+	struct CallSites
+	{
+		// One entry per call site that resolves to a function defined in this binary (duplicates
+		// included, e.g. the same helper called twice shows up twice).
+		vector<Ref<Function>> internalCallees;
+		size_t externalCount = 0;
+		size_t indirectCount = 0;
+	};
+
+	// Walks every call-like MLIL statement in `func` and sorts it into one of three buckets:
+	//
+	// * resolves to a function defined in this binary -> appended to internalCallees
+	// * resolves to an address, but that address is an import/thunk/library stub, or analysis
+	//   couldn't identify a function there -> externalCount
+	// * the target isn't a static constant at all (computed/register call, e.g. through a
+	//   function pointer or vtable) -> indirectCount, since we can't know what runs there without
+	//   deeper (and possibly incomplete) analysis
+	//
+	// Built entirely from already-public API calls (MLIL visitors, BinaryView lookups) - this used
+	// to be Core-internal, but nothing here needs a per-instruction callback into Core, so there's
+	// nothing to gain from Core doing it on our behalf.
+	CallSites ClassifyCallSites(const Function* func)
+	{
+		CallSites result;
+
+		Ref<MediumLevelILFunction> mlil = func->GetMediumLevelIL();
+		if (!mlil)
+			return result;
+
+		Ref<BinaryView> view = func->GetView();
+
+		mlil->VisitInstructions([&](BasicBlock*, const MediumLevelILInstruction& instr) {
+			if (g_mlilSyscallOperations.count(instr.operation))
+			{
+				result.externalCount++;
+				return;
+			}
+			if (!g_mlilCallOperations.count(instr.operation))
+				return;
+
+			bool foundDest = false;
+			MediumLevelILInstruction dest;
+			for (auto& operand : instr.GetOperands())
+			{
+				if (operand.GetUsage() == DestExprMediumLevelOperandUsage && operand.GetType() == ExprMediumLevelOperand)
+				{
+					dest = operand.GetExpr();
+					foundDest = true;
+					break;
+				}
+			}
+
+			if (!foundDest ||
+				(dest.operation != MLIL_CONST && dest.operation != MLIL_CONST_PTR && dest.operation != MLIL_IMPORT))
+			{
+				result.indirectCount++;
+				return;
+			}
+
+			uint64_t targetAddr = dest.GetRawOperandAsInteger(0);
+			vector<Ref<Function>> targets = view->GetAnalysisFunctionsForAddress(targetAddr);
+			if (targets.empty())
+			{
+				result.externalCount++;
+				return;
+			}
+
+			Ref<Symbol> symbol = view->GetSymbolByAddress(targetAddr);
+			if (symbol && g_externalSymbolTypes.count(symbol->GetType()))
+				result.externalCount++;
+			else
+				result.internalCallees.push_back(targets[0]);
+		});
+
+		return result;
+	}
+
+
+	// `func`'s own composite complexity plus the (decayed) composite complexity of everything it
+	// calls, recursively, up to maxDepth hops. Each function is only ever counted once (tracked by
+	// start address) across the whole walk, which both breaks recursion/cycles safely and avoids
+	// over-counting a shared helper reached through multiple paths.
+	double TransitiveComplexityWalk(const Function* func, size_t depth, double decay, unordered_set<uint64_t>& visited)
+	{
+		if (visited.count(func->GetStart()))
+			return 0.0;
+		visited.insert(func->GetStart());
+
+		double total = func->GetCompositeComplexity();
+		if (depth == 0)
+			return total;
+
+		unordered_map<uint64_t, Ref<Function>> callees;
+		for (auto& callee : ClassifyCallSites(func).internalCallees)
+			callees.emplace(callee->GetStart(), callee);
+
+		for (auto& entry : callees)
+			total += decay * TransitiveComplexityWalk(entry.second.GetPtr(), depth - 1, decay, visited);
+
+		return total;
+	}
+
+}  // namespace
+
+
+// How much, and how riskily, `func` fans out into other code - captures the "main() is just a
+// dispatcher" shape that every intraprocedural metric misses. Distinct callees count in full;
+// repeated calls to a callee already counted (e.g. in a loop) count for less. Calls to
+// external/library code count more, since we can't inspect what they do. Indirect calls count the
+// most, since we can't even statically know what runs.
+double Function::GetFanOutComplexity() const
+{
+	CallSites calls = ClassifyCallSites(this);
+
+	unordered_set<uint64_t> distinctTargets;
+	for (auto& callee : calls.internalCallees)
+		distinctTargets.insert(callee->GetStart());
+
+	size_t repeatCalls = calls.internalCallees.size() - distinctTargets.size();
+
+	return double(distinctTargets.size()) +
+		0.25 * double(repeatCalls) +
+		1.5 * double(calls.externalCount) +
+		2.5 * double(calls.indirectCount);
+}
+
+
+// How many places in this binary's code reference `func` - the complement of GetFanOutComplexity:
+// that measures how much `func` reaches into other code, this measures how much other code
+// reaches into `func`. Not "complexity" in the same sense as the other metrics - a heavily-
+// referenced function isn't necessarily hard to read on its own - but it's a direct measure of
+// blast radius: a change to a function referenced from hundreds of call sites has far more to
+// potentially break than one referenced from a single caller.
+double Function::GetCodeReferenceComplexity() const
+{
+	return double(GetView()->GetCodeReferences(GetStart()).size());
+}
+
+
+// `func`'s own composite complexity plus the (decayed) composite complexity of everything it
+// calls, recursively, up to two hops. This is the metric that actually answers "this function
+// looks simple, but how much do I have to read to understand what it does": a function with a low
+// `composite` score but a high `transitive` score is exactly a thin dispatcher over a lot of real
+// work.
+double Function::GetTransitiveComplexity() const
+{
+	const size_t maxDepth = 2;
+	const double decay = 0.5;
+	unordered_set<uint64_t> visited;
+	return TransitiveComplexityWalk(this, maxDepth, decay, visited);
 }
 
 

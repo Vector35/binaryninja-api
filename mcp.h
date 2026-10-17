@@ -58,6 +58,7 @@ struct ToolDefinition
 	uint32_t annotations = 0;
 	/*! Empty for no output schema. */
 	std::string outputSchema;
+	std::string visibilitySetting;
 };
 
 /*! A converted argument, or the message explaining why the argument is invalid. */

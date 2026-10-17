@@ -102,6 +102,7 @@ Ref<Tool> CreateToolUsing(const ToolDefinition& definition, const std::string& i
 	apiDefinition.description = definition.description.c_str();
 	apiDefinition.inputSchema = inputSchema.c_str();
 	apiDefinition.outputSchema = definition.outputSchema.empty() ? nullptr : definition.outputSchema.c_str();
+	apiDefinition.visibilitySetting = definition.visibilitySetting.empty() ? nullptr : definition.visibilitySetting.c_str();
 	apiDefinition.scope = static_cast<BNMcpToolScope>(definition.scope);
 	apiDefinition.annotations = definition.annotations;
 

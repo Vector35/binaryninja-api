@@ -413,6 +413,7 @@ pub(super) fn create_with<T: McpTool>(
             .map_or(ptr::null(), |schema| schema.as_ptr()),
         scope: definition.info.scope,
         annotations: definition.info.annotations.bits(),
+        visibilitySetting: ptr::null(),
     };
 
     extern "C" fn cb_free_object<T: McpTool>(ctxt: *mut c_void) {

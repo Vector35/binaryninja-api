@@ -4089,6 +4089,7 @@ extern "C"
 		const char* outputSchema;
 		BNMcpToolScope scope;
 		uint32_t annotations;
+		const char* visibilitySetting;
 	} BNMcpToolDefinition;
 
 	typedef struct BNMcpToolCallbacks

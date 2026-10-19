@@ -93,7 +93,8 @@ static constexpr std::array s_operandTypeForUsage = {
 	OperandUsageType{SourceSSAVariablesHighLevelOperandUsage, SSAVariableListHighLevelOperand},
 	OperandUsageType{SourceMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand},
 	OperandUsageType{SourceMemoryVersionsHighLevelOperandUsage, IndexListHighLevelOperand},
-	OperandUsageType{DestMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand}
+	OperandUsageType{DestMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand},
+	OperandUsageType{ConstraintHighLevelOperandUsage, ConstraintHighLevelOperand}
 };
 
 static_assert(std::is_sorted(s_operandTypeForUsage.begin(), s_operandTypeForUsage.end()),
@@ -159,7 +160,7 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{HLIL_ASSIGN, {DestExprHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
 	OperandUsage{HLIL_ASSIGN_UNPACK, {DestExprsHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
 	OperandUsage{HLIL_FORCE_VER, {DestVariableHighLevelOperandUsage, VariableHighLevelOperandUsage}},
-	OperandUsage{HLIL_ASSERT, {VariableHighLevelOperandUsage, ConstantHighLevelOperandUsage}},
+	OperandUsage{HLIL_ASSERT, {VariableHighLevelOperandUsage, ConstraintHighLevelOperandUsage}},
 	OperandUsage{HLIL_VAR, {VariableHighLevelOperandUsage}},
 	OperandUsage{HLIL_STRUCT_FIELD, {SourceExprHighLevelOperandUsage, OffsetHighLevelOperandUsage, MemberIndexHighLevelOperandUsage}},
 	OperandUsage{HLIL_ARRAY_INDEX, {SourceExprHighLevelOperandUsage, IndexExprHighLevelOperandUsage}},
@@ -260,7 +261,7 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{HLIL_ASSIGN_MEM_SSA, {DestExprHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage, SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
 	OperandUsage{HLIL_ASSIGN_UNPACK_MEM_SSA, {DestExprsHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage, SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
 	OperandUsage{HLIL_FORCE_VER_SSA, {DestSSAVariableHighLevelOperandUsage, SSAVariableHighLevelOperandUsage}},
-	OperandUsage{HLIL_ASSERT_SSA, {SSAVariableHighLevelOperandUsage, ConstantHighLevelOperandUsage}},
+	OperandUsage{HLIL_ASSERT_SSA, {SSAVariableHighLevelOperandUsage, ConstraintHighLevelOperandUsage}},
 	OperandUsage{HLIL_VAR_SSA, {SSAVariableHighLevelOperandUsage}},
 	OperandUsage{HLIL_VAR_SSA_PARTIAL, {SSAVariableHighLevelOperandUsage, PartialSSAVariableSourceHighLevelOperandUsage}},
 	OperandUsage{HLIL_ARRAY_INDEX_SSA, {SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage, IndexExprHighLevelOperandUsage}},
@@ -632,6 +633,8 @@ SSAVariable HighLevelILOperand::GetSSAVariable() const
 {
 	if (m_type != SSAVariableHighLevelOperand)
 		throw HighLevelILInstructionAccessException();
+	if (m_usage == PartialSSAVariableSourceHighLevelOperandUsage)
+		return m_instr.GetRawOperandAsPartialSSAVariableSource(m_operandIndex - 2);
 	return m_instr.GetRawOperandAsSSAVariable(m_operandIndex);
 }
 
@@ -1798,11 +1801,11 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 			return true;
 		if (other.GetConditionPhiExpr<HLIL_WHILE_SSA>() < GetConditionPhiExpr<HLIL_WHILE_SSA>())
 			return false;
-		if (GetConditionExpr<HLIL_WHILE>() < other.GetConditionExpr<HLIL_WHILE>())
+		if (GetConditionExpr<HLIL_WHILE_SSA>() < other.GetConditionExpr<HLIL_WHILE_SSA>())
 			return true;
-		if (other.GetConditionExpr<HLIL_WHILE>() < GetConditionExpr<HLIL_WHILE>())
+		if (other.GetConditionExpr<HLIL_WHILE_SSA>() < GetConditionExpr<HLIL_WHILE_SSA>())
 			return false;
-		return GetLoopExpr<HLIL_WHILE>() < other.GetLoopExpr<HLIL_WHILE>();
+		return GetLoopExpr<HLIL_WHILE_SSA>() < other.GetLoopExpr<HLIL_WHILE_SSA>();
 	case HLIL_DO_WHILE:
 		if (GetLoopExpr<HLIL_DO_WHILE>() < other.GetLoopExpr<HLIL_DO_WHILE>())
 			return true;
@@ -1913,6 +1916,46 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 		if (other.GetSourceExpr<HLIL_ASSIGN_UNPACK>() < GetSourceExpr<HLIL_ASSIGN_UNPACK>())
 			return false;
 		return CompareExprList(GetDestExprs<HLIL_ASSIGN_UNPACK>(), other.GetDestExprs<HLIL_ASSIGN_UNPACK>());
+	case HLIL_FORCE_VER:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetDestVariable<HLIL_FORCE_VER>() < other.GetDestVariable<HLIL_FORCE_VER>())
+			return true;
+		if (other.GetDestVariable<HLIL_FORCE_VER>() < GetDestVariable<HLIL_FORCE_VER>())
+			return false;
+		return GetVariable<HLIL_FORCE_VER>() < other.GetVariable<HLIL_FORCE_VER>();
+	case HLIL_FORCE_VER_SSA:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetDestSSAVariable<HLIL_FORCE_VER_SSA>() < other.GetDestSSAVariable<HLIL_FORCE_VER_SSA>())
+			return true;
+		if (other.GetDestSSAVariable<HLIL_FORCE_VER_SSA>() < GetDestSSAVariable<HLIL_FORCE_VER_SSA>())
+			return false;
+		return GetSSAVariable<HLIL_FORCE_VER_SSA>() < other.GetSSAVariable<HLIL_FORCE_VER_SSA>();
+	case HLIL_ASSERT:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetVariable<HLIL_ASSERT>() < other.GetVariable<HLIL_ASSERT>())
+			return true;
+		if (other.GetVariable<HLIL_ASSERT>() < GetVariable<HLIL_ASSERT>())
+			return false;
+		return GetRawOperandAsInteger(1) < other.GetRawOperandAsInteger(1);
+	case HLIL_ASSERT_SSA:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetSSAVariable<HLIL_ASSERT_SSA>() < other.GetSSAVariable<HLIL_ASSERT_SSA>())
+			return true;
+		if (other.GetSSAVariable<HLIL_ASSERT_SSA>() < GetSSAVariable<HLIL_ASSERT_SSA>())
+			return false;
+		return GetRawOperandAsInteger(2) < other.GetRawOperandAsInteger(2);
 	case HLIL_ASSIGN_MEM_SSA:
 		if (size < other.size)
 			return true;
@@ -2225,12 +2268,29 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 		if (other.AsTwoOperandWithCarry().GetRightExpr() < AsTwoOperandWithCarry().GetRightExpr())
 			return false;
 		return AsTwoOperandWithCarry().GetCarryExpr() < other.AsTwoOperandWithCarry().GetCarryExpr();
-	case HLIL_CONST:
 	case HLIL_CONST_DATA:
+		if (GetRawOperandAsInteger(0) < other.GetRawOperandAsInteger(0))
+			return true;
+		if (other.GetRawOperandAsInteger(0) < GetRawOperandAsInteger(0))
+			return false;
+		return GetRawOperandAsInteger(1) < other.GetRawOperandAsInteger(1);
+	case HLIL_CONST:
 	case HLIL_CONST_PTR:
 	case HLIL_FLOAT_CONST:
 	case HLIL_IMPORT:
 		return AsConstant().GetConstant() < other.AsConstant().GetConstant();
+	case HLIL_UNIMPL:
+		return As<HLIL_UNIMPL>().IsUnknown() < other.As<HLIL_UNIMPL>().IsUnknown();
+	case HLIL_UNIMPL_MEM:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetSourceExpr<HLIL_UNIMPL_MEM>() < other.GetSourceExpr<HLIL_UNIMPL_MEM>())
+			return true;
+		if (other.GetSourceExpr<HLIL_UNIMPL_MEM>() < GetSourceExpr<HLIL_UNIMPL_MEM>())
+			return false;
+		return As<HLIL_UNIMPL_MEM>().IsUnknown() < other.As<HLIL_UNIMPL_MEM>().IsUnknown();
 	case HLIL_DEREF:
 	case HLIL_NEG:
 	case HLIL_NOT:
@@ -2245,7 +2305,6 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 	case HLIL_ZX:
 	case HLIL_LOW_PART:
 	case HLIL_BOOL_TO_INT:
-	case HLIL_UNIMPL_MEM:
 	case HLIL_FSQRT:
 	case HLIL_FNEG:
 	case HLIL_FABS:
@@ -2396,7 +2455,7 @@ SSAVariable HighLevelILInstruction::GetSourceSSAVariable() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(PartialSSAVariableSourceHighLevelOperandUsage, operandIndex))
 		return GetRawOperandAsPartialSSAVariableSource(operandIndex - 2);
-	throw MediumLevelILInstructionAccessException();
+	throw HighLevelILInstructionAccessException();
 }
 
 

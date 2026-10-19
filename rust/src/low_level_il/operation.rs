@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use binaryninjacore_sys::{
-    BNGetCachedLowLevelILPossibleValueSet, BNGetLowLevelILByIndex, BNLowLevelILFreeOperandList,
-    BNLowLevelILGetOperandList, BNLowLevelILInstruction,
+    BNGetCachedLowLevelILPossibleValueSet, BNLowLevelILFreeOperandList, BNLowLevelILGetOperandList,
+    BNLowLevelILInstruction,
 };
 
 use super::*;
@@ -248,7 +248,7 @@ impl From<CoreFlag> for IntrinsicOutput {
     }
 }
 
-impl<M, F> Operation<'_, M, F, Intrinsic>
+impl<'func, M, F> Operation<'func, M, F, Intrinsic>
 where
     M: FunctionMutability,
     F: FunctionForm,
@@ -287,7 +287,7 @@ where
     ///
     /// This will just be a CallParamSsa expression.
     #[inline]
-    pub fn inputs(&self) -> LowLevelILExpression<'_, M, F, ValueExpr> {
+    pub fn inputs(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[3] as usize),
@@ -902,12 +902,12 @@ where
         self.op.size
     }
 
-    pub fn low_reg(&self) -> LowLevelILRegisterKind<CoreRegister> {
+    pub fn high_reg(&self) -> LowLevelILRegisterKind<CoreRegister> {
         let raw_id = RegisterId(self.op.operands[0] as u32);
         LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id).expect("Bad register ID")
     }
 
-    pub fn high_reg(&self) -> LowLevelILRegisterKind<CoreRegister> {
+    pub fn low_reg(&self) -> LowLevelILRegisterKind<CoreRegister> {
         let raw_id = RegisterId(self.op.operands[1] as u32);
         LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id).expect("Bad register ID")
     }
@@ -922,8 +922,8 @@ where
         f.debug_struct("RegSplit")
             .field("address", &self.address())
             .field("size", &self.size())
-            .field("low_reg", &self.low_reg())
             .field("high_reg", &self.high_reg())
+            .field("low_reg", &self.low_reg())
             .finish()
     }
 }
@@ -940,7 +940,7 @@ where
         self.op.size
     }
 
-    pub fn low_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+    pub fn high_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
         let raw_id = RegisterId(self.op.operands[0] as u32);
         let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
             .expect("Bad register ID");
@@ -948,7 +948,7 @@ where
         LowLevelILSSARegisterKind::new_full(reg_kind, version)
     }
 
-    pub fn high_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+    pub fn low_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
         let raw_id = RegisterId(self.op.operands[2] as u32);
         let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
             .expect("Bad register ID");
@@ -966,8 +966,8 @@ where
         f.debug_struct("RegSplitSsa")
             .field("address", &self.address())
             .field("size", &self.size())
-            .field("low_reg", &self.low_reg())
             .field("high_reg", &self.high_reg())
+            .field("low_reg", &self.low_reg())
             .finish()
     }
 }
@@ -1157,34 +1157,6 @@ where
 // LLIL_JUMP_TO
 pub struct JumpTo;
 
-struct TargetListIter<'func, M, F>
-where
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    function: &'func LowLevelILFunction<M, F>,
-    cursor: BNLowLevelILInstruction,
-    cursor_operand: usize,
-}
-
-impl<M, F> TargetListIter<'_, M, F>
-where
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    fn next(&mut self) -> u64 {
-        if self.cursor_operand >= 3 {
-            self.cursor = unsafe {
-                BNGetLowLevelILByIndex(self.function.handle, self.cursor.operands[3] as usize)
-            };
-            self.cursor_operand = 0;
-        }
-        let result = self.cursor.operands[self.cursor_operand];
-        self.cursor_operand += 1;
-        result
-    }
-}
-
 impl<'func, M, F> Operation<'func, M, F, JumpTo>
 where
     M: FunctionMutability,
@@ -1198,23 +1170,12 @@ where
     }
 
     pub fn target_list(&self) -> BTreeMap<u64, LowLevelInstructionIndex> {
-        let mut result = BTreeMap::new();
-        let count = self.op.operands[1] as usize / 2;
-        let mut list = TargetListIter {
-            function: self.function,
-            cursor: unsafe {
-                BNGetLowLevelILByIndex(self.function.handle, self.op.operands[2] as usize)
-            },
-            cursor_operand: 0,
-        };
-
-        for _ in 0..count {
-            let value = list.next();
-            let target = LowLevelInstructionIndex(list.next() as usize);
-            result.insert(value, target);
-        }
-
-        result
+        self.get_operand_list(1)
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|pair| (pair[0], LowLevelInstructionIndex(pair[1] as usize)))
+            .collect()
     }
 }
 

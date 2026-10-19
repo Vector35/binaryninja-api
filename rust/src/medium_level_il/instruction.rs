@@ -121,7 +121,28 @@ impl MediumLevelILInstruction {
             MLIL_NORET => Op::Noret,
             MLIL_BP => Op::Bp,
             MLIL_UNDEF => Op::Undef,
-            MLIL_ASSERT | MLIL_ASSERT_SSA | MLIL_FORCE_VER | MLIL_FORCE_VER_SSA => Op::Undef,
+            MLIL_ASSERT => Op::Assert(Assert {
+                src: get_var(op.operands[0]),
+                constraint_index: op.operands[1] as usize,
+            }),
+            MLIL_ASSERT_SSA => Op::AssertSsa(AssertSsa {
+                src: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                constraint_index: op.operands[2] as usize,
+            }),
+            MLIL_FORCE_VER => Op::ForceVer(ForceVer {
+                dest: get_var(op.operands[0]),
+                src: get_var(op.operands[1]),
+                reason: unsafe {
+                    std::mem::transmute::<u8, ForceVersionReason>(op.operands[2] as u8)
+                },
+            }),
+            MLIL_FORCE_VER_SSA => Op::ForceVerSsa(ForceVerSsa {
+                dest: get_var_ssa(op.operands[0], op.operands[1] as usize),
+                src: get_var_ssa(op.operands[2], op.operands[3] as usize),
+                reason: unsafe {
+                    std::mem::transmute::<u8, ForceVersionReason>(op.operands[4] as u8)
+                },
+            }),
             MLIL_UNIMPL => Op::Unimpl,
             MLIL_IF => Op::If(MediumLevelILOperationIf {
                 condition: MediumLevelExpressionIndex::from(op.operands[0]),
@@ -474,8 +495,8 @@ impl MediumLevelILInstruction {
                 first_param: op.operands[4] as usize,
             }),
             MLIL_CALL_PARAM => Op::CallParam(CallParam {
-                first_param: op.operands[0] as usize,
-                num_params: op.operands[1] as usize,
+                num_params: op.operands[0] as usize,
+                first_param: op.operands[1] as usize,
             }),
             MLIL_CALL_OUTPUT_SSA => Op::CallOutputSsa(CallOutputSsa {
                 dest_memory: op.operands[0],
@@ -524,8 +545,8 @@ impl MediumLevelILInstruction {
             MLIL_MEMORY_INTRINSIC_OUTPUT_SSA => {
                 Op::MemoryIntrinsicOutputSsa(MemoryIntrinsicOutputSsa {
                     dest_memory: op.operands[0],
-                    first_output: op.operands[1] as usize,
-                    num_outputs: op.operands[2] as usize,
+                    num_outputs: op.operands[1] as usize,
+                    first_output: op.operands[2] as usize,
                 })
             }
             MLIL_CALL_SSA => Op::CallSsa(CallSsa {
@@ -823,7 +844,6 @@ impl MediumLevelILInstruction {
             Bp => Lifted::Bp,
             Undef => Lifted::Undef,
             Unimpl => Lifted::Unimpl,
-            NotYetImplemented => Lifted::NotYetImplemented,
             If(op) => Lifted::If(LiftedIf {
                 condition: self.lift_operand(op.condition),
                 dest_true: op.dest_true,
@@ -938,6 +958,26 @@ impl MediumLevelILInstruction {
                 low: op.low,
                 src: self.lift_operand(op.src),
             }),
+            Assert(op) => Lifted::Assert(LiftedAssert {
+                src: op.src,
+                constraint: PossibleValueSet::from_owned_core_raw(unsafe {
+                    BNGetCachedMediumLevelILPossibleValueSet(
+                        self.function.handle,
+                        op.constraint_index,
+                    )
+                }),
+            }),
+            ForceVer(op) => Lifted::ForceVer(op),
+            AssertSsa(op) => Lifted::AssertSsa(LiftedAssertSsa {
+                src: op.src,
+                constraint: PossibleValueSet::from_owned_core_raw(unsafe {
+                    BNGetCachedMediumLevelILPossibleValueSet(
+                        self.function.handle,
+                        op.constraint_index,
+                    )
+                }),
+            }),
+            ForceVerSsa(op) => Lifted::ForceVerSsa(op),
 
             Add(op) => Lifted::Add(self.lift_binary_op(op)),
             Sub(op) => Lifted::Sub(self.lift_binary_op(op)),
@@ -995,15 +1035,12 @@ impl MediumLevelILInstruction {
             Rrc(op) => Lifted::Rrc(self.lift_binary_op_carry(op)),
 
             Call(op) => Lifted::Call(self.lift_call(op)),
-            CallOutput(_op) => Lifted::CallOutput(LiftedCallOutput {
-                output: self.get_var_list(0),
-            }),
             CallParam(_op) => Lifted::CallParam(LiftedCallParam {
                 params: self.get_expr_list(0).iter().map(|i| i.lift()).collect(),
             }),
             CallOutputSsa(op) => Lifted::CallOutputSsa(LiftedCallOutputSsa {
                 dest_memory: op.dest_memory,
-                output: self.get_ssa_var_list(1),
+                output: self.get_expr_list(1).iter().map(|i| i.lift()).collect(),
             }),
             CallParamSsa(op) => Lifted::CallParamSsa(LiftedCallParamSsa {
                 src_memory: op.src_memory,
@@ -1844,8 +1881,12 @@ pub enum MediumLevelILInstructionKind {
     MemPhi(MemPhi),
     VarSplit(VarSplit),
     SetVarSplit(SetVarSplit),
+    Assert(Assert),
+    ForceVer(ForceVer),
     VarSplitSsa(VarSplitSsa),
     SetVarSplitSsa(SetVarSplitSsa),
+    AssertSsa(AssertSsa),
+    ForceVerSsa(ForceVerSsa),
     Add(BinaryOp),
     Sub(BinaryOp),
     And(BinaryOp),
@@ -1900,7 +1941,6 @@ pub enum MediumLevelILInstructionKind {
     Rlc(BinaryOpCarry),
     Rrc(BinaryOpCarry),
     Call(Call),
-    CallOutput(CallOutput),
     CallParam(CallParam),
     CallOutputSsa(CallOutputSsa),
     CallParamSsa(CallParamSsa),
@@ -1969,9 +2009,6 @@ pub enum MediumLevelILInstructionKind {
     VarOutputAliasedField(VarOutputAliasedField),
     Trap(Trap),
     BlockToExpand(BlockToExpand),
-    // A placeholder for instructions that the Rust bindings do not yet support.
-    // Distinct from `Unimpl` as that is a valid instruction.
-    NotYetImplemented,
 }
 
 fn get_float(value: u64, size: usize) -> f64 {

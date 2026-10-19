@@ -26,7 +26,7 @@ use crate::{
     calling_convention::CoreCallingConvention,
     data_buffer::DataBuffer,
     disassembly::InstructionTextToken,
-    ffi::INVALID_REGISTER,
+    ffi::{slice_from_raw_parts, INVALID_REGISTER},
     function::{Function, Location, NativeBlock},
     platform::Platform,
     rc::*,
@@ -2206,7 +2206,7 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let flag_write = custom_arch.flag_write_from_id(FlagWriteId(flag_write));
         let flag = custom_arch.flag_from_id(FlagId(flag));
-        let operands = unsafe { std::slice::from_raw_parts(operands_raw, operand_count) };
+        let operands = unsafe { slice_from_raw_parts(operands_raw, operand_count) };
         let lifter = unsafe {
             LowLevelILMutableFunction::from_raw_with_arch(il, Some(*custom_arch.as_ref()))
         };

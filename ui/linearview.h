@@ -147,6 +147,9 @@ public:
 	void updateViewType(const BinaryNinja::FunctionViewType& viewType);
 	void updateFonts();
 	void updateTheme();
+	FunctionRef function() const { return m_line.function; }
+	SectionRef section() const;
+	uint64_t address() const { return m_line.contents.addr; }
 
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void resizeEvent(QResizeEvent* event) override;
@@ -232,6 +235,12 @@ class BINARYNINJAUIAPI LinearView :
 	void updateStickyHeaderLine();
 	void updateStickyHeaderVisibility();
 	bool shouldShowStickyHeader() const;
+	FunctionRef functionForBoundaryNavigation() const;
+	FunctionRef adjacentFunction(bool next) const;
+	void goToAdjacentFunction(bool next);
+	SectionRef sectionForNavigation() const;
+	SectionRef adjacentSection(bool next) const;
+	void goToAdjacentSection(bool next);
 
 	SettingsRef m_settings;
 	DisassemblySettingsRef m_options;
@@ -282,6 +291,7 @@ class BINARYNINJAUIAPI LinearView :
 	bool navigateToAddress(uint64_t addr, bool center, bool updateHighlight, bool navByRef = false);
 	bool navigateToLine(
 		FunctionRef func, uint64_t offset, size_t instrIndex, bool center, bool updateHighlight, bool navByRef = false);
+	BinaryNinja::Ref<BinaryNinja::LinearViewObject> createSingleFunctionLinearViewObject(FunctionRef func);
 	bool navigateToGotoLabel(uint64_t label);
 	bool navigateToMatchingBrace();
 
@@ -493,6 +503,8 @@ public:
 	virtual BNILIndexRange getILIndexRange() override;
 	virtual bool navigate(uint64_t offset) override;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t offset) override;
+	void goToFunctionBoundary(FunctionRef func, bool toEnd);
+	void goToSectionBoundary(SectionRef section, bool toEnd);
 	virtual bool navigateToViewLocation(const ViewLocation& viewLocation, bool center = false) override;
 
 	virtual BinaryNinja::Ref<HistoryEntry> getHistoryEntry() override;

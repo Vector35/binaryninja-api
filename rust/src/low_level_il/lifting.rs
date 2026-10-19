@@ -1758,9 +1758,9 @@ impl LowLevelILMutableFunction {
     binary_op_lifter!(asr, LLIL_ASR);
 
     binary_op_lifter!(rol, LLIL_ROL);
-    binary_op_lifter!(rlc, LLIL_RLC);
+    binary_op_carry_lifter!(rlc, LLIL_RLC);
     binary_op_lifter!(ror, LLIL_ROR);
-    binary_op_lifter!(rrc, LLIL_RRC);
+    binary_op_carry_lifter!(rrc, LLIL_RRC);
     binary_op_lifter!(mul, LLIL_MUL);
     binary_op_lifter!(muls_dp, LLIL_MULS_DP);
     binary_op_lifter!(mulu_dp, LLIL_MULU_DP);
@@ -1807,9 +1807,9 @@ impl LowLevelILMutableFunction {
     sized_unary_op_lifter!(fsqrt, LLIL_FSQRT, ValueExpr);
     sized_unary_op_lifter!(fneg, LLIL_FNEG, ValueExpr);
     sized_unary_op_lifter!(fabs, LLIL_FABS, ValueExpr);
-    sized_unary_op_lifter!(float_to_int, LLIL_FLOAT_TO_INT, ValueExpr);
-    sized_unary_op_lifter!(int_to_float, LLIL_INT_TO_FLOAT, ValueExpr);
-    sized_unary_op_lifter!(float_conv, LLIL_FLOAT_CONV, ValueExpr);
+    size_changing_unary_op_lifter!(float_to_int, LLIL_FLOAT_TO_INT, ValueExpr);
+    size_changing_unary_op_lifter!(int_to_float, LLIL_INT_TO_FLOAT, ValueExpr);
+    size_changing_unary_op_lifter!(float_conv, LLIL_FLOAT_CONV, ValueExpr);
     sized_unary_op_lifter!(round_to_int, LLIL_ROUND_TO_INT, ValueExpr);
     sized_unary_op_lifter!(floor, LLIL_FLOOR, ValueExpr);
     sized_unary_op_lifter!(ceil, LLIL_CEIL, ValueExpr);

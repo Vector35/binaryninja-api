@@ -68,8 +68,8 @@ static constexpr std::array s_operandTypeForUsage = {
 	OperandUsageType{ConditionExprMediumLevelOperandUsage, ExprMediumLevelOperand},
 	OperandUsageType{HighVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
 	OperandUsageType{LowVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-	OperandUsageType{HighSSAVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-	OperandUsageType{LowSSAVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
+	OperandUsageType{HighSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
+	OperandUsageType{LowSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
 	OperandUsageType{OffsetMediumLevelOperandUsage, IntegerMediumLevelOperand},
 	OperandUsageType{ConstantMediumLevelOperandUsage, IntegerMediumLevelOperand},
 	OperandUsageType{ConstantDataMediumLevelOperandUsage, ConstantDataMediumLevelOperand},
@@ -213,7 +213,7 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{MLIL_JUMP_TO, {DestExprMediumLevelOperandUsage, TargetsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_RET_HINT, {DestExprMediumLevelOperandUsage}},
 	OperandUsage{MLIL_CALL, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_UNTYPED, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_UNTYPED, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
 	OperandUsage{MLIL_CALL_PARAM, {ParameterExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_SEPARATE_PARAM_LIST, {ParameterExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_SHARED_PARAM_SLOT, {ParameterExprsMediumLevelOperandUsage}},
@@ -240,7 +240,7 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{MLIL_SYSCALL, {OutputExprsMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_SYSCALL_UNTYPED, {OutputExprsMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
 	OperandUsage{MLIL_TAILCALL, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_TAILCALL_UNTYPED, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_TAILCALL_UNTYPED, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
 	OperandUsage{MLIL_INTRINSIC, {OutputVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_FREE_VAR_SLOT, {DestVariableMediumLevelOperandUsage}},
 	OperandUsage{MLIL_BP},
@@ -288,13 +288,13 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{MLIL_SYSCALL_UNTYPED_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
 	OperandUsage{MLIL_TAILCALL_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
 	OperandUsage{MLIL_TAILCALL_UNTYPED_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_PARAM_SSA, {ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_OUTPUT_SSA, {OutputSSAVariablesMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_PARAM_SSA, {SourceMemoryVersionMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_OUTPUT_SSA, {DestMemoryVersionMediumLevelOperandUsage, OutputExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_VAR_OUTPUT_SSA, {DestSSAVariableMediumLevelOperandUsage}},
 	OperandUsage{MLIL_VAR_OUTPUT_SSA_FIELD, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
 	OperandUsage{MLIL_VAR_OUTPUT_ALIASED, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage}},
 	OperandUsage{MLIL_VAR_OUTPUT_ALIASED_FIELD, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-	OperandUsage{MLIL_MEMORY_INTRINSIC_OUTPUT_SSA, {OutputSSAVariablesMediumLevelOperandUsage}},
+	OperandUsage{MLIL_MEMORY_INTRINSIC_OUTPUT_SSA, {DestMemoryVersionMediumLevelOperandUsage, OutputSSAVariablesMediumLevelOperandUsage}},
 	OperandUsage{MLIL_LOAD_SSA, {SourceExprMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
 	OperandUsage{MLIL_LOAD_STRUCT_SSA, {SourceExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
 	OperandUsage{MLIL_STORE_SSA, {DestExprMediumLevelOperandUsage, DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
@@ -2030,6 +2030,19 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 		return dest->FreeVarSlotSSA(GetDestSSAVariable<MLIL_FREE_VAR_SLOT_SSA>().var,
 		    GetDestSSAVariable<MLIL_FREE_VAR_SLOT_SSA>().version,
 		    GetSourceSSAVariable<MLIL_FREE_VAR_SLOT_SSA>().version, loc);
+	case MLIL_VAR_PHI:
+	{
+		SSAVariable phiDest = GetDestSSAVariable<MLIL_VAR_PHI>();
+		vector<SSAVariable> sources = GetSourceSSAVariables<MLIL_VAR_PHI>();
+		return dest->AddExprWithLocation(MLIL_VAR_PHI, loc, size, phiDest.var.ToIdentifier(), phiDest.version,
+		    sources.size() * 2, dest->AddSSAVariableList(sources));
+	}
+	case MLIL_MEM_PHI:
+	{
+		vector<size_t> sources = GetSourceMemoryVersions<MLIL_MEM_PHI>();
+		return dest->AddExprWithLocation(MLIL_MEM_PHI, loc, size, GetDestMemoryVersion<MLIL_MEM_PHI>(), sources.size(),
+		    dest->AddIndexList(sources));
+	}
 	case MLIL_UNDEF:
 		return dest->Undefined(loc);
 	case MLIL_UNIMPL:

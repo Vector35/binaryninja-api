@@ -187,12 +187,16 @@ class HighLevelILInstruction(BaseILInstruction):
 	                                                                                        ("dest_memory", "int"),
 	                                                                                        ("src", "expr"),
 	                                                                                        ("src_memory", "int")],
+	    HighLevelILOperation.HLIL_FORCE_VER: [("dest", "var"), ("src", "var")],
+	    HighLevelILOperation.HLIL_ASSERT: [("src", "var"), ("constraint", "constraint")],
+	    HighLevelILOperation.HLIL_FORCE_VER_SSA: [("dest", "var_ssa"), ("src", "var_ssa")],
+	    HighLevelILOperation.HLIL_ASSERT_SSA: [("src", "var_ssa"), ("constraint", "constraint")],
 	    HighLevelILOperation.HLIL_ASSIGN_UNPACK_MEM_SSA: [
 	        ("dest", "expr_list"), ("dest_memory", "int"), ("src", "expr"), ("src_memory", "int")
 	    ], HighLevelILOperation.HLIL_VAR: [("var", "var")], HighLevelILOperation.HLIL_VAR_SSA: [
 	        ("var", "var_ssa")
 	    ], HighLevelILOperation.HLIL_VAR_SSA_PARTIAL: [
-	        ("var", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src")
+	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src")
 	    ], HighLevelILOperation.HLIL_VAR_PHI: [("dest", "var_ssa"),
 	                                           ("src", "var_ssa_list")], HighLevelILOperation.HLIL_MEM_PHI: [
 	                                               ("dest", "int"), ("src", "int_list")
@@ -1998,7 +2002,7 @@ class HighLevelILRlc(HighLevelILCarryBase):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILRor(HighLevelILCarryBase):
+class HighLevelILRor(HighLevelILBinaryBase, Arithmetic):
 	pass
 
 
@@ -2505,6 +2509,13 @@ class HighLevelILAssert(HighLevelILInstruction):
     def constraint(self) -> variable.PossibleValueSet:
         return self._get_constraint(1)
 
+    @property
+    def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+        return [
+            ("src", self.src, "Variable"),
+            ("constraint", self.constraint, "PossibleValueSet"),
+        ]
+
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILAssertSsa(HighLevelILInstruction, SSA):
     @property
@@ -2514,6 +2525,13 @@ class HighLevelILAssertSsa(HighLevelILInstruction, SSA):
     @property
     def constraint(self) -> variable.PossibleValueSet:
         return self._get_constraint(2)
+
+    @property
+    def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+        return [
+            ("src", self.src, "SSAVariable"),
+            ("constraint", self.constraint, "PossibleValueSet"),
+        ]
 
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILForceVer(HighLevelILInstruction):
@@ -2525,6 +2543,17 @@ class HighLevelILForceVer(HighLevelILInstruction):
     def src(self) -> variable.Variable:
         return self._get_var(1)
 
+    @property
+    def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+        return [
+            ("dest", self.dest, "Variable"),
+            ("src", self.src, "Variable"),
+        ]
+
+    @property
+    def vars_written(self) -> VariablesList:
+        return [self.dest]
+
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILForceVerSsa(HighLevelILInstruction, SSA):
     @property
@@ -2534,6 +2563,17 @@ class HighLevelILForceVerSsa(HighLevelILInstruction, SSA):
     @property
     def src(self) -> 'mediumlevelil.SSAVariable':
         return self._get_var_ssa(2, 3)
+
+    @property
+    def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+        return [
+            ("dest", self.dest, "SSAVariable"),
+            ("src", self.src, "SSAVariable"),
+        ]
+
+    @property
+    def vars_written(self) -> VariablesList:
+        return [self.dest]
 
 
 ILInstruction = {
@@ -3269,7 +3309,7 @@ class HighLevelILFunction:
 		return self.expr(HighLevelILOperation.HLIL_WHILE, condition, loop_expr, source_location=loc)
 
 	def do_while_expr(
-		self, condition: ExpressionIndex, loop_expr: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+		self, loop_expr: ExpressionIndex, condition: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
 		``do_while_expr`` a do-while-loop expression with a condition and loop body.
@@ -3280,7 +3320,7 @@ class HighLevelILFunction:
 		:return: The expression ``do { loop_expr } while (condition)``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_DO_WHILE, condition, loop_expr, source_location=loc)
+		return self.expr(HighLevelILOperation.HLIL_DO_WHILE, loop_expr, condition, source_location=loc)
 
 	def for_expr(
 		self, init_expr: ExpressionIndex, condition: ExpressionIndex, update_expr: ExpressionIndex, loop_expr: ExpressionIndex,
@@ -3558,7 +3598,7 @@ class HighLevelILFunction:
 		"""
 		return self.expr(HighLevelILOperation.HLIL_STRUCT_INIT_FIELD, offset, member_index, src, size=size, source_location=loc)
 
-	def deref(self, size: int, src: ExpressionIndex, loc: Optional['ILSourceLocation']) -> ExpressionIndex:
+	def deref(self, size: int, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
 		``deref`` dereferences expression ``src`` and reads a value of size ``size``
 
@@ -3571,7 +3611,7 @@ class HighLevelILFunction:
 		return self.expr(HighLevelILOperation.HLIL_DEREF, src, size=size, source_location=loc)
 
 	def deref_field(
-		self, size: int, src: ExpressionIndex, offset: int, member_index: int, loc: Optional['ILSourceLocation']
+		self, size: int, src: ExpressionIndex, offset: int, member_index: int, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
 		``deref_field`` dereferences structure field in expression ``src`` at offset ``offset`` and index ``member_index`` of size ``size``
@@ -3607,7 +3647,7 @@ class HighLevelILFunction:
 		:return: The expression ``ref *src``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_PASS_BY_REF, src, size, source_location=loc)
+		return self.expr(HighLevelILOperation.HLIL_PASS_BY_REF, src, size=size, source_location=loc)
 
 	def return_by_ref(self, size: int, dest: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
@@ -3619,7 +3659,7 @@ class HighLevelILFunction:
 		:return: The expression ``ref dest``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(HighLevelILOperation.HLIL_RETURN_BY_REF, dest, size, source_location=loc)
+		return self.expr(HighLevelILOperation.HLIL_RETURN_BY_REF, dest, size=size, source_location=loc)
 
 	def const(self, size: int, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""

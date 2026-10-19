@@ -133,12 +133,16 @@ class StickyHeader: public QWidget
 
 	LinearViewLine m_line;
 	BinaryNinja::FunctionViewType m_viewType;
+	LinearView* m_view;
 	QProgressIndicator* m_updateIndicator;
+	ClickableIcon* m_navTopButton = nullptr;
+	ClickableIcon* m_navBottomButton = nullptr;
 	QHBoxLayout* m_mainLayout = nullptr;
 	QVBoxLayout* m_indicatorLayout = nullptr;
 
 	void updateIndicatorIcon();
 	void updateIndicatorPosition();
+	void updateNavigationButtons();
 
 public:
 	StickyHeader(BinaryViewRef data, LinearView* parent);

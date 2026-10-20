@@ -245,11 +245,11 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         self.instruction_text(data, addr)
     }
 
-    // TODO: Why do we need to return a boolean here? Does `None` not represent the same thing?
     /// Appends arbitrary low-level il instructions to `il`.
     ///
-    /// If `None` is returned, no instructions were appended and the data is invalid. If `Some` is returned,
-    /// the instructions consumed length is returned (necessary for variable length instruction decoding).
+    /// Returns the decoded length and whether lifting succeeded. `Some((length, false))` preserves
+    /// the decoded length even when lifting fails. `None` reports failure without updating the
+    /// caller's length.
     fn instruction_llil(
         &self,
         data: &[u8],
@@ -1006,11 +1006,7 @@ impl Architecture for CoreArchitecture {
             )
         };
 
-        if !success {
-            None
-        } else {
-            Some((size, true))
-        }
+        Some((size, success))
     }
 
     /// Performs basic block recovery and commits the results to the function analysis.

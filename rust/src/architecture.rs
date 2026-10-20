@@ -507,8 +507,12 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         Vec::new()
     }
 
-    fn intrinsic_class(&self, _id: IntrinsicId) -> BNIntrinsicClass {
-        BNIntrinsicClass::GeneralIntrinsicClass
+    /// Returns the class from [`Intrinsic::class`], or the general class for an unknown ID.
+    fn intrinsic_class(&self, id: IntrinsicId) -> BNIntrinsicClass {
+        match self.intrinsic_from_id(id) {
+            Some(intrinsic) => intrinsic.class(),
+            None => BNIntrinsicClass::GeneralIntrinsicClass,
+        }
     }
 
     /// Get the [`Self::Intrinsic`] associated with the given [`IntrinsicId`].
@@ -2483,11 +2487,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        match custom_arch.intrinsic_from_id(IntrinsicId(intrinsic)) {
-            Some(intrinsic) => intrinsic.class(),
-            // TODO: Make this unreachable?
-            None => BNIntrinsicClass::GeneralIntrinsicClass,
-        }
+        custom_arch.intrinsic_class(IntrinsicId(intrinsic))
     }
 
     extern "C" fn cb_intrinsic_name<A>(ctxt: *mut c_void, intrinsic: u32) -> *mut c_char

@@ -34,13 +34,6 @@ macro_rules! architecture_hook {
         ///
         /// Register implementations with [`register_architecture_hook`].
         pub trait ArchitectureHook: Send + Sync + 'static {
-            /// Selects an architecture and updates the address, preserving normalization such
-            /// as clearing the ARM Thumb bit. Unlike [`Architecture::associated_arch_by_addr`],
-            /// this callback can update the caller's address.
-            fn associated_arch_by_addr(&self, base: &CoreArchitecture, addr: &mut u64) -> CoreArchitecture {
-                base.associated_arch_by_addr_mut(addr)
-            }
-
             $(
                 #[doc = concat!("See [`Architecture::", stringify!($name), "`].")]
                 fn $name $(<$lt>)? (&self, base: &CoreArchitecture, $($arg: $ty),*) -> $ret {
@@ -67,10 +60,6 @@ macro_rules! architecture_hook {
                 }
             )*
 
-            fn associated_arch_by_addr(&self, mut addr: u64) -> CoreArchitecture {
-                self.hook.associated_arch_by_addr(&self.base, &mut addr)
-            }
-
             fn handle(&self) -> Self::Handle {
                 self.handle
             }
@@ -87,6 +76,7 @@ architecture_hook! {
     fn linear_sweep_analysis_capabilities() -> u32;
     fn max_instr_len() -> usize;
     fn opcode_display_len() -> usize;
+    fn associated_arch_by_addr(addr: &mut u64) -> CoreArchitecture;
     fn instruction_info(data: &[u8], addr: u64) -> Option<InstructionInfo>;
     fn instruction_text(data: &[u8], addr: u64) -> Option<(usize, Vec<InstructionTextToken>)>;
     fn instruction_text_with_context(
@@ -199,16 +189,6 @@ pub fn register_architecture_hook<H: ArchitectureHook>(
     base: CoreArchitecture,
     hook: H,
 ) -> &'static H {
-    unsafe extern "C" fn associated_arch<H: ArchitectureHook>(
-        context: *mut c_void,
-        addr: *mut u64,
-    ) -> *mut BNArchitecture {
-        let arch = unsafe { &*context.cast::<HookArchitecture<H>>() };
-        arch.hook
-            .associated_arch_by_addr(&arch.base, unsafe { &mut *addr })
-            .handle
-    }
-
     unsafe extern "C" fn intrinsic_class<H: ArchitectureHook>(
         context: *mut c_void,
         intrinsic: u32,
@@ -222,9 +202,6 @@ pub fn register_architecture_hook<H: ArchitectureHook>(
         ArchitectureRegistration::Hook(base),
         |handle, base| HookArchitecture { hook, base, handle },
         |callbacks| {
-            // The Architecture trait takes an address by value; hooks must also preserve any
-            // address normalization performed by the previous architecture in the chain.
-            callbacks.getAssociatedArchitectureByAddress = Some(associated_arch::<H>);
             // Hooks expose a class override independent of intrinsic lookup. Ordinary custom
             // architectures continue to obtain the class from their Intrinsic implementation.
             callbacks.getIntrinsicClass = Some(intrinsic_class::<H>);

@@ -115,6 +115,7 @@ pub use binaryninjacore_sys::BNILBranchDependence as ILBranchDependence;
 
 pub const BN_FULL_CONFIDENCE: u8 = u8::MAX;
 pub const BN_INVALID_EXPR: usize = usize::MAX;
+pub const BN_INVALID_OPERAND: usize = u32::MAX as usize;
 
 /// Fuzzy match a string against a query string. Returns a score that is higher for
 /// a more confident match, or `None` if the query does not match the target string.

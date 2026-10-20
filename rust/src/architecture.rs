@@ -183,7 +183,9 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     /// In binaries with multiple architectures, you may wish to associate a specific architecture
     /// with a given virtual address. This can be seen in armv7 where odd addresses are associated
     /// with the thumb architecture.
-    fn associated_arch_by_addr(&self, _addr: u64) -> CoreArchitecture {
+    ///
+    /// The address can be updated in place to normalize it, such as clearing the ARM Thumb bit.
+    fn associated_arch_by_addr(&self, _addr: &mut u64) -> CoreArchitecture {
         *self.as_ref()
     }
 
@@ -814,13 +816,6 @@ impl CoreArchitecture {
         CoreArchitecture { handle }
     }
 
-    /// Selects the architecture for `addr` and applies its address normalization in place.
-    /// For example, ARM uses the low address bit to select Thumb mode, then clears that bit.
-    pub fn associated_arch_by_addr_mut(&self, addr: &mut u64) -> CoreArchitecture {
-        let handle = unsafe { BNGetAssociatedArchitectureByAddress(self.handle, addr) };
-        CoreArchitecture { handle }
-    }
-
     pub fn list_all() -> CoreArchitectureList {
         let mut count: usize = 0;
         let archs = unsafe { BNGetArchitectureList(&mut count) };
@@ -903,8 +898,9 @@ impl Architecture for CoreArchitecture {
         unsafe { BNGetArchitectureOpcodeDisplayLength(self.handle) }
     }
 
-    fn associated_arch_by_addr(&self, mut addr: u64) -> CoreArchitecture {
-        self.associated_arch_by_addr_mut(&mut addr)
+    fn associated_arch_by_addr(&self, addr: &mut u64) -> CoreArchitecture {
+        let handle = unsafe { BNGetAssociatedArchitectureByAddress(self.handle, addr) };
+        CoreArchitecture { handle }
     }
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
@@ -1718,7 +1714,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let addr = unsafe { *(addr) };
+        let addr = unsafe { &mut *addr };
 
         custom_arch.associated_arch_by_addr(addr).handle
     }

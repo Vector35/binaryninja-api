@@ -19,6 +19,35 @@ fn test_architecture_hook() {
     check_instruction_text();
     check_floating_point_flags();
     check_intrinsic_class_override();
+    check_associated_arch_by_addr();
+}
+
+struct AddressHook;
+
+impl ArchitectureHook for AddressHook {
+    fn associated_arch_by_addr(&self, base: &CoreArchitecture, addr: &mut u64) -> CoreArchitecture {
+        *addr += 0x1000;
+        let arch = base.associated_arch_by_addr(addr);
+        *addr += 0x2000;
+        arch
+    }
+}
+
+fn check_associated_arch_by_addr() {
+    let arch = CoreArchitecture::by_name("armv7").expect("Failed to get architecture");
+    let mut address = 0x1001;
+    assert_eq!(arch.associated_arch_by_addr(&mut address).name(), "thumb2");
+    assert_eq!(address, 0x1000);
+
+    register_architecture_hook(arch, AddressHook);
+    let mut address = 0x1001;
+    assert_eq!(arch.associated_arch_by_addr(&mut address).name(), "thumb2");
+    assert_eq!(address, 0x4000);
+
+    register_architecture_hook(arch, PassThroughHook);
+    let mut address = 0x1001;
+    assert_eq!(arch.associated_arch_by_addr(&mut address).name(), "thumb2");
+    assert_eq!(address, 0x4000);
 }
 
 struct TextHook;

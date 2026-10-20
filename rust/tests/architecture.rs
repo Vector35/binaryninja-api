@@ -14,6 +14,17 @@ fn test_architecture_info() {
 }
 
 #[test]
+fn test_associated_arch_by_addr() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let arch = CoreArchitecture::by_name("armv7").expect("Failed to get architecture");
+    let mut address = 0x1001;
+    assert_eq!(arch.associated_arch_by_addr(&mut address).name(), "thumb2");
+    assert_eq!(address, 0x1000);
+    assert_eq!(arch.associated_arch_by_addr(&mut address), arch);
+    assert_eq!(address, 0x1000);
+}
+
+#[test]
 fn test_architecture_disassembly() {
     let _session = Session::new().expect("Failed to initialize session");
     let arch = CoreArchitecture::by_name("x86_64").expect("Failed to get architecture");

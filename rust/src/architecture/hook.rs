@@ -189,23 +189,10 @@ pub fn register_architecture_hook<H: ArchitectureHook>(
     base: CoreArchitecture,
     hook: H,
 ) -> &'static H {
-    unsafe extern "C" fn intrinsic_class<H: ArchitectureHook>(
-        context: *mut c_void,
-        intrinsic: u32,
-    ) -> BNIntrinsicClass {
-        let arch = unsafe { &*context.cast::<HookArchitecture<H>>() };
-        arch.hook
-            .intrinsic_class(&arch.base, IntrinsicId(intrinsic))
-    }
-
     let registered = super::register_architecture_impl(
         ArchitectureRegistration::Hook(base),
         |handle, base| HookArchitecture { hook, base, handle },
-        |callbacks| {
-            // Hooks expose a class override independent of intrinsic lookup. Ordinary custom
-            // architectures continue to obtain the class from their Intrinsic implementation.
-            callbacks.getIntrinsicClass = Some(intrinsic_class::<H>);
-        },
+        |_| {},
     );
     &registered.hook
 }

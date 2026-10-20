@@ -25,8 +25,8 @@ macro_rules! architecture_hook {
         /// hook chain. Override only the methods you need. Use the supplied `base` to delegate:
         /// looking up the hooked architecture by name inside a callback would call the hook again.
         ///
-        /// Flag-write operations that cannot be represented by [`LowLevelILFlagWriteOp`] bypass
-        /// the typed callback and forward directly to the previous implementation.
+        /// Flag-write operations without a typed representation are delivered as
+        /// [`LowLevelILFlagWriteOp::Raw`], including their complete operand list.
         ///
         /// The methods have the same semantics as their counterparts in [`Architecture`].
         /// Contextual disassembly forwards to the previous contextual implementation; override

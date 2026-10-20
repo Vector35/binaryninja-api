@@ -1035,7 +1035,7 @@ impl Architecture for CoreArchitecture {
         il: &'a LowLevelILMutableFunction,
     ) -> Option<LowLevelILMutableExpression<'a, ValueExpr>> {
         let (size, operation) = op.size_and_op();
-        let (count, mut operands) = op.raw_operands();
+        let mut operands = op.raw_operands();
         let index = unsafe {
             BNGetArchitectureFlagWriteLowLevelIL(
                 self.handle,
@@ -1044,7 +1044,7 @@ impl Architecture for CoreArchitecture {
                 flag_write.id().0,
                 flag.id().0,
                 operands.as_mut_ptr(),
-                count,
+                operands.len(),
                 il.handle,
             )
         };
@@ -2246,7 +2246,7 @@ where
             .unwrap_or(0)
     }
 
-    extern "C" fn cb_flag_write_llil<A, const IS_HOOK: bool>(
+    extern "C" fn cb_flag_write_llil<A>(
         ctxt: *mut c_void,
         op: BNLowLevelILOperation,
         size: usize,
@@ -2262,41 +2262,22 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let flag_write_type = custom_arch.flag_write_from_id(FlagWriteId(flag_write));
         let flag_value = custom_arch.flag_from_id(FlagId(flag));
-        let operands = unsafe { std::slice::from_raw_parts(operands_raw, operand_count) };
+        let operands = if operand_count == 0 {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(operands_raw, operand_count) }
+        };
         let lifter = unsafe {
             LowLevelILMutableFunction::from_raw_with_arch(il, Some(*custom_arch.as_ref()))
         };
 
         if let (Some(flag_write_type), Some(flag_value)) = (flag_write_type, flag_value) {
-            if let Some(op) = LowLevelILFlagWriteOp::from_op(custom_arch, size, op, operands) {
-                if let Some(expr) =
-                    custom_arch.flag_write_llil(flag_value, flag_write_type, op, &lifter)
-                {
-                    // TODO verify that returned expr is a bool value
-                    return expr.index.0;
-                }
-            } else if IS_HOOK {
-                // Hook AsRef points to the previous implementation. Preserve native semantics
-                // for operations absent from LowLevelILFlagWriteOp (e.g. LLIL_FSUB), passing
-                // the original operation, IDs and operands through without conversion.
-                return unsafe {
-                    BNGetArchitectureFlagWriteLowLevelIL(
-                        custom_arch.as_ref().handle,
-                        op,
-                        size,
-                        flag_write,
-                        flag,
-                        operands_raw,
-                        operand_count,
-                        il,
-                    )
-                };
-            } else {
-                tracing::warn!(
-                    "unable to unpack flag write op: {:?} with {} operands",
-                    op,
-                    operands.len()
-                );
+            let decoded_op = LowLevelILFlagWriteOp::from_op(custom_arch, size, op, operands);
+            if let Some(expr) =
+                custom_arch.flag_write_llil(flag_value, flag_write_type, decoded_op, &lifter)
+            {
+                // TODO verify that returned expr is a bool value
+                return expr.index.0;
             }
 
             let role = flag_value.role(flag_write_type.class());
@@ -2850,10 +2831,7 @@ where
         getFlagsWrittenByFlagWriteType: Some(cb_flags_written_by_write_type::<A>),
         getSemanticClassForFlagWriteType: Some(cb_semantic_class_for_flag_write_type::<A>),
 
-        getFlagWriteLowLevelIL: match registration {
-            ArchitectureRegistration::New(_) => Some(cb_flag_write_llil::<A, false>),
-            ArchitectureRegistration::Hook(_) => Some(cb_flag_write_llil::<A, true>),
-        },
+        getFlagWriteLowLevelIL: Some(cb_flag_write_llil::<A>),
         getFlagConditionLowLevelIL: Some(cb_flag_cond_llil::<A>),
         getSemanticFlagGroupLowLevelIL: Some(cb_flag_group_llil::<A>),
 

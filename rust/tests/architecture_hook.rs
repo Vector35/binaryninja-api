@@ -5,11 +5,13 @@ use binaryninja::architecture::{
 };
 use binaryninja::disassembly::{InstructionTextToken, InstructionTextTokenKind};
 use binaryninja::headless::Session;
-use binaryninja::low_level_il::expression::ValueExpr;
+use binaryninja::low_level_il::expression::{
+    ExpressionHandler, LowLevelExpressionIndex, LowLevelILExpressionKind, ValueExpr,
+};
 use binaryninja::low_level_il::lifting::LowLevelILFlagWriteOp;
 use binaryninja::low_level_il::{LowLevelILMutableExpression, LowLevelILMutableFunction};
 use binaryninjacore_sys::*;
-use std::ffi::{c_void, CString};
+use std::ffi::c_void;
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -130,42 +132,67 @@ impl ArchitectureHook for TypedFlagHook {
 // Compare the full expression, including operand values and sizes, rather than just its root op.
 type Expression = (BNLowLevelILOperation, usize, u32, [u64; 4]);
 
+fn snapshot_expression(expr: LowLevelILMutableExpression<'_, ValueExpr>) -> Expression {
+    use BNLowLevelILOperation::*;
+    let kind = expr.kind();
+    let flags = kind.flag_write().map(|write| write.id().0).unwrap_or(0);
+    let (operation, size, operands) = match kind {
+        LowLevelILExpressionKind::Const(op) => (LLIL_CONST, op.size(), [op.value(), 0, 0, 0]),
+        LowLevelILExpressionKind::FloatConst(op) => {
+            (LLIL_FLOAT_CONST, op.size(), [op.raw_value(), 0, 0, 0])
+        }
+        LowLevelILExpressionKind::FcmpLT(op) => (
+            LLIL_FCMP_LT,
+            op.size(),
+            [op.left().index.0 as u64, op.right().index.0 as u64, 0, 0],
+        ),
+        LowLevelILExpressionKind::FcmpUO(op) => (
+            LLIL_FCMP_UO,
+            op.size(),
+            [op.left().index.0 as u64, op.right().index.0 as u64, 0, 0],
+        ),
+        other => panic!("Unexpected flag expression: {other:?}"),
+    };
+    (operation, size, flags, operands)
+}
+
 fn flag_write_il(
     arch: CoreArchitecture,
     write: u32,
     flag: u32,
     operation: BNLowLevelILOperation,
 ) -> (usize, Vec<Expression>) {
-    let name = CString::new(arch.name()).unwrap();
-    let mut operands = [1.25f64.to_bits(), 2.5f64.to_bits()].map(|value| BNRegisterOrConstant {
+    let operands = [1.25f64.to_bits(), 2.5f64.to_bits()].map(|value| BNRegisterOrConstant {
         constant: true,
         reg: 0,
         value,
     });
-    // Use the core API because LLIL_FSUB has no LowLevelILFlagWriteOp variant.
-    unsafe {
-        let arch = BNGetArchitectureByName(name.as_ptr());
-        let il = BNCreateLowLevelILFunction(arch, std::ptr::null_mut());
-        assert!(!il.is_null());
-        let root = BNGetArchitectureFlagWriteLowLevelIL(
-            arch,
-            operation,
-            8,
-            write,
+    let write = arch.flag_write_from_id(write.into()).unwrap();
+    let flag = arch.flag_from_id(flag.into()).unwrap();
+    let il = LowLevelILMutableFunction::new(arch, None);
+    let root = arch
+        .flag_write_llil(
             flag,
-            operands.as_mut_ptr(),
-            operands.len(),
-            il,
-        );
-        let expressions = (0..BNGetLowLevelILExprCount(il))
-            .map(|index| {
-                let expr = BNGetLowLevelILByIndex(il, index);
-                (expr.operation, expr.size, expr.flags, expr.operands)
-            })
-            .collect();
-        BNFreeLowLevelILFunction(il);
-        (root, expressions)
-    }
+            write,
+            LowLevelILFlagWriteOp::Raw {
+                operation,
+                size: 8,
+                operands: operands.to_vec(),
+            },
+            &il,
+        )
+        .unwrap()
+        .index
+        .0;
+    let expressions = (0..il.expression_count())
+        .map(|index| {
+            snapshot_expression(LowLevelILMutableExpression::new(
+                &il,
+                LowLevelExpressionIndex(index),
+            ))
+        })
+        .collect();
+    (root, expressions)
 }
 
 fn check_floating_point_flags() {
@@ -221,15 +248,13 @@ fn check_floating_point_flags() {
         }
 
         register_architecture_hook(arch, TypedFlagHook);
-        // An unsupported operation delegates through both hooks with its raw arguments intact.
-        for (flag, expected) in &originals {
-            assert_eq!(
-                flag_write_il(arch, write, *flag, LLIL_FSUB),
-                *expected,
-                "{name}"
-            );
+        // Floating-point operations must reach the typed hook override too.
+        for (flag, _) in &originals {
+            let (root, expressions) = flag_write_il(arch, write, *flag, LLIL_FSUB);
+            assert_eq!(expressions[root].0, LLIL_CONST, "{name}");
+            assert_eq!(expressions[root].3[0], 1, "{name}");
         }
-        // Supported operations must still call the typed hook override.
+        // Existing integer operations still reach the same callback.
         let (root, expressions) = flag_write_il(arch, write, originals[0].0, LLIL_ADD);
         assert_eq!(expressions[root].0, LLIL_CONST);
         assert_eq!(expressions[root].3[0], 1);

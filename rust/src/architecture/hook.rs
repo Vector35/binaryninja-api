@@ -189,10 +189,22 @@ pub fn register_architecture_hook<H: ArchitectureHook>(
     base: CoreArchitecture,
     hook: H,
 ) -> &'static H {
+    unsafe extern "C" fn free_function_arch_context<H: ArchitectureHook>(
+        context: *mut c_void,
+        function_context: *mut c_void,
+    ) {
+        let arch = unsafe { &*context.cast::<HookArchitecture<H>>() };
+        // Each hook must explicitly forward cleanup: copied callback tables do not retain
+        // the core's fallback chain when another hook is registered.
+        unsafe { BNArchitectureFreeFunctionArchContext(arch.base.handle, function_context) };
+    }
+
     let registered = super::register_architecture_impl(
         ArchitectureRegistration::Hook(base),
         |handle, base| HookArchitecture { hook, base, handle },
-        |_| {},
+        |callbacks| {
+            callbacks.freeFunctionArchContext = Some(free_function_arch_context::<H>);
+        },
     );
     &registered.hook
 }

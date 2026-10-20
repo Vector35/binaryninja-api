@@ -23,7 +23,7 @@ use crate::low_level_il as llil;
 use crate::medium_level_il as mlil;
 use crate::string::IntoCStr;
 use crate::string::{raw_to_string, strings_to_string_list, BnString};
-use crate::{high_level_il as hlil, BN_INVALID_EXPR};
+use crate::{high_level_il as hlil, BN_INVALID_EXPR, BN_INVALID_OPERAND};
 
 use crate::rc::*;
 
@@ -267,46 +267,67 @@ pub struct InstructionTextToken {
     pub confidence: u8,
     pub context: InstructionTextTokenContext,
     pub expr_index: Option<usize>,
-    pub kind: InstructionTextTokenKind,
+    /// Native token type. Use [`Self::kind`] for the typed interpretation.
+    pub type_: InstructionTextTokenType,
+    /// Native value, including the unmodified payload bits of floating-point tokens.
+    pub value: u64,
+    /// Display width in columns. Zero selects the UTF-8 byte length of `text`.
+    pub width: u64,
+    pub size: usize,
+    pub operand: usize,
+    pub type_names: Vec<String>,
 }
 
 impl InstructionTextToken {
     pub(crate) fn from_raw(value: &BNInstructionTextToken) -> Self {
+        let text = raw_to_string(value.text).unwrap();
+        let type_names = if value.namesCount == 0 {
+            Vec::new()
+        } else {
+            let names = unsafe { std::slice::from_raw_parts(value.typeNames, value.namesCount) };
+            names
+                .iter()
+                .filter_map(|&name| raw_to_string(name))
+                .collect()
+        };
         Self {
             address: value.address,
-            text: raw_to_string(value.text).unwrap(),
+            width: if value.width == 0 {
+                text.len() as u64
+            } else {
+                value.width
+            },
+            text,
             confidence: value.confidence,
             context: value.context.into(),
             expr_index: match value.exprIndex {
                 BN_INVALID_EXPR => None,
                 index => Some(index),
             },
-            kind: InstructionTextTokenKind::from_raw(value),
+            type_: value.type_,
+            value: value.value,
+            size: value.size,
+            operand: value.operand,
+            type_names,
         }
     }
 
     pub(crate) fn into_raw(value: Self) -> BNInstructionTextToken {
         let bn_text = BnString::new(value.text);
-        // These can be gathered from value.kind
-        let kind_value = value.kind.try_value().unwrap_or(0);
-        let operand = value.kind.try_operand().unwrap_or(0);
-        let size = value.kind.try_size().unwrap_or(0);
-        let type_names = value.kind.try_type_names().unwrap_or_default();
         BNInstructionTextToken {
-            type_: value.kind.into(),
+            type_: value.type_,
             // NOTE: Expected to be freed with `InstructionTextToken::free_raw`.
             text: BnString::into_raw(bn_text),
-            value: kind_value,
-            // TODO: Where is this even used?
-            width: 0,
-            size,
-            operand,
+            value: value.value,
+            width: value.width,
+            size: value.size,
+            operand: value.operand,
             context: value.context.into(),
             confidence: value.confidence,
             address: value.address,
             // NOTE: Expected to be freed with `InstructionTextToken::free_raw`.
-            typeNames: strings_to_string_list(&type_names),
-            namesCount: type_names.len(),
+            typeNames: strings_to_string_list(&value.type_names),
+            namesCount: value.type_names.len(),
             exprIndex: value.expr_index.unwrap_or(BN_INVALID_EXPR),
         }
     }
@@ -323,14 +344,7 @@ impl InstructionTextToken {
     /// You most likely want to call [`InstructionTextToken::new_with_address`], while also adjusting
     /// the [`InstructionTextToken::expr_index`] field where applicable.
     pub fn new(text: impl Into<String>, kind: InstructionTextTokenKind) -> Self {
-        Self {
-            address: 0,
-            text: text.into(),
-            confidence: MAX_CONFIDENCE,
-            context: InstructionTextTokenContext::Normal,
-            expr_index: None,
-            kind,
-        }
+        Self::new_with_address(0, text, kind)
     }
 
     pub fn new_with_address(
@@ -338,14 +352,26 @@ impl InstructionTextToken {
         text: impl Into<String>,
         kind: InstructionTextTokenKind,
     ) -> Self {
+        let text = text.into();
         Self {
             address,
-            text: text.into(),
+            width: text.len() as u64,
+            text,
             confidence: MAX_CONFIDENCE,
             context: InstructionTextTokenContext::Normal,
             expr_index: None,
-            kind,
+            value: kind.try_value().unwrap_or(0),
+            size: kind.try_size().unwrap_or(0),
+            operand: kind.try_operand().unwrap_or(BN_INVALID_OPERAND),
+            type_names: kind.try_type_names().unwrap_or_default(),
+            type_: kind.into(),
         }
+    }
+
+    /// Interprets the native fields as a typed token kind without discarding ancillary metadata.
+    /// Mutate the token's fields directly to change its metadata.
+    pub fn kind(&self) -> InstructionTextTokenKind {
+        InstructionTextTokenKind::from_token(self)
     }
 }
 
@@ -600,7 +626,7 @@ pub enum InstructionTextTokenKind {
 }
 
 impl InstructionTextTokenKind {
-    pub(crate) fn from_raw(value: &BNInstructionTextToken) -> Self {
+    fn from_token(value: &InstructionTextToken) -> Self {
         match value.type_ {
             BNInstructionTextTokenType::TextToken => Self::Text,
             BNInstructionTextTokenType::InstructionToken => Self::Instruction,
@@ -625,7 +651,7 @@ impl InstructionTextTokenKind {
             BNInstructionTextTokenType::BeginMemoryOperandToken => Self::BeginMemoryOperand,
             BNInstructionTextTokenType::EndMemoryOperandToken => Self::EndMemoryOperand,
             BNInstructionTextTokenType::FloatingPointToken => Self::FloatingPoint {
-                value: value.value as f64,
+                value: f64::from_bits(value.value),
                 size: match value.size {
                     0 => None,
                     size => Some(size),
@@ -652,7 +678,7 @@ impl InstructionTextTokenKind {
                 Self::HexDumpText { width: value.value }
             }
             BNInstructionTextTokenType::OpcodeToken => Self::Opcode,
-            BNInstructionTextTokenType::StringToken => match value.context {
+            BNInstructionTextTokenType::StringToken => match value.context.into() {
                 BNInstructionTextTokenContext::StringReferenceTokenContext
                 | BNInstructionTextTokenContext::StringDisplayTokenContext => {
                     match value.value {
@@ -683,24 +709,14 @@ impl InstructionTextTokenKind {
             BNInstructionTextTokenType::TypeNameToken => Self::TypeName,
             BNInstructionTextTokenType::FieldNameToken => Self::FieldName {
                 offset: value.value,
-                type_names: {
-                    // NOTE: Do not need to free, this is a part of the From<&> impl
-                    let raw_names =
-                        unsafe { std::slice::from_raw_parts(value.typeNames, value.namesCount) };
-                    raw_names.iter().filter_map(|&r| raw_to_string(r)).collect()
-                },
+                type_names: value.type_names.clone(),
             },
             BNInstructionTextTokenType::NameSpaceToken => Self::NameSpace,
             BNInstructionTextTokenType::NameSpaceSeparatorToken => Self::NameSpaceSeparator,
             BNInstructionTextTokenType::TagToken => Self::Tag,
             BNInstructionTextTokenType::StructOffsetToken => Self::StructOffset {
                 offset: value.value,
-                type_names: {
-                    // NOTE: Do not need to free, this is a part of the From<&> impl
-                    let raw_names =
-                        unsafe { std::slice::from_raw_parts(value.typeNames, value.namesCount) };
-                    raw_names.iter().filter_map(|&r| raw_to_string(r)).collect()
-                },
+                type_names: value.type_names.clone(),
             },
             BNInstructionTextTokenType::StructOffsetByteValueToken => Self::StructOffsetByteValue,
             BNInstructionTextTokenType::StructureHexDumpTextToken => {
@@ -722,13 +738,7 @@ impl InstructionTextTokenKind {
             BNInstructionTextTokenType::UnknownMemoryToken => Self::UnknownMemory,
             BNInstructionTextTokenType::EnumerationMemberToken => Self::EnumerationMember {
                 value: value.value,
-                type_id: {
-                    // NOTE: Type id comes from value.typeNames, it should be the first one (hence the .next)
-                    // NOTE: Do not need to free, this is a part of the From<&> impl
-                    let raw_names =
-                        unsafe { std::slice::from_raw_parts(value.typeNames, value.namesCount) };
-                    raw_names.iter().filter_map(|&r| raw_to_string(r)).next()
-                },
+                type_id: value.type_names.first().cloned(),
             },
             BNInstructionTextTokenType::OperationToken => Self::Operation,
             BNInstructionTextTokenType::BaseStructureNameToken => Self::BaseStructureName,
@@ -790,7 +800,7 @@ impl InstructionTextTokenKind {
             InstructionTextTokenKind::Integer { value, .. } => Some(*value),
             InstructionTextTokenKind::PossibleAddress { value, .. } => Some(*value),
             InstructionTextTokenKind::PossibleValue { value, .. } => Some(*value),
-            InstructionTextTokenKind::FloatingPoint { value, .. } => Some(*value as u64),
+            InstructionTextTokenKind::FloatingPoint { value, .. } => Some(value.to_bits()),
             InstructionTextTokenKind::CodeRelativeAddress { value, .. } => Some(*value),
             InstructionTextTokenKind::ArgumentName { value, .. } => Some(*value),
             InstructionTextTokenKind::HexDumpByteValue { value, .. } => Some(*value as u64),

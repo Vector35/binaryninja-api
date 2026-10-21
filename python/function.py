@@ -2627,7 +2627,7 @@ class Function:
 	) -> None:
 		if value is None:
 			location_list = []
-		elif isinstance(value, variable.CoreVariable):
+		elif isinstance(value, (variable.CoreVariable, types.ValueLocation)):
 			location_list = [value]
 		elif isinstance(value, variable.ParameterLocations):
 			location_list = value.locations
@@ -2643,7 +2643,7 @@ class Function:
 				location_conf.locations[i] = types.ValueLocation([types.ValueLocationComponent(location_list[i])])._to_core_struct()
 		if value is None:
 			location_conf.confidence = 0
-		elif isinstance(value, variable.ParameterVariables):
+		elif isinstance(value, variable.ParameterLocations):
 			location_conf.confidence = value.confidence
 		else:
 			location_conf.confidence = core.max_confidence

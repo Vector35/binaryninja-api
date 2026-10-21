@@ -1354,7 +1354,7 @@ class ParameterLocations:
 		return f"<ParameterLocations: {str(self._locations)}>"
 
 	def __len__(self):
-		return len(self._vars)
+		return len(self._locations)
 
 	def __iter__(self) -> Generator['types.ValueLocation', None, None]:
 		for location in self._locations:

@@ -3668,6 +3668,10 @@ class BinaryView:
 		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
 		:rtype: :py:class:`BinaryView` or ``None``
 
+		.. note:: With ``update_analysis=False``, transient function architecture contexts restored through analysis may \
+		still be unavailable to function-backed disassembly. Call :py:func:`~BinaryView.update_analysis_and_wait` before \
+		using disassembly that depends on those contexts. Rendering does not reconstruct them automatically.
+
 		:Example:
 
 			>>> binaryninja.load('/bin/ls', options={'loader.imageBase': 0xfffffff0000, 'loader.macho.processFunctionStarts' : False})

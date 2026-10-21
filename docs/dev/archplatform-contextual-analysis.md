@@ -66,6 +66,14 @@ another.
 Function architecture context is transient analysis data rather than persistent `BinaryView` metadata, so be
 prepared to rebuild it during reanalysis or after reopening an analysis database.
 
+When a function has an architecture context, the database records that requirement and schedules basic block
+analysis to rebuild the context on restore. Context readiness is guaranteed only after that analysis completes
+successfully. A normal `binaryninja.load` waits for analysis by default. With `update_analysis=False`, restoration
+only queues reconstruction: function-backed disassembly can still receive `None` for the context until you call
+`view.update_analysis_and_wait()`. Rendering does not trigger context reconstruction itself.
+
+Older databases without the saved requirement need an explicit reanalysis and save to enable this restoration.
+
 Here's a high-level diagram of the structures used by the contextual analysis callbacks:
 
 ![Context-Aware Analysis Structures><](../img/context-analysis-structures.png)

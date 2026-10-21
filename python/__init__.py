@@ -497,6 +497,10 @@ def load(*args, **kwargs) -> BinaryView:
 
 	.. note:: The progress_func callback **must** return True to continue the load operation, False will abort the load operation.
 
+	.. note:: With ``update_analysis=False``, transient function architecture contexts restored through analysis may \
+	still be unavailable to function-backed disassembly. Call :py:func:`~BinaryView.update_analysis_and_wait` before \
+	using disassembly that depends on those contexts. Rendering does not reconstruct them automatically.
+
 	.. warning:: The progress_func will **only** be called for BNDB files, not for any other file format due to a `design limitation <https://github.com/Vector35/binaryninja-api/issues/4116#issuecomment-1479496712>`_.
 
 	:Example:

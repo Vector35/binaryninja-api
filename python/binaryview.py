@@ -45,7 +45,7 @@ from . import decorators
 from .enums import (
     AnalysisState, SymbolType, Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
     TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, DisassemblyOption,
-	RelocationType, DerivedStringLocationType, MetadataStoreFlag
+	RelocationType, DerivedStringLocationType, MetadataStoreFlag, MemoryChangeReason
 )
 from .exceptions import RelocationWriteException, ExternalLinkException
 
@@ -2765,6 +2765,51 @@ class ResolvedRange:
 		return self.start <= addr < self.end
 
 
+@dataclass(frozen=True)
+class MemoryChangeEvent:
+	"""
+	A change to the bytes a :py:class:`BinaryView` returns that did not come from a write through the view. It does not
+	by itself invalidate analysis.
+
+	``start`` and ``end`` are the affected addresses, inclusive, and are ignored when ``unknown_range`` is set, meaning
+	the source does not know which addresses are affected.
+	"""
+	start: int = 0
+	end: int = 0
+	reason: MemoryChangeReason = MemoryChangeReason.MemoryContentsChanged
+	unknown_range: bool = False
+
+	@staticmethod
+	def unknown(reason: MemoryChangeReason) -> 'MemoryChangeEvent':
+		return MemoryChangeEvent(0, 0, reason, True)
+
+	def overlaps(self, start: int, end: int) -> bool:
+		"""Whether the change may affect any address in [start, end]"""
+		return self.unknown_range or (self.start <= end and start <= self.end)
+
+
+class MemoryChangeObserver:
+	"""
+	Observes memory changes of a :py:class:`BinaryView`. Subclass it, override :py:meth:`on_memory_changed` and register
+	it with :py:meth:`BinaryView.register_memory_change_observer`.
+
+	:py:meth:`on_memory_changed` is called synchronously on the thread that made the change, after it is committed and
+	the view's lock is released, with the events of one change in order. It should defer substantial work.
+	"""
+	def on_memory_changed(self, view: 'BinaryView', events: List[MemoryChangeEvent]) -> None:
+		pass
+
+
+@dataclass
+class RemoteMemoryRegionAddition:
+	"""A remote memory region to add with :py:meth:`MemoryMap.update_remote_memory_regions`."""
+	name: str
+	start: int
+	accessor: 'fileaccessor.MemoryRegionAccessor'
+	flags: SegmentFlag = SegmentFlag(0)
+	fallthrough: bool = False
+
+
 class MemoryMap:
 	r"""
 		Live proxy to the memory map of a BinaryView.
@@ -3045,7 +3090,7 @@ class MemoryMap:
 		"""
 		return core.BNIsMemoryMapActivated(self.handle)
 
-	def add_memory_region(self, name: str, start: int, source: Optional[Union['os.PathLike', str, bytes, bytearray, 'BinaryView', 'databuffer.DataBuffer', 'fileaccessor.FileAccessor']] = None, flags: SegmentFlag = 0, fill: int = 0, length: Optional[int] = None) -> bool:
+	def add_memory_region(self, name: str, start: int, source: Optional[Union['os.PathLike', str, bytes, bytearray, 'BinaryView', 'databuffer.DataBuffer', 'fileaccessor.FileAccessor', 'fileaccessor.MemoryRegionAccessor']] = None, flags: SegmentFlag = 0, fill: int = 0, length: Optional[int] = None, fallthrough: bool = False) -> bool:
 		"""
 		Adds a memory region to the memory map. Depending on the source parameter, the memory region is created as one of the following types:
 
@@ -3060,6 +3105,7 @@ class MemoryMap:
 			- `bytes` or `bytearray`: Directly loaded into memory as a `DataMemoryRegion`.
 			- `databuffer.DataBuffer`: Loaded as a `DataMemoryRegion`.
 			- `fileaccessor.FileAccessor`: Remote proxy source.
+			- `fileaccessor.MemoryRegionAccessor`: Remote proxy source that reports its contents span by span. The memory map takes ownership of it.
 			- `BinaryView`: (Reserved for future).
 			- `None`: Creates an unbacked memory region (must specify `length`).
 
@@ -3072,6 +3118,7 @@ class MemoryMap:
 			length (Optional[int]): Required if source is None (unbacked).
 			flags (SegmentFlag): Flags to apply to the memory region. Defaults to 0 (no flags).
 			fill (int): Fill byte for unbacked regions. Defaults to 0.
+			fallthrough (bool): For a `MemoryRegionAccessor` source, read the spans it reports as transparent from the regions beneath it. Defaults to False.
 
 		Returns:
 			bool: `True` if the memory region was successfully added, `False` otherwise.
@@ -3079,7 +3126,10 @@ class MemoryMap:
 		Raises:
 			NotImplementedError: If source type is unsupported.
 			ValueError: If source is None and length is not specified.
+			ValueError: If fallthrough is set for a source other than a `MemoryRegionAccessor`, or the accessor already backs a region.
 		"""
+		if fallthrough and not isinstance(source, fileaccessor.MemoryRegionAccessor):
+			raise ValueError("Only a MemoryRegionAccessor source can fall through to the regions beneath it")
 		if source is None:
 			if length is None:
 				raise ValueError("Must specify `length` when `source` is None for unbacked memory region")
@@ -3102,8 +3152,38 @@ class MemoryMap:
 			return core.BNAddDataMemoryRegion(self.handle, name, start, source.handle, flags)
 		elif isinstance(source, fileaccessor.FileAccessor):
 			return core.BNAddRemoteMemoryRegion(self.handle, name, start, source._cb, flags)
+		elif isinstance(source, fileaccessor.MemoryRegionAccessor):
+			return core.BNAddRemoteMemoryRegionWithAccessor(self.handle, name, start, source._take_ownership(), flags, fallthrough)
 		else:
 			raise NotImplementedError(f"Unsupported memory region source type: {type(source)}")
+
+	def update_remote_memory_regions(self, remove: Sequence[str] = (), add: Sequence[RemoteMemoryRegionAddition] = ()) -> bool:
+		"""
+		Remove the named regions and then add the remote regions as a single change to the memory map. Either all of it
+		takes effect or, if any part is invalid (a missing or duplicate name, an invalid accessor), none of it does.
+
+		The memory map takes ownership of every accessor in ``add``, even if the update fails.
+
+		:param remove: Names of the regions to remove
+		:param add: Remote regions to add, in increasing order of priority
+		:return: Whether the memory map was updated
+		:raises ValueError: If an accessor already backs a region or appears more than once
+		"""
+		accessors = [addition.accessor for addition in add]
+		if len(set(id(accessor) for accessor in accessors)) != len(accessors):
+			raise ValueError("A MemoryRegionAccessor can only back one memory region")
+		if any(id(accessor) in fileaccessor.MemoryRegionAccessor._live_instances for accessor in accessors):
+			raise ValueError("A MemoryRegionAccessor can only back one memory region")
+
+		names = (ctypes.c_char_p * len(remove))(*[core.cstr(name) for name in remove])
+		additions = (core.BNRemoteMemoryRegionAddition * len(add))()
+		for i, addition in enumerate(add):
+			additions[i].name = core.cstr(addition.name)
+			additions[i].start = addition.start
+			additions[i].accessor = ctypes.pointer(addition.accessor._take_ownership())
+			additions[i].flags = addition.flags
+			additions[i].fallthrough = addition.fallthrough
+		return core.BNUpdateRemoteMemoryRegions(self.handle, names, len(remove), additions, len(add))
 
 	def remove_memory_region(self, name: str) -> bool:
 		"""Remove a memory region by name. Returns True on success."""
@@ -3160,6 +3240,10 @@ class MemoryMap:
 	def is_memory_region_rebaseable(self, name: str) -> bool:
 		"""Return whether the named region is rebaseable."""
 		return core.BNIsMemoryRegionRebaseable(self.handle, name)
+
+	def is_memory_region_fallthrough(self, name: str) -> bool:
+		"""Return whether reads of the named region may fall through to the regions beneath it."""
+		return core.BNIsMemoryRegionFallthrough(self.handle, name)
 
 	def set_memory_region_rebaseable(self, name: str, rebaseable: bool = True) -> bool:
 		"""Set the rebaseable state for the named region."""
@@ -5584,6 +5668,86 @@ class BinaryView:
 		cb = BinaryDataNotificationCallbacks(self, notify)
 		cb._register()
 		self._notifications[notify] = cb
+
+	# Registered memory change observers by the context the core calls back with. Every registration shares one callback
+	# that is never freed, so unregistering never frees a callback that may be running. The view is not referenced here,
+	# so a forgotten registration does not keep it alive.
+	_memory_change_observers: Dict[int, MemoryChangeObserver] = {}
+	_memory_change_contexts: Dict[int, int] = {}  # context by handle
+	_next_memory_change_context = 1
+	_memory_change_callback = None
+
+	@staticmethod
+	def _memory_changed(ctxt, view, events, count):
+		observer = BinaryView._memory_change_observers.get(ctxt)
+		if observer is None:
+			return
+		try:
+			bv = BinaryView(handle=core.BNNewViewReference(view))
+			changes = [
+				MemoryChangeEvent(events[i].start, events[i].end, MemoryChangeReason(events[i].reason), events[i].unknownRange)
+				for i in range(count)
+			]
+			observer.on_memory_changed(bv, changes)
+		except Exception:
+			log_error_for_exception("Unhandled Python exception in MemoryChangeObserver.on_memory_changed")
+
+	def register_memory_change_observer(self, observer: MemoryChangeObserver) -> int:
+		"""
+		Register an observer of this view's memory changes: changes to the bytes it returns that did not come from
+		writes through it.
+
+		:param MemoryChangeObserver observer: the observer
+		:return: handle of the registration, for :py:meth:`unregister_memory_change_observer`, or 0 on failure
+		"""
+		callbacks = core.BNMemoryChangeObserver()
+		if BinaryView._memory_change_callback is None:
+			BinaryView._memory_change_callback = callbacks.memoryChanged.__class__(BinaryView._memory_changed)
+		context = BinaryView._next_memory_change_context
+		BinaryView._next_memory_change_context += 1
+		BinaryView._memory_change_observers[context] = observer
+
+		callbacks.version = 1  # BN_MEMORY_CHANGE_OBSERVER_VERSION
+		callbacks.context = context
+		callbacks.memoryChanged = BinaryView._memory_change_callback
+		handle = core.BNRegisterMemoryChangeObserver(self.handle, callbacks)
+		if handle:
+			BinaryView._memory_change_contexts[handle] = context
+		else:
+			del BinaryView._memory_change_observers[context]
+		return handle
+
+	def unregister_memory_change_observer(self, handle: int) -> bool:
+		"""
+		Unregister an observer registered with :py:meth:`register_memory_change_observer`. No callback for it begins
+		after this is called. Outside any memory change callback, this also waits for its running callbacks to finish;
+		inside one it does not, since that could deadlock.
+
+		:param int handle: handle returned by :py:meth:`register_memory_change_observer`
+		:return: whether the handle was registered on this view
+		"""
+		if not core.BNUnregisterMemoryChangeObserver(self.handle, handle):
+			return False
+		context = BinaryView._memory_change_contexts.pop(handle, None)
+		if context is not None:
+			BinaryView._memory_change_observers.pop(context, None)
+		return True
+
+	def notify_memory_changed(self, events: List[MemoryChangeEvent]) -> bool:
+		"""
+		Report memory changes that did not come from writes through this view, e.g. a memory source whose contents or
+		availability changed. They are delivered synchronously to the view's observers, in order.
+
+		:param events: the changes
+		:return: whether the events were valid and delivered
+		"""
+		changes = (core.BNMemoryChangeEvent * len(events))()
+		for i, event in enumerate(events):
+			changes[i].start = event.start
+			changes[i].end = event.end
+			changes[i].reason = event.reason
+			changes[i].unknownRange = event.unknown_range
+		return core.BNNotifyMemoryChanged(self.handle, changes, len(events))
 
 	def unregister_notification(self, notify: BinaryDataNotification) -> None:
 		"""

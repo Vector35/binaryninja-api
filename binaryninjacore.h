@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 189
+#define BN_CURRENT_CORE_ABI_VERSION 190
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -1969,6 +1969,103 @@ extern "C"
 		size_t (*read)(void* ctxt, void* dest, uint64_t offset, size_t len);
 		size_t (*write)(void* ctxt, uint64_t offset, const void* src, size_t len);
 	} BNFileAccessor;
+
+	// What a BNMemoryRegionAccessor read reports about the span starting at the requested address.
+	BN_ENUM(uint8_t, BNMemoryReadStatus)
+	{
+		// The returned count of bytes were written to the destination.
+		MemoryReadAvailable = 0,
+		// The region has no bytes for the returned count of bytes; the memory map may resolve them from the regions
+		// beneath it, if the region was added with fallthrough enabled. Nothing is written to the destination. This only
+		// affects reads: writes always go to the highest-priority enabled region.
+		MemoryReadTransparent = 1,
+		// The returned count of bytes cannot be read; the read ends here and no lower region is consulted.
+		MemoryReadInaccessible = 2
+	};
+
+#define BN_MEMORY_REGION_ACCESSOR_VERSION 1
+
+	// Backing for a remote memory region that can describe availability span by span. Unlike BNFileAccessor, the core
+	// owns the accessor once it is passed to BNAddRemoteMemoryRegionWithAccessor: freeObject is called exactly once,
+	// when the last memory map snapshot referencing the region is released (or immediately, if the region is
+	// rejected), and possibly from any thread. In-flight reads hold a snapshot, so the callbacks stay valid until then.
+	//
+	// Callbacks are invoked with the view's lock held and must not read from or write to the same view.
+	typedef struct BNMemoryRegionAccessor
+	{
+		// Must be BN_MEMORY_REGION_ACCESSOR_VERSION. Later versions only append fields.
+		uint32_t version;
+		void* context;
+		uint64_t (*getLength)(void* ctxt);
+		// Describes the single contiguous span starting at offset (an absolute address), sets *status, and returns
+		// its length, which must be between 1 and len. A result outside that range is treated as inaccessible.
+		size_t (*read)(void* ctxt, void* dest, uint64_t offset, size_t len, BNMemoryReadStatus* status);
+		size_t (*write)(void* ctxt, uint64_t offset, const void* src, size_t len);
+		void (*freeObject)(void* ctxt);
+	} BNMemoryRegionAccessor;
+
+	// Why the bytes a BinaryView returns for a range may differ from before. Unlike a data-written notification, a memory
+	// change does not mean anything was written through the view, and it does not by itself invalidate analysis.
+	BN_ENUM(uint8_t, BNMemoryChangeReason)
+	{
+		// The bytes a memory source supplies may have changed, e.g. the memory of a debugged process while it ran.
+		MemoryContentsChanged = 0,
+		// Which region supplies the bytes may have changed without the regions themselves changing, e.g. a memory
+		// source started or stopped supplying bytes it previously delegated to the regions beneath it.
+		MemoryAvailabilityChanged = 1,
+		// The memory map changed: regions were added, removed, reordered, enabled, disabled or otherwise modified.
+		// Reported wherever the regions a read resolves through differ (which regions, their order, properties and
+		// backing objects), whether or not the bytes they supply differ. A region's own contents changing is reported by
+		// its source as MemoryContentsChanged or MemoryAvailabilityChanged instead.
+		MemoryMappingChanged = 2
+	};
+
+	typedef struct BNMemoryChangeEvent
+	{
+		// The affected addresses, [start, end] inclusive. Ignored when unknownRange is set.
+		uint64_t start;
+		uint64_t end;
+		BNMemoryChangeReason reason;
+		// The source does not know which addresses are affected; any address may be.
+		bool unknownRange;
+	} BNMemoryChangeEvent;
+
+	// Identifies one registration of a memory change observer. Never reused, and never 0.
+	typedef uint64_t BNMemoryChangeObserverHandle;
+
+#define BN_MEMORY_CHANGE_OBSERVER_VERSION 1
+
+	// Observes memory changes of a BinaryView. The core copies this structure when it is registered. The context must
+	// remain valid until no callback of the registration can run any more: until BNUnregisterMemoryChangeObserver returns
+	// when it is called outside any memory change callback, and otherwise until freeObject is called.
+	//
+	// memoryChanged is called synchronously on the thread that made the change, after the change is committed and the
+	// view's lock has been released, with the events of one change in order. Changes made on different threads may be
+	// delivered concurrently and in any order relative to each other. The callback may read the view and its memory map
+	// but should defer any substantial work. It must not call BNUnregisterMemoryChangeObserver expecting it to wait
+	// (see there).
+	typedef struct BNMemoryChangeObserver
+	{
+		// Must be BN_MEMORY_CHANGE_OBSERVER_VERSION. Later versions only append fields.
+		uint32_t version;
+		void* context;
+		void (*memoryChanged)(void* ctxt, BNBinaryView* view, const BNMemoryChangeEvent* events, size_t count);
+		// Optional. Called exactly once, possibly on another thread, once the registration is unregistered and none of
+		// its callbacks is running: by BNUnregisterMemoryChangeObserver before it returns when it waits, otherwise by
+		// the last of its callbacks to finish (or the unregistration itself, if none is running). Also called if the
+		// view is destroyed while the observer is registered; it must not use the view.
+		void (*freeObject)(void* ctxt);
+	} BNMemoryChangeObserver;
+
+	// A remote memory region to add with BNUpdateRemoteMemoryRegions
+	typedef struct BNRemoteMemoryRegionAddition
+	{
+		const char* name;
+		uint64_t start;
+		BNMemoryRegionAccessor* accessor;
+		uint32_t flags;
+		bool fallthrough;
+	} BNRemoteMemoryRegionAddition;
 
 	typedef struct BNCustomBinaryView
 	{
@@ -5395,6 +5492,30 @@ extern "C"
 	BINARYNINJACOREAPI bool BNAddDataMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, BNDataBuffer* data, uint32_t flags);
 	BINARYNINJACOREAPI bool BNAddUnbackedMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, uint64_t length, uint32_t flags, uint8_t fill);
 	BINARYNINJACOREAPI bool BNAddRemoteMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, BNFileAccessor* accessor, uint32_t flags);
+	BINARYNINJACOREAPI bool BNAddRemoteMemoryRegionWithAccessor(BNBinaryView* view, const char* name, uint64_t start, BNMemoryRegionAccessor* accessor, uint32_t flags, bool fallthrough);
+	BINARYNINJACOREAPI bool BNIsMemoryRegionFallthrough(BNBinaryView* view, const char* name);
+	// Removes the named regions and then adds the remote regions as a single change to the memory map: either all of it
+	// takes effect or, if any part is invalid (a missing or duplicate name, an invalid accessor), none of it does. The
+	// core owns every accessor in additions, whether or not the update succeeds.
+	//
+	// Removing a data region can be undone, but adding a remote region cannot. Region names are unique, so undo does not
+	// restore a removed region whose name is in use by then (e.g. by a remote region that replaced it), and redo does not
+	// remove a region of that name that is backed by something else.
+	BINARYNINJACOREAPI bool BNUpdateRemoteMemoryRegions(BNBinaryView* view, const char** removeNames, size_t removeCount,
+		BNRemoteMemoryRegionAddition* additions, size_t additionCount);
+
+	// Returns 0 if the observer is invalid
+	BINARYNINJACOREAPI BNMemoryChangeObserverHandle BNRegisterMemoryChangeObserver(BNBinaryView* view, BNMemoryChangeObserver* observer);
+	// No callback for the registration begins after this is called. Called from outside any memory change callback, it
+	// also waits for the registration's running callbacks to finish, so the observer's context can be released once it
+	// returns. Called from inside a memory change callback (of any observer, on any view), it does not wait, since that
+	// could deadlock: callbacks of the registration may still be running, including the calling one, and the context
+	// must outlive them until freeObject is called. Returns false if the handle is not registered on the view.
+	BINARYNINJACOREAPI bool BNUnregisterMemoryChangeObserver(BNBinaryView* view, BNMemoryChangeObserverHandle handle);
+	// Reports memory changes that did not come from writes through the view, e.g. a memory source whose contents or
+	// availability changed. Delivered synchronously to the view's observers, so call it without holding the view's
+	// lock. Returns false, delivering nothing, if any known range has end < start.
+	BINARYNINJACOREAPI bool BNNotifyMemoryChanged(BNBinaryView* view, const BNMemoryChangeEvent* events, size_t count);
 	BINARYNINJACOREAPI bool BNRemoveMemoryRegion(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI char* BNGetActiveMemoryRegionAt(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI uint32_t BNGetMemoryRegionFlags(BNBinaryView* view, const char* name);

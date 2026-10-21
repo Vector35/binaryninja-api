@@ -76,3 +76,43 @@ size_t CoreFileAccessor::Write(uint64_t offset, const void* src, size_t len)
 {
 	return m_callbacks.write(m_callbacks.context, offset, src, len);
 }
+
+
+uint64_t MemoryRegionAccessor::GetLengthCallback(void* ctxt)
+{
+	MemoryRegionAccessor* accessor = (MemoryRegionAccessor*)ctxt;
+	return accessor->GetLength();
+}
+
+
+size_t MemoryRegionAccessor::ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len, BNMemoryReadStatus* status)
+{
+	MemoryRegionAccessor* accessor = (MemoryRegionAccessor*)ctxt;
+	return accessor->Read(dest, offset, len, *status);
+}
+
+
+size_t MemoryRegionAccessor::WriteCallback(void* ctxt, uint64_t offset, const void* src, size_t len)
+{
+	MemoryRegionAccessor* accessor = (MemoryRegionAccessor*)ctxt;
+	return accessor->Write(offset, src, len);
+}
+
+
+void MemoryRegionAccessor::FreeCallback(void* ctxt)
+{
+	delete (MemoryRegionAccessor*)ctxt;
+}
+
+
+BNMemoryRegionAccessor MemoryRegionAccessor::GetCallbacks()
+{
+	BNMemoryRegionAccessor callbacks;
+	callbacks.version = BN_MEMORY_REGION_ACCESSOR_VERSION;
+	callbacks.context = this;
+	callbacks.getLength = GetLengthCallback;
+	callbacks.read = ReadCallback;
+	callbacks.write = WriteCallback;
+	callbacks.freeObject = FreeCallback;
+	return callbacks;
+}

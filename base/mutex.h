@@ -31,6 +31,8 @@
 // Note that `std::mutex` must still be used with `std::condition_variable` as
 // `std::condition_variable` only works with `std::mutex`.
 
+#include <optional>
+
 #ifndef __APPLE__
 
 #include <mutex>
@@ -39,6 +41,12 @@ namespace bn::base {
 
 using mutex = std::mutex;
 using recursive_mutex = std::recursive_mutex;
+
+// Whether the calling thread holds the lock, where the platform can tell
+inline std::optional<bool> held_by_current_thread(recursive_mutex&)
+{
+	return std::nullopt;
+}
 
 } // namespace bn::base
 
@@ -97,6 +105,9 @@ bool os_unfair_recursive_lock_trylock(os_unfair_recursive_lock* lock);
 OS_NOTHROW OS_NONNULL_ALL
 void os_unfair_recursive_lock_unlock(os_unfair_recursive_lock* lock);
 
+OS_NOTHROW OS_NONNULL_ALL
+bool os_unfair_recursive_lock_owned(os_unfair_recursive_lock* lock);
+
 };
 
 } // namespace bn::base::detail
@@ -127,7 +138,19 @@ public:
 	{
 		os_unfair_recursive_lock_unlock(&m_lock);
 	}
+
+	// Whether the calling thread holds the lock
+	bool owned()
+	{
+		return os_unfair_recursive_lock_owned(&m_lock);
+	}
 };
+
+// Whether the calling thread holds the lock, where the platform can tell
+inline std::optional<bool> held_by_current_thread(recursive_mutex& lock)
+{
+	return lock.owned();
+}
 
 } // namespace bn::base
 

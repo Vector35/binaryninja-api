@@ -25,7 +25,8 @@ class BINARYNINJAUIAPI HexEditor :
     public QAbstractScrollArea,
     public View,
     public PreviewScrollHandler,
-    public BinaryNinja::BinaryDataNotification
+    public BinaryNinja::BinaryDataNotification,
+    public BinaryNinja::MemoryChangeObserver
 {
 	Q_OBJECT
 
@@ -44,6 +45,7 @@ class BINARYNINJAUIAPI HexEditor :
 	virtual bool navigate(uint64_t pos) override;
 
 	virtual void OnBinaryDataWritten(BinaryNinja::BinaryView* data, uint64_t offset, size_t len) override;
+	virtual void OnMemoryChanged(BinaryNinja::BinaryView* data, const std::vector<BinaryNinja::MemoryChangeEvent>& events) override;
 	virtual void OnBinaryDataInserted(BinaryNinja::BinaryView* data, uint64_t offset, size_t len) override;
 	virtual void OnBinaryDataRemoved(BinaryNinja::BinaryView* data, uint64_t offset, uint64_t len) override;
 
@@ -206,6 +208,7 @@ class BINARYNINJAUIAPI HexEditor :
 	int m_wheelDelta = 0;
 	bool m_updatingScrollBar = false;
 	bool m_updatesRequired = false;
+	BNMemoryChangeObserverHandle m_memoryChangeObserver = 0;
 
 	uint64_t m_minAddr = 0;
 	uint64_t m_cursorAddr = 0;

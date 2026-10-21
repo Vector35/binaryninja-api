@@ -46,6 +46,28 @@ uint64_t BinaryDataNotification::NotificationBarrierCallback(void* ctxt, BNBinar
 }
 
 
+MemoryChangeObserver::MemoryChangeObserver()
+{
+	m_callbacks.version = BN_MEMORY_CHANGE_OBSERVER_VERSION;
+	m_callbacks.context = this;
+	m_callbacks.memoryChanged = MemoryChangedCallback;
+	// The observer is owned by its creator
+	m_callbacks.freeObject = nullptr;
+}
+
+
+void MemoryChangeObserver::MemoryChangedCallback(void* ctxt, BNBinaryView* object, const BNMemoryChangeEvent* events, size_t count)
+{
+	MemoryChangeObserver* observer = (MemoryChangeObserver*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	std::vector<MemoryChangeEvent> changes;
+	changes.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		changes.push_back({events[i].start, events[i].end, events[i].reason, events[i].unknownRange});
+	observer->OnMemoryChanged(view, changes);
+}
+
+
 void BinaryDataNotification::DataWrittenCallback(void* ctxt, BNBinaryView* object, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -1965,6 +1987,28 @@ std::vector<Ref<Relocation>> BinaryView::GetRelocationsAt(uint64_t addr) const
 	}
 	BNFreeRelocationList(relocations, count);
 	return result;
+}
+
+
+BNMemoryChangeObserverHandle BinaryView::RegisterMemoryChangeObserver(MemoryChangeObserver* observer)
+{
+	return BNRegisterMemoryChangeObserver(m_object, observer->GetCallbacks());
+}
+
+
+bool BinaryView::UnregisterMemoryChangeObserver(BNMemoryChangeObserverHandle handle)
+{
+	return BNUnregisterMemoryChangeObserver(m_object, handle);
+}
+
+
+bool BinaryView::NotifyMemoryChanged(const std::vector<MemoryChangeEvent>& events)
+{
+	std::vector<BNMemoryChangeEvent> changes;
+	changes.reserve(events.size());
+	for (const auto& event : events)
+		changes.push_back({event.start, event.end, event.reason, event.unknownRange});
+	return BNNotifyMemoryChanged(m_object, changes.data(), changes.size());
 }
 
 

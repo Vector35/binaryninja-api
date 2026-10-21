@@ -4060,6 +4060,50 @@ namespace BinaryNinja {
 	class TypeArchive;
 	struct DerivedString;
 
+	/*! A change to the bytes a BinaryView returns that did not come from a write through the view
+
+		\ingroup binaryview
+	*/
+	struct MemoryChangeEvent
+	{
+		//! The affected addresses, [start, end] inclusive. Ignored when unknownRange is set.
+		uint64_t start = 0;
+		uint64_t end = 0;
+		BNMemoryChangeReason reason = MemoryContentsChanged;
+		//! The source does not know which addresses are affected; any address may be.
+		bool unknownRange = false;
+
+		static MemoryChangeEvent Unknown(BNMemoryChangeReason reason) { return {0, 0, reason, true}; }
+		//! Whether the change may affect any address in [rangeStart, rangeEnd]
+		bool Overlaps(uint64_t rangeStart, uint64_t rangeEnd) const
+		{
+			return unknownRange || ((start <= rangeEnd) && (rangeStart <= end));
+		}
+	};
+
+	/*! Observes memory changes of a BinaryView: changes to the bytes it returns that did not come from writes through it
+
+		Register with BinaryView::RegisterMemoryChangeObserver. OnMemoryChanged is called synchronously on the thread that
+		made the change, after it is committed and the view's lock is released, so it must defer substantial work (e.g. to
+		the UI thread). A memory change does not by itself invalidate analysis.
+
+		\ingroup binaryview
+	*/
+	class MemoryChangeObserver
+	{
+		BNMemoryChangeObserver m_callbacks;
+
+		static void MemoryChangedCallback(void* ctxt, BNBinaryView* view, const BNMemoryChangeEvent* events, size_t count);
+
+	  public:
+		MemoryChangeObserver();
+		virtual ~MemoryChangeObserver() {}
+
+		BNMemoryChangeObserver* GetCallbacks() { return &m_callbacks; }
+
+		virtual void OnMemoryChanged(BinaryView* view, const std::vector<MemoryChangeEvent>& events) = 0;
+	};
+
 	/*!
 
 		\ingroup binaryview
@@ -4683,6 +4727,55 @@ namespace BinaryNinja {
 		virtual uint64_t GetLength() const override;
 		virtual size_t Read(void* dest, uint64_t offset, size_t len) override;
 		virtual size_t Write(uint64_t offset, const void* src, size_t len) override;
+	};
+
+	/*! Backing for a remote memory region that describes availability span by span
+
+		Pass ownership to MemoryMap::AddRemoteMemoryRegion; the core deletes the accessor once no memory map snapshot
+		references the region any longer, which can happen on any thread. Callbacks are invoked with the view's lock
+		held and must not read from or write to the same view.
+
+		\ingroup fileaccessor
+	*/
+	class MemoryRegionAccessor
+	{
+		static uint64_t GetLengthCallback(void* ctxt);
+		static size_t ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len, BNMemoryReadStatus* status);
+		static size_t WriteCallback(void* ctxt, uint64_t offset, const void* src, size_t len);
+		static void FreeCallback(void* ctxt);
+
+	  public:
+		virtual ~MemoryRegionAccessor() {}
+
+		/*! Builds the callbacks that hand this accessor to the core, which then owns it */
+		BNMemoryRegionAccessor GetCallbacks();
+
+		virtual uint64_t GetLength() const = 0;
+
+		/*! Describes the single contiguous span starting at \c offset (an absolute address)
+
+			\param dest Destination for the bytes of an available span
+			\param offset Address at which the span starts
+			\param len Maximum length of the span
+			\param status Set to what the span is: available (its bytes were written to \c dest), transparent (the
+				regions beneath this one may supply it, if the region allows fallthrough) or inaccessible
+			\return Length of the span, between 1 and \c len
+		*/
+		virtual size_t Read(void* dest, uint64_t offset, size_t len, BNMemoryReadStatus& status) = 0;
+		virtual size_t Write(uint64_t offset, const void* src, size_t len) { return 0; }
+	};
+
+	/*! A remote memory region to add with MemoryMap::UpdateRemoteMemoryRegions
+
+		\ingroup fileaccessor
+	*/
+	struct RemoteMemoryRegionAddition
+	{
+		std::string name;
+		uint64_t start;
+		std::unique_ptr<MemoryRegionAccessor> accessor;
+		uint32_t flags = 0;
+		bool fallthrough = false;
 	};
 
 	class Function;
@@ -6385,6 +6478,32 @@ namespace BinaryNinja {
 		    \param notify An instance of a class Subclassing BinaryDataNotification
 		*/
 		void UnregisterNotification(BinaryDataNotification* notify);
+
+		/*! Registers an observer of this view's memory changes
+
+		    \param observer Observer, which must stay valid until it is unregistered
+		    \return Handle of the registration, or 0 on failure
+		*/
+		BNMemoryChangeObserverHandle RegisterMemoryChangeObserver(MemoryChangeObserver* observer);
+
+		/*! Unregisters an observer of this view's memory changes
+
+		    No callback for the registration begins after this is called. Outside any memory change callback, this also
+		    waits for its running callbacks to finish, so the observer can be destroyed once it returns. Inside a memory
+		    change callback it does not wait, since that could deadlock, and the observer must outlive its callbacks.
+
+		    \param handle Handle returned by RegisterMemoryChangeObserver
+		    \return Whether the handle was registered on this view
+		*/
+		bool UnregisterMemoryChangeObserver(BNMemoryChangeObserverHandle handle);
+
+		/*! Reports memory changes that did not come from writes through this view, e.g. a memory source whose contents
+		    or availability changed. They are delivered synchronously, so call this without holding the view's lock.
+
+		    \param events Changes, in the order observers receive them
+		    \return Whether the events were valid and delivered
+		*/
+		bool NotifyMemoryChanged(const std::vector<MemoryChangeEvent>& events);
 
 		/*! Adds an analysis option. Analysis options elaborate the analysis phase. The user must start analysis by calling either UpdateAnalysis or UpdateAnalysisAndWait
 
@@ -8489,6 +8608,58 @@ namespace BinaryNinja {
 			return BNAddRemoteMemoryRegion(m_object, name.c_str(), start, source->GetCallbacks(), flags);
 		}
 
+		/*! Adds a remote memory region whose accessor reports availability span by span
+
+			The memory map takes ownership of \c source, even if the region is not added.
+
+			\param name Unique name of the region
+			\param start Address at which the region starts
+			\param source Accessor that supplies the region's contents
+			\param flags Segment flags of the region
+			\param fallthrough Whether spans the accessor reports as transparent are read from the regions beneath it
+			\return Whether the region was added
+		*/
+		bool AddRemoteMemoryRegion(const std::string& name, uint64_t start, std::unique_ptr<MemoryRegionAccessor> source,
+			uint32_t flags = 0, bool fallthrough = false)
+		{
+			if (!source)
+				return false;
+			BNMemoryRegionAccessor callbacks = source.release()->GetCallbacks();
+			return BNAddRemoteMemoryRegionWithAccessor(m_object, name.c_str(), start, &callbacks, flags, fallthrough);
+		}
+
+		/*! Removes the named regions and then adds the remote regions as a single change to the memory map
+
+			Either all of it takes effect or, if any part is invalid (a missing or duplicate name, an invalid accessor),
+			none of it does. The memory map takes ownership of every accessor in \c additions, even if the update fails.
+
+			\param removeNames Names of the regions to remove
+			\param additions Remote regions to add, in increasing order of priority
+			\return Whether the memory map was updated
+		*/
+		bool UpdateRemoteMemoryRegions(const std::vector<std::string>& removeNames, std::vector<RemoteMemoryRegionAddition> additions)
+		{
+			std::vector<const char*> names;
+			names.reserve(removeNames.size());
+			for (const auto& name : removeNames)
+				names.push_back(name.c_str());
+
+			std::vector<BNMemoryRegionAccessor> callbacks;
+			callbacks.reserve(additions.size());
+			for (auto& addition : additions)
+				callbacks.push_back(addition.accessor ? addition.accessor.release()->GetCallbacks() : BNMemoryRegionAccessor {});
+
+			std::vector<BNRemoteMemoryRegionAddition> regions;
+			regions.reserve(additions.size());
+			for (size_t i = 0; i < additions.size(); i++)
+			{
+				regions.push_back({additions[i].name.c_str(), additions[i].start,
+					callbacks[i].version ? &callbacks[i] : nullptr, additions[i].flags, additions[i].fallthrough});
+			}
+
+			return BNUpdateRemoteMemoryRegions(m_object, names.data(), names.size(), regions.data(), regions.size());
+		}
+
 		bool AddUnbackedMemoryRegion(const std::string& name, uint64_t start, uint64_t length, uint32_t flags = 0, uint8_t fill = 0)
 		{
 			return BNAddUnbackedMemoryRegion(m_object, name.c_str(), start, length, flags, fill);
@@ -8535,6 +8706,11 @@ namespace BinaryNinja {
 		bool SetMemoryRegionRebaseable(const std::string& name, bool rebaseable)
 		{
 			return BNSetMemoryRegionRebaseable(m_object, name.c_str(), rebaseable);
+		}
+
+		bool IsMemoryRegionFallthrough(const std::string& name)
+		{
+			return BNIsMemoryRegionFallthrough(m_object, name.c_str());
 		}
 
 		uint8_t GetMemoryRegionFill(const std::string& name)

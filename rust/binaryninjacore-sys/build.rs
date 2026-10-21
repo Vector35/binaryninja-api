@@ -121,6 +121,8 @@ fn main() {
         .allowlist_function("BN.*")
         .allowlist_var("BN_CURRENT_CORE_ABI_VERSION")
         .allowlist_var("BN_MINIMUM_CORE_ABI_VERSION")
+        .allowlist_var("BN_MEMORY_REGION_ACCESSOR_VERSION")
+        .allowlist_var("BN_MEMORY_CHANGE_OBSERVER_VERSION")
         .allowlist_var("MAX_RELOCATION_SIZE")
         .allowlist_type("BNLinearSweepAnalysisCapability")
         .allowlist_type("BNMcpToolAnnotation")

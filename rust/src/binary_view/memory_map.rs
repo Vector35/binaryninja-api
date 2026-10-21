@@ -5,6 +5,7 @@ use crate::rc::Ref;
 use crate::segment::SegmentFlags;
 use crate::string::{raw_to_string, BnString, IntoCStr};
 use binaryninjacore_sys::*;
+use std::ffi::c_void;
 
 /// Snapshot of a memory region's properties at the time of query.
 ///
@@ -24,6 +25,192 @@ pub struct MemoryRegionInfo {
     pub has_target: bool,
     pub absolute_address_mode: bool,
     pub local: bool,
+}
+
+/// What a [`RegionAccessor`] reports about the span starting at the requested address.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum MemoryRead {
+    /// The first `n` bytes of the destination were filled.
+    Available(usize),
+    /// The region has no bytes for the next `n` bytes. If the region was added with fallthrough
+    /// enabled, they are read from the regions beneath it.
+    Transparent(usize),
+    /// The next `n` bytes cannot be read; the read ends here.
+    Inaccessible(usize),
+}
+
+/// Backs a remote memory region and describes its contents span by span.
+///
+/// Once added with [`MemoryMap::add_remote_memory_region_with_accessor`], the memory map owns the
+/// accessor and drops it once no snapshot of the map references the region any longer, possibly
+/// on another thread. Callbacks run with the view's lock held and must not read from or write to
+/// the same view.
+pub trait RegionAccessor: Send + Sync + 'static {
+    fn length(&self) -> u64;
+
+    /// Describe the single span starting at `offset` (an absolute address), at most `dest.len()`
+    /// bytes long. The reported length must be at least 1; anything else is treated as
+    /// inaccessible.
+    fn read(&self, offset: u64, dest: &mut [u8]) -> MemoryRead;
+
+    fn write(&self, _offset: u64, _data: &[u8]) -> usize {
+        0
+    }
+}
+
+impl RegionAccessor for Box<dyn RegionAccessor> {
+    fn length(&self) -> u64 {
+        (**self).length()
+    }
+
+    fn read(&self, offset: u64, dest: &mut [u8]) -> MemoryRead {
+        (**self).read(offset, dest)
+    }
+
+    fn write(&self, offset: u64, data: &[u8]) -> usize {
+        (**self).write(offset, data)
+    }
+}
+
+pub use binaryninjacore_sys::BNMemoryChangeReason as MemoryChangeReason;
+
+/// A change to the bytes a [`BinaryView`] returns that did not come from a write through the
+/// view. It does not by itself invalidate analysis.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct MemoryChangeEvent {
+    /// The affected addresses, `[start, end]` inclusive. Ignored when `unknown_range` is set.
+    pub start: u64,
+    pub end: u64,
+    pub reason: MemoryChangeReason,
+    /// The source does not know which addresses are affected; any address may be.
+    pub unknown_range: bool,
+}
+
+impl MemoryChangeEvent {
+    pub fn unknown(reason: MemoryChangeReason) -> Self {
+        Self {
+            start: 0,
+            end: 0,
+            reason,
+            unknown_range: true,
+        }
+    }
+
+    /// Whether the change may affect any address in `[start, end]`.
+    pub fn overlaps(&self, start: u64, end: u64) -> bool {
+        self.unknown_range || (self.start <= end && start <= self.end)
+    }
+
+    fn from_raw(event: &BNMemoryChangeEvent) -> Self {
+        Self {
+            start: event.start,
+            end: event.end,
+            reason: event.reason,
+            unknown_range: event.unknownRange,
+        }
+    }
+
+    fn into_raw(self) -> BNMemoryChangeEvent {
+        BNMemoryChangeEvent {
+            start: self.start,
+            end: self.end,
+            reason: self.reason,
+            unknownRange: self.unknown_range,
+        }
+    }
+}
+
+/// Observes memory changes of a [`BinaryView`].
+///
+/// `memory_changed` is called synchronously on the thread that made the change, after it is
+/// committed and the view's lock is released, with the events of one change in order. It should
+/// defer substantial work.
+pub trait MemoryChangeObserver: Send + Sync + 'static {
+    fn memory_changed(&self, view: &BinaryView, events: &[MemoryChangeEvent]);
+}
+
+/// A registered [`MemoryChangeObserver`]. Dropping it unregisters the observer. Outside a memory
+/// change callback that waits for its running callbacks to finish; inside one it does not, and the
+/// core drops the observer once its last running callback finishes.
+pub struct MemoryChangeObserverRegistration<O: MemoryChangeObserver> {
+    view: Ref<BinaryView>,
+    handle: BNMemoryChangeObserverHandle,
+    observer: *mut O,
+}
+
+unsafe impl<O: MemoryChangeObserver> Send for MemoryChangeObserverRegistration<O> {}
+unsafe impl<O: MemoryChangeObserver> Sync for MemoryChangeObserverRegistration<O> {}
+
+impl<O: MemoryChangeObserver> MemoryChangeObserverRegistration<O> {
+    pub fn observer(&self) -> &O {
+        // The core frees the observer only after it is unregistered, which happens on drop
+        unsafe { &*self.observer }
+    }
+}
+
+impl<O: MemoryChangeObserver> Drop for MemoryChangeObserverRegistration<O> {
+    fn drop(&mut self) {
+        // The core frees the observer (see cb_free_object) once none of its callbacks can run
+        unsafe { BNUnregisterMemoryChangeObserver(self.view.handle, self.handle) };
+    }
+}
+
+/// A remote memory region to add with [`MemoryMap::update_remote_memory_regions`].
+pub struct RemoteMemoryRegionAddition {
+    pub name: String,
+    pub start: u64,
+    pub accessor: Box<dyn RegionAccessor>,
+    pub segment_flags: Option<SegmentFlags>,
+    pub fallthrough: bool,
+}
+
+fn region_accessor_callbacks<A: RegionAccessor>(accessor: A) -> BNMemoryRegionAccessor {
+    extern "C" fn cb_get_length<A: RegionAccessor>(ctxt: *mut c_void) -> u64 {
+        let accessor = unsafe { &*(ctxt as *const A) };
+        accessor.length()
+    }
+
+    extern "C" fn cb_read<A: RegionAccessor>(
+        ctxt: *mut c_void,
+        dest: *mut c_void,
+        offset: u64,
+        len: usize,
+        status: *mut BNMemoryReadStatus,
+    ) -> usize {
+        let accessor = unsafe { &*(ctxt as *const A) };
+        let dest = unsafe { std::slice::from_raw_parts_mut(dest as *mut u8, len) };
+        let (result, count) = match accessor.read(offset, dest) {
+            MemoryRead::Available(n) => (BNMemoryReadStatus::MemoryReadAvailable, n),
+            MemoryRead::Transparent(n) => (BNMemoryReadStatus::MemoryReadTransparent, n),
+            MemoryRead::Inaccessible(n) => (BNMemoryReadStatus::MemoryReadInaccessible, n),
+        };
+        unsafe { *status = result };
+        count
+    }
+
+    extern "C" fn cb_write<A: RegionAccessor>(
+        ctxt: *mut c_void,
+        offset: u64,
+        src: *const c_void,
+        len: usize,
+    ) -> usize {
+        let accessor = unsafe { &*(ctxt as *const A) };
+        let src = unsafe { std::slice::from_raw_parts(src as *const u8, len) };
+        accessor.write(offset, src)
+    }
+
+    extern "C" fn cb_free_object<A: RegionAccessor>(ctxt: *mut c_void) {
+        let _ = unsafe { Box::from_raw(ctxt as *mut A) };
+    }
+
+    BNMemoryRegionAccessor {
+        version: BN_MEMORY_REGION_ACCESSOR_VERSION,
+        context: Box::into_raw(Box::new(accessor)) as *mut c_void,
+        getLength: Some(cb_get_length::<A>),
+        read: Some(cb_read::<A>),
+        write: Some(cb_write::<A>),
+        freeObject: Some(cb_free_object::<A>),
+    }
 }
 
 impl MemoryRegionInfo {
@@ -315,6 +502,8 @@ impl MemoryMap {
     ///
     /// NOTE: The [`FileAccessor`] MUST live as long as the region is available, currently there is no gurentee by
     /// the type checker that the file accessor is tied to that of the memory region.
+    /// [`MemoryMap::add_remote_memory_region_with_accessor`] has no such requirement, since the memory map owns
+    /// its accessor.
     pub fn add_remote_memory_region<A: Accessor>(
         &mut self,
         name: &str,
@@ -332,6 +521,143 @@ impl MemoryMap {
                 segment_flags.unwrap_or_default().into_raw(),
             )
         }
+    }
+
+    /// Adds a remote memory region whose accessor describes its contents span by span.
+    ///
+    /// The memory map takes ownership of `accessor`, even if the region is not added. With
+    /// `fallthrough`, the spans the accessor reports as [`MemoryRead::Transparent`] are read from
+    /// the regions beneath this one.
+    pub fn add_remote_memory_region_with_accessor<A: RegionAccessor>(
+        &mut self,
+        name: &str,
+        start: u64,
+        accessor: A,
+        segment_flags: Option<SegmentFlags>,
+        fallthrough: bool,
+    ) -> bool {
+        let name_raw = name.to_cstr();
+        let mut callbacks = region_accessor_callbacks(accessor);
+        unsafe {
+            BNAddRemoteMemoryRegionWithAccessor(
+                self.view.handle,
+                name_raw.as_ptr(),
+                start,
+                &mut callbacks,
+                segment_flags.unwrap_or_default().into_raw(),
+                fallthrough,
+            )
+        }
+    }
+
+    /// Removes the named regions and then adds the remote regions as a single change to the memory
+    /// map. Either all of it takes effect or, if any part is invalid (a missing or duplicate name,
+    /// an invalid accessor), none of it does.
+    ///
+    /// The memory map takes ownership of every accessor in `additions`, even if the update fails.
+    /// Additions are given in increasing order of priority.
+    pub fn update_remote_memory_regions(
+        &mut self,
+        remove_names: &[&str],
+        additions: Vec<RemoteMemoryRegionAddition>,
+    ) -> bool {
+        let remove_raw: Vec<_> = remove_names.iter().map(|name| (*name).to_cstr()).collect();
+        let remove_ptrs: Vec<_> = remove_raw.iter().map(|name| name.as_ptr()).collect();
+
+        let mut names_raw = Vec::with_capacity(additions.len());
+        let mut callbacks = Vec::with_capacity(additions.len());
+        let mut settings = Vec::with_capacity(additions.len());
+        for addition in additions {
+            names_raw.push(addition.name.to_cstr());
+            callbacks.push(region_accessor_callbacks(addition.accessor));
+            settings.push((
+                addition.start,
+                addition.segment_flags.unwrap_or_default().into_raw(),
+                addition.fallthrough,
+            ));
+        }
+
+        let mut regions: Vec<BNRemoteMemoryRegionAddition> = settings
+            .iter()
+            .zip(names_raw.iter())
+            .zip(callbacks.iter_mut())
+            .map(
+                |(((start, flags, fallthrough), name), callbacks)| BNRemoteMemoryRegionAddition {
+                    name: name.as_ptr(),
+                    start: *start,
+                    accessor: callbacks,
+                    flags: *flags,
+                    fallthrough: *fallthrough,
+                },
+            )
+            .collect();
+
+        unsafe {
+            BNUpdateRemoteMemoryRegions(
+                self.view.handle,
+                remove_ptrs.as_ptr() as *mut _,
+                remove_ptrs.len(),
+                regions.as_mut_ptr(),
+                regions.len(),
+            )
+        }
+    }
+
+    /// Registers an observer of the view's memory changes. It stays registered until the returned
+    /// registration is dropped.
+    pub fn register_memory_change_observer<O: MemoryChangeObserver>(
+        &self,
+        observer: O,
+    ) -> Option<MemoryChangeObserverRegistration<O>> {
+        extern "C" fn cb_memory_changed<O: MemoryChangeObserver>(
+            ctxt: *mut c_void,
+            view: *mut BNBinaryView,
+            events: *const BNMemoryChangeEvent,
+            count: usize,
+        ) {
+            let observer = unsafe { &*(ctxt as *const O) };
+            let view = unsafe { BinaryView::from_raw(view) };
+            let events: Vec<_> = unsafe { std::slice::from_raw_parts(events, count) }
+                .iter()
+                .map(MemoryChangeEvent::from_raw)
+                .collect();
+            observer.memory_changed(&view, &events);
+        }
+
+        extern "C" fn cb_free_object<O: MemoryChangeObserver>(ctxt: *mut c_void) {
+            let _ = unsafe { Box::from_raw(ctxt as *mut O) };
+        }
+
+        let observer = Box::into_raw(Box::new(observer));
+        let mut callbacks = BNMemoryChangeObserver {
+            version: BN_MEMORY_CHANGE_OBSERVER_VERSION,
+            context: observer as *mut c_void,
+            memoryChanged: Some(cb_memory_changed::<O>),
+            freeObject: Some(cb_free_object::<O>),
+        };
+        let handle = unsafe { BNRegisterMemoryChangeObserver(self.view.handle, &mut callbacks) };
+        if handle == 0 {
+            // Not registered, so the core never frees it
+            let _ = unsafe { Box::from_raw(observer) };
+            return None;
+        }
+        Some(MemoryChangeObserverRegistration {
+            view: self.view.clone(),
+            handle,
+            observer,
+        })
+    }
+
+    /// Reports memory changes that did not come from writes through the view, e.g. a memory source
+    /// whose contents or availability changed. Delivered synchronously to the view's observers.
+    pub fn notify_memory_changed(&self, events: &[MemoryChangeEvent]) -> bool {
+        let raw: Vec<_> = events.iter().map(|event| event.into_raw()).collect();
+        unsafe { BNNotifyMemoryChanged(self.view.handle, raw.as_ptr(), raw.len()) }
+    }
+
+    pub fn is_memory_region_fallthrough(&self, name: &str) -> bool {
+        let name_raw = name.to_cstr();
+        unsafe { BNIsMemoryRegionFallthrough(self.view.handle, name_raw.as_ptr()) }
     }
 
     /// Adds an unbacked memory region with a given length and fill byte.

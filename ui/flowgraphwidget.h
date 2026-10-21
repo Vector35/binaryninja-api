@@ -69,12 +69,15 @@ class BINARYNINJAUIAPI FlowGraphHistoryEntry : public HistoryEntry
 	virtual bool deserialize(const Json::Value& value) override;
 };
 
+class AnalysisStalenessTracker;
+
 class BINARYNINJAUIAPI FlowGraphWidget :
     public QAbstractScrollArea,
     public View,
     public PreviewScrollHandler,
     public TokenNavigationHandler,
-    public BinaryNinja::BinaryDataNotification
+    public BinaryNinja::BinaryDataNotification,
+    public BinaryNinja::MemoryChangeObserver
 {
 	Q_OBJECT
 
@@ -98,6 +101,11 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	BinaryViewRef m_defaultData;
 	BinaryViewRef m_data;
 	bool m_dataNotificationRegistered = false;
+	BNMemoryChangeObserverHandle m_memoryChangeObserver = 0;
+	// Whether the analysis of each function may predate a memory change, guarded by m_updateMutex
+	std::unique_ptr<AnalysisStalenessTracker> m_staleness;
+	// What the UI thread currently shows for the current function
+	bool m_analysisMayBeStale = false;
 	FlowGraphRef m_graph;
 	FlowGraphRef m_updateGraph;
 	FlowGraphLayoutRequestRef m_graphLayoutRequest;
@@ -251,6 +259,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 
 	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
 	virtual void OnAnalysisFunctionUpdateRequested(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
+	virtual void OnMemoryChanged(BinaryNinja::BinaryView* data, const std::vector<BinaryNinja::MemoryChangeEvent>& events) override;
 	virtual void OnDataMetadataUpdated(BinaryNinja::BinaryView* data, uint64_t offset) override;
 	virtual void OnTagAdded(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;
 	virtual void OnTagUpdated(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;

@@ -1655,31 +1655,48 @@ static void LoadExclusive(
 
 
 static void LoadPair(
-		Architecture* arch,
 		LowLevelILFunction& il,
 		InstructionOperand& dst1,
 		InstructionOperand& dst2,
 		InstructionOperand& src,
 		size_t addr)
 {
-	ExprId address, value;
+	ExprId address;
 	size_t dstSize = get_register_size(dst1.reg);
+	bool indexed = src.cls == MEM_PRE_IDX || src.cls == MEM_POST_IDX;
 
-	if (src.cls == MEM_PRE_IDX || src.cls == MEM_POST_IDX)
+	if (indexed)
 		address = ILREG(src);
 	else
 		address = ReadAddress(il, src, addr);
-	value = il.Load(dstSize * 2, address);
-
 	if (src.cls == MEM_PRE_IDX)
 		il.AddInstruction(SetRegisterOrBranch(il, src.reg, ReadAddress(il, src, addr)));
 
-	ExprId setReg;
-	if (arch->GetEndianness() == LittleEndian)
-		setReg = il.SetRegisterSplit(dstSize, dst2.reg, dst1.reg, value);
+	bool preserveAddress = src.cls != LABEL && (src.reg == dst1.reg
+		|| (!indexed && src.flags.offsetRegUsed && src.offset == dst1.reg));
+	if (preserveAddress)
+	{
+		// Both loads must use the address from before the first destination is written.
+		il.AddInstruction(il.SetRegister(4, LLIL_TEMP(0), address));
+		address = il.Register(4, LLIL_TEMP(0));
+	}
+
+	ExprId secondAddress;
+	if (src.cls == LABEL)
+		secondAddress = il.ConstPointer(4, (uint32_t)(src.imm + dstSize));
+	else if (!preserveAddress && !indexed && !src.flags.offsetRegUsed && src.shift == SHIFT_NONE)
+	{
+		// Fold the word displacement into the instruction's immediate offset.
+		int64_t offset = (src.flags.add ? (int64_t)src.imm : -(int64_t)src.imm) + (int64_t)dstSize;
+		ExprId base = ReadRegisterOrPointer(il, src, addr);
+		secondAddress = offset == 0 ? base : offset > 0
+			? il.Add(4, base, il.Const(4, offset)) : il.Sub(4, base, il.Const(4, -offset));
+	}
 	else
-		setReg = il.SetRegisterSplit(dstSize, dst1.reg, dst2.reg, value);
-	il.AddInstruction(setReg);
+		secondAddress = il.Add(4, address, il.Const(4, dstSize));
+
+	il.AddInstruction(il.SetRegister(dstSize, dst1.reg, il.Load(dstSize, address)));
+	il.AddInstruction(il.SetRegister(dstSize, dst2.reg, il.Load(dstSize, secondAddress)));
 
 	if (src.cls == MEM_POST_IDX)
 		il.AddInstruction(SetRegisterOrBranch(il, src.reg, ReadAddress(il, src, addr)));
@@ -1687,7 +1704,6 @@ static void LoadPair(
 
 
 static void LoadPairExclusive(
-		Architecture* arch,
 		LowLevelILFunction& il,
 		InstructionOperand& dst1,
 		InstructionOperand& dst2,
@@ -1699,7 +1715,7 @@ static void LoadPairExclusive(
 	il.AddInstruction(il.Intrinsic({ },
 				ARMV7_INTRIN_SET_EXCLUSIVE_MONITORS,
 				{ address, il.Const(1, 8) }));
-	LoadPair(arch, il, dst1, dst2, src, addr);
+	LoadPair(il, dst1, dst2, src, addr);
 }
 
 
@@ -2750,7 +2766,7 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 					{
 						(void) addrSize;
 						(void) instr;
-						LoadPairExclusive(arch, il, op1, op2, op3, addr);
+						LoadPairExclusive(il, op1, op2, op3, addr);
 					});
 			break;
 		case ARMV7_LDRD:
@@ -2759,7 +2775,7 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 					{
 						(void) addrSize;
 						(void) instr;
-						LoadPair(arch, il, op1, op2, op3, addr);
+						LoadPair(il, op1, op2, op3, addr);
 					});
 			break;
 		case ARMV7_LSL:

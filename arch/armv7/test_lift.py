@@ -39,6 +39,23 @@ def vmlal_expected(size, unsigned):
 
 test_cases = \
 [
+    # ldrd r0, r1, [r0, #0x18] -- preserve the computed address before the first load
+    ('A', b'\xd8\x01\xc0\xe1', 'LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(r0),LLIL_CONST.d(0x18))); LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_REG.d(temp0))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x4))))'),
+    ('T', b'\xd0\xe9\x06\x01', 'LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(r0),LLIL_CONST.d(0x18))); LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_REG.d(temp0))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x4))))'),
+    # Big-endian ldrd r0, r1, [r0, #0x18] -- register order and address preservation are unchanged
+    ('A_BE', b'\xe1\xc0\x01\xd8', 'LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(r0),LLIL_CONST.d(0x18))); LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_REG.d(temp0))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x4))))'),
+    # ldrd r0, r1, [r2, r0] -- the register offset can overlap the first destination too
+    ('A', b'\xd0\x00\x82\xe1', 'LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(r2),LLIL_REG.d(r0))); LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_REG.d(temp0))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x4))))'),
+    # ldrd r0, r1, [r1, #0x18] -- overlap with only the second destination needs no temporary
+    ('A', b'\xd8\x01\xc1\xe1', 'LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(r1),LLIL_CONST.d(0x18)))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(r1),LLIL_CONST.d(0x1C))))'),
+    ('T', b'\xd1\xe9\x06\x01', 'LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(r1),LLIL_CONST.d(0x18)))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(r1),LLIL_CONST.d(0x1C))))'),
+    # ldrd r0, r1, [r2, #-0x18] -- fold the second word into the negative displacement
+    ('A', b'\xd8\x01\x42\xe1', 'LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_SUB.d(LLIL_REG.d(r2),LLIL_CONST.d(0x18)))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_SUB.d(LLIL_REG.d(r2),LLIL_CONST.d(0x14))))'),
+    ('T', b'\x52\xe9\x06\x01', 'LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_SUB.d(LLIL_REG.d(r2),LLIL_CONST.d(0x18)))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_SUB.d(LLIL_REG.d(r2),LLIL_CONST.d(0x14))))'),
+    # ldrexd r0, r1, [r0] -- the shared pair-load paths also preserve the address
+    ('A', b'\x9f\x0f\xb0\xe1', 'LLIL_INTRINSIC([],SetExclusiveMonitors,[LLIL_ADD.d(LLIL_REG.d(r0),LLIL_CONST.d(0x0)),LLIL_CONST.b(0x8)]); LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(r0),LLIL_CONST.d(0x0))); LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_REG.d(temp0))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x4))))'),
+    ('T', b'\xd0\xe8\x7f\x01', 'LLIL_SET_REG.d(temp0,LLIL_REG.d(r0)); LLIL_INTRINSIC([],SetExclusiveMonitors,[LLIL_REG.d(temp0),LLIL_CONST.b(0x8)]); LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_REG.d(temp0))); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x4))))'),
+
     # vzip.8 d0, d1
     ('A', b'\x81\x01\xb2\xf3', 'LLIL_INTRINSIC([d0,d1],__vzip,[LLIL_CONST.b(0x8),LLIL_REG.q(d0),LLIL_REG.q(d1)])'),
     # it eq; vzipeq.16 q15, q14
@@ -1162,6 +1179,7 @@ def il2str(il):
 def instr_to_il(data, platform):
     # mov pc, lr
     RETURN = {  'linux-armv7': b'\x0e\xf0\xa0\xe1',
+                'linux-armv7eb': b'\xe1\xa0\xf0\x0e',
                 'linux-thumb2': b'\xf7\x46'
             }[platform]
     RETURN_LIFTED = 'LLIL_JUMP(LLIL_REG.d(lr))'
@@ -1214,7 +1232,7 @@ def fail_test(message):
 
 def run_all_tests():
     for (test_i, (arch_name, data, expected)) in enumerate(test_cases):
-        platform = {'A':'linux-armv7', 'T':'linux-thumb2'}[arch_name]
+        platform = {'A':'linux-armv7', 'T':'linux-thumb2', 'A_BE':'linux-armv7eb'}[arch_name]
 
         if '?' in expected:
             fail_test(

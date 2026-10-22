@@ -2903,18 +2903,40 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		uint32_t rt2 = GetRegisterByIndex(instr->fields[instr->format->operands[1].field0]);
 
 		mem = GetMemoryAddress(il, instr, 2, 4, instr->format->operandCount != 4);
-		if (instr->mnem == armv7::ARMV7_LDREXD)
-			il.AddInstruction(il.Intrinsic({}, ARMV7_INTRIN_SET_EXCLUSIVE_MONITORS, { mem, il.Const(1, 8) }));
-		if (arch->GetEndianness() == LittleEndian)
+		bool preserveAddress = instr->format->operands[2].type != OPERAND_FORMAT_LABEL
+			&& GetRegisterByIndex(instr->fields[instr->format->operands[2].field0]) == rt;
+		if (preserveAddress)
 		{
-				il.AddInstruction(il.SetRegister(4, rt, il.Load(4, mem)));
-				il.AddInstruction(il.SetRegister(4, rt2, il.Load(4, il.Add(4, mem, il.Const(4, 4)))));
+			// Both loads must use the address from before the first destination is written.
+			il.AddInstruction(il.SetRegister(4, LLIL_TEMP(0), mem));
+			mem = il.Register(4, LLIL_TEMP(0));
+		}
+
+		ExprId secondMem;
+		if (instr->format->operands[2].type == OPERAND_FORMAT_LABEL)
+		{
+			uint32_t address = instr->fields[FIELD_add] ? ALIGN4(instr->pc) + instr->fields[FIELD_imm32]
+				: ALIGN4(instr->pc) - instr->fields[FIELD_imm32];
+			secondMem = il.ConstPointer(4, (uint32_t)(address + 4));
+		}
+		else if (!preserveAddress
+			&& instr->format->operands[2].type == OPERAND_FORMAT_MEMORY_ONE_REG_OPTIONAL_ADD_IMM)
+		{
+			// Fold the word displacement into the instruction's immediate offset.
+			int64_t imm = instr->fields[instr->format->operands[2].field1];
+			int64_t offset = (instr->fields[FIELD_add] ? imm : -imm) + 4;
+			uint32_t reg = GetRegisterByIndex(instr->fields[instr->format->operands[2].field0]);
+			ExprId base = ReadRegister(il, instr, reg);
+			secondMem = offset == 0 ? base : offset > 0
+				? il.Add(4, base, il.Const(4, offset)) : il.Sub(4, base, il.Const(4, -offset));
 		}
 		else
-		{
-			il.AddInstruction(il.SetRegister(4, rt2, il.Load(4, mem)));
-			il.AddInstruction(il.SetRegister(4, rt, il.Load(4, il.Add(4, mem, il.Const(4, 4)))));
-		}
+			secondMem = il.Add(4, mem, il.Const(4, 4));
+
+		if (instr->mnem == armv7::ARMV7_LDREXD)
+			il.AddInstruction(il.Intrinsic({}, ARMV7_INTRIN_SET_EXCLUSIVE_MONITORS, { mem, il.Const(1, 8) }));
+		il.AddInstruction(il.SetRegister(4, rt, il.Load(4, mem)));
+		il.AddInstruction(il.SetRegister(4, rt2, il.Load(4, secondMem)));
 
 		if (instr->format->operandCount == 4)
 		{

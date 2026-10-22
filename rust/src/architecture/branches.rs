@@ -5,6 +5,68 @@ use binaryninjacore_sys::*;
 
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct BranchOverride {
+    pub type_: BranchType,
+    pub target: Option<Location>,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) struct UserBranchOverride {
+    pub original_type: BranchType,
+    pub replacement: BranchOverride,
+}
+
+impl CoreArrayProvider for UserBranchOverride {
+    type Raw = BNBranchOverride;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for UserBranchOverride {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        unsafe { BNFreeBranchOverrideList(raw) }
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let target = raw.hasReplacementTarget.then(|| {
+            let arch = (!raw.replacementTargetArch.is_null())
+                .then(|| unsafe { CoreArchitecture::from_raw(raw.replacementTargetArch) });
+            Location::new(arch, raw.replacementTarget)
+        });
+        Self {
+            original_type: raw.originalBranchType,
+            replacement: BranchOverride {
+                type_: raw.replacementBranchType,
+                target,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct OverridableBranchInfo {
+    pub type_: BranchType,
+    pub target: u64,
+    pub arch: Option<CoreArchitecture>,
+}
+
+impl CoreArrayProvider for OverridableBranchInfo {
+    type Raw = BNOverridableBranchInfo;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for OverridableBranchInfo {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        unsafe { BNFreeOverridableBranchInfoList(raw) }
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self {
+        (*raw).into()
+    }
+}
+
 #[derive(Default, Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum BranchKind {
     #[default]
@@ -17,6 +79,7 @@ pub enum BranchKind {
     SystemCall,
     Indirect,
     Exception,
+    Nop,
     UserDefined,
 }
 
@@ -54,6 +117,28 @@ impl BranchInfo {
     }
 }
 
+impl From<BNOverridableBranchInfo> for OverridableBranchInfo {
+    fn from(value: BNOverridableBranchInfo) -> Self {
+        let arch =
+            (!value.arch.is_null()).then(|| unsafe { CoreArchitecture::from_raw(value.arch) });
+        Self {
+            type_: value.type_,
+            target: value.target,
+            arch,
+        }
+    }
+}
+
+impl From<OverridableBranchInfo> for BNOverridableBranchInfo {
+    fn from(value: OverridableBranchInfo) -> Self {
+        Self {
+            type_: value.type_,
+            target: value.target,
+            arch: value.arch.map_or(std::ptr::null_mut(), |arch| arch.handle),
+        }
+    }
+}
+
 impl From<BranchInfo> for BNBranchType {
     fn from(value: BranchInfo) -> Self {
         match value.kind {
@@ -66,6 +151,7 @@ impl From<BranchInfo> for BNBranchType {
             BranchKind::SystemCall => BNBranchType::SystemCall,
             BranchKind::Indirect => BNBranchType::IndirectBranch,
             BranchKind::Exception => BNBranchType::ExceptionBranch,
+            BranchKind::Nop => BNBranchType::NopBranch,
             BranchKind::UserDefined => BNBranchType::UserDefinedBranch,
         }
     }
@@ -92,6 +178,7 @@ impl From<BranchKind> for BranchType {
             BranchKind::SystemCall => BranchType::SystemCall,
             BranchKind::Indirect => BranchType::IndirectBranch,
             BranchKind::Exception => BranchType::ExceptionBranch,
+            BranchKind::Nop => BranchType::NopBranch,
             BranchKind::UserDefined => BranchType::UserDefinedBranch,
         }
     }

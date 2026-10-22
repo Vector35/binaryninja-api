@@ -3571,11 +3571,12 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 			// The intrinsic used to perform the quantize operation.
 			// optional, use output {} for empty.
+			ei0 = SingleBits(il, il.Register(8, oper0->reg));
 			ei0 = il.Intrinsic(
-				{RegisterOrFlag::Register(oper0->reg)},
+				{RegisterOrFlag::Register(LLIL_TEMP(3))},
 				PPC_PS_INTRIN_QUANTIZE,
 				{
-					operToIL(il, oper0),
+					ei0,
 					il.Const(4, oper3->uimm)
 					}
 				);
@@ -3583,10 +3584,9 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei0);
 
 			// Then store the quantized value
-			ei0 = il.Store(8, operToIL(il, oper1),
-				// temporary measure to allow it to resemble the instruction, just oper2il oper0
+			ei0 = il.Store(4, operToIL(il, oper1, OTI_GPR0_ZERO, 0, addressSize_l),
 		        // ei0
-				operToIL(il, oper0)
+				il.Register(4, LLIL_TEMP(3))
 				// ei2
 			);
 			il.AddInstruction(ei0);
@@ -3602,18 +3602,20 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			REQUIRE4OPS
 		    // w_l = oper2->imm;
 
-		    ei0 = il.Load(8, operToIL(il, oper1));                    // [d(rA)]
+		    ei0 = il.Load(4, operToIL(il, oper1, OTI_GPR0_ZERO, 0, addressSize_l)); // [d(rA)]
 			ei0 = il.Intrinsic(
-				{RegisterOrFlag::Register(oper0->reg)},
+				{RegisterOrFlag::Register(LLIL_TEMP(3))},
 				PPC_PS_INTRIN_DEQUANTIZE,
 				{
 					ei0,
-					operToIL(il, oper0),
+					il.Register(8, oper0->reg),
 					il.Const(4, oper3->uimm)
 					}
 				);
 
 			il.AddInstruction(ei0);
+			ei0 = DoubleBits(il, il.Register(4, LLIL_TEMP(3)));
+			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0));
 
 			// again, if w=0 qdequantize ps1
 			// if (w_l == 0)

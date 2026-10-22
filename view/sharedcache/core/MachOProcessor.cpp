@@ -1,6 +1,8 @@
 #include "MachOProcessor.h"
 #include "SharedCache.h"
 
+#include <exception>
+
 using namespace BinaryNinja;
 
 SharedCacheMachOProcessor::SharedCacheMachOProcessor(Ref<BinaryView> view, std::shared_ptr<VirtualMemory> vm) :
@@ -50,9 +52,24 @@ void SharedCacheMachOProcessor::ApplyHeader(const SharedCache& cache, SharedCach
 		if (m_applyFunctions && header.functionStartsPresent)
 		{
 			auto targetPlatform = m_view->GetDefaultPlatform();
+			auto arch = targetPlatform->GetArchitecture();
 			auto functions = header.ReadFunctionTable(*m_vm);
 			for (const auto& func : functions)
-				m_view->AddFunctionForAnalysis(targetPlatform, func, false);
+			{
+				uint8_t opcode[BN_MAX_INSTRUCTION_LENGTH];
+				size_t opLen = arch->GetMaxInstructionLength();
+				try
+				{
+					m_vm->Read(opcode, func, opLen);
+				}
+				catch (const std::exception& e)
+				{
+					m_logger->LogWarnF("Failed to read function start at {:#x}: {}", func, e.what());
+					continue;
+				}
+				if (IsValidFunctionStart(arch, func, opcode, opLen))
+					m_view->AddFunctionForAnalysis(targetPlatform, func, false);
+			}
 		}
 
 		BulkSymbolModification bulkSymbolModification(m_view);

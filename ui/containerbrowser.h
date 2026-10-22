@@ -9,6 +9,7 @@
 #include <QDialogButtonBox>
 #include <QModelIndex>
 #include <QSplitter>
+#include <QStackedWidget>
 
 #include "binaryninjaapi.h"
 #include "uitypes.h"
@@ -16,6 +17,7 @@
 #include <vector>
 
 class ContainerOpenRequest;
+class ImagePreviewLabel;
 
 class ContainerTreeModel : public QAbstractItemModel
 {
@@ -60,6 +62,10 @@ public:
 	QStringList pathFor(const QModelIndex& index) const;
 	void selectNode(const QModelIndex& index);
 	void rebuild();
+
+	// Sniffs the item's header bytes for a known image format (e.g. "PNG", "BMP").
+	// Returns an empty string if the data isn't a recognized image.
+	static QString detectImageFormat(TransformContextRef context);
 };
 
 
@@ -85,7 +91,9 @@ class BINARYNINJAUIAPI ContainerBrowser : public QDialog
 
 	QLineEdit* m_filter = nullptr;
 	QTreeView* m_tree = nullptr;
+	QStackedWidget* m_previewStack = nullptr;
 	QPlainTextEdit* m_preview = nullptr;
+	ImagePreviewLabel* m_imagePreview = nullptr;
 	QSplitter* m_splitter = nullptr;
 	QLabel* m_status = nullptr;
 	QLabel* m_extractionStatus = nullptr;
@@ -105,6 +113,7 @@ class BINARYNINJAUIAPI ContainerBrowser : public QDialog
 	bool requiresPassword(TransformContextRef context);
 	bool requiresExtraction(TransformContextRef context);
 	void extractItem(TransformContextRef context);
+	void exportItem(TransformContextRef context);
 	void promptForPassword(TransformContextRef context, bool tryCachedPassword = false);
 	void showContextMenu(const QPoint& position);
 	static QString toHexDump(const QByteArray& data, int bytesPerLine = 16);

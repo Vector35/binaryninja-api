@@ -3546,11 +3546,14 @@ bool GetLowLevelILForInstruction(
 		case EXARMO_AARCH64_ENC_ScvtfS32Float2int:
 		case EXARMO_AARCH64_ENC_ScvtfS64Float2int:
 		{
+			// Never truncate the integer to the floating result width. Keep widening
+			// extensions when the result is larger so signedness survives analysis.
+			size_t sourceSize = std::max(REGSZ_O(operand1), REGSZ_O(operand2));
 			il.AddInstruction(ILSETREG_O(
 			    operand1, il.IntToFloat(REGSZ_O(operand1),
 					zero_extend
-					? il.ZeroExtend(REGSZ_O(operand1), ILREG_O(operand2))
-					: il.SignExtend(REGSZ_O(operand1), ILREG_O(operand2)))));
+					? il.ZeroExtend(sourceSize, ILREG_O(operand2))
+					: il.SignExtend(sourceSize, ILREG_O(operand2)))));
 			break;
 		}
 		// Vector, single-precision and double-precision unsigned

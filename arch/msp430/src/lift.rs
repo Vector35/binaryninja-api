@@ -172,12 +172,14 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let src = il.const_int(size, 1);
             let dest = lift_source_operand(inst.source(), size, il);
             let op = match inst.operand_width() {
-                Some(OperandWidth::Byte) => {
-                    il.zx(2, il.rrc(size, dest, src).with_flag_write(FlagWrite::All))
-                }
-                Some(OperandWidth::Word) | None => {
-                    il.rrc(size, dest, src).with_flag_write(FlagWrite::All)
-                }
+                Some(OperandWidth::Byte) => il.zx(
+                    2,
+                    il.rrc(size, dest, src, il.flag(Flag::C))
+                        .with_flag_write(FlagWrite::All),
+                ),
+                Some(OperandWidth::Word) | None => il
+                    .rrc(size, dest, src, il.flag(Flag::C))
+                    .with_flag_write(FlagWrite::All),
             };
             one_operand!(inst.source(), il, op);
         }
@@ -580,12 +582,14 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let src = il.const_int(size, 1);
             let dest = lift_source_operand(&inst.destination().unwrap(), size, il);
             let op = match inst.operand_width() {
-                Some(OperandWidth::Byte) => {
-                    il.zx(2, il.rlc(size, dest, src).with_flag_write(FlagWrite::All))
-                }
-                Some(OperandWidth::Word) | None => {
-                    il.rlc(size, dest, src).with_flag_write(FlagWrite::All)
-                }
+                Some(OperandWidth::Byte) => il.zx(
+                    2,
+                    il.rlc(size, dest, src, il.flag(Flag::C))
+                        .with_flag_write(FlagWrite::All),
+                ),
+                Some(OperandWidth::Word) | None => il
+                    .rlc(size, dest, src, il.flag(Flag::C))
+                    .with_flag_write(FlagWrite::All),
             };
             emulated!(inst, il, op);
         }

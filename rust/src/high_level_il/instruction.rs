@@ -9,7 +9,7 @@ use crate::confidence::Conf;
 use crate::disassembly::DisassemblyTextLine;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::types::Type;
-use crate::variable::{ConstantData, RegisterValue, SSAVariable, Variable};
+use crate::variable::{ConstantData, PossibleValueSet, RegisterValue, SSAVariable, Variable};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct HighLevelInstructionIndex(pub usize);
@@ -121,7 +121,6 @@ impl HighLevelILInstruction {
             HLIL_UNREACHABLE => Op::Unreachable,
             HLIL_BP => Op::Bp,
             HLIL_UNDEF => Op::Undef,
-            HLIL_FORCE_VER | HLIL_FORCE_VER_SSA | HLIL_ASSERT | HLIL_ASSERT_SSA => Op::Undef,
             HLIL_UNIMPL => Op::Unimpl,
             HLIL_ADC => Op::Adc(BinaryOpCarry {
                 left: HighLevelExpressionIndex::from(op.operands[0]),
@@ -348,6 +347,14 @@ impl HighLevelILInstruction {
                 src_memory: op.operands[1],
                 index: HighLevelExpressionIndex::from(op.operands[2]),
             }),
+            HLIL_ASSERT => Op::Assert(Assert {
+                src: get_var(op.operands[0]),
+                constraint_index: op.operands[1] as usize,
+            }),
+            HLIL_ASSERT_SSA => Op::AssertSsa(AssertSsa {
+                src: get_var_ssa((op.operands[0], op.operands[1] as usize)),
+                constraint_index: op.operands[2] as usize,
+            }),
             HLIL_ASSIGN => Op::Assign(Assign {
                 dest: HighLevelExpressionIndex::from(op.operands[0]),
                 src: HighLevelExpressionIndex::from(op.operands[1]),
@@ -524,6 +531,14 @@ impl HighLevelILInstruction {
                 update: HighLevelExpressionIndex::from(op.operands[3]),
                 body: HighLevelExpressionIndex::from(op.operands[4]),
             }),
+            HLIL_FORCE_VER => Op::ForceVer(ForceVer {
+                dest: get_var(op.operands[0]),
+                src: get_var(op.operands[1]),
+            }),
+            HLIL_FORCE_VER_SSA => Op::ForceVerSsa(ForceVerSsa {
+                dest: get_var_ssa((op.operands[0], op.operands[1] as usize)),
+                src: get_var_ssa((op.operands[2], op.operands[3] as usize)),
+            }),
             HLIL_GOTO => Op::Goto(Label {
                 target: op.operands[0],
             }),
@@ -641,9 +656,9 @@ impl HighLevelILInstruction {
                 body: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_DO_WHILE_SSA => Op::DoWhileSsa(WhileSsa {
-                condition_phi: HighLevelExpressionIndex::from(op.operands[0]),
-                condition: HighLevelExpressionIndex::from(op.operands[1]),
-                body: HighLevelExpressionIndex::from(op.operands[2]),
+                body: HighLevelExpressionIndex::from(op.operands[0]),
+                condition_phi: HighLevelExpressionIndex::from(op.operands[1]),
+                condition: HighLevelExpressionIndex::from(op.operands[2]),
             }),
         };
         Self {
@@ -686,6 +701,13 @@ impl HighLevelILInstruction {
             .map(|val| HighLevelExpressionIndex(val as usize))
             .filter_map(|idx| self.function.instruction_from_expr_index(idx))
             .collect()
+    }
+
+    fn get_constraint(&self, constraint_index: usize) -> PossibleValueSet {
+        let value = unsafe {
+            BNGetCachedHighLevelILPossibleValueSet(self.function.handle, constraint_index)
+        };
+        PossibleValueSet::from_owned_core_raw(value)
     }
 
     pub fn lift(&self) -> HighLevelILLiftedInstruction {
@@ -764,6 +786,14 @@ impl HighLevelILInstruction {
                 src: self.lift_operand(op.src),
                 src_memory: op.src_memory,
                 index: self.lift_operand(op.index),
+            }),
+            Assert(op) => Lifted::Assert(LiftedAssert {
+                src: op.src,
+                constraint: self.get_constraint(op.constraint_index),
+            }),
+            AssertSsa(op) => Lifted::AssertSsa(LiftedAssertSsa {
+                src: op.src,
+                constraint: self.get_constraint(op.constraint_index),
             }),
             Assign(op) => Lifted::Assign(LiftedAssign {
                 dest: self.lift_operand(op.dest),
@@ -898,6 +928,8 @@ impl HighLevelILInstruction {
                 update: self.lift_operand(op.update),
                 body: self.lift_operand(op.body),
             }),
+            ForceVer(op) => Lifted::ForceVer(op),
+            ForceVerSsa(op) => Lifted::ForceVerSsa(op),
             If(op) => Lifted::If(LiftedIf {
                 condition: self.lift_operand(op.condition),
                 cond_true: self.lift_operand(op.cond_true),
@@ -1228,6 +1260,8 @@ pub enum HighLevelILInstructionKind {
     FcmpUo(BinaryOp),
     ArrayIndex(ArrayIndex),
     ArrayIndexSsa(ArrayIndexSsa),
+    Assert(Assert),
+    AssertSsa(AssertSsa),
     Assign(Assign),
     AssignMemSsa(AssignMemSsa),
     AssignUnpack(AssignUnpack),
@@ -1275,6 +1309,8 @@ pub enum HighLevelILInstructionKind {
     FloatConst(FloatConst),
     For(ForLoop),
     ForSsa(ForLoopSsa),
+    ForceVer(ForceVer),
+    ForceVerSsa(ForceVerSsa),
     Goto(Label),
     Label(Label),
     If(If),
@@ -1319,7 +1355,7 @@ fn get_var(id: u64) -> Variable {
 }
 
 fn get_member_index(idx: u64) -> Option<usize> {
-    (idx as i64 > 0).then_some(idx as usize)
+    (idx as i64 >= 0).then_some(idx as usize)
 }
 
 fn get_var_ssa(input: (u64, usize)) -> SSAVariable {

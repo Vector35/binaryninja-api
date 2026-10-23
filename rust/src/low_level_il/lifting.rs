@@ -20,7 +20,7 @@ use binaryninjacore_sys::{
 };
 
 use super::*;
-use crate::architecture::{Architecture, FlagWriteId, RegisterId};
+use crate::architecture::{Architecture, FlagWriteId, IntrinsicId, RegisterId};
 use crate::architecture::{CoreRegister, Register as ArchReg};
 use crate::architecture::{
     Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite, Intrinsic,
@@ -68,8 +68,7 @@ impl<R: ArchReg> From<LowLevelILRegisterOrConstant<R>> for BNRegisterOrConstant 
     }
 }
 
-// TODO flesh way out
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub enum LowLevelILFlagWriteOp<R: ArchReg> {
     SetReg(usize, LowLevelILRegisterOrConstant<R>),
     SetRegSplit(
@@ -106,6 +105,15 @@ pub enum LowLevelILFlagWriteOp<R: ArchReg> {
     LowPart(usize, LowLevelILRegisterOrConstant<R>),
     BoolToInt(usize, LowLevelILRegisterOrConstant<R>),
     FloatToInt(usize, LowLevelILRegisterOrConstant<R>),
+    Fsqrt(usize, LowLevelILRegisterOrConstant<R>),
+    Fneg(usize, LowLevelILRegisterOrConstant<R>),
+    Fabs(usize, LowLevelILRegisterOrConstant<R>),
+    IntToFloat(usize, LowLevelILRegisterOrConstant<R>),
+    FloatConv(usize, LowLevelILRegisterOrConstant<R>),
+    RoundToInt(usize, LowLevelILRegisterOrConstant<R>),
+    Floor(usize, LowLevelILRegisterOrConstant<R>),
+    Ceil(usize, LowLevelILRegisterOrConstant<R>),
+    Ftrunc(usize, LowLevelILRegisterOrConstant<R>),
 
     Store(
         usize,
@@ -239,6 +247,117 @@ pub enum LowLevelILFlagWriteOp<R: ArchReg> {
         LowLevelILRegisterOrConstant<R>,
         LowLevelILRegisterOrConstant<R>,
     ),
+    CmpE(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    CmpNe(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    CmpSlt(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    CmpUlt(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    CmpSle(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    CmpUle(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    CmpSge(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    CmpUge(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    CmpSgt(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    CmpUgt(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+
+    Fadd(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    Fsub(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    Fmul(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    Fdiv(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    FcmpE(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    FcmpNE(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    FcmpLT(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    FcmpLE(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    FcmpGE(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    FcmpGT(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    FcmpO(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
+    FcmpUO(
+        usize,
+        LowLevelILRegisterOrConstant<R>,
+        LowLevelILRegisterOrConstant<R>,
+    ),
 
     Adc(
         usize,
@@ -266,7 +385,9 @@ pub enum LowLevelILFlagWriteOp<R: ArchReg> {
     ),
 
     Pop(usize),
-    // TODO: floating point stuff, llil comparison ops that set flags, intrinsics
+
+    /// Core doesn't pass each parameter's width, so the parameters carry the intrinsic's size, which is usually 0.
+    Intrinsic(usize, IntrinsicId, Vec<LowLevelILRegisterOrConstant<R>>),
 }
 
 impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
@@ -332,6 +453,15 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
             (1, LLIL_LOW_PART) => op!(LowPart, 0),
             (1, LLIL_BOOL_TO_INT) => op!(BoolToInt, 0),
             (1, LLIL_FLOAT_TO_INT) => op!(FloatToInt, 0),
+            (1, LLIL_FSQRT) => op!(Fsqrt, 0),
+            (1, LLIL_FNEG) => op!(Fneg, 0),
+            (1, LLIL_FABS) => op!(Fabs, 0),
+            (1, LLIL_INT_TO_FLOAT) => op!(IntToFloat, 0),
+            (1, LLIL_FLOAT_CONV) => op!(FloatConv, 0),
+            (1, LLIL_ROUND_TO_INT) => op!(RoundToInt, 0),
+            (1, LLIL_FLOOR) => op!(Floor, 0),
+            (1, LLIL_CEIL) => op!(Ceil, 0),
+            (1, LLIL_FTRUNC) => op!(Ftrunc, 0),
 
             (2, LLIL_STORE) => op!(Store, 0, 1),
 
@@ -361,6 +491,29 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
 
             (2, LLIL_TEST_BIT) => op!(TestBit, 0, 1),
             (2, LLIL_ADD_OVERFLOW) => op!(AddOverflow, 0, 1),
+            (2, LLIL_CMP_E) => op!(CmpE, 0, 1),
+            (2, LLIL_CMP_NE) => op!(CmpNe, 0, 1),
+            (2, LLIL_CMP_SLT) => op!(CmpSlt, 0, 1),
+            (2, LLIL_CMP_ULT) => op!(CmpUlt, 0, 1),
+            (2, LLIL_CMP_SLE) => op!(CmpSle, 0, 1),
+            (2, LLIL_CMP_ULE) => op!(CmpUle, 0, 1),
+            (2, LLIL_CMP_SGE) => op!(CmpSge, 0, 1),
+            (2, LLIL_CMP_UGE) => op!(CmpUge, 0, 1),
+            (2, LLIL_CMP_SGT) => op!(CmpSgt, 0, 1),
+            (2, LLIL_CMP_UGT) => op!(CmpUgt, 0, 1),
+
+            (2, LLIL_FADD) => op!(Fadd, 0, 1),
+            (2, LLIL_FSUB) => op!(Fsub, 0, 1),
+            (2, LLIL_FMUL) => op!(Fmul, 0, 1),
+            (2, LLIL_FDIV) => op!(Fdiv, 0, 1),
+            (2, LLIL_FCMP_E) => op!(FcmpE, 0, 1),
+            (2, LLIL_FCMP_NE) => op!(FcmpNE, 0, 1),
+            (2, LLIL_FCMP_LT) => op!(FcmpLT, 0, 1),
+            (2, LLIL_FCMP_LE) => op!(FcmpLE, 0, 1),
+            (2, LLIL_FCMP_GE) => op!(FcmpGE, 0, 1),
+            (2, LLIL_FCMP_GT) => op!(FcmpGT, 0, 1),
+            (2, LLIL_FCMP_O) => op!(FcmpO, 0, 1),
+            (2, LLIL_FCMP_UO) => op!(FcmpUO, 0, 1),
 
             (3, LLIL_ADC) => op!(Adc, 0, 1, 2),
             (3, LLIL_SBB) => op!(Sbb, 0, 1, 2),
@@ -368,6 +521,16 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
             (3, LLIL_RRC) => op!(Rrc, 0, 1, 2),
 
             (0, LLIL_POP) => op!(Pop,),
+
+            // Core passes the intrinsic as a constant, followed by each parameter.
+            (n, LLIL_INTRINSIC) if n >= 1 && operands[0].constant => Intrinsic(
+                size,
+                IntrinsicId(operands[0].value as u32),
+                operands[1..]
+                    .iter()
+                    .map(|operand| build_op(arch, size, operand))
+                    .collect(),
+            ),
 
             _ => return None,
         })
@@ -401,6 +564,15 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
             LowPart(size, ..) => (size, LLIL_LOW_PART),
             BoolToInt(size, ..) => (size, LLIL_BOOL_TO_INT),
             FloatToInt(size, ..) => (size, LLIL_FLOAT_TO_INT),
+            Fsqrt(size, ..) => (size, LLIL_FSQRT),
+            Fneg(size, ..) => (size, LLIL_FNEG),
+            Fabs(size, ..) => (size, LLIL_FABS),
+            IntToFloat(size, ..) => (size, LLIL_INT_TO_FLOAT),
+            FloatConv(size, ..) => (size, LLIL_FLOAT_CONV),
+            RoundToInt(size, ..) => (size, LLIL_ROUND_TO_INT),
+            Floor(size, ..) => (size, LLIL_FLOOR),
+            Ceil(size, ..) => (size, LLIL_CEIL),
+            Ftrunc(size, ..) => (size, LLIL_FTRUNC),
 
             Store(size, ..) => (size, LLIL_STORE),
 
@@ -430,6 +602,29 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
 
             TestBit(size, ..) => (size, LLIL_TEST_BIT),
             AddOverflow(size, ..) => (size, LLIL_ADD_OVERFLOW),
+            CmpE(size, ..) => (size, LLIL_CMP_E),
+            CmpNe(size, ..) => (size, LLIL_CMP_NE),
+            CmpSlt(size, ..) => (size, LLIL_CMP_SLT),
+            CmpUlt(size, ..) => (size, LLIL_CMP_ULT),
+            CmpSle(size, ..) => (size, LLIL_CMP_SLE),
+            CmpUle(size, ..) => (size, LLIL_CMP_ULE),
+            CmpSge(size, ..) => (size, LLIL_CMP_SGE),
+            CmpUge(size, ..) => (size, LLIL_CMP_UGE),
+            CmpSgt(size, ..) => (size, LLIL_CMP_SGT),
+            CmpUgt(size, ..) => (size, LLIL_CMP_UGT),
+
+            Fadd(size, ..) => (size, LLIL_FADD),
+            Fsub(size, ..) => (size, LLIL_FSUB),
+            Fmul(size, ..) => (size, LLIL_FMUL),
+            Fdiv(size, ..) => (size, LLIL_FDIV),
+            FcmpE(size, ..) => (size, LLIL_FCMP_E),
+            FcmpNE(size, ..) => (size, LLIL_FCMP_NE),
+            FcmpLT(size, ..) => (size, LLIL_FCMP_LT),
+            FcmpLE(size, ..) => (size, LLIL_FCMP_LE),
+            FcmpGE(size, ..) => (size, LLIL_FCMP_GE),
+            FcmpGT(size, ..) => (size, LLIL_FCMP_GT),
+            FcmpO(size, ..) => (size, LLIL_FCMP_O),
+            FcmpUO(size, ..) => (size, LLIL_FCMP_UO),
 
             Adc(size, ..) => (size, LLIL_ADC),
             Sbb(size, ..) => (size, LLIL_SBB),
@@ -437,16 +632,16 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
             Rrc(size, ..) => (size, LLIL_RRC),
 
             Pop(size) => (size, LLIL_POP),
+
+            Intrinsic(size, ..) => (size, LLIL_INTRINSIC),
         }
     }
 
-    pub(crate) fn raw_operands(&self) -> (usize, [BNRegisterOrConstant; 5]) {
+    pub(crate) fn raw_operands(&self) -> Vec<BNRegisterOrConstant> {
         use self::LowLevelILFlagWriteOp::*;
 
-        let mut operands: [BNRegisterOrConstant; 5] = [BNRegisterOrConstant::default(); 5];
-
-        let count = match *self {
-            Pop(_) => 0,
+        match *self {
+            Pop(_) => Vec::new(),
 
             SetReg(_, op0)
             | Load(_, op0)
@@ -464,10 +659,16 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
             | Zx(_, op0)
             | LowPart(_, op0)
             | BoolToInt(_, op0)
-            | FloatToInt(_, op0) => {
-                operands[0] = op0.into();
-                1
-            }
+            | FloatToInt(_, op0)
+            | Fsqrt(_, op0)
+            | Fneg(_, op0)
+            | Fabs(_, op0)
+            | IntToFloat(_, op0)
+            | FloatConv(_, op0)
+            | RoundToInt(_, op0)
+            | Floor(_, op0)
+            | Ceil(_, op0)
+            | Ftrunc(_, op0) => vec![op0.into()],
 
             SetRegSplit(_, op0, op1)
             | Sub(_, op0, op1)
@@ -497,24 +698,46 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
             | ModuDp(_, op0, op1)
             | ModsDp(_, op0, op1)
             | TestBit(_, op0, op1)
-            | AddOverflow(_, op0, op1) => {
-                operands[0] = op0.into();
-                operands[1] = op1.into();
-                2
-            }
+            | AddOverflow(_, op0, op1)
+            | CmpE(_, op0, op1)
+            | CmpNe(_, op0, op1)
+            | CmpSlt(_, op0, op1)
+            | CmpUlt(_, op0, op1)
+            | CmpSle(_, op0, op1)
+            | CmpUle(_, op0, op1)
+            | CmpSge(_, op0, op1)
+            | CmpUge(_, op0, op1)
+            | CmpSgt(_, op0, op1)
+            | CmpUgt(_, op0, op1)
+            | Fadd(_, op0, op1)
+            | Fsub(_, op0, op1)
+            | Fmul(_, op0, op1)
+            | Fdiv(_, op0, op1)
+            | FcmpE(_, op0, op1)
+            | FcmpNE(_, op0, op1)
+            | FcmpLT(_, op0, op1)
+            | FcmpLE(_, op0, op1)
+            | FcmpGE(_, op0, op1)
+            | FcmpGT(_, op0, op1)
+            | FcmpO(_, op0, op1)
+            | FcmpUO(_, op0, op1) => vec![op0.into(), op1.into()],
 
             Adc(_, op0, op1, op2)
             | Sbb(_, op0, op1, op2)
             | Rlc(_, op0, op1, op2)
-            | Rrc(_, op0, op1, op2) => {
-                operands[0] = op0.into();
-                operands[1] = op1.into();
-                operands[2] = op2.into();
-                3
-            }
-        };
+            | Rrc(_, op0, op1, op2) => vec![op0.into(), op1.into(), op2.into()],
 
-        (count, operands)
+            Intrinsic(_, id, ref params) => {
+                let id = BNRegisterOrConstant {
+                    constant: true,
+                    reg: 0,
+                    value: id.0 as u64,
+                };
+                std::iter::once(id)
+                    .chain(params.iter().map(|&param| param.into()))
+                    .collect()
+            }
+        }
     }
 }
 
@@ -528,7 +751,7 @@ where
     A: 'func + Architecture,
 {
     let (size, operation) = op.size_and_op();
-    let (count, operands) = op.raw_operands();
+    let mut operands = op.raw_operands();
 
     let expr_idx = unsafe {
         use binaryninjacore_sys::BNGetDefaultArchitectureFlagWriteLowLevelIL;
@@ -537,8 +760,8 @@ where
             operation,
             size,
             role,
-            operands.as_ptr() as *mut _,
-            count,
+            operands.as_mut_ptr(),
+            operands.len(),
             il.handle,
         )
     };
@@ -1535,9 +1758,9 @@ impl LowLevelILMutableFunction {
     binary_op_lifter!(asr, LLIL_ASR);
 
     binary_op_lifter!(rol, LLIL_ROL);
-    binary_op_lifter!(rlc, LLIL_RLC);
+    binary_op_carry_lifter!(rlc, LLIL_RLC);
     binary_op_lifter!(ror, LLIL_ROR);
-    binary_op_lifter!(rrc, LLIL_RRC);
+    binary_op_carry_lifter!(rrc, LLIL_RRC);
     binary_op_lifter!(mul, LLIL_MUL);
     binary_op_lifter!(muls_dp, LLIL_MULS_DP);
     binary_op_lifter!(mulu_dp, LLIL_MULU_DP);
@@ -1584,9 +1807,9 @@ impl LowLevelILMutableFunction {
     sized_unary_op_lifter!(fsqrt, LLIL_FSQRT, ValueExpr);
     sized_unary_op_lifter!(fneg, LLIL_FNEG, ValueExpr);
     sized_unary_op_lifter!(fabs, LLIL_FABS, ValueExpr);
-    sized_unary_op_lifter!(float_to_int, LLIL_FLOAT_TO_INT, ValueExpr);
-    sized_unary_op_lifter!(int_to_float, LLIL_INT_TO_FLOAT, ValueExpr);
-    sized_unary_op_lifter!(float_conv, LLIL_FLOAT_CONV, ValueExpr);
+    size_changing_unary_op_lifter!(float_to_int, LLIL_FLOAT_TO_INT, ValueExpr);
+    size_changing_unary_op_lifter!(int_to_float, LLIL_INT_TO_FLOAT, ValueExpr);
+    size_changing_unary_op_lifter!(float_conv, LLIL_FLOAT_CONV, ValueExpr);
     sized_unary_op_lifter!(round_to_int, LLIL_ROUND_TO_INT, ValueExpr);
     sized_unary_op_lifter!(floor, LLIL_FLOOR, ValueExpr);
     sized_unary_op_lifter!(ceil, LLIL_CEIL, ValueExpr);

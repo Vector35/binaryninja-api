@@ -76,7 +76,8 @@ namespace BinaryNinja
 		SSAVariableHighLevelOperand,
 		ExprListHighLevelOperand,
 		SSAVariableListHighLevelOperand,
-		IndexListHighLevelOperand
+		IndexListHighLevelOperand,
+		ConstraintHighLevelOperand
 	};
 
 	/*!
@@ -122,7 +123,8 @@ namespace BinaryNinja
 		SourceSSAVariablesHighLevelOperandUsage,
 		SourceMemoryVersionHighLevelOperandUsage,
 		SourceMemoryVersionsHighLevelOperandUsage,
-		DestMemoryVersionHighLevelOperandUsage
+		DestMemoryVersionHighLevelOperandUsage,
+		ConstraintHighLevelOperandUsage
 	};
 }  // namespace BinaryNinjaCore
 

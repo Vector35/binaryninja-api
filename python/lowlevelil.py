@@ -501,7 +501,11 @@ class LowLevelILInstruction(BaseILInstruction):
 	                                            ], LowLevelILOperation.LLIL_FLAG_PHI: [
 	                                                ("dest", "flag_ssa"), ("src", "flag_ssa_list")
 	                                            ], LowLevelILOperation.LLIL_MEM_PHI: [("dest_memory", "int"),
-	                                                                                  ("src_memory", "int_list")]
+	                                                                                  ("src_memory", "int_list")],
+		LowLevelILOperation.LLIL_ASSERT: [("src", "reg"), ("constraint", "constraint")],
+		LowLevelILOperation.LLIL_ASSERT_SSA: [("src", "reg_ssa"), ("constraint", "constraint")],
+		LowLevelILOperation.LLIL_FORCE_VER: [("dest", "reg")],
+		LowLevelILOperation.LLIL_FORCE_VER_SSA: [("dest", "reg_ssa"), ("src", "reg_ssa")],
 	}
 
 	@staticmethod
@@ -1073,8 +1077,9 @@ class LowLevelILInstruction(BaseILInstruction):
 			for j in range(count.value // 2):
 				reg_stack = operand_list[j * 2]
 				adjust = operand_list[(j*2) + 1]
+				adjust &= 0xffffffff
 				if adjust & 0x80000000:
-					adjust |= ~0x80000000
+					adjust -= 1 << 32
 				result[self.function.arch.get_reg_stack_name(reg_stack)] = adjust
 			return result
 		finally:
@@ -3123,6 +3128,13 @@ class LowLevelILAssert(LowLevelILInstruction):
     def constraint(self) -> variable.PossibleValueSet:
         return self._get_constraint(1)
 
+    @property
+    def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+        return [
+            ("src", self.src, "ILRegister"),
+            ("constraint", self.constraint, "PossibleValueSet"),
+        ]
+
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILAssertSsa(LowLevelILInstruction, SSA):
     @property
@@ -3133,11 +3145,24 @@ class LowLevelILAssertSsa(LowLevelILInstruction, SSA):
     def constraint(self) -> variable.PossibleValueSet:
         return self._get_constraint(2)
 
+    @property
+    def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+        return [
+            ("src", self.src, "SSARegister"),
+            ("constraint", self.constraint, "PossibleValueSet"),
+        ]
+
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILForceVer(LowLevelILInstruction):
     @property
     def dest(self) -> ILRegister:
         return self._get_reg(0)
+
+    @property
+    def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+        return [
+            ("dest", self.dest, "ILRegister"),
+        ]
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILForceVerSsa(LowLevelILInstruction, SSA):
@@ -3148,6 +3173,13 @@ class LowLevelILForceVerSsa(LowLevelILInstruction, SSA):
     @property
     def src(self) -> SSARegister:
         return self._get_reg_ssa(2, 3)
+
+    @property
+    def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+        return [
+            ("dest", self.dest, "SSARegister"),
+            ("src", self.src, "SSARegister"),
+        ]
 
 
 ILInstruction:Dict[LowLevelILOperation, LowLevelILInstruction] = {  # type: ignore

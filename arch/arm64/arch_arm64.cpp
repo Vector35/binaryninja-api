@@ -1365,6 +1365,9 @@ class Arm64Architecture : public Architecture
 
 	virtual map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup) override
 	{
+		// FCMP sets NZCV to 1000, 0110, 0010, or 0011 for less, equal,
+		// greater, or unordered. Only use exact floating predicates; conditions
+		// including unordered outcomes must expand their architectural flags.
 		switch (semGroup) {
 		case IL_FLAG_GROUP_EQ:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
@@ -1379,7 +1382,6 @@ class Arm64Architecture : public Architecture
 		case IL_FLAG_GROUP_CS:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{IL_FLAG_CLASS_INT, LLFC_UGE},
-				{IL_FLAG_CLASS_FLOAT, LLFC_FGE},
 			};
 		case IL_FLAG_GROUP_CC:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
@@ -1394,22 +1396,20 @@ class Arm64Architecture : public Architecture
 		case IL_FLAG_GROUP_PL:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{IL_FLAG_CLASS_INT, LLFC_POS},
-				{IL_FLAG_CLASS_FLOAT, LLFC_FGE},
 			};
 		case IL_FLAG_GROUP_VS:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{IL_FLAG_CLASS_INT, LLFC_O},
-				{IL_FLAG_CLASS_FLOAT, LLFC_FO},
+				{IL_FLAG_CLASS_FLOAT, LLFC_FUO},
 			};
 		case IL_FLAG_GROUP_VC:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{IL_FLAG_CLASS_INT, LLFC_NO},
-				{IL_FLAG_CLASS_FLOAT, LLFC_FUO},
+				{IL_FLAG_CLASS_FLOAT, LLFC_FO},
 			};
 		case IL_FLAG_GROUP_HI:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{IL_FLAG_CLASS_INT, LLFC_UGT},
-				{IL_FLAG_CLASS_FLOAT, LLFC_FGT},
 			};
 		case IL_FLAG_GROUP_LS:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
@@ -1424,7 +1424,6 @@ class Arm64Architecture : public Architecture
 		case IL_FLAG_GROUP_LT:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{IL_FLAG_CLASS_INT, LLFC_SLT},
-				{IL_FLAG_CLASS_FLOAT, LLFC_FLT},
 			};
 		case IL_FLAG_GROUP_GT:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
@@ -1434,7 +1433,6 @@ class Arm64Architecture : public Architecture
 		case IL_FLAG_GROUP_LE:
 			return map<uint32_t, BNLowLevelILFlagCondition> {
 				{IL_FLAG_CLASS_INT, LLFC_SLE},
-				{IL_FLAG_CLASS_FLOAT, LLFC_FLE},
 			};
 		default:
 			return map<uint32_t, BNLowLevelILFlagCondition>();
@@ -1540,6 +1538,25 @@ class Arm64Architecture : public Architecture
 	    uint32_t flagWriteType, uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,
 	    LowLevelILFunction& il) override
 	{
+		if ((flagWriteType == IL_FLAG_WRITE_ALL_FLOAT) && (op == LLIL_FSUB) && (operandCount >= 2))
+		{
+			ExprId lhs = il.GetExprForRegisterOrConstant(operands[0], size);
+			ExprId rhs = il.GetExprForRegisterOrConstant(operands[1], size);
+			switch (flag)
+			{
+			case IL_FLAG_N:
+				return il.FloatCompareLessThan(size, lhs, rhs);
+			case IL_FLAG_Z:
+				return il.FloatCompareEqual(size, lhs, rhs);
+			case IL_FLAG_C:
+				return il.Not(0, il.FloatCompareLessThan(size, lhs, rhs));
+			case IL_FLAG_V:
+				return il.FloatCompareUnordered(size, lhs, rhs);
+			default:
+				break;
+			}
+		}
+
 		switch (op)
 		{
 		case LLIL_AND:

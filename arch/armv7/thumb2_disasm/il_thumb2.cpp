@@ -2846,8 +2846,18 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		if (instr->format->operandCount == 3)
 		{
 			uint32_t reg = GetRegisterByIndex(instr->fields[instr->format->operands[1].field0]);
-			il.AddInstruction(WriteILOperand(il, instr, 0, il.Load(4, GetMemoryAddress(il, instr, 1, 4, false))));
-			il.AddInstruction(il.SetRegister(4, reg, il.Add(4, il.Register(4, reg), ReadILOperand(il, instr, 2))));
+			uint32_t dest = GetRegisterOperand(instr, 0);
+			if (dest == armv7::REG_PC)
+			{
+				il.AddInstruction(il.SetRegister(4, LLIL_TEMP(0), il.Load(4, GetMemoryAddress(il, instr, 1, 4, false))));
+				il.AddInstruction(il.SetRegister(4, reg, il.Add(4, il.Register(4, reg), ReadILOperand(il, instr, 2))));
+				il.AddInstruction(il.Jump(il.Register(4, LLIL_TEMP(0))));
+			}
+			else
+			{
+				il.AddInstruction(il.SetRegister(4, dest, il.Load(4, GetMemoryAddress(il, instr, 1, 4, false))));
+				il.AddInstruction(il.SetRegister(4, reg, il.Add(4, il.Register(4, reg), ReadILOperand(il, instr, 2))));
+			}
 		}
 		else
 		{

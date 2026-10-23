@@ -166,9 +166,9 @@ test_cases = \
     # mrc2 p15, #0, pc, c1, c0, #0 (Thumb2)
     ('T', b'\x11\xfe\x10\xff', 'LLIL_INTRINSIC([n,z,c,v],Coproc_GetOneWord,[LLIL_CONST.b(0xF),LLIL_CONST.b(0x0),LLIL_CONST.b(0x1),LLIL_CONST.b(0x0),LLIL_CONST.b(0x0)])'),
     # ands r0, r5
-    ('T', b'\x28\x40', 'LLIL_SET_REG.d(r0,LLIL_AND.d{*}(LLIL_REG.d(r0),LLIL_REG.d(r5)))'),
+    ('T', b'\x28\x40', 'LLIL_SET_REG.d(r0,LLIL_AND.d{nz}(LLIL_REG.d(r0),LLIL_REG.d(r5)))'),
     # bics r3, r3
-    ('T', b'\x9b\x43', 'LLIL_SET_REG.d(r3,LLIL_AND.d{*}(LLIL_REG.d(r3),LLIL_NOT.d(LLIL_REG.d(r3))))'),
+    ('T', b'\x9b\x43', 'LLIL_SET_REG.d(r3,LLIL_AND.d{nz}(LLIL_REG.d(r3),LLIL_NOT.d(LLIL_REG.d(r3))))'),
     # bfi r2, r1, #0, #32 -- a full-width insert copies the source register
     ('A', b'\x11\x20\xdf\xe7', 'LLIL_SET_REG.d(r2,LLIL_OR.d(LLIL_AND.d(LLIL_REG.d(r2),LLIL_CONST.d(0x0)),LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFFFFFFFF)),LLIL_CONST.d(0x0))))'),
     ('T', b'\x61\xf3\x1f\x02', 'LLIL_SET_REG.d(r2,LLIL_OR.d(LLIL_AND.d(LLIL_REG.d(r2),LLIL_CONST.d(0x0)),LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFFFFFFFF)),LLIL_CONST.d(0x0))))'),
@@ -178,21 +178,21 @@ test_cases = \
     # ubfx r2, r1, #0, #32 -- a full-width extract copies the source register
     ('T', b'\xc1\xf3\x1f\x02', 'LLIL_SET_REG.d(r2,LLIL_AND.d(LLIL_LSR.d(LLIL_REG.d(r1),LLIL_CONST.d(0x0)),LLIL_CONST.d(0xFFFFFFFF)))'),
     # mvns r3, r6
-    ('T', b'\xf3\x43', 'LLIL_SET_REG.d(r3,LLIL_NOT.d{*}(LLIL_REG.d(r6)))'),
+    ('T', b'\xf3\x43', 'LLIL_SET_REG.d(r3,LLIL_NOT.d{nz}(LLIL_REG.d(r6)))'),
     # eors r2, r0
-    ('T', b'\x42\x40', 'LLIL_SET_REG.d(r2,LLIL_XOR.d{*}(LLIL_REG.d(r2),LLIL_REG.d(r0)))'),
+    ('T', b'\x42\x40', 'LLIL_SET_REG.d(r2,LLIL_XOR.d{nz}(LLIL_REG.d(r2),LLIL_REG.d(r0)))'),
     # eors r10, r9, r1, lsl #18
-    ('T', b'\x99\xea\x81\x4a', 'LLIL_SET_REG.d(r10,LLIL_XOR.d{*}(LLIL_REG.d(r9),LLIL_LSL.d(LLIL_REG.d(r1),LLIL_CONST.d(0x12))))'),
+    ('T', b'\x99\xea\x81\x4a', 'LLIL_SET_FLAG(c,LLIL_TEST_BIT(LLIL_REG.d(r1),LLIL_CONST.d(0xE))); LLIL_SET_REG.d(r10,LLIL_XOR.d{nz}(LLIL_REG.d(r9),LLIL_LSL.d(LLIL_REG.d(r1),LLIL_CONST.b(0x12))))'),
     # ands r2, sp, r8, lsl #6
-    ('T', b'\x1d\xea\x88\x12', 'LLIL_SET_REG.d(r2,LLIL_AND.d{*}(LLIL_REG.d(sp),LLIL_LSL.d(LLIL_REG.d(r8),LLIL_CONST.d(0x6))))'),
+    ('T', b'\x1d\xea\x88\x12', 'LLIL_SET_FLAG(c,LLIL_TEST_BIT(LLIL_REG.d(r8),LLIL_CONST.d(0x1A))); LLIL_SET_REG.d(r2,LLIL_AND.d{nz}(LLIL_REG.d(sp),LLIL_LSL.d(LLIL_REG.d(r8),LLIL_CONST.b(0x6))))'),
     # teq r0, #0
-    ('A', b'\x00\x00\x30\xe3', 'LLIL_XOR.d{cnz}(LLIL_REG.d(r0),LLIL_CONST.d(0x0))'),
+    ('A', b'\x00\x00\x30\xe3', 'LLIL_XOR.d{nz}(LLIL_REG.d(r0),LLIL_CONST.d(0x0))'),
     # teq r1, #1
-    ('A', b'\x01\x00\x31\xe3', 'LLIL_XOR.d{cnz}(LLIL_REG.d(r1),LLIL_CONST.d(0x1))'),
+    ('A', b'\x01\x00\x31\xe3', 'LLIL_XOR.d{nz}(LLIL_REG.d(r1),LLIL_CONST.d(0x1))'),
     # teq r2, #2
-    ('A', b'\x02\x00\x32\xe3', 'LLIL_XOR.d{cnz}(LLIL_REG.d(r2),LLIL_CONST.d(0x2))'),
+    ('A', b'\x02\x00\x32\xe3', 'LLIL_XOR.d{nz}(LLIL_REG.d(r2),LLIL_CONST.d(0x2))'),
     # teq r3, #3
-    ('A', b'\x03\x00\x33\xe3', 'LLIL_XOR.d{cnz}(LLIL_REG.d(r3),LLIL_CONST.d(0x3))'),
+    ('A', b'\x03\x00\x33\xe3', 'LLIL_XOR.d{nz}(LLIL_REG.d(r3),LLIL_CONST.d(0x3))'),
     # crc32b r0, r1, r2
     ('A', b'\x42\x00\x01\xe1', 'LLIL_INTRINSIC([r0],__crc32b,[LLIL_REG.d(r1),LLIL_LOW_PART.b(LLIL_REG.d(r2))])'),
     # crc32h r0, r1, r2
@@ -264,19 +264,19 @@ test_cases = \
     ('T', b'\x3f\xfa\x81\xf0', scalar_intrinsic_expected('r0', 'uxtb16', 'r1')),
 
     # ror r0, r1
-    ('A', b'\x70\x01\xa0\xe1', 'LLIL_SET_REG.d(r0,LLIL_ROR.d(LLIL_REG.d(r0),LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFF))))'),
+    ('A', b'\x70\x01\xa0\xe1', 'LLIL_SET_REG.d(r0,LLIL_ROR.d(LLIL_REG.d(r0),LLIL_AND.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x1F))))'),
     # ror r0, 7
-    ('A', b'\xe0\x03\xa0\xe1', 'LLIL_SET_REG.d(r0,LLIL_ROR.d(LLIL_REG.d(r0),LLIL_AND.d(LLIL_CONST.d(0x7),LLIL_CONST.d(0xFF))))'),
+    ('A', b'\xe0\x03\xa0\xe1', 'LLIL_SET_REG.d(r0,LLIL_ROR.d(LLIL_REG.d(r0),LLIL_CONST.b(0x7)))'),
     # rors r0, r1
-    ('A', b'\x70\x01\xb0\xe1', 'LLIL_SET_REG.d(r0,LLIL_ROR.d{cnz}(LLIL_REG.d(r0),LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFF))))'),
+    ('A', b'\x70\x01\xb0\xe1', 'LLIL_SET_FLAG(c,LLIL_OR(LLIL_AND(LLIL_CMP_E.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x0)),LLIL_FLAG(c)),LLIL_AND(LLIL_CMP_NE.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x0)),LLIL_TEST_BIT(LLIL_REG.d(r0),LLIL_AND.d(LLIL_SUB.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x1)),LLIL_CONST.d(0x1F)))))); LLIL_SET_REG.d{nz}(r0,LLIL_ROR.d(LLIL_REG.d(r0),LLIL_AND.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x1F))))'),
     # rors r0, 7
-    ('A', b'\xe0\x03\xb0\xe1', 'LLIL_SET_REG.d(r0,LLIL_ROR.d{cnz}(LLIL_REG.d(r0),LLIL_AND.d(LLIL_CONST.d(0x7),LLIL_CONST.d(0xFF))))'),
+    ('A', b'\xe0\x03\xb0\xe1', 'LLIL_SET_FLAG(c,LLIL_TEST_BIT(LLIL_REG.d(r0),LLIL_CONST.d(0x6))); LLIL_SET_REG.d{nz}(r0,LLIL_ROR.d(LLIL_REG.d(r0),LLIL_CONST.b(0x7)))'),
     # rors r3, r5
-    ('T', b'\xeb\x41', 'LLIL_SET_REG.d(r3,LLIL_ROR.d{cnz}(LLIL_REG.d(r3),LLIL_AND.d(LLIL_REG.d(r5),LLIL_CONST.d(0xFF))))'),
+    ('T', b'\xeb\x41', 'LLIL_SET_FLAG(c,LLIL_OR(LLIL_AND(LLIL_CMP_E.d(LLIL_AND.d(LLIL_REG.d(r5),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x0)),LLIL_FLAG(c)),LLIL_AND(LLIL_CMP_NE.d(LLIL_AND.d(LLIL_REG.d(r5),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x0)),LLIL_TEST_BIT(LLIL_REG.d(r3),LLIL_AND.d(LLIL_SUB.d(LLIL_AND.d(LLIL_REG.d(r5),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x1)),LLIL_CONST.d(0x1F)))))); LLIL_SET_REG.d{nz}(r3,LLIL_ROR.d(LLIL_REG.d(r3),LLIL_AND.d(LLIL_AND.d(LLIL_REG.d(r5),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x1F))))'),
     # orrs r0, r0, r12, lsl #1
-    ('T', b'\x50\xea\x4c\x00', 'LLIL_SET_REG.d(r0,LLIL_OR.d{*}(LLIL_REG.d(r0),LLIL_LSL.d(LLIL_REG.d(r12),LLIL_CONST.d(0x1))))'),
+    ('T', b'\x50\xea\x4c\x00', 'LLIL_SET_FLAG(c,LLIL_TEST_BIT(LLIL_REG.d(r12),LLIL_CONST.d(0x1F))); LLIL_SET_REG.d(r0,LLIL_OR.d{nz}(LLIL_REG.d(r0),LLIL_LSL.d(LLIL_REG.d(r12),LLIL_CONST.b(0x1))))'),
     # asrs r5, r5, #0x1e
-    ('T', b'\xad\x17', 'LLIL_SET_REG.d(r5,LLIL_ASR.d{cnz}(LLIL_REG.d(r5),LLIL_CONST.d(0x1E)))'),
+    ('T', b'\xad\x17', 'LLIL_SET_FLAG(c,LLIL_TEST_BIT(LLIL_REG.d(r5),LLIL_CONST.d(0x1D))); LLIL_SET_REG.d{nz}(r5,LLIL_ASR.d(LLIL_REG.d(r5),LLIL_CONST.b(0x1E)))'),
     # sbcs r3, r7, #0
     ('A', b'\x00\x30\xd7\xe2', 'LLIL_SET_REG.d{*}(r3,LLIL_SBB.d(LLIL_REG.d(r7),LLIL_CONST.d(0x0),LLIL_NOT.b(LLIL_FLAG(c))))'),
     # adcs r2, r7
@@ -296,9 +296,9 @@ test_cases = \
     # usat r1, #8, r1
     ('T', b'\x81\xf3\x08\x01', 'LLIL_INTRINSIC([r1,q],__usat,[LLIL_CONST.d(0x8),LLIL_REG.d(r1)])'),
     # tst r0, r6
-    ('T', b'\x30\x42', 'LLIL_AND.d{cnz}(LLIL_REG.d(r0),LLIL_REG.d(r6))'),
+    ('T', b'\x30\x42', 'LLIL_AND.d{nz}(LLIL_REG.d(r0),LLIL_REG.d(r6))'),
     # teq r0, r1
-    ('T', b'\x90\xea\x01\x0f', 'LLIL_XOR.d{cnz}(LLIL_REG.d(r0),LLIL_REG.d(r1))'),
+    ('T', b'\x90\xea\x01\x0f', 'LLIL_XOR.d{nz}(LLIL_REG.d(r0),LLIL_REG.d(r1))'),
     # stmdavs r5!, {r1, r2, r3, r5, r6, r9, r11, r12, sp}
     ('A', b'\x6e\x3a\x25\x68', 'LLIL_IF(LLIL_FLAG_GROUP(vs),1,22); LLIL_SET_REG.d(temp0,LLIL_SUB.d(LLIL_REG.d(r5),LLIL_CONST.d(0x20))); LLIL_STORE.d(LLIL_REG.d(temp0),LLIL_REG.d(r1)); LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.b(0x4))); LLIL_STORE.d(LLIL_REG.d(temp0),LLIL_REG.d(r2)); LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.b(0x4))); LLIL_STORE.d(LLIL_REG.d(temp0),LLIL_REG.d(r3)); LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.b(0x4))); LLIL_STORE.d(LLIL_REG.d(temp0),LLIL_REG.d(r5)); LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.b(0x4))); LLIL_STORE.d(LLIL_REG.d(temp0),LLIL_REG.d(r6)); LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.b(0x4))); LLIL_STORE.d(LLIL_REG.d(temp0),LLIL_REG.d(r9)); LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.b(0x4))); LLIL_STORE.d(LLIL_REG.d(temp0),LLIL_REG.d(r11)); LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.b(0x4))); LLIL_STORE.d(LLIL_REG.d(temp0),LLIL_REG.d(r12)); LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.b(0x4))); LLIL_STORE.d(LLIL_REG.d(temp0),LLIL_REG.d(sp)); LLIL_SET_REG.d(temp0,LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.b(0x4))); LLIL_SET_REG.d(r5,LLIL_SUB.d(LLIL_REG.d(r5),LLIL_CONST.d(0x24))); LLIL_GOTO(22)'),
     # vadd.f32 s0, s1, s2
@@ -349,9 +349,9 @@ test_cases = \
     # pkhtb r0, r1, r2, asr #8
     ('A', b'\x52\x04\x81\xe6', 'LLIL_SET_REG.d(r0,LLIL_OR.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFFFF0000)),LLIL_AND.d(LLIL_ASR.d(LLIL_REG.d(r2),LLIL_CONST.b(0x8)),LLIL_CONST.d(0xFFFF))))'),
     # pkhbt r0, r1, r2, lsl #8
-    ('T', b'\xc1\xea\x02\x20', 'LLIL_SET_REG.d(r0,LLIL_OR.d(LLIL_AND.d(LLIL_LSL.d(LLIL_REG.d(r2),LLIL_CONST.d(0x8)),LLIL_CONST.d(0xFFFF0000)),LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFFFF))))'),
+    ('T', b'\xc1\xea\x02\x20', 'LLIL_SET_REG.d(r0,LLIL_OR.d(LLIL_AND.d(LLIL_LSL.d(LLIL_REG.d(r2),LLIL_CONST.b(0x8)),LLIL_CONST.d(0xFFFF0000)),LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFFFF))))'),
     # pkhtb r0, r1, r2, asr #8
-    ('T', b'\xc1\xea\x22\x20', 'LLIL_SET_REG.d(r0,LLIL_OR.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFFFF0000)),LLIL_AND.d(LLIL_ASR.d(LLIL_REG.d(r2),LLIL_CONST.d(0x8)),LLIL_CONST.d(0xFFFF))))'),
+    ('T', b'\xc1\xea\x22\x20', 'LLIL_SET_REG.d(r0,LLIL_OR.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFFFF0000)),LLIL_AND.d(LLIL_ASR.d(LLIL_REG.d(r2),LLIL_CONST.b(0x8)),LLIL_CONST.d(0xFFFF))))'),
     # qadd r0, r1, r2
     ('A', b'\x51\x00\x02\xe1', saturating_scalar_expected('r0', 'r1', 'r2', 'qadd')),
     # qadd r0, r1, r2
@@ -753,14 +753,14 @@ test_cases = \
     # vpop {d8, d9}
     ('T', b'\xbd\xec\x04\x8b', 'LLIL_SET_REG.q(d8,LLIL_POP.q()); LLIL_SET_REG.q(d9,LLIL_POP.q())'),
     # orr r0, r1, r3, lsl r4
-    ('A', b'\x13\x04\x81\xe1', 'LLIL_SET_REG.d(r0,LLIL_OR.d(LLIL_REG.d(r1),LLIL_LSL.d(LLIL_REG.d(r3),LLIL_AND.d(LLIL_REG.d(r4),LLIL_CONST.d(0xFF)))))'),
+    ('A', b'\x13\x04\x81\xe1', 'LLIL_SET_REG.d(r0,LLIL_OR.d(LLIL_REG.d(r1),LLIL_AND.d(LLIL_LSL.d(LLIL_REG.d(r3),LLIL_AND.d(LLIL_AND.d(LLIL_REG.d(r4),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x1F))),LLIL_NEG.d(LLIL_BOOL_TO_INT.d(LLIL_CMP_ULT.d(LLIL_AND.d(LLIL_REG.d(r4),LLIL_CONST.d(0xFF)),LLIL_CONST.d(0x20)))))))'),
 
     # mov r2, r0
     ('T', b'\x02\x46', 'LLIL_SET_REG.d(r2,LLIL_REG.d(r0))'),
     # cmp r1, r2
     ('T', b'\x91\x42', 'LLIL_SUB.d{*}(LLIL_REG.d(r1),LLIL_REG.d(r2))'),
     # cmp r1, r2, lsl #7
-    ('T', b'\xb1\xeb\xc2\x1f', 'LLIL_SUB.d{*}(LLIL_REG.d(r1),LLIL_LSL.d(LLIL_REG.d(r2),LLIL_CONST.d(0x7)))'),
+    ('T', b'\xb1\xeb\xc2\x1f', 'LLIL_SUB.d{*}(LLIL_REG.d(r1),LLIL_LSL.d(LLIL_REG.d(r2),LLIL_CONST.b(0x7)))'),
     # uadd8 r5, r2, r12
     ('A', b'\x9c\x5f\x52\xe6', scalar_ge_intrinsic_expected('r5', 'uadd8', 'r2', 'r12')),
     # uadd16 r5, r2, r12
@@ -1227,51 +1227,72 @@ def il_str_to_tree(ilstr):
             result += c
     return result
 
+PLATFORMS = {'A': 'linux-armv7', 'T': 'linux-thumb2', 'A_BE': 'linux-armv7eb'}
+
+
 def fail_test(message):
     raise AssertionError(message)
 
+
+def check_lift_case(test_i, arch_name, data, expected):
+    """Return a failure description for one lift case, or None when it matches."""
+    platform = PLATFORMS[arch_name]
+
+    if '?' in expected:
+        return ('INVALID EXPECTED LLIL AT TEST %d!\n\t   input: %s\n\texpected: %s'
+            % (test_i, data.hex(), expected))
+
+    actual = instr_to_il(data, platform)
+
+    if '?' in actual:
+        return ('INVALID ACTUAL LLIL AT TEST %d!\n\t   input: %s\n\t  actual: %s\n\t    tree:\n%s'
+            % (test_i, data.hex(), actual, il_str_to_tree(actual)))
+
+    if actual != expected:
+        return ('MISMATCH AT TEST %d!\n\t   input: %s\n\texpected: %s\n\t  actual: %s\n\t    tree:\n%s'
+            % (test_i, data.hex(), expected, actual, il_str_to_tree(actual)))
+
+    return None
+
+
+def check_info_case(test_i, arch_name, data, expected_length, expected_branches, expected_arch_transition):
+    """Return a failure description for one instruction-info case, or None when it matches."""
+    info = binaryninja.Platform[PLATFORMS[arch_name]].arch.get_instruction_info(data, 0)
+    actual_branches = [(branch.type.name, branch.target) for branch in info.branches]
+
+    if (info.length != expected_length or actual_branches != expected_branches
+            or info.arch_transition_by_target_addr != expected_arch_transition):
+        return ('MISMATCH AT INFO TEST %d!\n\t   input: %s\n\texpected: length=%d branches=%s arch_transition=%s\n\t  actual: length=%d branches=%s arch_transition=%s'
+            % (test_i, data.hex(), expected_length, expected_branches, expected_arch_transition,
+                info.length, actual_branches, info.arch_transition_by_target_addr))
+
+    return None
+
+
 def run_all_tests():
+    # Every case is checked before reporting, so that one stale expectation does not hide the rest.
+    failures = []
+
     for (test_i, (arch_name, data, expected)) in enumerate(test_cases):
-        platform = {'A':'linux-armv7', 'T':'linux-thumb2', 'A_BE':'linux-armv7eb'}[arch_name]
+        failure = check_lift_case(test_i, arch_name, data, expected)
+        if failure:
+            failures.append(failure)
 
-        if '?' in expected:
-            fail_test(
-                'INVALID EXPECTED LLIL AT TEST %d!\n\t   input: %s\n\texpected: %s'
-                % (test_i, data.hex(), expected))
+    for (test_i, info_case) in enumerate(info_test_cases):
+        failure = check_info_case(test_i, *info_case)
+        if failure:
+            failures.append(failure)
 
-        actual = instr_to_il(data, platform)
+    if failures:
+        fail_test('%d of %d cases failed:\n\n%s'
+            % (len(failures), len(test_cases) + len(info_test_cases), '\n\n'.join(failures)))
 
-        #print(f'{test_i:04d} {data.hex()} {actual}')
-
-        if '?' in actual:
-            fail_test(
-                'INVALID ACTUAL LLIL AT TEST %d!\n\t   input: %s\n\t  actual: %s\n\t    tree:\n%s'
-                % (test_i, data.hex(), actual, il_str_to_tree(actual)))
-
-        if actual != expected:
-            fail_test(
-                'MISMATCH AT TEST %d!\n\t   input: %s\n\texpected: %s\n\t  actual: %s\n\t    tree:\n%s'
-                % (test_i, data.hex(), expected, actual, il_str_to_tree(actual)))
-
-    for (test_i, (arch_name, data, expected_length, expected_branches, expected_arch_transition)) in enumerate(info_test_cases):
-        platform = {'A':'linux-armv7', 'T':'linux-thumb2'}[arch_name]
-        info = binaryninja.Platform[platform].arch.get_instruction_info(data, 0)
-        actual_branches = [(branch.type.name, branch.target) for branch in info.branches]
-
-        if info.length != expected_length or actual_branches != expected_branches or info.arch_transition_by_target_addr != expected_arch_transition:
-            fail_test(
-                'MISMATCH AT INFO TEST %d!\n\t   input: %s\n\texpected: length=%d branches=%s arch_transition=%s\n\t  actual: length=%d branches=%s arch_transition=%s'
-                % (test_i, data.hex(), expected_length, expected_branches, expected_arch_transition,
-                    info.length, actual_branches, info.arch_transition_by_target_addr))
 
 def test_all():
     run_all_tests()
+
 
 if __name__ == '__main__':
     run_all_tests()
     print('success!')
     sys.exit(0)
-
-if __name__ == 'test_lift':
-    test_all()
-    print('success!')

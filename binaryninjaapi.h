@@ -13639,9 +13639,30 @@ namespace BinaryNinja {
 			\return The HLIL for this Function if it's available.
 		*/
 		Ref<HighLevelILFunction> GetHighLevelILIfAvailable() const;
+
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentation(const std::string& language = "Pseudo C") const;
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentationIfAvailable(
 			const std::string& language = "Pseudo C") const;
+
+		// Code complexity primitives - thin wrappers over the matching BNGetFunction*Complexity
+		// Core calls, each a single whole-function walk.
+		double GetCyclomaticComplexity() const;
+		double GetInstructionCountComplexity() const;
+		double GetTokenCountComplexity() const;
+		double GetBranchDensityComplexity() const;
+		double GetHalsteadComplexity() const;
+		double GetNestingDepthComplexity() const;
+		double GetCognitiveComplexity() const;
+
+		// Composite/aggregate complexity metrics - built entirely from the primitives above plus
+		// other already-public API calls (MLIL visitors, BinaryView::GetCodeReferences,
+		// BinaryView::GetAnalysisFunctionsForAddress). Implemented here rather than in Core since
+		// none of them need a per-instruction callback into Core - only a bounded number of
+		// whole-function calls - so there's nothing to gain from Core doing the aggregation itself.
+		double GetCompositeComplexity() const;
+		double GetFanOutComplexity() const;
+		double GetCodeReferenceComplexity() const;
+		double GetTransitiveComplexity() const;
 
 		Ref<Type> GetType() const;
 		Confidence<Ref<Type>> GetReturnType() const;

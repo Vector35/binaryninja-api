@@ -1,0 +1,13 @@
+[package]
+name = "example_primask_write_hook"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+binaryninjacore-sys = { path = "../../binaryninjacore-sys" }
+binaryninja = { path = "../.." }

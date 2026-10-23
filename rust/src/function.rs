@@ -15,7 +15,10 @@
 use binaryninjacore_sys::*;
 
 use crate::{
-    architecture::{Architecture, CoreArchitecture, CoreRegister, Register},
+    architecture::{
+        Architecture, BranchOverride, BranchType, CoreArchitecture, CoreRegister, Register,
+        UserBranchOverride,
+    },
     basic_block::{BasicBlock, BlockContext},
     binary_view::BinaryView,
     calling_convention::CoreCallingConvention,
@@ -52,7 +55,7 @@ use crate::variable::{
     StackVariableReference, Variable,
 };
 use crate::workflow::Workflow;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ffi::CStr;
 use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
@@ -861,15 +864,10 @@ impl Function {
         let arch = arch.unwrap_or_else(|| self.arch());
         let adjust_type: Conf<&Type> = adjust_type.into();
         unsafe {
-            BNSetAutoCallTypeAdjustment(
-                self.handle,
-                arch.handle,
-                addr,
-                &mut BNTypeWithConfidence {
-                    type_: adjust_type.contents.handle,
-                    confidence: adjust_type.confidence,
-                },
-            )
+            BNSetAutoCallTypeAdjustment(self.handle, arch.handle, addr, &mut BNTypeWithConfidence {
+                type_: adjust_type.contents.handle,
+                confidence: adjust_type.confidence,
+            })
         }
     }
 
@@ -1709,6 +1707,77 @@ impl Function {
                 branches.len(),
             )
         }
+    }
+
+    /// Replace a branch type and optionally its destination.
+    ///
+    /// Targets in another architecture must belong to the function's platform or an
+    /// explicitly related platform. Unsupported targets leave existing overrides unchanged.
+    pub fn set_user_branch_override(
+        &self,
+        address: u64,
+        original_branch_type: BranchType,
+        replacement_branch_type: BranchType,
+        replacement_target: Option<Location>,
+        arch: Option<CoreArchitecture>,
+    ) {
+        let arch = arch.unwrap_or_else(|| self.arch());
+        unsafe {
+            BNSetUserBranchOverride(
+                self.handle,
+                arch.handle,
+                address,
+                original_branch_type,
+                replacement_branch_type,
+                replacement_target.is_some(),
+                replacement_target
+                    .and_then(|target| target.arch)
+                    .map_or(std::ptr::null_mut(), |arch| arch.handle),
+                replacement_target.map_or(0, |target| target.addr),
+            )
+        }
+    }
+
+    pub fn clear_user_branch_override(
+        &self,
+        address: u64,
+        original_branch_type: BranchType,
+        arch: Option<CoreArchitecture>,
+    ) {
+        let arch = arch.unwrap_or_else(|| self.arch());
+        unsafe {
+            BNClearUserBranchOverride(
+                self.handle,
+                arch.handle,
+                address,
+                original_branch_type,
+            )
+        }
+    }
+
+    pub fn user_branch_overrides(
+        &self,
+        address: u64,
+        arch: Option<CoreArchitecture>,
+    ) -> HashMap<BranchType, BranchOverride> {
+        let arch = arch.unwrap_or_else(|| self.arch());
+        let mut count = 0;
+        let overrides =
+            unsafe { BNGetUserBranchOverrides(self.handle, arch.handle, address, &mut count) };
+        let overrides = unsafe { Array::<UserBranchOverride>::new(overrides, count, ()) };
+        overrides
+            .iter()
+            .map(|entry| (entry.original_type, entry.replacement))
+            .collect()
+    }
+
+    pub fn is_valid_branch_override_location(
+        &self,
+        address: u64,
+        arch: Option<CoreArchitecture>,
+    ) -> bool {
+        let arch = arch.unwrap_or_else(|| self.arch());
+        unsafe { BNIsValidBranchOverrideLocation(self.handle, arch.handle, address) }
     }
 
     pub fn set_auto_indirect_branches<I>(

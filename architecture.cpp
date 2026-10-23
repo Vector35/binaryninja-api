@@ -278,6 +278,29 @@ const std::set<ArchAndAddr>& BasicBlockAnalysisContext::GetIndirectNoReturnCalls
 }
 
 
+const std::map<ArchAndAddr, std::map<BNBranchType, BranchOverride>>& BasicBlockAnalysisContext::GetBranchOverrides()
+{
+	if (!m_branchOverrides)
+	{
+		auto& branchOverrides = m_branchOverrides.emplace();
+		for (size_t i = 0; i < m_context->branchOverrideCount; i++)
+		{
+			ArchAndAddr location(new CoreArchitecture(m_context->branchOverrides[i].arch),
+				m_context->branchOverrides[i].address);
+			BranchOverride replacement {m_context->branchOverrides[i].replacementBranchType};
+			if (m_context->branchOverrides[i].hasReplacementTarget)
+				replacement.target = m_context->branchOverrides[i].replacementTarget;
+			if (m_context->branchOverrides[i].replacementTargetArch)
+				replacement.targetArch =
+					new CoreArchitecture(m_context->branchOverrides[i].replacementTargetArch);
+			branchOverrides[location][m_context->branchOverrides[i].originalBranchType] = replacement;
+		}
+	}
+
+	return *m_branchOverrides;
+}
+
+
 std::map<ArchAndAddr, bool>& BasicBlockAnalysisContext::GetContextualReturns()
 {
 	if (!m_contextualReturns)
@@ -337,6 +360,15 @@ std::map<ArchAndAddr, ArchAndAddr>& BasicBlockAnalysisContext::GetInlinedUnresol
 		m_inlinedUnresolvedIndirectBranches.emplace();
 
 	return *m_inlinedUnresolvedIndirectBranches;
+}
+
+
+std::set<ArchAndAddr>& BasicBlockAnalysisContext::GetValidBranchOverrideLocations()
+{
+	if (!m_validBranchOverrideLocations)
+		m_validBranchOverrideLocations.emplace();
+
+	return *m_validBranchOverrideLocations;
 }
 
 
@@ -460,6 +492,24 @@ void BasicBlockAnalysisContext::Finalize()
 		delete[] locations;
 	}
 
+	if (m_validBranchOverrideLocations)
+	{
+		auto& validLocations = *m_validBranchOverrideLocations;
+		BNArchitectureAndAddress* locations = new BNArchitectureAndAddress[validLocations.size()];
+
+		size_t i = 0;
+		for (auto& location : validLocations)
+		{
+			locations[i].arch = location.arch->GetObject();
+			locations[i].address = location.address;
+			i++;
+		}
+
+		BNAnalyzeBasicBlocksContextSetValidBranchOverrideLocations(
+			m_context, locations, validLocations.size());
+		delete[] locations;
+	}
+
 	if (m_contextualReturns)
 	{
 		auto& contextualReturns = *m_contextualReturns;
@@ -553,6 +603,18 @@ FunctionLifterContext::FunctionLifterContext(LowLevelILFunction* func, BNFunctio
 			m_userIndirectBranches[src].insert(dest);
 	}
 
+	for (size_t i = 0; i < context->branchOverrideCount; i++)
+	{
+		ArchAndAddr location(new CoreArchitecture(context->branchOverrides[i].arch),
+			context->branchOverrides[i].address);
+		BranchOverride replacement {context->branchOverrides[i].replacementBranchType};
+		if (context->branchOverrides[i].hasReplacementTarget)
+			replacement.target = context->branchOverrides[i].replacementTarget;
+		if (context->branchOverrides[i].replacementTargetArch)
+			replacement.targetArch = new CoreArchitecture(context->branchOverrides[i].replacementTargetArch);
+		m_branchOverrides[location][context->branchOverrides[i].originalBranchType] = replacement;
+	}
+
 	for (size_t i = 0; i < context->inlinedCallsCount; i++)
 	{
 		m_inlinedCalls.insert(context->inlinedCalls[i]);
@@ -595,6 +657,114 @@ std::map<ArchAndAddr, std::set<ArchAndAddr>>& FunctionLifterContext::GetUserIndi
 std::map<ArchAndAddr, std::set<ArchAndAddr>>& FunctionLifterContext::GetAutoIndirectBranches()
 {
 	return m_autoIndirectBranches;
+}
+
+
+const std::map<ArchAndAddr, std::map<BNBranchType, BranchOverride>>& FunctionLifterContext::GetBranchOverrides() const
+{
+	return m_branchOverrides;
+}
+
+
+PreparedLiftedBranchOverride::PreparedLiftedBranchOverride(BNPreparedLiftedBranchOverride* object) : m_object(object)
+{}
+
+
+PreparedLiftedBranchOverride::~PreparedLiftedBranchOverride()
+{
+	BNFreePreparedLiftedBranchOverride(m_object);
+}
+
+
+bool PreparedLiftedBranchOverride::SuppressesInstruction() const
+{
+	return BNPreparedLiftedBranchOverrideSuppressesInstruction(m_object);
+}
+
+
+Ref<LowLevelILFunction> PreparedLiftedBranchOverride::GetSource()
+{
+	if (!m_source)
+		m_source = new LowLevelILFunction(BNGetPreparedLiftedBranchOverrideSource(m_object));
+	return m_source;
+}
+
+
+bool PreparedLiftedBranchOverride::Apply(uint64_t continuationAddress)
+{
+	return BNApplyPreparedLiftedBranchOverride(m_object, continuationAddress);
+}
+
+
+struct FunctionLifterContext::LiftedBranchOverrideInputs
+{
+	vector<BNOverridableBranchInfo> branches;
+	vector<BNBranchOverride> overrides;
+	vector<BNArchitectureAndAddress> indirectTargets;
+	BNLiftedBranchOverrideInfo info{};
+};
+
+
+FunctionLifterContext::LiftedBranchOverrideInputs FunctionLifterContext::GetLiftedBranchOverrideInputs(
+	const ArchAndAddr& location, const vector<OverridableBranchInfo>& branches) const
+{
+	LiftedBranchOverrideInputs result;
+	auto& rawBranches = result.branches;
+	auto& rawOverrides = result.overrides;
+	auto& indirectTargets = result.indirectTargets;
+	auto it = m_branchOverrides.find(location);
+	if (!location.arch || (it == m_branchOverrides.end()))
+		return result;
+
+	rawBranches.reserve(branches.size());
+	for (const auto& branch : branches)
+		rawBranches.push_back({branch.type, branch.target, branch.arch ? branch.arch->GetObject() : nullptr});
+
+	rawOverrides.reserve(it->second.size());
+	for (const auto& [originalType, value] : it->second)
+	{
+		rawOverrides.push_back({location.arch->GetObject(), location.address, originalType, value.type,
+			value.target.has_value(), value.targetArch ? value.targetArch->GetObject() : nullptr,
+			value.target.value_or(0)});
+	}
+
+	const set<ArchAndAddr>* targets = nullptr;
+	if (auto user = m_userIndirectBranches.find(location); user != m_userIndirectBranches.end())
+		targets = &user->second;
+	else if (auto automatic = m_autoIndirectBranches.find(location); automatic != m_autoIndirectBranches.end())
+		targets = &automatic->second;
+	if (targets)
+	{
+		indirectTargets.reserve(targets->size());
+		for (const auto& target : *targets)
+			indirectTargets.push_back({target.arch->GetObject(), target.address});
+	}
+
+	result.info = {location.arch->GetObject(), location.address, 0,
+		rawBranches.data(), rawBranches.size(), rawOverrides.data(), rawOverrides.size(),
+		m_noReturnCalls.count(location) != 0, indirectTargets.data(), indirectTargets.size()};
+	return result;
+}
+
+
+unique_ptr<PreparedLiftedBranchOverride> FunctionLifterContext::PrepareLiftedBranchOverrides(
+	LowLevelILFunction& dest, BasicBlock* block, const ArchAndAddr& location,
+	const vector<OverridableBranchInfo>& branches) const
+{
+	auto inputs = GetLiftedBranchOverrideInputs(location, branches);
+	if (!inputs.info.arch)
+		return nullptr;
+	auto result = BNPrepareLiftedBranchOverrides(dest.GetObject(), block ? block->GetObject() : nullptr, &inputs.info);
+	return result ? make_unique<PreparedLiftedBranchOverride>(result) : nullptr;
+}
+
+
+bool FunctionLifterContext::ApplyLiftedBranchOverrides(LowLevelILFunction& dest, LowLevelILFunction& source,
+	const ArchAndAddr& location, uint64_t continuationAddress, const vector<OverridableBranchInfo>& branches) const
+{
+	auto inputs = GetLiftedBranchOverrideInputs(location, branches);
+	inputs.info.continuationAddress = continuationAddress;
+	return inputs.info.arch && BNApplyLiftedBranchOverrides(dest.GetObject(), source.GetObject(), &inputs.info);
 }
 
 
@@ -772,6 +942,23 @@ bool Architecture::GetInstructionInfoCallback(
 	bool ok = arch->GetInstructionInfo(data, addr, maxLen, info);
 	*result = info;
 	return ok;
+}
+
+
+size_t Architecture::GetBranchTypesWithContextCallback(void* ctxt, BNFunction* function, uint64_t addr,
+	BNOverridableBranchInfo* branches, size_t maxBranches, void* functionArchContext)
+{
+	CallbackRef<Architecture> arch(ctxt);
+	Ref<Function> func(new Function(BNNewFunctionReference(function)));
+	auto result = arch->GetBranchTypesWithContext(func, addr, functionArchContext);
+	size_t count = std::min(result.size(), maxBranches);
+	for (size_t i = 0; i < count; i++)
+	{
+		branches[i].type = result[i].type;
+		branches[i].target = result[i].target;
+		branches[i].arch = result[i].arch ? result[i].arch->GetObject() : nullptr;
+	}
+	return count;
 }
 
 
@@ -1351,6 +1538,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getOpcodeDisplayLength = GetOpcodeDisplayLengthCallback;
 	callbacks.getAssociatedArchitectureByAddress = GetAssociatedArchitectureByAddressCallback;
 	callbacks.getInstructionInfo = GetInstructionInfoCallback;
+	callbacks.getBranchTypesWithContext = GetBranchTypesWithContextCallback;
 	callbacks.getInstructionText = GetInstructionTextCallback;
 	callbacks.getInstructionTextWithContext = GetInstructionTextWithContextCallback;
 	callbacks.freeInstructionText = FreeInstructionTextCallback;
@@ -1484,6 +1672,23 @@ size_t Architecture::GetOpcodeDisplayLength() const
 	if (maxLen < BN_DEFAULT_OPCODE_DISPLAY)
 		return maxLen;
 	return BN_DEFAULT_OPCODE_DISPLAY;
+}
+
+
+std::vector<OverridableBranchInfo> Architecture::GetBranchTypesWithContext(Function* function, uint64_t addr, void*)
+{
+	size_t count = 0;
+	BNOverridableBranchInfo* branches = BNArchitectureDefaultGetBranchTypesWithContext(
+		m_object, function->GetObject(), addr, &count);
+	std::vector<OverridableBranchInfo> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back({branches[i].type, branches[i].target,
+			branches[i].arch ? new CoreArchitecture(branches[i].arch) : nullptr});
+	}
+	BNFreeOverridableBranchInfoList(branches);
+	return result;
 }
 
 
@@ -2076,6 +2281,22 @@ bool CoreArchitecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, si
 }
 
 
+std::vector<OverridableBranchInfo> CoreArchitecture::GetBranchTypesWithContext(Function* function, uint64_t addr, void*)
+{
+	size_t count = 0;
+	BNOverridableBranchInfo* branches = BNGetArchitectureBranchTypesWithContext(m_object, function->GetObject(), addr, &count);
+	std::vector<OverridableBranchInfo> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back({branches[i].type, branches[i].target,
+			branches[i].arch ? new CoreArchitecture(branches[i].arch) : nullptr});
+	}
+	BNFreeOverridableBranchInfoList(branches);
+	return result;
+}
+
+
 bool CoreArchitecture::GetInstructionText(
     const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result)
 {
@@ -2638,6 +2859,13 @@ bool ArchitectureExtension::GetInstructionInfo(
     const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result)
 {
 	return m_base->GetInstructionInfo(data, addr, maxLen, result);
+}
+
+
+std::vector<OverridableBranchInfo> ArchitectureExtension::GetBranchTypesWithContext(
+	Function* function, uint64_t addr, void* functionArchContext)
+{
+	return m_base->GetBranchTypesWithContext(function, addr, functionArchContext);
 }
 
 

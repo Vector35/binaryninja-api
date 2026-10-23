@@ -333,6 +333,8 @@ pub enum ILInstructionAttribute {
     HLILEarlyReturnPossible,
     HLILSwitchRecoveryPossible,
     ILTransparentCopy,
+    /// Control flow explicitly selected by a user branch override.
+    ILBranchOverride,
 }
 
 impl ILInstructionAttribute {
@@ -351,6 +353,7 @@ impl ILInstructionAttribute {
             Self::HLILEarlyReturnPossible => 1024,
             Self::HLILSwitchRecoveryPossible => 2048,
             Self::ILTransparentCopy => 4096,
+            Self::ILBranchOverride => 32768,
         }
     }
 }

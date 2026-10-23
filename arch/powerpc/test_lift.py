@@ -142,11 +142,67 @@ def check_il(test_i, arch_name, data, expected, actual):
                il_str_to_tree(actual)))
 
 
+def analyze_words(words, arch_name):
+    arch = binaryninja.Architecture[arch_name]
+    order = 'little' if arch_name.endswith('_le') else 'big'
+    bv = binaryview.BinaryView.new(b''.join(word.to_bytes(4, order) for word in words))
+    bv.add_function(0, plat=arch.standalone_platform)
+    bv.update_analysis_and_wait()
+    return bv
+
+
+def check_carry_chain_analysis(arch_name):
+    # An aliased carry producer feeds arithmetic used as an indirect target.
+    shift = 0x7c632836 if arch_name.startswith('ppc64') else 0x7c632830
+    words = [0x3880ffff, 0x38a00001, 0x7c842814,  # li r4,-1; li r5,1; addc r4,r4,r5
+             0x3880000f, 0x7c640194,             # li r4,15; addze r3,r4
+             0x38a00002, shift, 0x7c6903a6, 0x4e800420]
+    words += [0x60000000] * 7 + [0x4e800020]
+    with analyze_words(words, arch_name) as bv:
+        func = bv.functions[0]
+        assert {branch.dest_addr for branch in func.indirect_branches} == {0x40}
+        assert any(block.start == 0x40 for block in func.basic_blocks)
+        assert len(func.mlil) and len(func.hlil)
+
+
+def check_stack_analysis(arch_name):
+    # Losing native-width arithmetic precision also loses stack-frame offsets.
+    words = [0x3880fff0, 0x7c212214, 0x7c230b78, 0x4e800020]
+    with analyze_words(words, arch_name) as bv:
+        value = bv.functions[0].get_reg_value_after(4, 'r1')
+        assert value.type == binaryninja.RegisterValueType.StackFrameOffset
+        assert value.value == -16
+
+
+def check_fp_state_analysis(arch_name):
+    # Load, arithmetic, bit operation, store and status read share 64-bit FPR state.
+    words = [0xc0240010, 0xec41082b, 0xfc401050, 0xd8440020, 0xfc60048e, 0x4e800020]
+    with analyze_words(words, arch_name) as bv:
+        func = bv.functions[0]
+        il = [insn for block in func.llil.ssa_form for insn in block]
+        intrinsics = [insn for insn in il if insn.operation == LowLevelILOperation.LLIL_INTRINSIC_SSA]
+        arithmetic = next(insn for insn in intrinsics if str(insn.intrinsic) == '__fadds')
+        status = next(insn for insn in intrinsics if str(insn.intrinsic) == '__mffs')
+        assert [param.size for param in arithmetic.params] == [8, 8, 8]
+        assert str(arithmetic.params[0]) == str(arithmetic.params[1])
+        assert arithmetic.params[0].src.version > 0
+        assert status.params[0].src.version > arithmetic.params[2].src.version
+        stores = [insn for insn in il if insn.operation == LowLevelILOperation.LLIL_STORE_SSA]
+        assert len(stores) == 1 and stores[0].size == 8
+        assert stores[0].src.operation == LowLevelILOperation.LLIL_REG_SSA
+        assert str(stores[0].src.src.reg) == 'f2' and stores[0].src.src.version > 1
+        assert len(func.mlil) and len(func.hlil)
+
+
 def run_all_tests():
     for (test_i, (arch_name, data,
                   expected)) in enumerate(test_cases):
         actual = instr_to_il(data, arch_name)
         check_il(test_i, arch_name, data, expected, actual)
+    for arch_name in ('ppc', 'ppc_le', 'ppc64', 'ppc64_le'):
+        check_carry_chain_analysis(arch_name)
+        check_stack_analysis(arch_name)
+        check_fp_state_analysis(arch_name)
 
 
 def test_all():

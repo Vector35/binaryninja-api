@@ -7,6 +7,7 @@ use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::symbol::{Symbol as BNSymbol, SymbolType};
 use binaryninja::types::TypeClass as BNTypeClass;
+use std::path::PathBuf;
 use std::str::FromStr;
 use warp::mock::{mock_constraint, mock_function};
 use warp::r#type::class::{IntegerClass, ReferrerClass, StructureClass, StructureMember};
@@ -14,8 +15,10 @@ use warp::r#type::guid::TypeGUID;
 use warp::r#type::Type;
 use warp::signature::function::FunctionGUID;
 use warp::target::Target;
+use warp_ninja::container::disk::DiskContainer;
 use warp_ninja::container::memory::MemoryContainer;
 use warp_ninja::container::{Container, SourceId};
+use warp_ninja::convert::platform_to_target;
 use warp_ninja::function_guid;
 use warp_ninja::matcher::{Matcher, MatcherSettings};
 
@@ -178,4 +181,50 @@ fn test_add_type_to_view() {
         .expect("Failed to find added type");
     // Make sure we actually added it as a structure type.
     assert_eq!(found_type.type_class(), BNTypeClass::StructureTypeClass);
+}
+
+#[test]
+fn test_load_type_from_file() {
+    let matcher_settings = MatcherSettings::default();
+    let matcher = Matcher::new(matcher_settings);
+
+    let session = Session::new().expect("Failed to create session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let file = out_dir.join("test.exe");
+    let view = session.load(file).expect("Failed to load view");
+
+    let platform = view.default_platform().expect("No default platform");
+    let target = platform_to_target(&platform);
+    let container = DiskContainer::new_from_dir(out_dir);
+    let bn_function = view
+        .function_at(&platform, 0x43e83b)
+        .expect("Failed to get function");
+    let func_guid = function_guid(&bn_function, &bn_function.lifted_il().unwrap());
+    let possible_funcs: Vec<_> = container
+        .sources()
+        .unwrap()
+        .iter()
+        .flat_map(|source| {
+            container
+                .functions_with_guid(&target, source, &func_guid)
+                .unwrap()
+        })
+        .collect();
+    let matched_func = matcher
+        .match_function_from_constraints(&bn_function, &possible_funcs)
+        .expect("Failed to match function");
+    assert_eq!(matched_func.symbol.name, "my_signature".to_string());
+
+    // Actually add the type information to the view.
+    matcher.add_function_types_to_view(
+        &container,
+        &container.sources().unwrap(),
+        &view,
+        platform.arch(),
+        matched_func,
+    );
+
+    // Verify that the type information is present in the view.
+    view.type_by_name("VOID_PTR").expect("Failed to find type");
+    view.type_by_name("test_type").expect("Failed to find type");
 }

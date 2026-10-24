@@ -9,7 +9,6 @@
 #include <QDialogButtonBox>
 #include <QModelIndex>
 #include <QSplitter>
-#include <QStackedWidget>
 
 #include "binaryninjaapi.h"
 #include "uitypes.h"
@@ -91,7 +90,7 @@ class BINARYNINJAUIAPI ContainerBrowser : public QDialog
 
 	QLineEdit* m_filter = nullptr;
 	QTreeView* m_tree = nullptr;
-	QStackedWidget* m_previewStack = nullptr;
+	QSplitter* m_previewSplitter = nullptr;
 	QPlainTextEdit* m_preview = nullptr;
 	ImagePreviewLabel* m_imagePreview = nullptr;
 	QSplitter* m_splitter = nullptr;

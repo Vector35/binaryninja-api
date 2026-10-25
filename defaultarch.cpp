@@ -79,6 +79,58 @@ static bool IsReturnAddressRegisterJumpOrReturn(LowLevelILInstruction instr, con
 }
 
 
+// Returning overrides need a continuation even when another branch ends the block.
+static void AddBranchOverrideContinuations(const set<BNBranchType>& overrideContinuations, BasicBlock* block,
+	const ArchAndAddr& location, set<ArchAndAddr>& seenBlocks, queue<ArchAndAddr>& blocksToProcess)
+{
+	block->SetCanExit(true);
+	for (auto type : overrideContinuations)
+	{
+		if ((type != TrueBranch) && (type != FalseBranch))
+			type = UnconditionalBranch;
+		const auto& edges = block->GetPendingOutgoingEdges();
+		if (none_of(edges.begin(), edges.end(), [&](const auto& edge) {
+			return (edge.type == type) && (edge.target == location.address);
+		}))
+			block->AddPendingOutgoingEdge(type, location.address, location.arch, true);
+	}
+	if (seenBlocks.insert(location).second)
+		blocksToProcess.push(location);
+}
+
+
+// NOPs and some indirect calls have no ordinary branch metadata. Discover it only
+// at a user override site, without changing the instruction decoder's normal behavior.
+// A NOP replacement suppresses the whole native instruction, including all branch arms.
+static bool ApplyInstructionInfoOverride(Function* function, BasicBlockAnalysisContext& context,
+	const ArchAndAddr& location, InstructionInfo& info)
+{
+	const auto& overrides = context.GetBranchOverrides();
+	auto entry = overrides.find(location);
+	if (entry == overrides.end())
+		return false;
+	if (!info.branchCount)
+	{
+		for (const auto& branch : location.arch->GetBranchTypesWithContext(function, location.address,
+			context.GetFunctionArchContextRaw()))
+			if (entry->second.count(branch.type))
+				info.AddBranch(branch.type, branch.target, branch.arch);
+	}
+	for (size_t i = 0; i < info.branchCount; i++)
+	{
+		auto replacement = entry->second.find(info.branchType[i]);
+		if ((replacement != entry->second.end()) && (replacement->second.type == NopBranch))
+		{
+			info.branchCount = 0;
+			info.delaySlots = 0;
+			info.AddBranch(NopBranch);
+			return true;
+		}
+	}
+	return false;
+}
+
+
 void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context)
 {
 	auto data = function->GetView();
@@ -93,6 +145,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 
 	auto& indirectBranches = context.GetIndirectBranches();
 	auto& indirectNoReturnCalls = context.GetIndirectNoReturnCalls();
+	auto& branchOverrides = context.GetBranchOverrides();
 
 	auto& contextualFunctionReturns = context.GetContextualReturns();
 
@@ -188,6 +241,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 		// we decrement. the architecture can change this value arbitrarily during callbacks.
 		uint8_t delaySlotCount = 0;
 		bool delayInstructionEndsBlock = false;
+		set<BNBranchType> overrideContinuations;
 
 		// Disassemble the instructions in the block
 		while (true)
@@ -312,6 +366,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 				break;
 			}
 
+			bool suppressInstruction = !delaySlotCount && !branchOverrides.empty()
+				&& ApplyInstructionInfoOverride(function, context, location, info);
 			bool endsBlock = false;
 			ArchAndAddr target;
 			map<ArchAndAddr, set<ArchAndAddr>>::const_iterator indirectBranchIter, endIter;
@@ -325,17 +381,41 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 				// Keep track of where the current 'group' of instructions started. A 'group'
 				// is an instruction and all of its delay slot instructions.
 				instructionGroupStart = location;
+				overrideContinuations.clear();
 
 				// Don't process branches in delay slots
 				for (size_t i = 0; i < info.branchCount; i++)
 				{
 					bool fastPath;
+					auto branchType = info.branchType[i];
+					auto branchTarget = info.branchTarget[i];
+					bool hasBranchTarget = (branchType == UnconditionalBranch) || (branchType == TrueBranch)
+						|| (branchType == FalseBranch) || (branchType == CallDestination);
+					Ref<Architecture> branchTargetArch =
+						info.branchArch[i] ? new CoreArchitecture(info.branchArch[i]) : nullptr;
+					bool branchOverridden = false;
+					if (auto locationOverrides = branchOverrides.find(location);
+						locationOverrides != branchOverrides.end())
+					{
+						if (auto branchOverride = locationOverrides->second.find(branchType);
+							branchOverride != locationOverrides->second.end())
+						{
+							branchType = branchOverride->second.type;
+							branchOverridden = true;
+							if (branchOverride->second.target)
+							{
+								hasBranchTarget = true;
+								branchTarget = *branchOverride->second.target;
+								branchTargetArch = branchOverride->second.targetArch;
+							}
+						}
+					}
 
 					auto handleAsFallback = [&]() {
 						// Undefined type or target, check for targets from analysis and stop disassembling this block
 						endsBlock = true;
 
-						if (info.branchType[i] == IndirectBranch)
+						if (branchType == IndirectBranch)
 						{
 							// Indirect calls need not end the block early.
 							Ref<LowLevelILFunction> ilFunc = new LowLevelILFunction(location.arch, nullptr);
@@ -352,7 +432,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 
 						indirectBranchIter = indirectBranches.find(location);
 						endIter = indirectBranches.end();
-						if (indirectBranchIter != endIter)
+						if (indirectBranchIter != endIter && (!branchOverridden
+							|| ((branchType != ExceptionBranch) && (branchType != FunctionReturn))))
 						{
 							for (auto& branch : indirectBranchIter->second)
 							{
@@ -376,11 +457,16 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 								}
 							}
 						}
-						else if (info.branchType[i] == ExceptionBranch)
+						else if (branchType == ExceptionBranch)
 						{
 							block->SetCanExit(false);
 						}
-						else if (info.branchType[i] == FunctionReturn && function->CanReturn().GetValue())
+						else if (branchOverridden && (branchType == FunctionReturn))
+						{
+							// An explicit return override takes precedence over contextual return detection.
+							return;
+						}
+						else if (branchType == FunctionReturn && function->CanReturn().GetValue())
 						{
 							// Support for contextual function returns. This is mainly used for ARM/Thumb with 'blx lr'. It's most common for this to be treated
 							// as a function return, however it can also be a function call. For now this transform is described as follows:
@@ -409,23 +495,33 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 						}
 					};
 
-					switch (info.branchType[i])
+					if (info.branchType[i] != SystemCall)
+						context.GetValidBranchOverrideLocations().insert(location);
+
+					bool returningOverride = branchOverridden
+						&& ((branchType == CallDestination) || (branchType == SystemCall));
+					switch (branchType)
 					{
 					case UnconditionalBranch:
 					case TrueBranch:
 					case FalseBranch:
+						if (!hasBranchTarget)
+						{
+							handleAsFallback();
+							break;
+						}
 						// Normal branch, resume disassembly at targets
 						endsBlock = true;
 						// Target of a call instruction, add the function to the analysis
-						if (data->IsOffsetExternSemantics(info.branchTarget[i]))
+						if (data->IsOffsetExternSemantics(branchTarget))
 						{
 							// Deal with direct pointers into the extern section
 							DataVariable dataVar;
-							if (data->GetDataVariableAtAddress(info.branchTarget[i], dataVar)
-								&& (dataVar.address == info.branchTarget[i]) && dataVar.type.GetValue()
+							if (data->GetDataVariableAtAddress(branchTarget, dataVar)
+								&& (dataVar.address == branchTarget) && dataVar.type.GetValue()
 								&& (dataVar.type->GetClass() == FunctionTypeClass))
 							{
-								directRefs[info.branchTarget[i]].emplace(location);
+								directRefs[branchTarget].emplace(location);
 								if (!dataVar.type->CanReturn())
 								{
 									directNoReturnCalls.insert(location);
@@ -436,12 +532,12 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							break;
 						}
 
-						fastPath = fastValidate && (info.branchTarget[i] >= fastStartAddr) && (info.branchTarget[i] <= fastEndAddr);
-						if (fastPath || (data->IsValidOffset(info.branchTarget[i]) &&
-							data->IsOffsetBackedByFile(info.branchTarget[i]) &&
-							((!validateExecutable) || data->IsOffsetExecutable(info.branchTarget[i]))))
+						fastPath = fastValidate && (branchTarget >= fastStartAddr) && (branchTarget <= fastEndAddr);
+						if (fastPath || (data->IsValidOffset(branchTarget) &&
+							data->IsOffsetBackedByFile(branchTarget) &&
+							((!validateExecutable) || data->IsOffsetExecutable(branchTarget))))
 						{
-							target = ArchAndAddr(info.branchArch[i] ? new CoreArchitecture(info.branchArch[i]) : location.arch, info.branchTarget[i]);
+							target = ArchAndAddr(branchTargetArch ? branchTargetArch : location.arch, branchTarget);
 
 							// Check if valid target
 							if (data->ShouldSkipTargetAnalysis(location, function, instrEnd, target))
@@ -451,13 +547,14 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							if (target.arch != funcPlatform->GetArchitecture())
 								targetPlatform = funcPlatform->GetRelatedPlatform(target.arch);
 
-							directRefs[info.branchTarget[i]].insert(location);
+							directRefs[branchTarget].insert(location);
 
 							auto otherFunc = function->GetCalleeForAnalysis(targetPlatform, target.address, true);
-							if (translateTailCalls && targetPlatform && otherFunc && (otherFunc->GetStart() != function->GetStart()))
+							if (!branchOverridden && translateTailCalls && targetPlatform && otherFunc
+								&& (otherFunc->GetStart() != function->GetStart()))
 							{
 								calledFunctions.insert(otherFunc);
-								if (info.branchType[i] == UnconditionalBranch)
+								if (branchType == UnconditionalBranch)
 								{
 									if (!otherFunc->CanReturn() && !otherFunc->IsInlinedDuringAnalysis().GetValue())
 									{
@@ -481,7 +578,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 								if (isGuidedSourceBlock)
 									guidedSourceBlockTargets.insert(target);
 
-								block->AddPendingOutgoingEdge(info.branchType[i], target.address, target.arch);
+								block->AddPendingOutgoingEdge(branchType, target.address, target.arch);
 								// Add the block to the list of blocks to process if it is not already processed
 								if (seenBlocks.count(target) == 0)
 								{
@@ -493,18 +590,27 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 						break;
 
 					case CallDestination:
+						// Preserve an indirect destination when no replacement address was supplied.
+						// Its callees and no-return status are resolved by indirect-call analysis.
+						if (!hasBranchTarget)
+						{
+							if (indirectNoReturnCalls.count(location))
+								returningOverride = false;
+							break;
+						}
 						// Target of a call instruction, add the function to the analysis
-						if (data->IsOffsetExternSemantics(info.branchTarget[i]))
+						if (data->IsOffsetExternSemantics(branchTarget))
 						{
 							// Deal with direct pointers into the extern section
 							DataVariable dataVar;
-							if (data->GetDataVariableAtAddress(info.branchTarget[i], dataVar)
-								&& (dataVar.address == info.branchTarget[i]) && dataVar.type.GetValue()
+							if (data->GetDataVariableAtAddress(branchTarget, dataVar)
+								&& (dataVar.address == branchTarget) && dataVar.type.GetValue()
 								&& (dataVar.type->GetClass() == FunctionTypeClass))
 							{
-								directRefs[info.branchTarget[i]].emplace(location);
+								directRefs[branchTarget].emplace(location);
 								if (!dataVar.type->CanReturn())
 								{
+									returningOverride = false;
 									directNoReturnCalls.insert(location);
 									endsBlock = true;
 									block->SetCanExit(false);
@@ -515,11 +621,11 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							break;
 						}
 
-						fastPath = fastValidate && (info.branchTarget[i] >= fastStartAddr) && (info.branchTarget[i] <= fastEndAddr);
-						if (fastPath || (data->IsValidOffset(info.branchTarget[i]) && data->IsOffsetBackedByFile(info.branchTarget[i]) &&
-							((!validateExecutable) || data->IsOffsetExecutable(info.branchTarget[i]))))
+						fastPath = fastValidate && (branchTarget >= fastStartAddr) && (branchTarget <= fastEndAddr);
+						if (fastPath || (data->IsValidOffset(branchTarget) && data->IsOffsetBackedByFile(branchTarget) &&
+							((!validateExecutable) || data->IsOffsetExecutable(branchTarget))))
 						{
-							target = ArchAndAddr(info.branchArch[i] ? new CoreArchitecture(info.branchArch[i]) : location.arch, info.branchTarget[i]);
+							target = ArchAndAddr(branchTargetArch ? branchTargetArch : location.arch, branchTarget);
 
 							if (!fastPath && !data->IsOffsetCodeSemantics(target.address) && data->IsOffsetCodeSemantics(location.address))
 							{
@@ -558,6 +664,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							directRefs[target.address].emplace(location);
 							if (!func->CanReturn())
 							{
+								returningOverride = false;
 								if (func->IsInlinedDuringAnalysis().GetValue() && func->HasUnresolvedIndirectBranches())
 								{
 									auto unresolved = func->GetUnresolvedIndirectBranches();
@@ -577,16 +684,19 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 						break;
 
 					case SystemCall:
+					case NopBranch:
 						break;
 
 					default:
 						handleAsFallback();
 						break;
 					}
+					if (returningOverride)
+						overrideContinuations.insert(info.branchType[i]);
 				}
 			}
 
-			if (indirectNoReturnCalls.count(location))
+			if (!suppressInstruction && indirectNoReturnCalls.count(location))
 			{
 				// Conditional Call Support (Part 1)
 				// Do not halt basic block analysis if this is a conditional call to a function that is 'no return'
@@ -607,7 +717,11 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 				instrData->Append(block, std::span<const uint8_t>(opcode, info.length));
 
 			if (endsBlock && !info.delaySlots)
+			{
+				if (!overrideContinuations.empty())
+					AddBranchOverrideContinuations(overrideContinuations, block, location, seenBlocks, blocksToProcess);
 				break;
+			}
 
 			// Respect the 'analysis.limits.maxFunctionSize' setting while allowing for overridable behavior as well.
 			// We prefer to allow disassembly when function analysis is disabled, but only up to the maximum size.
@@ -629,7 +743,11 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 			{
 				delaySlotCount--;
 				if (!delaySlotCount && delayInstructionEndsBlock)
+				{
+					if (!overrideContinuations.empty())
+						AddBranchOverrideContinuations(overrideContinuations, block, location, seenBlocks, blocksToProcess);
 					break;
+				}
 			}
 			else
 			{
@@ -788,8 +906,118 @@ static void ApplyExternPointerForRelocation(
 }
 
 
+namespace
+{
+
+	// Created only for functions with user branch overrides. Ordinary instructions still
+	// lift directly into the function; temporary IL exists only at matching override sites.
+	class BranchOverrideLifter
+	{
+		LowLevelILFunction* m_function;
+		FunctionLifterContext& m_context;
+		const map<ArchAndAddr, map<BNBranchType, BranchOverride>>& m_overrides;
+		unique_ptr<PreparedLiftedBranchOverride> m_prepared;
+
+		void limitCoalescing(const ArchAndAddr& location, size_t& len)
+		{
+			// A lifter must not consume a later override site while lifting an earlier instruction.
+			for (auto next = m_overrides.upper_bound(location);
+				next != m_overrides.end() && next->first.arch == location.arch
+					&& (next->first.address - location.address < len); ++next)
+			{
+				if (m_function->GetFunction()->IsValidBranchOverrideLocation(location.arch, next->first.address))
+				{
+					len = next->first.address - location.address;
+					break;
+				}
+			}
+		}
+
+		void limitToInstructionGroup(const ArchAndAddr& location, const uint8_t* opcode, size_t& len)
+		{
+			// Preserve delay slots, but exclude following instructions: a returning override
+			// resumes immediately after this group.
+			size_t groupLength = 0;
+			unsigned remaining = 1;
+			while (remaining && (groupLength < len))
+			{
+				InstructionInfo info;
+				if (!location.arch->GetInstructionInfo(opcode + groupLength, location.address + groupLength,
+					len - groupLength, info) || !info.length || (info.length > len - groupLength))
+					break;
+				remaining = groupLength ? remaining - 1 : (IsNopOverride() ? 0 : info.delaySlots);
+				groupLength += info.length;
+			}
+			if (!remaining)
+				len = groupLength;
+		}
+
+	public:
+		BranchOverrideLifter(LowLevelILFunction* function, FunctionLifterContext& context) :
+			m_function(function), m_context(context), m_overrides(context.GetBranchOverrides())
+		{}
+
+		LowLevelILFunction* PrepareInstruction(BasicBlock* block, const ArchAndAddr& location,
+			const uint8_t* opcode, size_t& len)
+		{
+			m_prepared.reset();
+			limitCoalescing(location, len);
+			if (!m_overrides.count(location))
+				return m_function;
+
+			auto branches = location.arch->GetBranchTypesWithContext(m_function->GetFunction(), location.address,
+				m_context.GetFunctionArchContextRaw());
+			m_prepared = m_context.PrepareLiftedBranchOverrides(*m_function, block, location, branches);
+			if (!m_prepared)
+				return m_function;
+
+			limitToInstructionGroup(location, opcode, len);
+			return IsNopOverride() ? m_function : m_prepared->GetSource().GetPtr();
+		}
+
+		bool IsNopOverride() const { return m_prepared && m_prepared->SuppressesInstruction(); }
+
+		bool LiftInstruction(BasicBlock* block, const ArchAndAddr& location, const uint8_t* opcode,
+			size_t& len, LowLevelILFunction*& liftTarget)
+		{
+			liftTarget = PrepareInstruction(block, location, opcode, len);
+			if (IsNopOverride())
+				return true;
+			return location.arch->GetInstructionLowLevelIL(opcode, location.address, len, *liftTarget);
+		}
+
+		bool FinishInstruction(const ArchAndAddr& location, uint64_t continuationAddress,
+			bool& status, size_t& instrCountAfter)
+		{
+			if (!m_prepared)
+				return true;
+
+			bool applied = m_prepared->Apply(continuationAddress);
+			m_prepared.reset();
+			if (!applied)
+			{
+				m_context.GetLogger()->LogWarn("Unable to match branch overrides to lifted control flow at %#" PRIx64
+					" (%s); this instruction requires architecture-specific lifting support.",
+					location.address, location.arch->GetName().c_str());
+				return false;
+			}
+
+			// Lifters can return false for a valid terminator. An overridden call may now
+			// continue, so use the analyzed block boundary after a successful rewrite.
+			status = true;
+			instrCountAfter = m_function->GetInstructionCount();
+			return true;
+		}
+	};
+}
+
+
 bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLifterContext& context)
 {
+	unique_ptr<BranchOverrideLifter> overrideLifter;
+	if (!context.GetBranchOverrides().empty())
+		overrideLifter = make_unique<BranchOverrideLifter>(function, context);
+
 	Ref<BinaryView> data = context.GetView();
 	Ref<Logger> logger = context.GetLogger();
 	Ref<Platform> platform = context.GetPlatform();
@@ -884,22 +1112,28 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 			}
 
 			size_t instrCountBefore = function->GetInstructionCount();
-			bool status = i->GetArchitecture()->GetInstructionLowLevelIL(opcode, addr, len, *function);
-			size_t instrCountAfter = function->GetInstructionCount();
+			auto liftTarget = function;
+			bool status = overrideLifter ? overrideLifter->LiftInstruction(i, cur, opcode, len, liftTarget)
+				: i->GetArchitecture()->GetInstructionLowLevelIL(opcode, addr, len, *function);
+			size_t instrCountAfter = liftTarget->GetInstructionCount();
 			while (nextRelocation && nextRelocation->GetAddress() >= addr && nextRelocation->GetAddress() < addr + len)
 			{
-				if (data->IsOffsetExternSemantics(nextRelocation->GetTarget()))
+				if (data->IsOffsetExternSemantics(nextRelocation->GetTarget())
+					&& !(overrideLifter && overrideLifter->IsNopOverride()))
 				{
 					int64_t operand = relocationHandler->GetOperandForExternalRelocation(
-						opcode, addr, len, function, nextRelocation);
+						opcode, addr, len, liftTarget, nextRelocation);
 					if (operand != BN_NOCOERCE_EXTERN_PTR)
 					{
 						ApplyExternPointerForRelocation(
-							operand, *function, instrCountBefore, instrCountAfter, nextRelocation, logger);
+							operand, *liftTarget, liftTarget == function ? instrCountBefore : 0,
+							instrCountAfter, nextRelocation, logger);
 					}
 				}
 				nextRelocation = data->GetNextRelocation(nextRelocation->GetAddress() + 1, i->GetEnd());
 			}
+			if (overrideLifter && !overrideLifter->FinishInstruction(cur, addr + len, status, instrCountAfter))
+				return false;
 
 			// Conditional Call Support (Part 2)
 			// Replace the emitted GOTO with a noreturn expression
@@ -908,7 +1142,8 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 			{
 				for (size_t instrIndex = instrCountBefore; instrIndex < (instrCountAfter - 1); instrIndex++)
 				{
-					if (function->GetInstruction(instrIndex).operation != LLIL_CALL)
+					auto call = function->GetInstruction(instrIndex);
+					if ((call.operation != LLIL_CALL) || (call.attributes & ILBranchOverride))
 						continue;
 					LowLevelILInstruction instr = function->GetInstruction(instrIndex + 1);
 					if (instr.operation == LLIL_GOTO)
@@ -922,7 +1157,8 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 			context.CheckForInlinedCall(i, instrCountBefore, instrCountAfter, prevAddr, addr, opcode, len, indirectSource);
 
 			// Indirect branch information informs when to translate non-standard returns into jumps
-			if (auto lastInstr = function->GetInstruction(instrCountAfter - 1); (lastInstr.operation == LLIL_RET)
+			if (auto lastInstr = instrCountAfter ? function->GetInstruction(instrCountAfter - 1) : LowLevelILInstruction();
+					instrCountAfter && (lastInstr.operation == LLIL_RET) && !(lastInstr.attributes & ILBranchOverride)
 					&& (function->HasIndirectBranches() || !function->GetFunction()->CanReturn().GetValue()))
 			{
 				auto addressSize = platform->GetAddressSize();
@@ -948,7 +1184,8 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 		// 2) By default, contextualFunctionReturns is used to translate this to a LLIL_RET (conservative)
 		// 3) Downstream analysis uses dataflow to validate the return target
 		// 4) If the target is not the ReturnAddressValue, then we avoid the translation to a return and leave the instruction as a call
-		if (LowLevelILInstruction prevInstr = function->GetInstruction(function->GetInstructionCount() - 1); prevInstr.operation == LLIL_CALL)
+		if (LowLevelILInstruction prevInstr = function->GetInstruction(function->GetInstructionCount() - 1);
+			(prevInstr.operation == LLIL_CALL) && !(prevInstr.attributes & ILBranchOverride))
 		{
 			if (auto itr = contextualReturns.find(ArchAndAddr(i->GetArchitecture(), prevInstr.address)); itr != contextualReturns.end() && itr->second)
 				prevInstr.Replace(function->Return(prevInstr.GetDestExpr().exprIndex, prevInstr));
@@ -1004,6 +1241,8 @@ void FunctionLifterContext::CheckForInlinedCall(BasicBlock* block, size_t instrC
 	if (instrCountAfter > instrCountBefore)
 	{
 		LowLevelILInstruction lastInstr = m_function->GetInstruction(instrCountAfter - 1);
+		if ((lastInstr.operation == LLIL_JUMP) && (lastInstr.attributes & ILBranchOverride))
+			return;
 		if ((lastInstr.operation == LLIL_CALL || lastInstr.operation == LLIL_JUMP)
 			&& (lastInstr.GetDestExpr().operation == LLIL_CONST || lastInstr.GetDestExpr().operation == LLIL_CONST_PTR))
 		{

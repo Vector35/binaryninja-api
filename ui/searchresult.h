@@ -5,6 +5,7 @@
 #include <QtCore/QSortFilterProxyModel>
 #include <QtCore/QModelIndex>
 #include <QtCore/QThread>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QStyledItemDelegate>
@@ -12,12 +13,13 @@
 #include <QtWidgets/QProgressBar>
 #include <QtWidgets/QToolButton>
 #include "binaryninjaapi.h"
+#include "backgroundfind.h"
+#include "clickablelabel.h"
 #include "filter.h"
 #include "expandablegroup.h"
 #include "sidebar.h"
 #include "tabwidget.h"
 
-#define FIND_RESULT_LIST_UPDATE_INTERVAL 250
 #define COLUMN_MIN_WIDTH_IN_CHAR         10
 #define COLUMN_MAX_WIDTH_IN_CHAR         30
 
@@ -255,30 +257,30 @@ class BINARYNINJAUIAPI SearchResultWidget : public SidebarWidget
 	SearchProgressBar* m_progress;
 	BinaryNinja::FindParameters m_params;
 	QThread* m_tokenCacheThread = nullptr;
+	BackgroundFind::Ptr m_search;
+	bool m_searchFoundMatch = false;
 
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
-
-  public:
-	SearchResultWidget(BinaryViewRef data, const QString& title);
-	~SearchResultWidget();
-
-	void notifyFontChanged() override;
-
-	void startNewFind(const BinaryNinja::FindParameters& params);
-	virtual QString getHeaderText();
-
+	void searchUpdated();
+	QString getHeaderText();
 	void addSearchResult(uint64_t addr, const BinaryNinja::DataBuffer& match);
 	void addSearchResult(
 	    uint64_t addr, const BinaryNinja::DataBuffer& match, const BinaryNinja::LinearDisassemblyLine& line);
 	void clearSearchResult();
-	bool updateProgress(uint64_t cur, uint64_t total);
+	void updateTotal();
+	void updateProgress(uint64_t cur, uint64_t total);
 	void notifySearchCompleted();
 	void cacheTokens();
 	void terminateCacheThread();
 	bool isSearchActive() const;
 
-public Q_SLOTS:
-	void updateTotal();
+  public:
+	// Adds the matches of `search` as they are found. Destroying the widget cancels the search.
+	SearchResultWidget(BinaryViewRef data, const QString& title, const BinaryNinja::FindParameters& params,
+		BackgroundFind::Ptr search);
+	~SearchResultWidget();
+
+	void notifyFontChanged() override;
 };
 
 /*!
@@ -292,18 +294,16 @@ class BINARYNINJAUIAPI SearchProgressBar : public QWidget
 	QProgressBar* m_progress;
 	QToolButton* m_cancel;
 	bool m_maxSet;
-	bool m_running;
-	// The minimal duration (in milliseconds) the progress bar must last, before it is displayed
-	int m_minimalDuration;
 	std::chrono::steady_clock::time_point m_lastUpdate;
 
   public:
 	explicit SearchProgressBar(QWidget* parent = nullptr);
-	bool updateProgress(uint64_t cur, uint64_t total);
+	void updateProgress(uint64_t cur, uint64_t total);
 	void init();
 	void reset();
-	void show();
-	bool isRunning() const { return m_running; }
+
+  Q_SIGNALS:
+	void cancelRequested();
 };
 
 /*!

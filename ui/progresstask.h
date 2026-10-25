@@ -15,6 +15,7 @@
 #include <functional>
 #include <chrono>
 #include <deque>
+#include <stdint.h>
 #include "binaryninjaapi.h"
 #include "uitypes.h"
 
@@ -58,6 +59,9 @@ class BINARYNINJAUIAPI ProgressDialog : public QDialog
 	QString text() const;
 
 	void setText(const QString& text);
+
+	// Sets the progress without processing events. `update` processes events for callers that block the main thread.
+	void setProgress(uint64_t cur, uint64_t total);
 
   protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;

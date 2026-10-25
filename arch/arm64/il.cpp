@@ -964,7 +964,7 @@ static enum Arm64Intrinsic mnemonic_to_intrinsic(exarmo_aarch64_mnemonic mnemoni
 
 
 bool GetLowLevelILForInstruction(
-    Architecture* arch, uint64_t addr, LowLevelILFunction& il, const exarmo_aarch64_instruction& instr, size_t addrSize, bool requireAlignment, std::function<bool()> _preferIntrinsics)
+    Architecture* arch, uint64_t addr, LowLevelILFunction& il, const exarmo_aarch64_instruction& instr, size_t addrSize, bool requireAlignment, bool brkEndsBlock, std::function<bool()> _preferIntrinsics)
 {
 	bool SetPacAttr = false;
 
@@ -4333,8 +4333,14 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_WFI, {}));
 		break;
 	case EXARMO_AARCH64_BRK:
-		il.AddInstruction(
-		    il.Trap(IMM_O(operand1)));  // FIXME Breakpoint may need a parameter (IMM_O(operand1)));
+		// Since LLIL_TRAP ends the block, if arch.aarch64.disassembly.brkEndsBlock is enabled
+		// lift it as an intrinsic instead so we can lift the whole block and keep the immediate
+		if (brkEndsBlock)
+		{
+			il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_BRK, {il.Const(2, IMM_O(operand1))}));
+			break;
+		}
+		il.AddInstruction(il.Trap(IMM_O(operand1))); // FIXME Breakpoint may need a parameter (IMM_O(operand1)));
 		return false;
 	case EXARMO_AARCH64_DGH:
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_HINT_DGH, {}));

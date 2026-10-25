@@ -429,6 +429,7 @@ class Arm64Architecture : public Architecture
 	size_t m_bits;
 	bool m_onlyDisassembleOnAlignedAddresses;
 	bool m_preferIntrinsics;
+	bool m_brkEndsBlock;
 
 	virtual size_t GetAddressSize() const override { return 8; }
 
@@ -550,9 +551,12 @@ class Arm64Architecture : public Architecture
 			result.AddBranch(SystemCall);
 			break;
 
-		// BRK, HLT and UDF all lift to a trap that ends the block.
+		// BRK, HLT and UDF all lift to a trap that ends the block, unless BRK is set to fall through.
 		case EXARMO_AARCH64_BRANCH_EXCEPTION:
 		case EXARMO_AARCH64_BRANCH_HALT:
+			if (!m_brkEndsBlock && exarmo_aarch64_instruction_mnemonic(&instr) == EXARMO_AARCH64_BRK)
+				break;
+
 			result.AddBranch(ExceptionBranch);
 			break;
 
@@ -582,6 +586,7 @@ class Arm64Architecture : public Architecture
 		Ref<Settings> settings = Settings::Instance();
 		m_onlyDisassembleOnAlignedAddresses = settings->Get<bool>("arch.aarch64.disassembly.alignRequired") ? 1 : 0;
 		m_preferIntrinsics = settings->Get<bool>("arch.aarch64.disassembly.preferIntrinsics") ? 1 : 0;
+		m_brkEndsBlock = settings->Get<bool>("arch.aarch64.disassembly.brkEndsBlock");
 	}
 
 	bool CanAssemble() override { return true; }
@@ -715,6 +720,8 @@ class Arm64Architecture : public Architecture
 			return "SystemHintOp_GCSB";
 		case ARM64_INTRIN_JCVT:
 			return "__jcvt";
+		case ARM64_INTRIN_BRK:
+			return "__break";
 		case ARM64_INTRIN_ISB:
 			return "__isb";
 		case ARM64_INTRIN_WFE:
@@ -959,6 +966,8 @@ class Arm64Architecture : public Architecture
 			return {NameAndType(Type::FloatType(4))};
 		case ARM64_INTRIN_JCVT:       // reads <Dn>
 			return {NameAndType(Type::FloatType(8))};
+		case ARM64_INTRIN_BRK:        // reads #<imm>
+			return {NameAndType(Type::IntegerType(2, false))};
 		case ARM64_INTRIN_FMADD:      // reads <Sa>, <Sn>, <Sm>
 		case ARM64_INTRIN_FMSUB:      // reads <Sa>, <Sn>, <Sm>
 			return {NameAndType(Type::FloatType(4)), NameAndType(Type::FloatType(4)),
@@ -1219,7 +1228,7 @@ class Arm64Architecture : public Architecture
 		}
 
 		len = 4;
-		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_onlyDisassembleOnAlignedAddresses, [&]() -> bool
+		return GetLowLevelILForInstruction(this, addr, il, instr, GetAddressSize(), m_onlyDisassembleOnAlignedAddresses, m_brkEndsBlock, [&]() -> bool
 			{
 				Ref<Function> f = il.GetFunction();
 				Ref<BinaryView> v;
@@ -3726,6 +3735,14 @@ static void InitAArch64Settings()
 			"type" : "boolean",
 			"default" : true,
 			"description" : "Prefer generating calls to intrinsics (where one is available) to lifting vector operations as unrolled loops (where available). Note that not all vector operations are currently lifted as either intrinsics or unrolled loops."
+			})");
+	settings->RegisterSetting("arch.aarch64.disassembly.brkEndsBlock",
+			R"({
+			"title" : "AArch64 BRK Instruction Ends Basic Block",
+			"type" : "boolean",
+			"default" : true,
+			"description" : "Treat BRK as a trap that does not return, ending the basic block. Turn this off for code that resumes after BRK, such as debugger breakpoints. Disassembly then continues past BRK, which lifts as the __break intrinsic instead of a trap.",
+			"requiresRestart" : true
 			})");
 }
 

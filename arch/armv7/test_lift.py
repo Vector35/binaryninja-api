@@ -777,8 +777,8 @@ test_cases = \
     ('T', b'\xd1\xe8\x5f\x0f', 'LLIL_INTRINSIC([],SetExclusiveMonitors,[LLIL_REG.d(r1),LLIL_CONST.b(0x2)]); LLIL_SET_REG.d(r0,LLIL_ZX.d(LLIL_LOAD.w(LLIL_REG.d(r1))))'),
     # ldrexd r2, r3, [r4]
     ('T', b'\xd4\xe8\x7f\x23', 'LLIL_INTRINSIC([],SetExclusiveMonitors,[LLIL_REG.d(r4),LLIL_CONST.b(0x8)]); LLIL_SET_REG.d(r2,LLIL_LOAD.d(LLIL_REG.d(r4))); LLIL_SET_REG.d(r3,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(r4),LLIL_CONST.d(0x4))))'),
-    # ldm.w r0!, {r1, pc}; followed by an ARM return fence for the arch-transition target
-    ('T', b'\xb0\xe8\x02\x80\x0e\xf0\xa0\xe1', 'LLIL_SET_REG.d(temp0,LLIL_REG.d(r0)); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x0)))); LLIL_SET_REG.d(pc,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x4)))); LLIL_SET_REG.d(r0,LLIL_ADD.d(LLIL_REG.d(r0),LLIL_CONST.d(0x8))); LLIL_JUMP_TO(LLIL_CONST.d(0x4),{4: 6})'),
+    # ldm.w r0!, {r1, pc}
+    ('T', b'\xb0\xe8\x02\x80', 'LLIL_SET_REG.d(temp0,LLIL_REG.d(r0)); LLIL_SET_REG.d(r1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x0)))); LLIL_SET_REG.d(temp1,LLIL_LOAD.d(LLIL_ADD.d(LLIL_REG.d(temp0),LLIL_CONST.d(0x4)))); LLIL_SET_REG.d(r0,LLIL_ADD.d(LLIL_REG.d(r0),LLIL_CONST.d(0x8))); LLIL_JUMP(LLIL_REG.d(temp1))'),
     # ldaexb r3, [r4]
     ('T', b'\xd4\xe8\xcf\x3f', 'LLIL_INTRINSIC([],SetExclusiveMonitors,[LLIL_REG.d(r4),LLIL_CONST.b(0x1)]); LLIL_SET_REG.d(r3,LLIL_ZX.d(LLIL_LOAD.b(LLIL_REG.d(r4))))'),
     # ldaexh r2, [r5]

@@ -2818,7 +2818,10 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		{
 			if ((regs >> i) & 1)
 			{
-				il.AddInstruction(il.SetRegister(4, GetRegisterByIndex(i),
+				uint32_t dest = GetRegisterByIndex(i);
+				if (dest == armv7::REG_PC)
+					dest = LLIL_TEMP(1);
+				il.AddInstruction(il.SetRegister(4, dest,
 					il.Load(4, il.Add(4, il.Register(4, LLIL_TEMP(0)), il.Const(4, 4 * slot++)))));
 			}
 		}
@@ -2833,7 +2836,7 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		}
 
 		if (regs & (1 << armv7::REG_PC))
-			il.AddInstruction(il.Jump(ReadRegister(il, instr, armv7::REG_PC, 4)));
+			il.AddInstruction(il.Jump(il.Register(4, LLIL_TEMP(1))));
 		break;
 	}
 	case armv7::ARMV7_LDA:

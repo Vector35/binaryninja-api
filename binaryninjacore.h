@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 190
+#define BN_CURRENT_CORE_ABI_VERSION 191
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 188
+#define BN_MINIMUM_CORE_ABI_VERSION 191
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -2325,6 +2325,7 @@ extern "C"
 
 		size_t (*getLinearSweepInitialAlignment)(void* ctxt);
 		uint32_t (*getLinearSweepAnalysisCapabilities)(void* ctxt);
+		bool (*supportsStandaloneInstructionDecoding)(void* ctxt);
 	} BNCustomArchitecture;
 
 	typedef struct BNCustomPlatform
@@ -5847,6 +5848,7 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetArchitectureInstructionAlignment(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureLinearSweepInitialAlignment(BNArchitecture* arch);
 	BINARYNINJACOREAPI uint32_t BNGetArchitectureLinearSweepAnalysisCapabilities(BNArchitecture* arch);
+	BINARYNINJACOREAPI bool BNArchitectureSupportsStandaloneInstructionDecoding(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureMaxInstructionLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureOpcodeDisplayLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI BNArchitecture* BNGetAssociatedArchitectureByAddress(BNArchitecture* arch, uint64_t* addr);

@@ -4335,7 +4335,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_BRK:
 		// Since LLIL_TRAP ends the block, if arch.aarch64.disassembly.brkEndsBlock is enabled
 		// lift it as an intrinsic instead so we can lift the whole block and keep the immediate
-		if (brkEndsBlock)
+		if (!brkEndsBlock)
 		{
 			il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_BRK, {il.Const(2, IMM_O(operand1))}));
 			break;

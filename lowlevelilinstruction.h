@@ -250,6 +250,7 @@ namespace BinaryNinja
 		RegisterStackAdjustmentsLowLevelOperandUsage,
 		OffsetLowLevelOperandUsage,
 		ConstraintLowLevelOperandUsage,
+		DiscriminatorLowLevelOperandUsage,
 	};
 }  // namespace BinaryNinjaCore
 
@@ -1027,6 +1028,11 @@ namespace BinaryNinja
 			return As<N>().GetOffset();
 		}
 		template <BNLowLevelILOperation N>
+		uint64_t GetDiscriminator() const
+		{
+			return As<N>().GetDiscriminator();
+		}
+		template <BNLowLevelILOperation N>
 		int64_t GetVector() const
 		{
 			return As<N>().GetVector();
@@ -1212,6 +1218,7 @@ namespace BinaryNinja
 		uint32_t GetIntrinsic() const;
 		int64_t GetConstant() const;
 		uint64_t GetOffset() const;
+		uint64_t GetDiscriminator() const;
 		int64_t GetVector() const;
 		int64_t GetStackAdjustment() const;
 		size_t GetTarget() const;
@@ -1688,6 +1695,12 @@ namespace BinaryNinja
 	struct LowLevelILInstructionAccessor<LLIL_FLAG_GROUP> : public LowLevelILInstructionBase
 	{
 		uint32_t GetSemanticFlagGroup() const { return GetRawOperandAsRegister(0); }
+	};
+
+	template <>
+	struct LowLevelILInstructionAccessor<LLIL_EXCEPTION> : public LowLevelILInstructionBase
+	{
+		uint64_t GetDiscriminator() const { return GetRawOperandAsInteger(0); }
 	};
 
 	template <>

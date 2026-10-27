@@ -208,6 +208,7 @@ As you can see from the above code, labels are really just used internally and a
 * `LLIL_RET` - Return execution to the caller.
 * `LLIL_NORET` - Instruction emitted automatically after syscall or call instruction which cause the program to terminate.
 * `LLIL_SYSCALL` - System call instruction
+* `LLIL_EXCEPTION` - Opaque architectural exception with an unsigned 64-bit `discriminator` for platform interpretation.
 * `LLIL_TAILCALL ` - This instruction calls the expression `dest` using `params` as input and `output` for return values
 * `LLIL_IF` - `If` provides conditional execution. If condition is true execution branches to the true label and false label otherwise.
 * `LLIL_GOTO` - `Goto` is used to branch to an IL label, this is different from jump since jump can only jump to addresses.
@@ -223,6 +224,37 @@ As you can see from the above code, labels are really just used internally and a
 * `LLIL_CMP_SGT` - signed greater than
 * `LLIL_CMP_UGT` - unsigned greater than
 
+
+### Architectural exception emission
+
+Architecture lifters can emit an exception without selecting an ABI:
+
+```cpp
+il.AddInstruction(il.Exception(discriminator));
+```
+
+```python
+il.append(il.exception(discriminator))
+```
+
+Rust lifters use `il.exception(discriminator).append()`. C lifters can use
+`BNLowLevelILAddExpr` with `LLIL_EXCEPTION`, size and flags zero, and the discriminator
+in operand `0`. Remaining operands are zero.
+
+The discriminator is an architecture-defined unsigned 64-bit constant. Its encoding must
+separate architectural events (for example, SVC, HVC, SMC, and BRK) and may include the
+instruction's immediate. There is no universal event-number or bit-field allocation.
+It is an integer identity, not an IL expression index or a syscall namespace.
+C++ exposes `GetDiscriminator()` / `GetDiscriminator<LLIL_EXCEPTION>()`; Python exposes
+`.discriminator`, and Rust exposes `.discriminator()` on the `Exception` instruction kind.
+Copying and operand enumeration preserve the complete value, and rendering uses
+`exception(0x...)`.
+
+This is the emission primitive for a later platform-modeling stage. It specifies no calling
+convention, register or memory effects, or continuation policy. Resolve it through that stage
+before semantic analysis; this change does not yet provide platform resolution or migrate
+existing architecture lifters. Existing syscall, breakpoint, and trap operations keep their
+current behavior.
 
 ### The Arithmetic & Logical Instructions
 

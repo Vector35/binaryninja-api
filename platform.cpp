@@ -372,10 +372,45 @@ vector<Ref<CallingConvention>> Platform::GetCallingConventions() const
 
 Ref<CallingConvention> Platform::GetSystemCallConvention() const
 {
-	BNCallingConvention* cc = BNGetPlatformSystemCallConvention(m_object);
+	return GetSystemCallConventionInNamespace(0);
+}
+
+
+vector<SystemCallNamespaceInfo> Platform::GetSystemCallNamespaces() const
+{
+	size_t count;
+	auto namespaces = BNGetPlatformSystemCallNamespaces(m_object, &count);
+	vector<SystemCallNamespaceInfo> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		Ref<CallingConvention> cc;
+		if (namespaces[i].callingConvention)
+			cc = new CoreCallingConvention(BNNewCallingConventionReference(namespaces[i].callingConvention));
+		result.push_back({namespaces[i].id, namespaces[i].name, cc});
+	}
+	BNFreeSystemCallNamespaceList(namespaces, count);
+	return result;
+}
+
+
+bool Platform::RegisterSystemCallNamespace(uint32_t id, const string& name, CallingConvention* cc)
+{
+	return BNRegisterPlatformSystemCallNamespace(m_object, id, name.c_str(), cc ? cc->GetObject() : nullptr);
+}
+
+
+Ref<CallingConvention> Platform::GetSystemCallConventionInNamespace(uint32_t id) const
+{
+	BNCallingConvention* cc = BNGetPlatformSystemCallConventionInNamespace(m_object, id);
 	if (!cc)
 		return nullptr;
 	return new CoreCallingConvention(cc);
+}
+
+
+bool Platform::SetSystemCallConventionInNamespace(uint32_t id, CallingConvention* cc)
+{
+	return BNSetPlatformSystemCallConventionInNamespace(m_object, id, cc ? cc->GetObject() : nullptr);
 }
 
 
@@ -411,7 +446,7 @@ void Platform::RegisterFastcallCallingConvention(CallingConvention* cc)
 
 void Platform::SetSystemCallConvention(CallingConvention* cc)
 {
-	BNSetPlatformSystemCallConvention(m_object, cc ? cc->GetObject() : nullptr);
+	SetSystemCallConventionInNamespace(0, cc);
 }
 
 
@@ -639,8 +674,14 @@ map<QualifiedName, Ref<Type>> Platform::GetFunctions()
 
 map<uint32_t, QualifiedNameAndType> Platform::GetSystemCalls()
 {
+	return GetSystemCallsInNamespace(0);
+}
+
+
+map<uint32_t, QualifiedNameAndType> Platform::GetSystemCallsInNamespace(uint32_t id)
+{
 	size_t count;
-	BNSystemCallInfo* calls = BNGetPlatformSystemCalls(m_object, &count);
+	BNSystemCallInfo* calls = BNGetPlatformSystemCallsInNamespace(m_object, id, &count);
 
 	map<uint32_t, QualifiedNameAndType> result;
 	for (size_t i = 0; i < count; i++)
@@ -652,6 +693,16 @@ map<uint32_t, QualifiedNameAndType> Platform::GetSystemCalls()
 	}
 
 	BNFreeSystemCallList(calls, count);
+	return result;
+}
+
+
+bool Platform::DefineSystemCallInNamespace(uint32_t id, uint32_t number, const QualifiedName& name, Type* type)
+{
+	BNQualifiedName apiName = name.ToAPIStruct();
+	bool result = BNDefinePlatformSystemCallInNamespace(
+		m_object, id, number, &apiName, type ? type->GetObject() : nullptr);
+	QualifiedName::FreeAPIStruct(&apiName);
 	return result;
 }
 
@@ -731,7 +782,13 @@ Ref<Type> Platform::GetFunctionByName(const QualifiedName& name, bool exactMatch
 
 string Platform::GetSystemCallName(uint32_t n)
 {
-	char* str = BNGetPlatformSystemCallName(m_object, n);
+	return GetSystemCallNameInNamespace(0, n);
+}
+
+
+string Platform::GetSystemCallNameInNamespace(uint32_t id, uint32_t n)
+{
+	char* str = BNGetPlatformSystemCallNameInNamespace(m_object, id, n);
 	string result = str;
 	BNFreeString(str);
 	return result;
@@ -740,7 +797,13 @@ string Platform::GetSystemCallName(uint32_t n)
 
 Ref<Type> Platform::GetSystemCallType(uint32_t n)
 {
-	BNType* type = BNGetPlatformSystemCallType(m_object, n);
+	return GetSystemCallTypeInNamespace(0, n);
+}
+
+
+Ref<Type> Platform::GetSystemCallTypeInNamespace(uint32_t id, uint32_t n)
+{
+	BNType* type = BNGetPlatformSystemCallTypeInNamespace(m_object, id, n);
 	if (!type)
 		return nullptr;
 	return new Type(type);

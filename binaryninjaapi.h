@@ -7681,6 +7681,8 @@ namespace BinaryNinja {
 		void RenameType(const QualifiedName& oldName, const QualifiedName& newName);
 		Ref<Type> GetSystemCallType(Platform* platform, uint32_t id);
 		std::string GetSystemCallName(Platform* platform, uint32_t id);
+		Ref<Type> GetSystemCallTypeInNamespace(Platform* platform, uint32_t nameSpace, uint32_t id);
+		std::string GetSystemCallNameInNamespace(Platform* platform, uint32_t nameSpace, uint32_t id);
 
 		void RegisterPlatformTypes(Platform* platform);
 
@@ -19655,6 +19657,14 @@ namespace BinaryNinja {
 			const std::optional<ValueLocation>& returnValue, const std::vector<ValueLocation>& params) override;
 	};
 
+	/*! An owned description of a platform syscall ABI. Namespace 0 is the legacy default. */
+	struct SystemCallNamespaceInfo
+	{
+		uint32_t id;
+		std::string name;
+		Ref<CallingConvention> callingConvention;
+	};
+
 	/*!
 	    Platform base class. This should be subclassed when creating a new platform
 
@@ -19796,6 +19806,15 @@ namespace BinaryNinja {
 		*/
 		Ref<CallingConvention> GetSystemCallConvention() const;
 
+		/*! Namespace 0 is always present, named "default", and backs the legacy syscall APIs. */
+		std::vector<SystemCallNamespaceInfo> GetSystemCallNamespaces() const;
+		/*! Register before analysis. Rejects duplicate IDs/names, empty names, and mismatched architectures.
+		    The nullable convention is retained without adding it to the platform's heuristic conventions. */
+		bool RegisterSystemCallNamespace(uint32_t id, const std::string& name, CallingConvention* cc = nullptr);
+		Ref<CallingConvention> GetSystemCallConventionInNamespace(uint32_t id) const;
+		/*! Set or clear the convention of an existing namespace. Returns false on invalid ID/architecture. */
+		bool SetSystemCallConventionInNamespace(uint32_t id, CallingConvention* cc);
+
 		/*! Register a Calling Convention
 
 			\param cc Calling Convention to register
@@ -19913,6 +19932,9 @@ namespace BinaryNinja {
 			\return A list of system calls for this platform
 		*/
 		std::map<uint32_t, QualifiedNameAndType> GetSystemCalls();
+		std::map<uint32_t, QualifiedNameAndType> GetSystemCallsInNamespace(uint32_t id);
+		/*! Define or replace a service before analysis. Rejects unknown namespaces, empty names, and non-function types. */
+		bool DefineSystemCallInNamespace(uint32_t id, uint32_t number, const QualifiedName& name, Type* type);
 
 		std::vector<Ref<TypeLibrary>> GetTypeLibraries();
 
@@ -19928,6 +19950,9 @@ namespace BinaryNinja {
 		Ref<Type> GetFunctionByName(const QualifiedName& name, bool exactMatch = false);
 		std::string GetSystemCallName(uint32_t n);
 		Ref<Type> GetSystemCallType(uint32_t n);
+		/*! Missing services return an empty name or null type, without falling back to namespace 0. */
+		std::string GetSystemCallNameInNamespace(uint32_t id, uint32_t n);
+		Ref<Type> GetSystemCallTypeInNamespace(uint32_t id, uint32_t n);
 
 		std::string GenerateAutoPlatformTypeId(const QualifiedName& name);
 		Ref<NamedTypeReference> GenerateAutoPlatformTypeReference(

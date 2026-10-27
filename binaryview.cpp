@@ -4741,7 +4741,13 @@ void BinaryView::RenameType(const QualifiedName& oldName, const QualifiedName& n
 
 Ref<Type> BinaryView::GetSystemCallType(Platform *platform, uint32_t id)
 {
-	BNType* type = BNGetAnalysisSystemCallType(m_object, platform->m_object, id);
+	return GetSystemCallTypeInNamespace(platform, 0, id);
+}
+
+
+Ref<Type> BinaryView::GetSystemCallTypeInNamespace(Platform* platform, uint32_t nameSpace, uint32_t id)
+{
+	BNType* type = BNGetAnalysisSystemCallTypeInNamespace(m_object, platform->m_object, nameSpace, id);
 	if (!type)
 		return nullptr;
 	return new Type(type);
@@ -4750,7 +4756,13 @@ Ref<Type> BinaryView::GetSystemCallType(Platform *platform, uint32_t id)
 
 std::string BinaryView::GetSystemCallName(Platform *platform, uint32_t id)
 {
-	char* name = BNGetAnalysisSystemCallName(m_object, platform->m_object, id);
+	return GetSystemCallNameInNamespace(platform, 0, id);
+}
+
+
+std::string BinaryView::GetSystemCallNameInNamespace(Platform* platform, uint32_t nameSpace, uint32_t id)
+{
+	char* name = BNGetAnalysisSystemCallNameInNamespace(m_object, platform->m_object, nameSpace, id);
 	string result = name;
 	BNFreeString(name);
 	return result;

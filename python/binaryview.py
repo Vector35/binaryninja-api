@@ -9282,21 +9282,35 @@ class BinaryView:
 		core.BNRenameAnalysisType(self.handle, _old_name, _new_name)
 
 	def get_system_call_type(self, id: int, platform: Optional['_platform.Platform'] = None) -> Optional['_types.Type']:
+		return self.get_system_call_type_in_namespace(0, id, platform)
+
+	def get_system_call_type_in_namespace(
+			self, namespace_id: int, id: int,
+			platform: Optional['_platform.Platform'] = None) -> Optional['_types.Type']:
+		"""Look up a service in its namespace. Legacy SYSCALLS type libraries belong to namespace 0."""
+		_platform._validate_namespace_id(namespace_id)
 		if platform is None:
 			platform = self.platform
 		if platform is None:
 			raise Exception("Unable to retrieve system call type without a platform")
-		handle = core.BNGetAnalysisSystemCallType(self.handle, platform.handle, id)
+		handle = core.BNGetAnalysisSystemCallTypeInNamespace(self.handle, platform.handle, namespace_id, id)
 		if handle is None:
 			return None
 		return _types.Type.create(handle, platform=platform)
 
 	def get_system_call_name(self, id: int, platform: Optional['_platform.Platform'] = None) -> Optional[str]:
+		return self.get_system_call_name_in_namespace(0, id, platform)
+
+	def get_system_call_name_in_namespace(
+			self, namespace_id: int, id: int,
+			platform: Optional['_platform.Platform'] = None) -> Optional[str]:
+		"""Look up a service name without falling back to another namespace."""
+		_platform._validate_namespace_id(namespace_id)
 		if platform is None:
 			platform = self.platform
 		if platform is None:
 			raise Exception("Unable to retrieve system call type without a platform")
-		result = core.BNGetAnalysisSystemCallName(self.handle, platform.handle, id)
+		result = core.BNGetAnalysisSystemCallNameInNamespace(self.handle, platform.handle, namespace_id, id)
 		if result is None:
 			return None
 		return result

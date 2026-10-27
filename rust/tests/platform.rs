@@ -1,6 +1,7 @@
 use binaryninja::architecture::{ArchitectureExt, CoreArchitecture};
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
+use binaryninja::types::Type;
 
 #[test]
 fn test_platform_lifetime() {
@@ -55,4 +56,71 @@ fn test_platform_register_calling_convention() {
     let calling_conventions = platform.calling_conventions();
     assert_eq!(calling_conventions.len(), 1);
     assert_eq!(calling_conventions.get(0).name(), "win64");
+}
+
+#[test]
+fn test_syscall_namespaces() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let arch = CoreArchitecture::by_name("x86_64").unwrap();
+    let p = Platform::new(&arch, "test-syscall-namespaces");
+    let os = arch.calling_convention_by_name("win64").unwrap();
+    let hyper = arch.calling_convention_by_name("sysv").unwrap();
+    assert_eq!(p.syscall_namespaces().len(), 1);
+    assert_eq!(p.syscall_namespaces()[0].name, "default");
+    p.set_syscall_convention(&os);
+    assert_eq!(
+        p.syscall_convention_in_namespace(0).unwrap().name(),
+        "win64"
+    );
+    assert!(p.set_syscall_convention_in_namespace(0, Some(&hyper)));
+    assert_eq!(p.get_syscall_convention().unwrap().name(), "sysv");
+    assert!(p.register_syscall_namespace(1, "hypervisor", Some(&hyper)));
+    assert!(p.register_syscall_namespace(2, "monitor", Some(&os)));
+    assert!(!p.register_syscall_namespace(0, "duplicate", None));
+    assert!(!p.register_syscall_namespace(1, "duplicate", None));
+    assert!(!p.register_syscall_namespace(3, "monitor", None));
+    assert!(!p.set_syscall_convention_in_namespace(999, None));
+    let snapshot = p.syscall_namespaces();
+    assert!(p.set_syscall_convention_in_namespace(1, None));
+    assert_eq!(
+        snapshot[1].calling_convention.as_ref().unwrap().name(),
+        "sysv"
+    );
+    assert!(p.syscall_convention_in_namespace(1).is_none());
+    assert!(p.calling_conventions().is_empty());
+}
+
+#[test]
+fn test_namespaced_syscall_services() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let arch = CoreArchitecture::by_name("x86_64").unwrap();
+    let p = Platform::new(&arch, "test-syscall-namespace-services");
+    assert!(p.register_syscall_namespace(1, "hypervisor", None));
+    assert!(p.register_syscall_namespace(2, "monitor", None));
+    let small = Type::function(Type::int(4, false), vec![], false);
+    let large = Type::function(Type::int(8, false), vec![], false);
+    assert!(p.define_syscall_in_namespace(0, 7, "os_service", &small));
+    assert!(p.define_syscall_in_namespace(1, 7, "hyper_service", &large));
+    assert!(p.define_syscall_in_namespace(2, 7, "monitor_service", &small));
+    assert_eq!(
+        p.syscall_name_in_namespace(0, 7).to_string_lossy(),
+        "os_service"
+    );
+    assert_eq!(
+        p.syscall_name_in_namespace(1, 7).to_string_lossy(),
+        "hyper_service"
+    );
+    assert_eq!(
+        p.syscall_name_in_namespace(2, 7).to_string_lossy(),
+        "monitor_service"
+    );
+    assert_eq!(p.syscall_type_in_namespace(1, 7).unwrap(), large);
+    assert_eq!(p.syscalls_in_namespace(1).len(), 1);
+    assert!(p.syscall_name_in_namespace(999, 7).to_bytes().is_empty());
+    assert!(p.syscall_type_in_namespace(999, 7).is_none());
+    assert!(p.syscalls_in_namespace(999).is_empty());
+    assert!(!p.define_syscall_in_namespace(999, 7, "invalid", &small));
+    assert!(!p.define_syscall_in_namespace(1, 7, "invalid", &Type::int(4, false)));
+    assert!(p.define_syscall_in_namespace(1, 7, "updated", &small));
+    assert_eq!(p.syscall_type_in_namespace(1, 7).unwrap(), small);
 }

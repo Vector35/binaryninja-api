@@ -39,6 +39,14 @@ pub struct Platform {
 unsafe impl Send for Platform {}
 unsafe impl Sync for Platform {}
 
+/// A syscall ABI registered on a platform. Namespace 0 is the legacy `default` namespace.
+#[derive(Debug)]
+pub struct SystemCallNamespaceInfo {
+    pub id: u32,
+    pub name: String,
+    pub calling_convention: Option<Ref<CoreCallingConvention>>,
+}
+
 macro_rules! cc_func {
     ($get_name:ident, $get_api:ident, $set_name:ident, $set_api:ident) => {
         pub fn $get_name(&self) -> Option<Ref<CoreCallingConvention>> {
@@ -240,12 +248,90 @@ impl Platform {
         BNRegisterPlatformFastcallCallingConvention
     );
 
-    cc_func!(
-        get_syscall_convention,
-        BNGetPlatformSystemCallConvention,
-        set_syscall_convention,
-        BNSetPlatformSystemCallConvention
-    );
+    pub fn get_syscall_convention(&self) -> Option<Ref<CoreCallingConvention>> {
+        self.syscall_convention_in_namespace(0)
+    }
+
+    pub fn set_syscall_convention(&self, cc: &CoreCallingConvention) {
+        assert!(
+            self.set_syscall_convention_in_namespace(0, Some(cc)),
+            "use of calling convention with non-matching Platform architecture!"
+        );
+    }
+
+    /// Return an owned snapshot, including namespace 0. Conventions are independently retained.
+    pub fn syscall_namespaces(&self) -> Vec<SystemCallNamespaceInfo> {
+        unsafe {
+            let mut count = 0;
+            let list = BNGetPlatformSystemCallNamespaces(self.handle, &mut count);
+            let arch = self.arch();
+            let result = (0..count)
+                .map(|i| {
+                    let ns = &*list.add(i);
+                    SystemCallNamespaceInfo {
+                        id: ns.id,
+                        name: raw_to_string(ns.name).unwrap(),
+                        calling_convention: if ns.callingConvention.is_null() {
+                            None
+                        } else {
+                            Some(CoreCallingConvention::ref_from_raw(
+                                BNNewCallingConventionReference(ns.callingConvention),
+                                arch,
+                            ))
+                        },
+                    }
+                })
+                .collect();
+            BNFreeSystemCallNamespaceList(list, count);
+            result
+        }
+    }
+
+    /// Register before analysis. Rejects duplicate IDs/names, empty names, and mismatched architectures.
+    /// Namespace 0 already exists. Does not add the convention to heuristic conventions.
+    pub fn register_syscall_namespace(
+        &self,
+        id: u32,
+        name: &str,
+        cc: Option<&CoreCallingConvention>,
+    ) -> bool {
+        let name = name.to_cstr();
+        unsafe {
+            BNRegisterPlatformSystemCallNamespace(
+                self.handle,
+                id,
+                name.as_ptr(),
+                cc.map_or(ptr::null_mut(), |cc| cc.handle),
+            )
+        }
+    }
+
+    /// Unknown namespaces and namespaces without a convention return None.
+    pub fn syscall_convention_in_namespace(&self, id: u32) -> Option<Ref<CoreCallingConvention>> {
+        unsafe {
+            let cc = BNGetPlatformSystemCallConventionInNamespace(self.handle, id);
+            if cc.is_null() {
+                None
+            } else {
+                Some(CoreCallingConvention::ref_from_raw(cc, self.arch()))
+            }
+        }
+    }
+
+    /// Set or clear a convention before analysis. Rejects unknown IDs and mismatched architectures.
+    pub fn set_syscall_convention_in_namespace(
+        &self,
+        id: u32,
+        cc: Option<&CoreCallingConvention>,
+    ) -> bool {
+        unsafe {
+            BNSetPlatformSystemCallConventionInNamespace(
+                self.handle,
+                id,
+                cc.map_or(ptr::null_mut(), |cc| cc.handle),
+            )
+        }
+    }
 
     /// Register a calling convention with the platform, adding it to [`Platform::calling_conventions`].
     ///
@@ -316,8 +402,71 @@ impl Platform {
         }
     }
 
-    // TODO: system_calls
-    // TODO: add a helper function to define a system call (platform function with a specific type)
+    /// Return service numbers and definitions, without falling back to namespace 0.
+    pub fn syscalls_in_namespace(&self, id: u32) -> Vec<(u32, QualifiedNameAndType)> {
+        unsafe {
+            let mut count = 0;
+            let list = BNGetPlatformSystemCallsInNamespace(self.handle, id, &mut count);
+            let result = (0..count)
+                .map(|i| {
+                    let call = &*list.add(i);
+                    (
+                        call.number,
+                        QualifiedNameAndType {
+                            name: QualifiedName::from_raw(&call.name),
+                            ty: Type::ref_from_raw(BNNewTypeReference(call.type_)),
+                        },
+                    )
+                })
+                .collect();
+            BNFreeSystemCallList(list, count);
+            result
+        }
+    }
+
+    /// Define or replace a service before analysis. Requires an existing namespace and a function type.
+    pub fn define_syscall_in_namespace<T: Into<QualifiedName>>(
+        &self,
+        id: u32,
+        number: u32,
+        name: T,
+        ty: &Type,
+    ) -> bool {
+        let mut name = QualifiedName::into_raw(name.into());
+        unsafe {
+            let result = BNDefinePlatformSystemCallInNamespace(
+                self.handle,
+                id,
+                number,
+                &mut name,
+                ty.handle,
+            );
+            QualifiedName::free_raw(name);
+            result
+        }
+    }
+
+    /// Missing services have empty names; another namespace is never used as a fallback.
+    pub fn syscall_name_in_namespace(&self, id: u32, number: u32) -> BnString {
+        unsafe {
+            BnString::from_raw(BNGetPlatformSystemCallNameInNamespace(
+                self.handle,
+                id,
+                number,
+            ))
+        }
+    }
+
+    pub fn syscall_type_in_namespace(&self, id: u32, number: u32) -> Option<Ref<Type>> {
+        unsafe {
+            let ty = BNGetPlatformSystemCallTypeInNamespace(self.handle, id, number);
+            if ty.is_null() {
+                None
+            } else {
+                Some(Type::ref_from_raw(ty))
+            }
+        }
+    }
 
     // TODO: Documentation, specifically how this differs from the TypeParser impl
     pub fn preprocess_source(

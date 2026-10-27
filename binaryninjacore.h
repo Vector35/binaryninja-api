@@ -3695,6 +3695,14 @@ extern "C"
 		BNType* type;
 	} BNSystemCallInfo;
 
+	/** A platform syscall ABI. Namespace 0 is always present and is named "default". */
+	typedef struct BNSystemCallNamespaceInfo
+	{
+		uint32_t id;
+		char* name;
+		BNCallingConvention* callingConvention;
+	} BNSystemCallNamespaceInfo;
+
 	BN_ENUM(uint8_t, BNILBranchDependence)
 	{
 		NotBranchDependent,
@@ -6774,6 +6782,10 @@ extern "C"
 	    BNBinaryView* view, BNQualifiedName* oldName, BNQualifiedName* newName);
 	BINARYNINJACOREAPI BNType* BNGetAnalysisSystemCallType(BNBinaryView* view, BNPlatform* platform, uint32_t id);
 	BINARYNINJACOREAPI char* BNGetAnalysisSystemCallName(BNBinaryView* view, BNPlatform* platform, uint32_t id);
+	BINARYNINJACOREAPI BNType* BNGetAnalysisSystemCallTypeInNamespace(
+	    BNBinaryView* view, BNPlatform* platform, uint32_t nameSpace, uint32_t id);
+	BINARYNINJACOREAPI char* BNGetAnalysisSystemCallNameInNamespace(
+	    BNBinaryView* view, BNPlatform* platform, uint32_t nameSpace, uint32_t id);
 	BINARYNINJACOREAPI char* BNGenerateAutoTypeId(const char* source, BNQualifiedName* name);
 	BINARYNINJACOREAPI char* BNGenerateAutoPlatformTypeId(BNPlatform* platform, BNQualifiedName* name);
 	BINARYNINJACOREAPI char* BNGenerateAutoDemangledTypeId(BNQualifiedName* name);
@@ -8655,6 +8667,13 @@ extern "C"
 	BINARYNINJACOREAPI BNCallingConvention* BNGetPlatformFastcallCallingConvention(BNPlatform* platform);
 	BINARYNINJACOREAPI BNCallingConvention** BNGetPlatformCallingConventions(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNCallingConvention* BNGetPlatformSystemCallConvention(BNPlatform* platform);
+	BINARYNINJACOREAPI BNSystemCallNamespaceInfo* BNGetPlatformSystemCallNamespaces(BNPlatform* platform, size_t* count);
+	BINARYNINJACOREAPI void BNFreeSystemCallNamespaceList(BNSystemCallNamespaceInfo* namespaces, size_t count);
+	BINARYNINJACOREAPI bool BNRegisterPlatformSystemCallNamespace(
+	    BNPlatform* platform, uint32_t id, const char* name, BNCallingConvention* cc);
+	BINARYNINJACOREAPI BNCallingConvention* BNGetPlatformSystemCallConventionInNamespace(BNPlatform* platform, uint32_t id);
+	BINARYNINJACOREAPI bool BNSetPlatformSystemCallConventionInNamespace(
+	    BNPlatform* platform, uint32_t id, BNCallingConvention* cc);
 
 	BINARYNINJACOREAPI void BNRegisterPlatformCallingConvention(BNPlatform* platform, BNCallingConvention* cc);
 	BINARYNINJACOREAPI void BNRegisterPlatformDefaultCallingConvention(BNPlatform* platform, BNCallingConvention* cc);
@@ -8693,6 +8712,10 @@ extern "C"
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetPlatformVariables(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetPlatformFunctions(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNSystemCallInfo* BNGetPlatformSystemCalls(BNPlatform* platform, size_t* count);
+	BINARYNINJACOREAPI BNSystemCallInfo* BNGetPlatformSystemCallsInNamespace(
+	    BNPlatform* platform, uint32_t nameSpace, size_t* count);
+	BINARYNINJACOREAPI bool BNDefinePlatformSystemCallInNamespace(
+	    BNPlatform* platform, uint32_t nameSpace, uint32_t number, BNQualifiedName* name, BNType* type);
 	BINARYNINJACOREAPI void BNFreeSystemCallList(BNSystemCallInfo* syscalls, size_t count);
 	BINARYNINJACOREAPI BNType* BNGetPlatformTypeByName(BNPlatform* platform, BNQualifiedName* name);
 	BINARYNINJACOREAPI BNType* BNGetPlatformVariableByName(BNPlatform* platform, BNQualifiedName* name);
@@ -8700,6 +8723,10 @@ extern "C"
 	    BNPlatform* platform, BNQualifiedName* name, bool exactMatch);
 	BINARYNINJACOREAPI char* BNGetPlatformSystemCallName(BNPlatform* platform, uint32_t number);
 	BINARYNINJACOREAPI BNType* BNGetPlatformSystemCallType(BNPlatform* platform, uint32_t number);
+	BINARYNINJACOREAPI char* BNGetPlatformSystemCallNameInNamespace(
+	    BNPlatform* platform, uint32_t nameSpace, uint32_t number);
+	BINARYNINJACOREAPI BNType* BNGetPlatformSystemCallTypeInNamespace(
+	    BNPlatform* platform, uint32_t nameSpace, uint32_t number);
 
 	BINARYNINJACOREAPI BNTypeLibrary** BNGetPlatformTypeLibraries(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNTypeLibrary** BNGetPlatformTypeLibrariesByName(

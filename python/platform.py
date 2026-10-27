@@ -22,6 +22,7 @@ import os
 import ctypes
 import traceback
 import warnings
+from dataclasses import dataclass
 from typing import List, Dict, Optional, Tuple, Any
 
 # Binary Ninja components
@@ -35,6 +36,19 @@ from . import architecture
 from . import typecontainer
 from . import binaryview
 from .log import log_error_for_exception
+
+
+@dataclass(frozen=True)
+class SystemCallNamespaceInfo:
+	"""A platform syscall ABI. Namespace 0 is the legacy, ``default`` namespace."""
+	id: int
+	name: str
+	calling_convention: Optional['callingconvention.CallingConvention']
+
+
+def _validate_namespace_id(namespace_id: int) -> None:
+	if not isinstance(namespace_id, int) or not 0 <= namespace_id <= 0xffffffff:
+		raise ValueError("Syscall namespace ID must be a uint32")
 
 
 class _PlatformMetaClass(type):
@@ -463,17 +477,61 @@ class Platform(metaclass=_PlatformMetaClass):
 		"""
 		CallingConvention object for the system call convention
 		"""
-		result = core.BNGetPlatformSystemCallConvention(self.handle)
-		if result is None:
-			return None
-		return callingconvention.CoreCallingConvention(handle=result)
+		return self.get_system_call_convention_in_namespace(0)
 
 	@system_call_convention.setter
 	def system_call_convention(self, value):
 		"""
 		Sets the system call convention
 		"""
-		core.BNSetPlatformSystemCallConvention(self.handle, value.handle)
+		self.set_system_call_convention_in_namespace(0, value)
+
+	@property
+	def system_call_namespaces(self) -> Dict[int, SystemCallNamespaceInfo]:
+		"""Registered syscall namespaces, including namespace 0. Returns an owned snapshot."""
+		count = ctypes.c_ulonglong()
+		namespaces = core.BNGetPlatformSystemCallNamespaces(self.handle, count)
+		result = {}
+		try:
+			for i in range(count.value):
+				ns = namespaces[i]
+				cc = None
+				if ns.callingConvention:
+					cc = callingconvention.CoreCallingConvention(
+						handle=core.BNNewCallingConventionReference(ns.callingConvention))
+				result[ns.id] = SystemCallNamespaceInfo(ns.id, core.pyNativeStr(ns.name), cc)
+		finally:
+			core.BNFreeSystemCallNamespaceList(namespaces, count.value)
+		return result
+
+	def register_system_call_namespace(
+			self, namespace_id: int, name: str,
+			convention: Optional['callingconvention.CallingConvention'] = None) -> None:
+		"""Register before analysis. IDs and nonempty names must be unique; namespace 0 already exists.
+
+		The convention must match this platform's architecture. It is not added to heuristic conventions.
+		"""
+		_validate_namespace_id(namespace_id)
+		if not core.BNRegisterPlatformSystemCallNamespace(
+				self.handle, namespace_id, name, convention.handle if convention else None):
+			raise ValueError("Invalid syscall namespace ID, name, or calling convention architecture")
+
+	def get_system_call_convention_in_namespace(
+			self, namespace_id: int) -> Optional['callingconvention.CallingConvention']:
+		"""Return the convention, or None for an unknown namespace or unset convention."""
+		_validate_namespace_id(namespace_id)
+		result = core.BNGetPlatformSystemCallConventionInNamespace(self.handle, namespace_id)
+		if not result:
+			return None
+		return callingconvention.CoreCallingConvention(handle=result)
+
+	def set_system_call_convention_in_namespace(
+			self, namespace_id: int, convention: Optional['callingconvention.CallingConvention']) -> None:
+		"""Set or clear an existing namespace's convention before analysis."""
+		_validate_namespace_id(namespace_id)
+		if not core.BNSetPlatformSystemCallConventionInNamespace(
+				self.handle, namespace_id, convention.handle if convention else None):
+			raise ValueError("Unknown syscall namespace or mismatched calling convention architecture")
 
 	@property
 	def calling_conventions(self):
@@ -546,16 +604,30 @@ class Platform(metaclass=_PlatformMetaClass):
 	@property
 	def system_calls(self):
 		"""List of system calls for this platform (read-only)"""
+		return self.get_system_calls_in_namespace(0)
+
+	def get_system_calls_in_namespace(self, namespace_id: int):
+		"""Return service numbers mapped to (qualified name, type), without falling back to namespace 0."""
+		_validate_namespace_id(namespace_id)
 		count = ctypes.c_ulonglong(0)
-		call_list = core.BNGetPlatformSystemCalls(self.handle, count)
-		assert call_list is not None, "core.BNGetPlatformSystemCalls returned None"
+		call_list = core.BNGetPlatformSystemCallsInNamespace(self.handle, namespace_id, count)
 		result = {}
-		for i in range(0, count.value):
-			name = types.QualifiedName._from_core_struct(call_list[i].name)
-			t = types.Type.create(core.BNNewTypeReference(call_list[i].type), platform=self)
-			result[call_list[i].number] = (name, t)
-		core.BNFreeSystemCallList(call_list, count.value)
+		try:
+			for i in range(count.value):
+				name = types.QualifiedName._from_core_struct(call_list[i].name)
+				t = types.Type.create(core.BNNewTypeReference(call_list[i].type), platform=self)
+				result[call_list[i].number] = (name, t)
+		finally:
+			core.BNFreeSystemCallList(call_list, count.value)
 		return result
+
+	def define_system_call_in_namespace(self, namespace_id: int, number: int, name, type) -> None:
+		"""Define or replace a service before analysis. Requires an existing namespace and function type."""
+		_validate_namespace_id(namespace_id)
+		api_name = types.QualifiedName(name)._to_core_struct()
+		if not core.BNDefinePlatformSystemCallInNamespace(
+				self.handle, namespace_id, number, api_name, type.handle):
+			raise ValueError("Unknown syscall namespace, empty name, or non-function type")
 
 	@property
 	def type_libraries(self) -> List['typelibrary.TypeLibrary']:
@@ -656,10 +728,20 @@ class Platform(metaclass=_PlatformMetaClass):
 		return types.Type.create(obj, platform=self)
 
 	def get_system_call_name(self, number):
-		return core.BNGetPlatformSystemCallName(self.handle, number)
+		return self.get_system_call_name_in_namespace(0, number)
+
+	def get_system_call_name_in_namespace(self, namespace_id: int, number: int) -> str:
+		"""Return an empty name for missing services; never fall back to namespace 0."""
+		_validate_namespace_id(namespace_id)
+		return core.BNGetPlatformSystemCallNameInNamespace(self.handle, namespace_id, number)
 
 	def get_system_call_type(self, number):
-		obj = core.BNGetPlatformSystemCallType(self.handle, number)
+		return self.get_system_call_type_in_namespace(0, number)
+
+	def get_system_call_type_in_namespace(self, namespace_id: int, number: int):
+		"""Return None for missing services; never fall back to namespace 0."""
+		_validate_namespace_id(namespace_id)
+		obj = core.BNGetPlatformSystemCallTypeInNamespace(self.handle, namespace_id, number)
 		if not obj:
 			return None
 		return types.Type.create(obj, platform=self)

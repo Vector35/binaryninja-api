@@ -427,6 +427,7 @@ class LowLevelILInstruction(BaseILInstruction):
 	    ], LowLevelILOperation.LLIL_MEMORY_INTRINSIC_SSA: [
 	        ("output", "expr"), ("intrinsic", "intrinsic"), ("params", "expr_list"), ("src_memory", "int")
 	    ], LowLevelILOperation.LLIL_BP: [], LowLevelILOperation.LLIL_TRAP: [("vector", "int")],
+	    LowLevelILOperation.LLIL_EXCEPTION: [("discriminator", "int")],
 	    LowLevelILOperation.LLIL_UNDEF: [], LowLevelILOperation.LLIL_UNIMPL: [], LowLevelILOperation.LLIL_UNIMPL_MEM: [
 	        ("src", "expr")
 	    ], LowLevelILOperation.LLIL_FADD: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_FSUB: [
@@ -1778,6 +1779,19 @@ class LowLevelILBoolToInt(LowLevelILInstruction):
 		return [
 			("src", self.src, "LowLevelILInstruction"),
 		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILException(LowLevelILInstruction):
+	"""An architectural exception whose discriminator is interpreted by the platform."""
+
+	@property
+	def discriminator(self) -> int:
+		return self.instr.operands[0]
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [("discriminator", self.discriminator, "int")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -3244,6 +3258,7 @@ ILInstruction:Dict[LowLevelILOperation, LowLevelILInstruction] = {  # type: igno
     LowLevelILOperation.LLIL_MEMORY_INTRINSIC_OUTPUT_SSA: LowLevelILMemoryIntrinsicOutputSsa,    #  [("dest_memory", "int"), ("output", "reg_or_flag_ssa_list")],
     LowLevelILOperation.LLIL_MEMORY_INTRINSIC_SSA: LowLevelILMemoryIntrinsicSsa,    #  [("output", "expr"), ("intrinsic", "intrinsic"), ("params", "expr_list"), ("src_memory", "int")],
     LowLevelILOperation.LLIL_BP: LowLevelILBp,                                      #  [],
+    LowLevelILOperation.LLIL_EXCEPTION: LowLevelILException,
     LowLevelILOperation.LLIL_TRAP: LowLevelILTrap,                                  #  [("vector", "int")],
     LowLevelILOperation.LLIL_UNDEF: LowLevelILUndef,                                #  [],
     LowLevelILOperation.LLIL_UNIMPL: LowLevelILUnimpl,                              #  [],
@@ -4149,6 +4164,9 @@ class LowLevelILFunction:
 		if expr.operation == LowLevelILOperation.LLIL_FLAG_GROUP:
 			expr: LowLevelILFlagGroup
 			return dest.flag_group(expr.semantic_group.name, loc)
+		if expr.operation == LowLevelILOperation.LLIL_EXCEPTION:
+			expr: LowLevelILException
+			return dest.exception(expr.discriminator, loc)
 		if expr.operation == LowLevelILOperation.LLIL_TRAP:
 			expr: LowLevelILTrap
 			return dest.trap(expr.vector, loc)
@@ -5875,6 +5893,16 @@ class LowLevelILFunction:
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(LowLevelILOperation.LLIL_BP, source_location=loc)
+
+	def exception(self, discriminator: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""Return an architectural exception for later platform interpretation.
+
+		The architecture defines the uint64 discriminator, including any relevant immediate.
+		The expression specifies no calling convention, ABI, or continuation policy.
+		"""
+		if not isinstance(discriminator, int) or not 0 <= discriminator <= 0xffffffffffffffff:
+			raise ValueError("Exception discriminator must be a uint64")
+		return self.expr(LowLevelILOperation.LLIL_EXCEPTION, discriminator, source_location=loc)
 
 	def trap(self, value: int, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""

@@ -812,7 +812,10 @@ extern "C"
 		LLIL_MAXS,    // Signed maximum of left and right
 		LLIL_MINU,    // Unsigned minimum of left and right
 		LLIL_MAXU,    // Unsigned maximum of left and right
-		LLIL_ABS      // Signed absolute value of src; abs(INT_MIN) == INT_MIN
+		LLIL_ABS,     // Signed absolute value of src; abs(INT_MIN) == INT_MIN
+
+		// Opaque architectural exception; platform modeling determines its behavior.
+		LLIL_EXCEPTION
 	};
 
 	BN_ENUM(uint8_t, BNLowLevelILFlagCondition)

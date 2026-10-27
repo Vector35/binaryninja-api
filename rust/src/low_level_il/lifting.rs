@@ -1337,6 +1337,26 @@ impl LowLevelILMutableFunction {
         self.const_ptr_sized(self.arch().address_size(), val)
     }
 
+    /// Emit an architectural exception for later platform interpretation.
+    ///
+    /// The opaque discriminator may encode the event's immediate. No ABI, calling
+    /// convention, or continuation policy is specified by this operation.
+    pub fn exception(&self, discriminator: u64) -> LowLevelILMutableExpression<'_, VoidExpr> {
+        let expr_idx = unsafe {
+            binaryninjacore_sys::BNLowLevelILAddExpr(
+                self.handle,
+                BNLowLevelILOperation::LLIL_EXCEPTION,
+                0,
+                0,
+                discriminator,
+                0,
+                0,
+                0,
+            )
+        };
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
+
     pub fn trap(&self, val: u64) -> LowLevelILExpression<'_, Mutable, NonSSA, VoidExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_TRAP;

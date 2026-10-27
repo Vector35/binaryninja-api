@@ -401,3 +401,30 @@ fn test_llil_unbacked_function_creation() {
     let dest_reg = inst_operation.dest_reg();
     assert_eq!(dest_reg.name(), "ebx");
 }
+
+#[test]
+fn test_exception_emission() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let arch = CoreArchitecture::by_name("x86_64").unwrap();
+    let llil = LowLevelILMutableFunction::new(arch, None);
+    let discriminators = [0, 1, 0x12340000, u64::MAX];
+    for discriminator in discriminators {
+        llil.exception(discriminator).append();
+    }
+    for (index, discriminator) in discriminators.into_iter().enumerate() {
+        let instr = llil
+            .instruction_from_index(LowLevelInstructionIndex(index))
+            .unwrap();
+        let LowLevelILInstructionKind::Exception(op) = instr.kind() else {
+            panic!("Expected architectural Exception");
+        };
+        assert_eq!(op.discriminator(), discriminator);
+        assert!(format!("{:?}", op).contains("discriminator"));
+        let mut visited = false;
+        instr.visit_tree(&mut |_| {
+            visited = true;
+            VisitorAction::Descend
+        });
+        assert!(!visited, "The discriminator is not an expression index");
+    }
+}

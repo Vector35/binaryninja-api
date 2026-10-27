@@ -15652,6 +15652,17 @@ namespace BinaryNinja {
 		*/
 		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
 
+		/*! Returns an opaque architectural exception expression for platform interpretation.
+
+			The discriminator identifies the architectural event and may encode its immediate.
+			It does not specify an ABI, calling convention, or continuation policy.
+
+			\param discriminator Architecture-defined unsigned 64-bit discriminator
+			\param loc Optional IL Location this expression was added from.
+			\return An exception expression.
+		*/
+		ExprId Exception(uint64_t discriminator, const ILSourceLocation& loc = ILSourceLocation());
+
 		/*! Returns a processor trap (interrupt) expression of the given integer \c value .
 
 			\param num trap (interrupt) number

@@ -264,6 +264,7 @@ where
     Intrinsic(Operation<'func, M, F, operation::Intrinsic>),
     Bp(Operation<'func, M, F, operation::NoArgs>),
     Trap(Operation<'func, M, F, operation::Trap>),
+    Exception(Operation<'func, M, F, operation::Exception>),
     Undef(Operation<'func, M, F, operation::NoArgs>),
     Assert(Operation<'func, M, F, operation::Assert>),
     AssertSsa(Operation<'func, M, F, operation::AssertSsa>),
@@ -362,6 +363,9 @@ where
             }
             LLIL_BP => LowLevelILInstructionKind::Bp(Operation::new(function, op, expr_index)),
             LLIL_TRAP => LowLevelILInstructionKind::Trap(Operation::new(function, op, expr_index)),
+            LLIL_EXCEPTION => {
+                LowLevelILInstructionKind::Exception(Operation::new(function, op, expr_index))
+            }
             LLIL_UNDEF => {
                 LowLevelILInstructionKind::Undef(Operation::new(function, op, expr_index))
             }
@@ -439,9 +443,9 @@ where
             }
             Value(e) => visit!(e),
             // Do not have any sub expressions.
-            Nop(_) | NoRet(_) | Goto(_) | Syscall(_) | Bp(_) | Trap(_) | Undef(_) | Assert(_)
-            | AssertSsa(_) | ForceVersion(_) | ForceVersionSsa(_) | RegPhi(_) | FlagPhi(_)
-            | MemPhi(_) => {}
+            Nop(_) | NoRet(_) | Goto(_) | Syscall(_) | Bp(_) | Trap(_) | Exception(_)
+            | Undef(_) | Assert(_) | AssertSsa(_) | ForceVersion(_) | ForceVersionSsa(_)
+            | RegPhi(_) | FlagPhi(_) | MemPhi(_) => {}
         }
 
         VisitorAction::Sibling

@@ -108,7 +108,8 @@ static constexpr std::array s_operandTypeForUsage = {
 	OperandUsageType{TargetsLowLevelOperandUsage, IndexMapLowLevelOperand},
 	OperandUsageType{RegisterStackAdjustmentsLowLevelOperandUsage, RegisterStackAdjustmentsLowLevelOperand},
 	OperandUsageType{OffsetLowLevelOperandUsage, IntegerLowLevelOperand},
-	OperandUsageType{ConstraintLowLevelOperandUsage, ConstraintLowLevelOperand}
+	OperandUsageType{ConstraintLowLevelOperandUsage, ConstraintLowLevelOperand},
+	OperandUsageType{DiscriminatorLowLevelOperandUsage, IntegerLowLevelOperand}
 };
 
 static_assert(std::is_sorted(s_operandTypeForUsage.begin(), s_operandTypeForUsage.end()),
@@ -343,6 +344,7 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{LLIL_MINU, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
 	OperandUsage{LLIL_MAXU, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
 	OperandUsage{LLIL_ABS, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_EXCEPTION, {DiscriminatorLowLevelOperandUsage}},
 };
 
 
@@ -2288,6 +2290,8 @@ ExprId LowLevelILInstruction::CopyTo(
 		return dest->FlagCondition(GetFlagCondition<LLIL_FLAG_COND>(), GetSemanticFlagClass<LLIL_FLAG_COND>(), loc);
 	case LLIL_FLAG_GROUP:
 		return dest->FlagGroup(GetSemanticFlagGroup<LLIL_FLAG_GROUP>(), loc);
+	case LLIL_EXCEPTION:
+		return dest->Exception(GetDiscriminator<LLIL_EXCEPTION>(), loc);
 	case LLIL_TRAP:
 		return dest->Trap(GetVector<LLIL_TRAP>(), loc);
 	case LLIL_CALL_SSA:
@@ -2738,6 +2742,15 @@ uint64_t LowLevelILInstruction::GetOffset() const
 {
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(OffsetLowLevelOperandUsage, operandIndex))
+		return GetRawOperandAsInteger(operandIndex);
+	throw LowLevelILInstructionAccessException();
+}
+
+
+uint64_t LowLevelILInstruction::GetDiscriminator() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(DiscriminatorLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsInteger(operandIndex);
 	throw LowLevelILInstructionAccessException();
 }
@@ -3706,6 +3719,12 @@ ExprId LowLevelILFunction::MemoryIntrinsicSSA(const vector<SSARegisterOrFlag>& o
 ExprId LowLevelILFunction::Breakpoint(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_BP, loc, 0, 0);
+}
+
+
+ExprId LowLevelILFunction::Exception(uint64_t discriminator, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_EXCEPTION, loc, 0, 0, discriminator);
 }
 
 

@@ -1578,6 +1578,24 @@ where
     }
 }
 
+// LLIL_EXCEPTION
+pub struct Exception;
+
+impl<M: FunctionMutability, F: FunctionForm> Operation<'_, M, F, Exception> {
+    /// Architecture-defined identity; the platform supplies its meaning.
+    pub fn discriminator(&self) -> u64 {
+        self.op.operands[0]
+    }
+}
+
+impl<M: FunctionMutability, F: FunctionForm> Debug for Operation<'_, M, F, Exception> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Exception")
+            .field("discriminator", &self.discriminator())
+            .finish()
+    }
+}
+
 // LLIL_TRAP
 pub struct Trap;
 
@@ -2323,6 +2341,7 @@ impl OperationArguments for Goto {}
 impl OperationArguments for FlagCond {}
 impl OperationArguments for FlagGroup {}
 impl OperationArguments for Trap {}
+impl OperationArguments for Exception {}
 impl OperationArguments for RegPhi {}
 impl OperationArguments for FlagPhi {}
 impl OperationArguments for MemPhi {}

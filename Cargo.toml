@@ -12,6 +12,7 @@ members = [
     "arch/msp430",
     "rust/plugin_examples/data_renderer",
     "rust/plugin_examples/flowgraph_layout",
+    "rust/plugin_examples/primask_write_hook",
     "view/minidump",
     "plugins/dwarf/dwarf_import",
     "plugins/dwarf/dwarf_export",

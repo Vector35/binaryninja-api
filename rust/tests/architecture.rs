@@ -1,7 +1,5 @@
 use binaryninja::architecture::{Architecture, CoreArchitecture};
-use binaryninja::disassembly::{
-    InstructionTextToken, InstructionTextTokenContext, InstructionTextTokenKind,
-};
+use binaryninja::disassembly::{InstructionTextToken, InstructionTextTokenKind};
 use binaryninja::headless::Session;
 
 #[test]
@@ -11,6 +9,17 @@ fn test_architecture_info() {
     assert_eq!(arch.name(), "x86_64");
     assert_eq!(arch.endianness(), binaryninja::Endianness::LittleEndian);
     assert_eq!(arch.address_size(), 8);
+}
+
+#[test]
+fn test_associated_arch_by_addr() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let arch = CoreArchitecture::by_name("armv7").expect("Failed to get architecture");
+    let mut address = 0x1001;
+    assert_eq!(arch.associated_arch_by_addr(&mut address).name(), "thumb2");
+    assert_eq!(address, 0x1000);
+    assert_eq!(arch.associated_arch_by_addr(&mut address), arch);
+    assert_eq!(address, 0x1000);
 }
 
 #[test]
@@ -27,51 +36,19 @@ fn test_architecture_disassembly() {
         .expect("Failed to disassemble instruction");
     assert_eq!(instr_len, 7);
 
-    let expected_tokens: Vec<InstructionTextToken> = vec![
-        InstructionTextToken {
-            address: 0,
-            text: "mov".to_string(),
-            confidence: 255,
-            context: InstructionTextTokenContext::Normal,
-            expr_index: None,
-            kind: InstructionTextTokenKind::Instruction,
-        },
-        InstructionTextToken {
-            address: 0,
-            text: "     ".to_string(),
-            confidence: 255,
-            context: InstructionTextTokenContext::Normal,
-            expr_index: None,
-            kind: InstructionTextTokenKind::Text,
-        },
-        InstructionTextToken {
-            address: 0,
-            text: "rax".to_string(),
-            confidence: 255,
-            context: InstructionTextTokenContext::Normal,
-            expr_index: None,
-            kind: InstructionTextTokenKind::Register,
-        },
-        InstructionTextToken {
-            address: 0,
-            text: ", ".to_string(),
-            confidence: 255,
-            context: InstructionTextTokenContext::Normal,
-            expr_index: None,
-            kind: InstructionTextTokenKind::OperandSeparator,
-        },
-        InstructionTextToken {
-            address: 0,
-            text: "0x10".to_string(),
-            confidence: 255,
-            context: InstructionTextTokenContext::Normal,
-            expr_index: None,
-            kind: InstructionTextTokenKind::PossibleAddress {
+    let expected_tokens = vec![
+        InstructionTextToken::new("mov", InstructionTextTokenKind::Instruction),
+        InstructionTextToken::new("     ", InstructionTextTokenKind::Text),
+        InstructionTextToken::new("rax", InstructionTextTokenKind::Register),
+        InstructionTextToken::new(", ", InstructionTextTokenKind::OperandSeparator),
+        InstructionTextToken::new(
+            "0x10",
+            InstructionTextTokenKind::PossibleAddress {
                 value: 16,
                 size: Some(8),
                 operand: None,
             },
-        },
+        ),
     ];
 
     assert_eq!(tokens, expected_tokens);

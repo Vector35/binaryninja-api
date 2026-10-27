@@ -75,7 +75,7 @@ impl Architecture for Msp430 {
         self.max_instr_len()
     }
 
-    fn associated_arch_by_addr(&self, _addr: u64) -> CoreArchitecture {
+    fn associated_arch_by_addr(&self, _addr: &mut u64) -> CoreArchitecture {
         self.handle
     }
 

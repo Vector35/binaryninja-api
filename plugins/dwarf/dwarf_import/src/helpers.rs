@@ -307,6 +307,11 @@ pub(crate) fn get_subrange_size<R: ReaderType>(entry: &DebuggingInformationEntry
     }
 }
 
+/// How far `bv` is rebased from the image base of the file, if not below it.
+pub(crate) fn rebase_offset(bv: &BinaryView) -> Option<u64> {
+    bv.start().checked_sub(bv.original_image_base())
+}
+
 // Get the start address of a function
 pub(crate) fn get_start_address<R: ReaderType>(
     dwarf: &Dwarf<R>,

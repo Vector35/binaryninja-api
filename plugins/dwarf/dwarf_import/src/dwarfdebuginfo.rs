@@ -14,7 +14,7 @@
 
 use crate::{
     functions::FrameBase,
-    helpers::{get_uid, resolve_specification, DieReference},
+    helpers::{get_uid, rebase_offset, resolve_specification, DieReference},
     ReaderType,
 };
 
@@ -867,8 +867,7 @@ impl DebugInfoBuilder {
             }
 
             if let Some(address) = func.address.as_mut() {
-                let (diff, overflowed) = bv.start().overflowing_sub(bv.original_image_base());
-                if !overflowed {
+                if let Some(diff) = rebase_offset(bv) {
                     *address = (*address).overflowing_add(diff).0; // rebase the address
                     let existing_functions = bv.functions_at(*address);
                     match existing_functions.len().cmp(&1) {
@@ -882,6 +881,13 @@ impl DebugInfoBuilder {
                     }
                 }
             }
+        }
+
+        if let Some(diff) = rebase_offset(bv).filter(|&diff| diff != 0) {
+            self.data_variables = std::mem::take(&mut self.data_variables)
+                .into_iter()
+                .map(|(address, variable)| (address.wrapping_add(diff), variable))
+                .collect();
         }
 
         self

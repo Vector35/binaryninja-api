@@ -463,6 +463,12 @@ Memory regions supply bytes for addresses the file itself doesn't provide. This 
 
 When invoked on an existing segment, the dialog is pre-filled with that segment's bounds and flags.
 
+#### Loading an SVD File
+
+System View Description (SVD) files describe a microcontroller's peripherals and their registers. Loading one via `Plugins` → `Load SVD File` creates a memory region for each peripheral and named data variables for its control and status registers, so MMIO accesses in firmware read as register names instead of raw addresses.
+
+To load an SVD file automatically when a view opens, set [`analysis.svd.autoLoadFile`](settings.md#analysis.svd.autoLoadFile). Related settings control whether [backing regions](settings.md#analysis.svd.addBackingRegions) and [comments](settings.md#analysis.svd.addComments) are added.
+
 #### Working with Sections
 
 Right-clicking in the section table shows:

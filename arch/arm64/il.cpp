@@ -929,8 +929,6 @@ static enum Arm64Intrinsic mnemonic_to_intrinsic(exarmo_aarch64_mnemonic mnemoni
 	case EXARMO_AARCH64_PACDB:
 	case EXARMO_AARCH64_PACDZB:
 		return ARM64_INTRIN_PACDB;
-	case EXARMO_AARCH64_PACGA:
-		return ARM64_INTRIN_PACGA;
 	case EXARMO_AARCH64_PACIA:
 	case EXARMO_AARCH64_PACIA1716:
 	case EXARMO_AARCH64_PACIASP:
@@ -2868,6 +2866,12 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_NOP:
 		il.AddInstruction(il.Nop());
 		break;
+	case EXARMO_AARCH64_PACGA:
+		// <Xd> receives a code computed from <Xn> and <Xm|SP> rather than a signed pointer, so unlike
+		// the other PAC instructions this can't lift as a NOP.
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))},
+		    ARM64_INTRIN_PACGA, {ILREG_O(operand2), ILREG_O(operand3)}));
+		break;
 
 #ifdef LIFT_PAC_AS_INTRINSIC
 	case EXARMO_AARCH64_AUTDA:
@@ -2881,11 +2885,6 @@ bool GetLowLevelILForInstruction(
 		// <Xd> is address, <Xn> is modifier
 		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))},
 		    mnemonic_to_intrinsic(mnemonic), {ILREG_O(operand1), ILREG_O(operand2)}));
-		break;
-	case EXARMO_AARCH64_PACGA:
-		// <Xd> is address, <Xn>, <Xm> are modifiers, keys
-		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))},
-		    mnemonic_to_intrinsic(mnemonic), {ILREG_O(operand2), ILREG_O(operand3)}));
 		break;
 	case EXARMO_AARCH64_AUTIA1716:
 	case EXARMO_AARCH64_AUTIB1716:
@@ -2975,7 +2974,6 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_PACDB:
 	case EXARMO_AARCH64_PACIA:
 	case EXARMO_AARCH64_PACIB:
-	case EXARMO_AARCH64_PACGA:
 	case EXARMO_AARCH64_AUTIA1716:
 	case EXARMO_AARCH64_AUTIB1716:
 	case EXARMO_AARCH64_PACIA1716:

@@ -140,6 +140,11 @@ tests_pac = [
     (b'\xFF\x0B\x5F\xD6', 'LLIL_RET(LLIL_REG.q(lr))', ATTR_PTR_AUTH), # retaa
     # RETAB_64E_branch_reg 11010110010111110000111111111111
     (b'\xFF\x0F\x5F\xD6', 'LLIL_RET(LLIL_REG.q(lr))', ATTR_PTR_AUTH), # retab
+    # PACGA computes a code rather than signing a pointer, so it always lifts as an intrinsic.
+    # PACGA_64P_dp_2src 10011010110xxxxx001100xxxxxxxxxx
+    (b'\xE1\x33\xCC\x9A', 'LLIL_INTRINSIC([x1],__pacga,[LLIL_CONST.q(0x0),LLIL_REG.q(x12)])'), # pacga x1, xzr, x12
+    (b'\x22\x30\xCD\x9A', 'LLIL_INTRINSIC([x2],__pacga,[LLIL_REG.q(x1),LLIL_REG.q(x13)])'), # pacga x2, x1, x13
+    (b'\x99\x32\xD3\x9A', 'LLIL_INTRINSIC([x25],__pacga,[LLIL_REG.q(x20),LLIL_REG.q(x19)])'), # pacga x25, x20, x19
 ]
 
 # pac tests depend on whether the architecture is configured to lift them as
@@ -186,8 +191,6 @@ if '#define LIFT_PAC_AS_INTRINSIC 1\n' in open(path_il_h).readlines():
     (b'\x6E\x0C\xC1\xDA', 'LLIL_INTRINSIC([x14],__pacdb,[LLIL_REG.q(x14),LLIL_REG.q(x3)])'),
     # pacdzb x1 (example of encoding: PACDZB_64Z_dp_1src)
     (b'\xE1\x2F\xC1\xDA', 'LLIL_INTRINSIC([x1],__pacdb,[LLIL_REG.q(x1),LLIL_CONST.q(0x0)])'),
-    # pacga x1, xzr, x12 (example of encoding: PACGA_64P_dp_2src)
-    (b'\xE1\x33\xCC\x9A', 'LLIL_INTRINSIC([x1],__pacga,[LLIL_CONST.q(0x0),LLIL_REG.q(x12)])'),
     # pacia x6, x14 (example of encoding: PACIA_64P_dp_1src)
     (b'\xC6\x01\xC1\xDA', 'LLIL_INTRINSIC([x6],__pacia,[LLIL_REG.q(x6),LLIL_REG.q(x14)])'),
     # paciza x21 (example of encoding: PACIZA_64Z_dp_1src)
@@ -234,9 +237,6 @@ if '#define LIFT_PAC_AS_INTRINSIC 1\n' in open(path_il_h).readlines():
     # PACDZB_64Z_dp_1src 1101101011000001001xxxxxxxxxxxxx
     (b'\xE6\x2F\xC1\xDA', 'LLIL_INTRINSIC([x6],__pacdb,[LLIL_REG.q(x6),LLIL_CONST.q(0x0)])'), # pacdzb x6
     (b'\xE0\x2F\xC1\xDA', 'LLIL_INTRINSIC([x0],__pacdb,[LLIL_REG.q(x0),LLIL_CONST.q(0x0)])'), # pacdzb x0
-    # PACGA_64P_dp_2src 10011010110xxxxx001100xxxxxxxxxx
-    (b'\x22\x30\xCD\x9A', 'LLIL_INTRINSIC([x2],__pacga,[LLIL_REG.q(x1),LLIL_REG.q(x13)])'), # pacga x2, x1, x13
-    (b'\x99\x32\xD3\x9A', 'LLIL_INTRINSIC([x25],__pacga,[LLIL_REG.q(x20),LLIL_REG.q(x19)])'), # pacga x25, x20, x19
     # PACIA1716_HI_hints 1101010100000011001000010xxxxxxx
     (b'\x1F\x21\x03\xD5', 'LLIL_INTRINSIC([x17],__pacia,[LLIL_REG.q(x17),LLIL_REG.q(x16)])'), # pacia1716
     # PACIAZ_HI_hints 11010101000000110010001100xxxxxx
@@ -312,7 +312,6 @@ else:
     (b'\xE5\x2B\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
     (b'\x6E\x0C\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
     (b'\xE1\x2F\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
-    (b'\xE1\x33\xCC\x9A', 'LLIL_NOP()', ATTR_PTR_AUTH),
     (b'\xC6\x01\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
     (b'\xF5\x23\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
     (b'\x9D\x04\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
@@ -329,8 +328,6 @@ else:
     (b'\xF7\x2B\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacdza x23
     (b'\xE6\x2F\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacdzb x6
     (b'\xE0\x2F\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacdzb x0
-    (b'\x22\x30\xCD\x9A', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacga x2, x1, x13
-    (b'\x99\x32\xD3\x9A', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacga x25, x20, x19
     (b'\x1F\x21\x03\xD5', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacia1716
     (b'\x1F\x23\x03\xD5', 'LLIL_NOP()', ATTR_PTR_AUTH), # paciaz
     (b'\x4A\x02\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacia x10, x18

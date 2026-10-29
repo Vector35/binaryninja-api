@@ -1805,15 +1805,16 @@ bool GetLowLevelILForInstruction(
 			if (preferIntrinsics())
 				return true;
 
-			Register srcs[16], dsts[16];
+			Register srcs1[16], srcs2[16], dsts[16];
 			int dst_n = unpack_vector(operand1, dsts);
-			int src_n = unpack_vector(operand2, srcs);
-			if ((dst_n != src_n) || dst_n == 0)
+			int src1_n = unpack_vector(operand2, srcs1);
+			int src2_n = unpack_vector(operand3, srcs2);
+			if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
 				ABORT_LIFT;
 
 			int rsize = RegisterSize(dsts[0]);
 			for (int i = 0; i < dst_n; ++i)
-				il.AddInstruction(ILSETREG(dsts[i], il.FloatSub(rsize, ILREG(dsts[i]), ILREG(srcs[i]))));
+				il.AddInstruction(ILSETREG(dsts[i], il.FloatSub(rsize, ILREG(srcs1[i]), ILREG(srcs2[i]))));
 			break;
 		}
 		default:

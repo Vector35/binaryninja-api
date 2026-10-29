@@ -1282,10 +1282,17 @@ bool GetLowLevelILForInstruction(
 			return true;
 		case EXARMO_AARCH64_ENC_BicAsimdimmLHl:
 		case EXARMO_AARCH64_ENC_BicAsimdimmLSl:
-			il.AddInstruction(ILSETREG_O(operand1,
-				il.And(REGSZ_O(operand1), ILREG_O(operand1),
-					il.Not(REGSZ_O(operand2), ReadILOperand(il, operand2, REGSZ_O(operand2), addr)), SETFLAGS)));
+		{
+			Register regs[16];
+			int n = unpack_vector(operand1, regs);
+			for (int i = 0; i < n; ++i)
+			{
+				size_t size = RegisterSize(regs[i]);
+				il.AddInstruction(
+				    ILSETREG(regs[i], il.And(size, ILREG(regs[i]), il.Not(size, ILCONST_O(size, operand2)))));
+			}
 			break;
+		}
 		default:
 			il.AddInstruction(ILSETREG_O(operand1,
 				il.And(REGSZ_O(operand2), ILREG_O(operand2),
@@ -3113,7 +3120,10 @@ bool GetLowLevelILForInstruction(
 			Register regs[16];
 			int n = unpack_vector(operand1, regs);
 			for (int i = 0; i < n; ++i)
-				il.AddInstruction(ILSETREG(regs[i], ILCONST_O(RegisterSize(regs[i]), operand2)));
+			{
+				size_t size = RegisterSize(regs[i]);
+				il.AddInstruction(ILSETREG(regs[i], il.Or(size, ILREG(regs[i]), ILCONST_O(size, operand2))));
+			}
 			break;
 		}
 		case EXARMO_AARCH64_ENC_OrrAsimdsameOnly:

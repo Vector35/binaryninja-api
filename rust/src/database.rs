@@ -22,10 +22,6 @@ pub struct Database {
 }
 
 impl Database {
-    pub(crate) unsafe fn from_raw(handle: NonNull<BNDatabase>) -> Self {
-        Self { handle }
-    }
-
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNDatabase>) -> Ref<Self> {
         Ref::new(Self { handle })
     }

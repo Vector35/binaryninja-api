@@ -145,12 +145,12 @@ impl HighLevelILFunction {
                 variable.version,
             )
         };
-        self.instruction_from_index(HighLevelInstructionIndex(index))
+        self.instruction_from_expr_index(HighLevelExpressionIndex(index))
     }
 
     pub fn ssa_memory_definition(&self, version: usize) -> Option<HighLevelILInstruction> {
         let index = unsafe { BNGetHighLevelILSSAMemoryDefinition(self.handle, version) };
-        self.instruction_from_index(HighLevelInstructionIndex(index))
+        self.instruction_from_expr_index(HighLevelExpressionIndex(index))
     }
 
     /// Gets all the instructions that use the given SSA variable.
@@ -193,7 +193,7 @@ impl HighLevelILFunction {
                 self.handle,
                 &variable.variable.into(),
                 variable.version,
-                instr.expr_index.0,
+                instr.instr_index.0,
             )
         }
     }
@@ -217,7 +217,7 @@ impl HighLevelILFunction {
 
     /// Determines if `variable` is live at a given point in the function
     pub fn is_variable_live_at(&self, variable: Variable, instr: &HighLevelILInstruction) -> bool {
-        unsafe { BNIsHighLevelILVarLiveAt(self.handle, &variable.into(), instr.expr_index.0) }
+        unsafe { BNIsHighLevelILVarLiveAt(self.handle, &variable.into(), instr.instr_index.0) }
     }
 
     /// This gets just the HLIL variables - you may be interested in the union

@@ -1077,7 +1077,10 @@ impl HighLevelILInstruction {
     /// Version of active memory contents in SSA form for this instruction
     pub fn ssa_memory_version(&self) -> usize {
         unsafe {
-            BNGetHighLevelILSSAMemoryVersionAtILInstruction(self.function.handle, self.expr_index.0)
+            BNGetHighLevelILSSAMemoryVersionAtILInstruction(
+                self.function.handle,
+                self.instr_index.0,
+            )
         }
     }
 
@@ -1086,7 +1089,7 @@ impl HighLevelILInstruction {
             BNGetHighLevelILSSAVarVersionAtILInstruction(
                 self.function.handle,
                 &variable.into(),
-                self.expr_index.0,
+                self.instr_index.0,
             )
         };
         SSAVariable::new(variable, version)

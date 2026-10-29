@@ -26,12 +26,12 @@ fn test_hlil_info() {
     // 00025f10        )
     let instr_0 = hlil_instr_iter.next().unwrap();
     assert_eq!(instr_0.instr_index, HighLevelInstructionIndex(0));
-    assert_eq!(instr_0.expr_index, HighLevelExpressionIndex(5));
+    assert_eq!(instr_0.expr_index, HighLevelExpressionIndex(3));
     assert_eq!(instr_0.address, image_base + 0x00025f22);
     println!("{:?}", instr_0.kind);
     match instr_0.kind {
         HighLevelILInstructionKind::Ret(op) => {
-            assert_eq!(op.first_src, 4);
+            assert_eq!(op.first_src, 1);
             assert_eq!(op.num_srcs, 1);
         }
         _ => panic!("Expected Ret"),
@@ -60,4 +60,56 @@ fn test_hlil_var_info() {
             let _ = hlil_function.ssa_variable_uses(ssa_var).to_vec();
         }
     }
+}
+
+#[test]
+fn test_hlil_ssa_variable_definition() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+
+    let mut var_inits = 0;
+    for function in view.functions().iter() {
+        let hlil_function = function.high_level_il(false).unwrap();
+        let ssa_function = hlil_function.ssa_form();
+        for v in hlil_function.variables().iter() {
+            for ssa_var in hlil_function.ssa_variables(&v).iter() {
+                if ssa_var.version == 0 {
+                    continue;
+                }
+                assert!(hlil_function.ssa_variable_definition(ssa_var).is_some());
+                let def = ssa_function
+                    .ssa_variable_definition(ssa_var)
+                    .expect("Versioned SSA variable should have a definition");
+                if let HighLevelILInstructionKind::VarInitSsa(op) = def.kind {
+                    assert_eq!(op.dest, ssa_var);
+                    var_inits += 1;
+                }
+            }
+        }
+    }
+    assert!(var_inits > 0);
+}
+
+#[test]
+fn test_hlil_variable_live_at_uses() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+
+    let mut uses = 0;
+    for function in view.functions().iter() {
+        let hlil_function = function.high_level_il(false).unwrap();
+        for v in hlil_function.variables().iter() {
+            // Only parameters can be live without a definition.
+            if hlil_function.variable_definitions(v).is_empty() {
+                continue;
+            }
+            for use_instr in hlil_function.variable_uses(v).iter() {
+                assert!(hlil_function.is_variable_live_at(v, &use_instr));
+                uses += 1;
+            }
+        }
+    }
+    assert!(uses > 0);
 }

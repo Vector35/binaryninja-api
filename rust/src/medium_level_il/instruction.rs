@@ -1311,7 +1311,7 @@ impl MediumLevelILInstruction {
         let value = unsafe {
             BNGetMediumLevelILPossibleExprValues(
                 self.function.handle,
-                self.instr_index.0,
+                self.expr_index.0,
                 options.as_ptr() as *mut _,
                 options.len(),
             )
@@ -2068,9 +2068,9 @@ unsafe impl CoreArrayProviderInner for BranchDependence {
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Self {
-            instruction: MediumLevelILInstruction::from_expr_index(
+            instruction: MediumLevelILInstruction::from_instr_index(
                 context.clone(),
-                MediumLevelExpressionIndex(raw.branch),
+                MediumLevelInstructionIndex(raw.branch),
             ),
             dependence: raw.dependence,
         }

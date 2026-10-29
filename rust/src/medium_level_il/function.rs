@@ -360,13 +360,11 @@ impl MediumLevelILFunction {
         let result = unsafe {
             BNGetMediumLevelILSSAVarDefinition(self.handle, &raw_var, ssa_variable.version)
         };
-        // TODO: Does this return the expression or instruction index? Also we dont diff and this prob doesnt work.
         self.instruction_from_index(MediumLevelInstructionIndex(result))
     }
 
     pub fn ssa_memory_definition(&self, version: usize) -> Option<MediumLevelILInstruction> {
         let result = unsafe { BNGetMediumLevelILSSAMemoryDefinition(self.handle, version) };
-        // TODO: Does this return the expression or instruction index? Also we dont diff and this prob doesnt work.
         self.instruction_from_index(MediumLevelInstructionIndex(result))
     }
 
@@ -525,7 +523,7 @@ pub struct ILReferenceSource {
     pub arch: CoreArchitecture,
     pub addr: u64,
     pub graph_type: FunctionGraphType,
-    pub expr_idx: MediumLevelExpressionIndex,
+    pub instr_idx: MediumLevelInstructionIndex,
 }
 
 impl From<BNILReferenceSource> for ILReferenceSource {
@@ -535,7 +533,7 @@ impl From<BNILReferenceSource> for ILReferenceSource {
             arch: unsafe { CoreArchitecture::from_raw(value.arch) },
             addr: value.addr,
             graph_type: value.type_,
-            expr_idx: MediumLevelExpressionIndex(value.exprId),
+            instr_idx: MediumLevelInstructionIndex(value.exprId),
         }
     }
 }
@@ -547,7 +545,7 @@ impl From<&BNILReferenceSource> for ILReferenceSource {
             arch: unsafe { CoreArchitecture::from_raw(value.arch) },
             addr: value.addr,
             graph_type: value.type_,
-            expr_idx: MediumLevelExpressionIndex(value.exprId),
+            instr_idx: MediumLevelInstructionIndex(value.exprId),
         }
     }
 }

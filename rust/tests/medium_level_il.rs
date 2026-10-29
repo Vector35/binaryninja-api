@@ -62,22 +62,22 @@ fn test_mlil_info() {
     // 3 @ 00025f19  (MLIL_CALL eax_1 = (MLIL_CONST_PTR.d __crt_interlocked_read_32)((MLIL_VAR.d var_8)))
     let instr_3 = mlil_instr_iter.next().unwrap();
     assert_eq!(instr_3.instr_index, MediumLevelInstructionIndex(3));
-    assert_eq!(instr_3.expr_index, MediumLevelExpressionIndex(10));
+    assert_eq!(instr_3.expr_index, MediumLevelExpressionIndex(9));
     assert_eq!(instr_3.address, image_base + 0x00025f19);
     println!("{:?}", instr_3.kind);
     match instr_3.kind {
         MediumLevelILInstructionKind::Call(op) => {
-            assert_eq!(op.first_output, 8);
+            assert_eq!(op.first_output, 0);
             assert_eq!(op.num_outputs, 1);
-            assert_eq!(op.dest, MediumLevelExpressionIndex(7));
-            assert_eq!(op.first_param, 9);
+            assert_eq!(op.dest, MediumLevelExpressionIndex(8));
+            assert_eq!(op.first_param, 1);
             assert_eq!(op.num_params, 1);
         }
         _ => panic!("Expected Call"),
     }
     match instr_3.lift().kind {
         MediumLevelILLiftedInstructionKind::Call(lifted_call) => {
-            assert_eq!(lifted_call.dest.expr_index, MediumLevelExpressionIndex(7));
+            assert_eq!(lifted_call.dest.expr_index, MediumLevelExpressionIndex(8));
             assert_eq!(lifted_call.output.len(), 1);
             assert_eq!(lifted_call.params.len(), 1);
         }
@@ -86,12 +86,12 @@ fn test_mlil_info() {
     // 4 @ 00025f22  (MLIL_RET return (MLIL_VAR.d eax_1))
     let instr_4 = mlil_instr_iter.next().unwrap();
     assert_eq!(instr_4.instr_index, MediumLevelInstructionIndex(4));
-    assert_eq!(instr_4.expr_index, MediumLevelExpressionIndex(13));
+    assert_eq!(instr_4.expr_index, MediumLevelExpressionIndex(11));
     assert_eq!(instr_4.address, image_base + 0x00025f22);
     println!("{:?}", instr_4.kind);
     match instr_4.kind {
         MediumLevelILInstructionKind::Ret(op) => {
-            assert_eq!(op.first_operand, 12);
+            assert_eq!(op.first_operand, 2);
             assert_eq!(op.num_operands, 1);
         }
         _ => panic!("Expected Ret"),
@@ -192,4 +192,84 @@ fn test_mlil_possible_values() {
         }
         _ => panic!("Expected Ret"),
     }
+}
+
+#[test]
+fn test_mlil_const_possible_values() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+
+    // Only constants whose expression index differs from their instruction index can tell the
+    // two kinds of index apart.
+    let mut sub_expression_consts = 0;
+    for function in view.functions().iter() {
+        let mlil_function = function.medium_level_il().unwrap();
+        for expr_index in 0..mlil_function.expression_count() {
+            let expr = mlil_function
+                .instruction_from_expr_index(MediumLevelExpressionIndex(expr_index))
+                .unwrap();
+            let MediumLevelILInstructionKind::Const(op) = expr.kind else {
+                continue;
+            };
+            if expr.expr_index.0 == expr.instr_index.0 {
+                continue;
+            }
+            assert_eq!(
+                expr.possible_values(),
+                PossibleValueSet::ConstantValue {
+                    value: op.constant as i64
+                }
+            );
+            sub_expression_consts += 1;
+        }
+    }
+    assert!(sub_expression_consts > 0);
+}
+
+#[test]
+fn test_mlil_branch_dependencies() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+
+    let mut dependencies = 0;
+    for function in view.functions().iter() {
+        let mlil_function = function.medium_level_il().unwrap();
+        for instr_index in 0..mlil_function.instruction_count() {
+            let instr = mlil_function
+                .instruction_from_index(MediumLevelInstructionIndex(instr_index))
+                .unwrap();
+            for dependence in instr.branch_dependencies().iter() {
+                assert!(matches!(
+                    dependence.instruction.kind,
+                    MediumLevelILInstructionKind::If(_)
+                ));
+                dependencies += 1;
+            }
+        }
+    }
+    assert!(dependencies > 0);
+}
+
+#[test]
+fn test_mlil_var_refs() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+
+    let mut refs = 0;
+    for function in view.functions().iter() {
+        let mlil_function = function.medium_level_il().unwrap();
+        for var in mlil_function.variables().iter() {
+            for var_ref in mlil_function.var_refs(&var).iter() {
+                let instr = mlil_function
+                    .instruction_from_index(var_ref.instr_idx)
+                    .expect("Reference should name a valid instruction");
+                assert_eq!(instr.address, var_ref.addr);
+                refs += 1;
+            }
+        }
+    }
+    assert!(refs > 0);
 }

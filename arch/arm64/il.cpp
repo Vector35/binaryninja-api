@@ -1038,9 +1038,37 @@ bool GetLowLevelILForInstruction(
 		case EXARMO_AARCH64_ENC_AddZPZz:
 		case EXARMO_AARCH64_ENC_AddZZi:
 		case EXARMO_AARCH64_ENC_AddZZz:
+		case EXARMO_AARCH64_ENC_AddMzZzv2x1:
+		case EXARMO_AARCH64_ENC_AddMzZzv4x1:
+		case EXARMO_AARCH64_ENC_AddZaZw2x2:
+		case EXARMO_AARCH64_ENC_AddZaZw4x4:
+		case EXARMO_AARCH64_ENC_AddZaZzv2x1:
+		case EXARMO_AARCH64_ENC_AddZaZzv4x1:
+		case EXARMO_AARCH64_ENC_AddZaZzw2x2:
+		case EXARMO_AARCH64_ENC_AddZaZzw4x4:
 			if (!preferIntrinsics())
 				il.AddInstruction(il.Unimplemented());
 			return true;
+		case EXARMO_AARCH64_ENC_AddAsimdsameOnly:
+		{
+			if (preferIntrinsics())
+				return true;
+
+			Register srcs1[16], srcs2[16], dsts[16];
+			int dst_n = unpack_vector(operand1, dsts);
+			int src1_n = unpack_vector(operand2, srcs1);
+			int src2_n = unpack_vector(operand3, srcs2);
+			if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
+			{
+				il.AddInstruction(il.Unimplemented());
+				return true;
+			}
+
+			int rsize = RegisterSize(dsts[0]);
+			for (int i = 0; i < dst_n; ++i)
+				il.AddInstruction(ILSETREG(dsts[i], il.Add(rsize, ILREG(srcs1[i]), ILREG(srcs2[i]))));
+			return true;
+		}
 		default: break;
 		}
 	case EXARMO_AARCH64_ADDS:
@@ -1519,9 +1547,29 @@ bool GetLowLevelILForInstruction(
 		    ILSETREG_O(operand1, ILREG_O(operand2)));
 		break;
 	case EXARMO_AARCH64_CLS:
+		switch (encoding)
+		{
+		case EXARMO_AARCH64_ENC_ClsAsimdmiscR:
+		case EXARMO_AARCH64_ENC_ClsZPZM:
+		case EXARMO_AARCH64_ENC_ClsZPZZ:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(ILSETREG_O(operand1, il.CountLeadingSigns(REGSZ_O(operand2), ILREG_O(operand2))));
 		break;
 	case EXARMO_AARCH64_CLZ:
+		switch (encoding)
+		{
+		case EXARMO_AARCH64_ENC_ClzAsimdmiscR:
+		case EXARMO_AARCH64_ENC_ClzZPZM:
+		case EXARMO_AARCH64_ENC_ClzZPZZ:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(ILSETREG_O(operand1, il.CountLeadingZeros(REGSZ_O(operand2), ILREG_O(operand2))));
 		break;
 	case EXARMO_AARCH64_CNT:
@@ -3810,9 +3858,35 @@ bool GetLowLevelILForInstruction(
 		case EXARMO_AARCH64_ENC_SubZPZz:
 		case EXARMO_AARCH64_ENC_SubZZi:
 		case EXARMO_AARCH64_ENC_SubZZz:
+		case EXARMO_AARCH64_ENC_SubZaZw2x2:
+		case EXARMO_AARCH64_ENC_SubZaZw4x4:
+		case EXARMO_AARCH64_ENC_SubZaZzv2x1:
+		case EXARMO_AARCH64_ENC_SubZaZzv4x1:
+		case EXARMO_AARCH64_ENC_SubZaZzw2x2:
+		case EXARMO_AARCH64_ENC_SubZaZzw4x4:
 			if (!preferIntrinsics())
 				il.AddInstruction(il.Unimplemented());
 			return true;
+		case EXARMO_AARCH64_ENC_SubAsimdsameOnly:
+		{
+			if (preferIntrinsics())
+				return true;
+
+			Register srcs1[16], srcs2[16], dsts[16];
+			int dst_n = unpack_vector(operand1, dsts);
+			int src1_n = unpack_vector(operand2, srcs1);
+			int src2_n = unpack_vector(operand3, srcs2);
+			if ((dst_n != src1_n) || (src1_n != src2_n) || dst_n == 0)
+			{
+				il.AddInstruction(il.Unimplemented());
+				return true;
+			}
+
+			int rsize = RegisterSize(dsts[0]);
+			for (int i = 0; i < dst_n; ++i)
+				il.AddInstruction(ILSETREG(dsts[i], il.Sub(rsize, ILREG(srcs1[i]), ILREG(srcs2[i]))));
+			return true;
+		}
 		default: break;
 		}
 	case EXARMO_AARCH64_SUBS:
@@ -4028,6 +4102,15 @@ bool GetLowLevelILForInstruction(
 		        il.MultDoublePrecUnsigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3)))));
 		break;
 	case EXARMO_AARCH64_UMULL:
+		switch (encoding)
+		{
+		case EXARMO_AARCH64_ENC_UmullAsimddiffL:
+		case EXARMO_AARCH64_ENC_UmullAsimdelemL:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(ILSETREG_O(operand1,
 		    il.MultDoublePrecUnsigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3))));
 		break;
@@ -4154,6 +4237,15 @@ bool GetLowLevelILForInstruction(
 		break;
 	}
 	case EXARMO_AARCH64_SMULL:
+		switch (encoding)
+		{
+		case EXARMO_AARCH64_ENC_SmullAsimddiffL:
+		case EXARMO_AARCH64_ENC_SmullAsimdelemL:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
 		il.AddInstruction(ILSETREG_O(operand1,
 		    il.MultDoublePrecSigned(REGSZ_O(operand2), ILREG_O(operand2), ILREG_O(operand3))));
 		break;

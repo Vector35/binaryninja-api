@@ -12077,17 +12077,19 @@ tests_umul_uadd = [
     # umull fp, w19, w2                                                UMULL_UMADDL_64WA_dp_3src
     (b'\x7D\x7E\xA2\x9B', 'LLIL_SET_REG.q(fp,LLIL_MULU_DP.q(LLIL_REG.d(w19),LLIL_REG.d(w2)))'),
     # umull v27.2d, v28.2s, v8.2s                                      UMULL_asimddiff_L
-    (b'\x9B\xC3\xA8\x2E', 'LLIL_SET_REG.o(v27,LLIL_MULU_DP.o(LLIL_REG.o(v28),LLIL_REG.o(v8)))'),
+    (b'\x9B\xC3\xA8\x2E', 'LLIL_INTRINSIC([v27],vmull_u32,[LLIL_REG.o(v28),LLIL_REG.o(v8)])'),
     # umull2 v12.4s, v14.8h, v26.8h                                    UMULL_asimddiff_L
     (b'\xCC\xC1\x7A\x6E', 'LLIL_INTRINSIC([v12],vmull_high_u16,[LLIL_REG.o(v14),LLIL_REG.o(v26)])'),
     # umull v8.8h, v4.8b, v14.8b                                       UMULL_asimddiff_L
-    (b'\x88\xC0\x2E\x2E', 'LLIL_SET_REG.o(v8,LLIL_MULU_DP.o(LLIL_REG.o(v4),LLIL_REG.o(v14)))'),
+    (b'\x88\xC0\x2E\x2E', 'LLIL_INTRINSIC([v8],vmull_u8,[LLIL_REG.o(v4),LLIL_REG.o(v14)])'),
     # umull2 v26.2d, v6.4s, v5.s[0]                                    UMULL_asimdelem_L
     (b'\xDA\xA0\x85\x6F', 'LLIL_INTRINSIC([v26],vmull_high_laneq_u32,[LLIL_REG.o(v6),LLIL_REG.o(v5),LLIL_CONST.b(0x0)])'),
     # umull2 v19.2d, v29.4s, v18.s[1]                                  UMULL_asimdelem_L
     (b'\xB3\xA3\xB2\x6F', 'LLIL_INTRINSIC([v19],vmull_high_laneq_u32,[LLIL_REG.o(v29),LLIL_REG.o(v18),LLIL_CONST.b(0x1)])'),
     # umull2 v3.2d, v15.4s, v14.s[2]                                   UMULL_asimdelem_L
     (b'\xE3\xA9\x8E\x6F', 'LLIL_INTRINSIC([v3],vmull_high_laneq_u32,[LLIL_REG.o(v15),LLIL_REG.o(v14),LLIL_CONST.b(0x2)])'),
+    # umull v0.2d, v1.2s, v2.s[1]                                      UMULL_asimdelem_L
+    (b'\x20\xA0\xA2\x2F', 'LLIL_INTRINSIC([v0],vmull_laneq_u32,[LLIL_REG.o(v1),LLIL_REG.o(v2),LLIL_CONST.b(0x1)])'),
 ]
 
 tests_smov = [
@@ -12355,21 +12357,21 @@ tests_vmul = [
     # smull x24, w0, wzr                                               SMULL_SMADDL_64WA_dp_3src
     (b'\x18\x7C\x3F\x9B', 'LLIL_SET_REG.q(x24,LLIL_MULS_DP.d(LLIL_REG.d(w0),LLIL_CONST.d(0x0)))'),
     # smull v4.8h, v22.8b, v18.8b                                      SMULL_asimddiff_L
-    (b'\xC4\xC2\x32\x0E', 'LLIL_SET_REG.o(v4,LLIL_MULS_DP.o(LLIL_REG.o(v22),LLIL_REG.o(v18)))'),
+    (b'\xC4\xC2\x32\x0E', 'LLIL_INTRINSIC([v4],vmull_s8,[LLIL_REG.o(v22),LLIL_REG.o(v18)])'),
     # smull2 v1.4s, v13.8h, v24.8h                                     SMULL_asimddiff_L
     (b'\xA1\xC1\x78\x4E', 'LLIL_INTRINSIC([v1],vmull_high_s16,[LLIL_REG.o(v13),LLIL_REG.o(v24)])'),
     # smull v6.4s, v3.4h, v31.4h                                       SMULL_asimddiff_L
-    (b'\x66\xC0\x7F\x0E', 'LLIL_SET_REG.o(v6,LLIL_MULS_DP.o(LLIL_REG.o(v3),LLIL_REG.o(v31)))'),
+    (b'\x66\xC0\x7F\x0E', 'LLIL_INTRINSIC([v6],vmull_s16,[LLIL_REG.o(v3),LLIL_REG.o(v31)])'),
     # smull2 v16.2d, v31.4s, v20.4s                                    SMULL_asimddiff_L
     (b'\xF0\xC3\xB4\x4E', 'LLIL_INTRINSIC([v16],vmull_high_s32,[LLIL_REG.o(v31),LLIL_REG.o(v20)])'),
     # smull v6.4s, v8.4h, v12.h[0]                                     SMULL_asimdelem_L
-    (b'\x06\xA1\x4C\x0F', 'LLIL_SET_REG.o(v6,LLIL_MULS_DP.o(LLIL_REG.o(v8),LLIL_REG.o(v12)))'),
+    (b'\x06\xA1\x4C\x0F', 'LLIL_INTRINSIC([v6],vmull_laneq_s16,[LLIL_REG.o(v8),LLIL_REG.o(v12),LLIL_CONST.b(0x0)])'),
     # smull2 v11.2d, v31.4s, v8.s[1]                                   SMULL_asimdelem_L
     (b'\xEB\xA3\xA8\x4F', 'LLIL_INTRINSIC([v11],vmull_high_laneq_s32,[LLIL_REG.o(v31),LLIL_REG.o(v8),LLIL_CONST.b(0x1)])'),
     # smull v11.2d, v3.2s, v19.s[2]                                    SMULL_asimdelem_L
-    (b'\x6B\xA8\x93\x0F', 'LLIL_SET_REG.o(v11,LLIL_MULS_DP.o(LLIL_REG.o(v3),LLIL_REG.o(v19)))'),
+    (b'\x6B\xA8\x93\x0F', 'LLIL_INTRINSIC([v11],vmull_laneq_s32,[LLIL_REG.o(v3),LLIL_REG.o(v19),LLIL_CONST.b(0x2)])'),
     # smull v27.4s, v0.4h, v7.h[5]                                     SMULL_asimdelem_L
-    (b'\x1B\xA8\x57\x0F', 'LLIL_SET_REG.o(v27,LLIL_MULS_DP.o(LLIL_REG.o(v0),LLIL_REG.o(v7)))'),
+    (b'\x1B\xA8\x57\x0F', 'LLIL_INTRINSIC([v27],vmull_laneq_s16,[LLIL_REG.o(v0),LLIL_REG.o(v7),LLIL_CONST.b(0x5)])'),
     # umaddl x7, w3, w18, x1                                           UMADDL_64WA_dp_3src
     (b'\x67\x04\xB2\x9B',
      'LLIL_SET_REG.q(x7,LLIL_ADD.q(LLIL_REG.q(x1),LLIL_MULU_DP.d(LLIL_REG.d(w3),LLIL_REG.d(w18))))'),
@@ -12426,13 +12428,13 @@ tests_vmul = [
     # umull x18, w18, w18                                              UMULL_UMADDL_64WA_dp_3src
     (b'\x52\x7E\xB2\x9B', 'LLIL_SET_REG.q(x18,LLIL_MULU_DP.d(LLIL_REG.d(w18),LLIL_REG.d(w18)))'),
     # umull v27.2d, v28.2s, v8.2s                                      UMULL_asimddiff_L
-    (b'\x9B\xC3\xA8\x2E', 'LLIL_SET_REG.o(v27,LLIL_MULU_DP.o(LLIL_REG.o(v28),LLIL_REG.o(v8)))'),
+    (b'\x9B\xC3\xA8\x2E', 'LLIL_INTRINSIC([v27],vmull_u32,[LLIL_REG.o(v28),LLIL_REG.o(v8)])'),
     # umull2 v12.4s, v14.8h, v26.8h                                    UMULL_asimddiff_L
     (b'\xCC\xC1\x7A\x6E', 'LLIL_INTRINSIC([v12],vmull_high_u16,[LLIL_REG.o(v14),LLIL_REG.o(v26)])'),
     # umull v8.8h, v4.8b, v14.8b                                       UMULL_asimddiff_L
-    (b'\x88\xC0\x2E\x2E', 'LLIL_SET_REG.o(v8,LLIL_MULU_DP.o(LLIL_REG.o(v4),LLIL_REG.o(v14)))'),
+    (b'\x88\xC0\x2E\x2E', 'LLIL_INTRINSIC([v8],vmull_u8,[LLIL_REG.o(v4),LLIL_REG.o(v14)])'),
     # umull v30.2d, v1.2s, v4.2s                                       UMULL_asimddiff_L
-    (b'\x3E\xC0\xA4\x2E', 'LLIL_SET_REG.o(v30,LLIL_MULU_DP.o(LLIL_REG.o(v1),LLIL_REG.o(v4)))'),
+    (b'\x3E\xC0\xA4\x2E', 'LLIL_INTRINSIC([v30],vmull_u32,[LLIL_REG.o(v1),LLIL_REG.o(v4)])'),
     # umull2 v26.2d, v6.4s, v5.s[0]                                    UMULL_asimdelem_L
     (b'\xDA\xA0\x85\x6F', 'LLIL_INTRINSIC([v26],vmull_high_laneq_u32,[LLIL_REG.o(v6),LLIL_REG.o(v5),LLIL_CONST.b(0x0)])'),
     # umull2 v19.2d, v29.4s, v18.s[1]                                  UMULL_asimdelem_L
@@ -12653,6 +12655,34 @@ tests_grab_bag = [
     # ldpsw x1, x2, [x0]
     (b'\x01\x08\x40\x69', 'LLIL_SET_REG.q(x1,LLIL_SX.q(LLIL_LOAD.d(LLIL_REG.q(x0))));' + \
                          ' LLIL_SET_REG.q(x2,LLIL_SX.q(LLIL_LOAD.d(LLIL_ADD.q(LLIL_REG.q(x0),LLIL_CONST.q(0x4)))))'),
+    # add v0.4s, v1.4s, v2.4s -- lanes, not one 128-bit add
+    (b'\x20\x84\xA2\x4E', 'LLIL_INTRINSIC([v0],vaddq_s32,[LLIL_REG.o(v1),LLIL_REG.o(v2)])'),
+    # add v2.2s, v2.2s, v0.2s
+    (b'\x42\x84\xA0\x0E', 'LLIL_INTRINSIC([v2],vadd_s32,[LLIL_REG.o(v2),LLIL_REG.o(v0)])'),
+    # sub v0.4s, v1.4s, v2.4s
+    (b'\x20\x84\xA2\x6E', 'LLIL_INTRINSIC([v0],vsubq_s32,[LLIL_REG.o(v1),LLIL_REG.o(v2)])'),
+    # add d0, d1, d2 -- the scalar form is one 64-bit add
+    (b'\x20\x84\xE2\x5E', 'LLIL_SET_REG.q(d0,LLIL_ADD.q(LLIL_REG.q(d1),LLIL_REG.q(d2)))'),
+    # add za.s[w8, 0, vgx2], {z0.s-z1.s}
+    (b'\x10\x1C\xA0\xC1', 'LLIL_UNIMPL()'),
+    # add {z0.s-z1.s}, {z0.s-z1.s}, z2.s
+    (b'\x00\xA3\xA2\xC1', 'LLIL_UNIMPL()'),
+    # sub za.s[w8, 0, vgx2], {z0.s-z1.s}, {z2.s-z3.s}
+    (b'\x18\x18\xA2\xC1', 'LLIL_UNIMPL()'),
+    # clz v0.4s, v1.4s -- lanes, not one 128-bit count
+    (b'\x20\x48\xA0\x6E', 'LLIL_INTRINSIC([v0],vclzq_s32,[LLIL_REG.o(v1)])'),
+    # clz v0.8b, v1.8b
+    (b'\x20\x48\x20\x2E', 'LLIL_INTRINSIC([v0],vclz_s8,[LLIL_REG.o(v1)])'),
+    # cls v0.8h, v1.8h
+    (b'\x20\x48\x60\x4E', 'LLIL_INTRINSIC([v0],vclsq_s16,[LLIL_REG.o(v1)])'),
+    # clz z0.s, p0/m, z1.s
+    (b'\x20\xA0\x99\x04', 'LLIL_UNIMPL()'),
+    # cls z0.s, p0/m, z1.s
+    (b'\x20\xA0\x98\x04', 'LLIL_UNIMPL()'),
+    # clz w0, w1
+    (b'\x20\x10\xC0\x5A', 'LLIL_SET_REG.d(w0,LLIL_CLZ.d(LLIL_REG.d(w1)))'),
+    # cls x0, x1
+    (b'\x20\x14\xC0\xDA', 'LLIL_SET_REG.q(x0,LLIL_CLS.q(LLIL_REG.q(x1)))'),
     # # cset w8, ne
     (b'\xE8\x07\x9F\x1A', 'LLIL_SET_REG.d(w8,LLIL_BOOL_TO_INT.d(LLIL_FLAG_GROUP(ne)))'),
     # some vector loads/stores

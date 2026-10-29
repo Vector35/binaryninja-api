@@ -12618,6 +12618,29 @@ tests_grab_bag = [
     (b'\xB6\x72\xC9\xA8', 'LLIL_SET_REG.q(x22,LLIL_LOAD.q(LLIL_REG.q(x21)));' + \
                          ' LLIL_SET_REG.q(x28,LLIL_LOAD.q(LLIL_ADD.q(LLIL_REG.q(x21),LLIL_CONST.q(0x8))));' + \
                          ' LLIL_SET_REG.q(x21,LLIL_ADD.q(LLIL_REG.q(x21),LLIL_CONST.q(0x90)))'),
+    # ldp w2, w4, [x2] -- the second address uses x2 before the first load writes w2
+    (b'\x42\x10\x40\x29', 'LLIL_SET_REG.q(temp0,LLIL_ADD.q(LLIL_REG.q(x2),LLIL_CONST.q(0x4)));' + \
+                         ' LLIL_SET_REG.d(w2,LLIL_LOAD.d(LLIL_REG.q(x2)));' + \
+                         ' LLIL_SET_REG.d(w4,LLIL_LOAD.d(LLIL_REG.q(temp0)))'),
+    # ldp w3, w2, [x3, #-0x8]
+    (b'\x63\x08\x7F\x29', 'LLIL_SET_REG.q(temp0,LLIL_ADD.q(LLIL_REG.q(x3),LLIL_CONST.q(0xFFFFFFFFFFFFFFFC)));' + \
+                         ' LLIL_SET_REG.d(w3,LLIL_LOAD.d(LLIL_ADD.q(LLIL_REG.q(x3),LLIL_CONST.q(0xFFFFFFFFFFFFFFF8))));' + \
+                         ' LLIL_SET_REG.d(w2,LLIL_LOAD.d(LLIL_REG.q(temp0)))'),
+    # ldnp w0, w1, [x0]
+    (b'\x00\x04\x40\x28', 'LLIL_SET_REG.q(temp0,LLIL_ADD.q(LLIL_REG.q(x0),LLIL_CONST.q(0x4)));' + \
+                         ' LLIL_SET_REG.d(w0,LLIL_LOAD.d(LLIL_REG.q(x0)));' + \
+                         ' LLIL_SET_REG.d(w1,LLIL_LOAD.d(LLIL_REG.q(temp0)))'),
+    # ldp w0, wzr, [x0]
+    (b'\x00\x7C\x40\x29', 'LLIL_SET_REG.q(temp0,LLIL_ADD.q(LLIL_REG.q(x0),LLIL_CONST.q(0x4)));' + \
+                         ' LLIL_SET_REG.d(w0,LLIL_LOAD.d(LLIL_REG.q(x0)));' + \
+                         ' LLIL_LOAD.d(LLIL_REG.q(temp0))'),
+    # ldpsw x0, x1, [x0, #0x8] -- the temporary holds the whole 64-bit address
+    (b'\x00\x04\x41\x69', 'LLIL_SET_REG.q(temp0,LLIL_ADD.q(LLIL_REG.q(x0),LLIL_CONST.q(0xC)));' + \
+                         ' LLIL_SET_REG.q(x0,LLIL_SX.q(LLIL_LOAD.d(LLIL_ADD.q(LLIL_REG.q(x0),LLIL_CONST.q(0x8)))));' + \
+                         ' LLIL_SET_REG.q(x1,LLIL_SX.q(LLIL_LOAD.d(LLIL_REG.q(temp0))))'),
+    # ldpsw x1, x2, [x0]
+    (b'\x01\x08\x40\x69', 'LLIL_SET_REG.q(x1,LLIL_SX.q(LLIL_LOAD.d(LLIL_REG.q(x0))));' + \
+                         ' LLIL_SET_REG.q(x2,LLIL_SX.q(LLIL_LOAD.d(LLIL_ADD.q(LLIL_REG.q(x0),LLIL_CONST.q(0x4)))))'),
     # # cset w8, ne
     (b'\xE8\x07\x9F\x1A', 'LLIL_SET_REG.d(w8,LLIL_BOOL_TO_INT.d(LLIL_FLAG_GROUP(ne)))'),
     # some vector loads/stores

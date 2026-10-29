@@ -534,22 +534,35 @@ static void LoadStoreOperandPairSize(LowLevelILFunction& il, bool load, size_t l
 	/* load/store */
 	if (load)
 	{
+		// LDPSW sign-extends each word to the X register it writes.
+		auto loadInto = [&](exarmo_aarch64_operand& operand, ExprId address) {
+			ExprId value = il.Load(load_size, address);
+			if (REGSZ_O(operand) > load_size)
+				value = il.SignExtend(REGSZ_O(operand), value);
+			return ILSETREG_O(operand, value);
+		};
+
+		// A W destination aliases its X register, so compare that with the base.
+		Register destination = REG_O(operand1);
+		if (IS_W_REG(destination))
+			destination = (Register)(destination - REG_W0 + REG_X0);
+
 		// We lift this instruction differently if operand1 and operand3 are equal as to not break outlining in the common case,
 		//  since outlining does not seem to handle intermediate stores to temporary registers
 		// TODO: unify lifting once outlining handles intermediate temporary stores
-		if (REG_O(operand1) != REG_O(operand3))
+		if (destination != REG_O(operand3))
 		{
 			// {op} X, Y, [Z]
-			il.AddInstruction(ILSETREG_O(operand1, il.Load(load_size, addr0)));
-			il.AddInstruction(ILSETREG_O(operand2, il.Load(load_size, addr1)));
+			il.AddInstruction(loadInto(operand1, addr0));
+			il.AddInstruction(loadInto(operand2, addr1));
 		}
 		else
 		{
 			// {op} X, Y, [X]
 			// Prevent clobbering of source during write to operand1 by storing source in a temporary register
-			il.AddInstruction(il.SetRegister(REGSZ_O(operand1), LLIL_TEMP(0), addr1));
-			il.AddInstruction(ILSETREG_O(operand1, il.Load(load_size, addr0)));
-			il.AddInstruction(ILSETREG_O(operand2, il.Load(load_size, il.Register(load_size, LLIL_TEMP(0)))));
+			il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0), addr1));
+			il.AddInstruction(loadInto(operand1, addr0));
+			il.AddInstruction(loadInto(operand2, il.Register(8, LLIL_TEMP(0))));
 		}
 	}
 	else

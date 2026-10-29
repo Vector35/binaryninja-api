@@ -1317,7 +1317,10 @@ bool MediumLevelILInstructionBase::HasLowLevelIL() const
 	Ref<LowLevelILFunction> func = function->GetLowLevelIL();
 	if (!func)
 		return false;
-	return GetLowLevelILExprIndex() < func->GetExprCount();
+	Ref<LowLevelILFunction> ssa = func->GetSSAForm();
+	if (!ssa)
+		return false;
+	return GetLowLevelILExprIndex() < ssa->GetExprCount();
 }
 
 
@@ -1326,10 +1329,13 @@ LowLevelILInstruction MediumLevelILInstructionBase::GetLowLevelIL() const
 	Ref<LowLevelILFunction> func = function->GetLowLevelIL();
 	if (!func)
 		throw LowLevelILInstructionAccessException();
-	size_t expr = GetLowLevelILExprIndex();
-	if (GetLowLevelILExprIndex() >= func->GetExprCount())
+	Ref<LowLevelILFunction> ssa = func->GetSSAForm();
+	if (!ssa)
 		throw LowLevelILInstructionAccessException();
-	return func->GetExpr(expr);
+	size_t expr = GetLowLevelILExprIndex();
+	if (expr >= ssa->GetExprCount())
+		throw LowLevelILInstructionAccessException();
+	return ssa->GetExpr(expr).GetNonSSAForm();
 }
 
 

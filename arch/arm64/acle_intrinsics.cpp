@@ -193,7 +193,8 @@ bool AcleGetLowLevelILForInstruction(
 		}
 	}
 
-	// A register-list result writes one output per register.
+	// A register-list result writes one output per register. A result destined for WZR or XZR is
+	// written to a temporary instead, which discards it.
 	vector<RegisterOrFlag> outputs;
 	if (realised.result.kind != EXARMO_AARCH64_INTRINSIC_OUTPUT_NONE)
 	{
@@ -203,7 +204,7 @@ bool AcleGetLowLevelILForInstruction(
 		{
 			Register reg = OperandRegisterAt(result, member);
 			if (reg != REG_NONE)
-				outputs.push_back(RegisterOrFlag::Register(reg));
+				outputs.push_back(RegisterOrFlag::Register(IS_ZERO_REG(reg) ? LLIL_TEMP(member) : reg));
 		}
 	}
 

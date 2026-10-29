@@ -5168,7 +5168,7 @@ tests_fcvt = [
     # fcvtas w0, d28                                                   FCVTAS_32D_float2int
     (b'\x80\x03\x64\x1E', 'LLIL_INTRINSIC([w0],vcvtad_s32_f64,[LLIL_REG.q(d28)])'),
     # fcvtas wzr, s20                                                  FCVTAS_32S_float2int
-    (b'\x9F\x02\x24\x1E', 'LLIL_INTRINSIC([wzr],vcvtas_s32_f32,[LLIL_REG.d(s20)])'),
+    (b'\x9F\x02\x24\x1E', 'LLIL_INTRINSIC([temp0],vcvtas_s32_f32,[LLIL_REG.d(s20)])'),
     # fcvtas w17, s19                                                  FCVTAS_32S_float2int
     (b'\x71\x02\x24\x1E', 'LLIL_INTRINSIC([w17],vcvtas_s32_f32,[LLIL_REG.d(s19)])'),
     # fcvtas x27, d9                                                   FCVTAS_64D_float2int

@@ -3219,6 +3219,28 @@ bool GetLowLevelILForInstruction(
 		if (!IS_REG_O(operand1) || !(IS_W_REG(REG_O(operand1)) || IS_X_REG(REG_O(operand1))))
 			break;
 
+		// LLIL has no float to unsigned integer conversion. A 64-bit FloatToInt holds every in-range
+		// unsigned 32-bit result, so W destinations take its low half. X destinations lift as ACLE
+		// intrinsics.
+		bool isUnsigned = mnemonic == EXARMO_AARCH64_FCVTZU || mnemonic == EXARMO_AARCH64_FCVTMU
+		    || mnemonic == EXARMO_AARCH64_FCVTNU || mnemonic == EXARMO_AARCH64_FCVTPU;
+		if (isUnsigned && IS_X_REG(REG_O(operand1)))
+		{
+			if (AcleGetLowLevelILForInstruction(il, instr, operands))
+				break;
+
+			// ACLE has no intrinsic for FCVTZU <Xd>, <Sn>, #<fbits>, and the one for
+			// FCVTZU <Xd>, <Hn>, #<fbits> takes at most 16 fraction bits. Widening to double and
+			// scaling by 2^fbits are both exact, so the double-precision intrinsic computes the same
+			// result.
+			if (operandCount < 3)
+				ABORT_LIFT;
+
+			IntrinsicToRegisters(il, {REG_O(operand1)}, AcleIntrinsicNamed("vcvtd_n_u64_f64"),
+			    {il.FloatConvert(8, ILREG_O(operand2)), il.Const(8, IMM_O(operand3))});
+			break;
+		}
+
 		size_t sourceSize = REGSZ_O(operand2);
 		size_t size = FixedPointSize(sourceSize);
 		ExprId value = ILREG_O(operand2);
@@ -3251,7 +3273,12 @@ bool GetLowLevelILForInstruction(
 			break;
 		}
 
-		il.AddInstruction(ILSETREG_O(operand1, il.FloatToInt(REGSZ_O(operand1), value)));
+		if (isUnsigned)
+			value = il.LowPart(4, il.FloatToInt(8, value));
+		else
+			value = il.FloatToInt(REGSZ_O(operand1), value);
+
+		il.AddInstruction(ILSETREG_O(operand1, value));
 		break;
 	}
 	// FCVTAS and FCVTAU round ties away from zero, but RoundToInt rounds ties to even.

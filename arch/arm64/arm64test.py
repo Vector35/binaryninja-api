@@ -6321,9 +6321,9 @@ tests_fmov = [
     # fmov x7, v8.d[1]
     (b'\x07\x01\xAE\x9E', 'LLIL_SET_REG.q(x7,LLIL_REG.q(v8.d[1]))'),
     # fmov d19, x0
-    (b'\x13\x00\x67\x9E', 'LLIL_SET_REG.q(d19,LLIL_INT_TO_FLOAT.q(LLIL_REG.q(x0)))'),
+    (b'\x13\x00\x67\x9E', 'LLIL_SET_REG.q(d19,LLIL_REG.q(x0))'),
     # fmov d8, x21
-    (b'\xA8\x02\x67\x9E', 'LLIL_SET_REG.q(d8,LLIL_INT_TO_FLOAT.q(LLIL_REG.q(x21)))'),
+    (b'\xA8\x02\x67\x9E', 'LLIL_SET_REG.q(d8,LLIL_REG.q(x21))'),
     # fmov d24, d27
     (b'\x78\x43\x60\x1E', 'LLIL_SET_REG.q(d24,LLIL_REG.q(d27))'),
     # fmov d19, d19
@@ -6333,13 +6333,13 @@ tests_fmov = [
     # TODO fmov d19, #-3.125
     (b'\x13\x30\x71\x1E', 'LLIL_SET_REG.q(d19,LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-3.125)))'),
     # fmov h28, w19
-    (b'\x7C\x02\xE7\x1E', 'LLIL_SET_REG.w(h28,LLIL_INT_TO_FLOAT.w(LLIL_REG.d(w19)))'),
+    (b'\x7C\x02\xE7\x1E', 'LLIL_SET_REG.w(h28,LLIL_LOW_PART.w(LLIL_REG.d(w19)))'),
     # fmov h2, w5
-    (b'\xA2\x00\xE7\x1E', 'LLIL_SET_REG.w(h2,LLIL_INT_TO_FLOAT.w(LLIL_REG.d(w5)))'),
+    (b'\xA2\x00\xE7\x1E', 'LLIL_SET_REG.w(h2,LLIL_LOW_PART.w(LLIL_REG.d(w5)))'),
     # fmov h10, x14
-    (b'\xCA\x01\xE7\x9E', 'LLIL_SET_REG.w(h10,LLIL_INT_TO_FLOAT.w(LLIL_REG.q(x14)))'),
+    (b'\xCA\x01\xE7\x9E', 'LLIL_SET_REG.w(h10,LLIL_LOW_PART.w(LLIL_REG.q(x14)))'),
     # fmov h9, fp
-    (b'\xA9\x03\xE7\x9E', 'LLIL_SET_REG.w(h9,LLIL_INT_TO_FLOAT.w(LLIL_REG.q(fp)))'),
+    (b'\xA9\x03\xE7\x9E', 'LLIL_SET_REG.w(h9,LLIL_LOW_PART.w(LLIL_REG.q(fp)))'),
     # fmov h6, h23
     (b'\xE6\x42\xE0\x1E', 'LLIL_SET_REG.w(h6,LLIL_REG.w(h23))'),
     # fmov h6, h28
@@ -6349,9 +6349,9 @@ tests_fmov = [
     # fmov h25, #11.0
     (b'\x19\xD0\xE4\x1E', 'LLIL_SET_REG.w(h25,LLIL_FLOAT_CONV.w(LLIL_FLOAT_CONST.d(11.0)))'),
     # fmov s17, w2
-    (b'\x51\x00\x27\x1E', 'LLIL_SET_REG.d(s17,LLIL_INT_TO_FLOAT.d(LLIL_REG.d(w2)))'),
+    (b'\x51\x00\x27\x1E', 'LLIL_SET_REG.d(s17,LLIL_REG.d(w2))'),
     # fmov s1, wzr
-    (b'\xE1\x03\x27\x1E', 'LLIL_SET_REG.d(s1,LLIL_INT_TO_FLOAT.d(LLIL_CONST.d(0x0)))'),
+    (b'\xE1\x03\x27\x1E', 'LLIL_SET_REG.d(s1,LLIL_CONST.d(0x0))'),
     # fmov s4, s11
     (b'\x64\x41\x20\x1E', 'LLIL_SET_REG.d(s4,LLIL_REG.d(s11))'),
     # fmov s23, s2
@@ -6361,9 +6361,9 @@ tests_fmov = [
     # fmov s14, #21.0
     (b'\x0E\xB0\x26\x1E', 'LLIL_SET_REG.d(s14,LLIL_FLOAT_CONV.d(LLIL_FLOAT_CONST.d(21.0)))'),
     # fmov v14.d[1], x26
-    (b'\x4E\x03\xAF\x9E', 'LLIL_SET_REG.q(v14.d[1],LLIL_REG.o(x26))'),
+    (b'\x4E\x03\xAF\x9E', 'LLIL_SET_REG.q(v14.d[1],LLIL_REG.q(x26))'),
     # fmov v28.d[1], x14
-    (b'\xDC\x01\xAF\x9E', 'LLIL_SET_REG.q(v28.d[1],LLIL_REG.o(x14))'),
+    (b'\xDC\x01\xAF\x9E', 'LLIL_SET_REG.q(v28.d[1],LLIL_REG.q(x14))'),
     # TODO fmov v13.2d, #-3.0 (.d in arm namespace is 64-bit, .q in binja namespce is 64-bit)
     (b'\x0D\xF5\x04\x6F', 'LLIL_SET_REG.q(v13.d[0],LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-3.0)));' + \
                          ' LLIL_SET_REG.q(v13.d[1],LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-3.0)))'),

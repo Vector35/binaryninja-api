@@ -1833,8 +1833,7 @@ bool GetLowLevelILForInstruction(
 		case EXARMO_AARCH64_ENC_FmovV64iFloat2int:
 		{
 			Register minreg = vector_reg_minimize(operands[0]);
-			il.AddInstruction(il.SetRegister(RegisterSize(minreg), minreg,
-			    il.Register(REGSZ_O(operand1), REG_O(operands[1]))));
+			il.AddInstruction(il.SetRegister(RegisterSize(minreg), minreg, ILREG_O(operands[1])));
 			break;
 		}
 		case EXARMO_AARCH64_ENC_Fmov32hFloat2int:
@@ -1859,8 +1858,8 @@ bool GetLowLevelILForInstruction(
 		case EXARMO_AARCH64_ENC_FmovH64Float2int:
 		case EXARMO_AARCH64_ENC_FmovS32Float2int:
 			// <Vd> <- <Rn> (copy from general register to FP register, with no conversion)
-			il.AddInstruction(
-			    ILSETREG_O(operand1, il.IntToFloat(REGSZ_O(operand1), ILREG_O(operands[1]))));
+			il.AddInstruction(ILSETREG_O(operand1,
+			    ExtractRegister(il, operands[1], 0, REGSZ_O(operand1), false, REGSZ_O(operand1))));
 			break;
 		case EXARMO_AARCH64_ENC_FmovHFloatimm:
 		case EXARMO_AARCH64_ENC_FmovSFloatimm:

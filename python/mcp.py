@@ -64,6 +64,7 @@ __all__ = [
 	"ToolCall",
 	"ToolError",
 	"ToolResult",
+	"register_group",
 	"register_tool",
 	"tool",
 ]
@@ -315,6 +316,10 @@ class Tool(metaclass=_ToolMetaclass):
 		return core.BNGetMcpToolName(self.handle)
 
 	@property
+	def group(self) -> str:
+		return core.BNGetMcpToolGroup(self.handle)
+
+	@property
 	def title(self) -> str:
 		return core.BNGetMcpToolTitle(self.handle)
 
@@ -409,6 +414,17 @@ class _RegisteredTool:
 				log_error_for_exception("Unhandled Python exception applying an MCP tool result")
 
 
+def register_group(name: str, title: str, description: str, *, default_enabled: bool = True) -> None:
+	"""Register an MCP tool group and its user exposure setting."""
+	group = core.BNMcpToolGroup()
+	group.name = name
+	group.title = title
+	group.description = description
+	group.defaultEnabled = default_enabled
+	if not core.BNRegisterMcpToolGroup(group):
+		raise ValueError(f"Binary Ninja rejected the MCP group '{name}'")
+
+
 def register_tool(
 	name: str,
 	description: str,
@@ -419,6 +435,7 @@ def register_tool(
 	scope: McpToolScope = McpToolScope.BinaryViewScope,
 	annotations: McpToolAnnotation = McpToolAnnotation(0),
 	output_schema: Optional[dict] = None,
+	group: str = "",
 ) -> Tool:
 	"""
 	Registers a tool for the life of the process.
@@ -436,7 +453,7 @@ def register_tool(
 	definition.outputSchema = json.dumps(output_schema) if output_schema is not None else None
 	definition.scope = scope
 	definition.annotations = annotations
-	handle = core.BNRegisterMcpTool(definition, registered.callbacks)
+	handle = core.BNRegisterMcpToolWithGroup(definition, registered.callbacks, group)
 	if not handle:
 		raise ValueError(f"Binary Ninja rejected the MCP tool '{name}'; see the log for why")
 	_registered_tools.append(registered)
@@ -713,6 +730,7 @@ def tool(
 	idempotent: bool = False,
 	open_world: bool = False,
 	output_schema: Optional[dict] = None,
+	group: str = "",
 ):
 	"""
 	Registers the decorated function as a tool. The function's first parameter receives the
@@ -792,6 +810,7 @@ def tool(
 			scope=scope,
 			annotations=annotations,
 			output_schema=output_schema,
+			group=group,
 		)
 		return function
 

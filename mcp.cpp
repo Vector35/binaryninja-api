@@ -94,7 +94,7 @@ void InvokeHandler(void* ctxt, BNMcpToolCall* callHandle, const char* arguments,
 }
 
 Ref<Tool> CreateToolUsing(const ToolDefinition& definition, const std::string& inputSchema, ToolHandler handler,
-	BNMcpTool* (*create)(const BNMcpToolDefinition*, const BNMcpToolCallbacks*))
+	BNMcpTool* (*create)(const BNMcpToolDefinition*, const BNMcpToolCallbacks*, const char*))
 {
 	BNMcpToolDefinition apiDefinition = {};
 	apiDefinition.name = definition.name.c_str();
@@ -110,7 +110,7 @@ Ref<Tool> CreateToolUsing(const ToolDefinition& definition, const std::string& i
 	callbacks.context = context;
 	callbacks.invoke = InvokeHandler;
 	callbacks.freeObject = [](void* ctxt) { delete static_cast<ToolHandler*>(ctxt); };
-	BNMcpTool* tool = create(&apiDefinition, &callbacks);
+	BNMcpTool* tool = create(&apiDefinition, &callbacks, definition.group.c_str());
 	if (!tool)
 	{
 		delete context;
@@ -353,13 +353,13 @@ std::string BinaryNinja::MCP::InvokeTool(
 Ref<Tool> BinaryNinja::MCP::RegisterTool(
 	const ToolDefinition& definition, const std::string& inputSchema, ToolHandler handler)
 {
-	return CreateToolUsing(definition, inputSchema, std::move(handler), BNRegisterMcpTool);
+	return CreateToolUsing(definition, inputSchema, std::move(handler), BNRegisterMcpToolWithGroup);
 }
 
 
 Ref<Tool> BinaryNinja::MCP::CreateTool(ToolSpec spec)
 {
-	return CreateToolUsing(spec.definition, spec.inputSchema, std::move(spec.handler), BNCreateMcpTool);
+	return CreateToolUsing(spec.definition, spec.inputSchema, std::move(spec.handler), BNCreateMcpToolWithGroup);
 }
 
 
@@ -855,4 +855,29 @@ ArgumentResult<const rapidjson::Value*> JsonValue::Convert(
 	ToolCall&, const rapidjson::Value& value, const ConvertedArguments&) const
 {
 	return &value;
+}
+
+
+std::string Tool::GetGroup() const
+{
+	return TakeString(BNGetMcpToolGroup(m_object));
+}
+
+bool BinaryNinja::MCP::RegisterGroup(const GroupDefinition& definition)
+{
+	BNMcpToolGroup group = {const_cast<char*>(definition.name.c_str()), const_cast<char*>(definition.title.c_str()),
+		const_cast<char*>(definition.description.c_str()), definition.defaultEnabled};
+	return BNRegisterMcpToolGroup(&group);
+}
+
+std::vector<GroupDefinition> BinaryNinja::MCP::GetGroups()
+{
+	size_t count = 0;
+	auto* groups = BNGetMcpToolGroupList(&count);
+	std::vector<GroupDefinition> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back({groups[i].name, groups[i].title, groups[i].description, groups[i].defaultEnabled});
+	BNFreeMcpToolGroupList(groups, count);
+	return result;
 }

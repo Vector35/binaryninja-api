@@ -124,7 +124,7 @@ bool UniversalTransform::ParseHeaders(Ref<BinaryView> data, FatHeader& fatHeader
 	fatHeader.nfat_arch = reader.Read32();
 
 	isFat64 = (fatHeader.magic == FAT_MAGIC_64);
-	size_t requiredFatHeaderSize = fatHeader.nfat_arch * (isFat64 ? 32 : 20) + 8;
+	size_t requiredFatHeaderSize = (size_t)fatHeader.nfat_arch * (isFat64 ? 32 : 20) + 8;
 	if (requiredFatHeaderSize > data->GetLength())
 	{
 		errorMsg = "Universal (Fat Mach-O): header truncated";

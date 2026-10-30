@@ -76,52 +76,104 @@ void Transform::FreeParametersCallback(BNTransformParameterInfo* params, size_t 
 bool Transform::DecodeCallback(
     void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount)
 {
-	map<string, DataBuffer> paramMap;
-	for (size_t i = 0; i < paramCount; i++)
-		paramMap[params[i].name] = DataBuffer(BNDuplicateDataBuffer(params[i].value));
+	try
+	{
+		map<string, DataBuffer> paramMap;
+		for (size_t i = 0; i < paramCount; i++)
+			paramMap[params[i].name] = DataBuffer(BNDuplicateDataBuffer(params[i].value));
 
-	DataBuffer inputBuf(BNDuplicateDataBuffer(input));
-	DataBuffer outputBuf;
+		DataBuffer inputBuf(BNDuplicateDataBuffer(input));
+		DataBuffer outputBuf;
 
-	CallbackRef<Transform> xform(ctxt);
-	bool result = xform->Decode(inputBuf, outputBuf, paramMap);
-	BNAssignDataBuffer(output, outputBuf.GetBufferObject());
-	return result;
+		CallbackRef<Transform> xform(ctxt);
+		bool result = xform->Decode(inputBuf, outputBuf, paramMap);
+		BNAssignDataBuffer(output, outputBuf.GetBufferObject());
+		return result;
+	}
+	catch (const std::exception& e)
+	{
+		LogError("Transform::Decode failed: %s", e.what());
+		return false;
+	}
+	catch (...)
+	{
+		LogError("Transform::Decode failed with unknown exception");
+		return false;
+	}
 }
 
 
 bool Transform::EncodeCallback(
     void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount)
 {
-	map<string, DataBuffer> paramMap;
-	for (size_t i = 0; i < paramCount; i++)
-		paramMap[params[i].name] = DataBuffer(BNDuplicateDataBuffer(params[i].value));
+	try
+	{
+		map<string, DataBuffer> paramMap;
+		for (size_t i = 0; i < paramCount; i++)
+			paramMap[params[i].name] = DataBuffer(BNDuplicateDataBuffer(params[i].value));
 
-	DataBuffer inputBuf(BNDuplicateDataBuffer(input));
-	DataBuffer outputBuf;
+		DataBuffer inputBuf(BNDuplicateDataBuffer(input));
+		DataBuffer outputBuf;
 
-	CallbackRef<Transform> xform(ctxt);
-	bool result = xform->Encode(inputBuf, outputBuf, paramMap);
-	BNAssignDataBuffer(output, outputBuf.GetBufferObject());
-	return result;
+		CallbackRef<Transform> xform(ctxt);
+		bool result = xform->Encode(inputBuf, outputBuf, paramMap);
+		BNAssignDataBuffer(output, outputBuf.GetBufferObject());
+		return result;
+	}
+	catch (const std::exception& e)
+	{
+		LogError("Transform::Encode failed: %s", e.what());
+		return false;
+	}
+	catch (...)
+	{
+		LogError("Transform::Encode failed with unknown exception");
+		return false;
+	}
 }
 
 
 bool Transform::DecodeWithContextCallback(void* ctxt, BNTransformContext* context, BNTransformParameter* params, size_t paramCount)
 {
-	map<string, DataBuffer> paramMap;
-	for (size_t i = 0; i < paramCount; i++)
-		paramMap[params[i].name] = DataBuffer(BNDuplicateDataBuffer(params[i].value));
+	try
+	{
+		map<string, DataBuffer> paramMap;
+		for (size_t i = 0; i < paramCount; i++)
+			paramMap[params[i].name] = DataBuffer(BNDuplicateDataBuffer(params[i].value));
 
-	CallbackRef<Transform> xform(ctxt);
-	return xform->DecodeWithContext(new TransformContext(BNNewTransformContextReference(context)), paramMap);
+		CallbackRef<Transform> xform(ctxt);
+		return xform->DecodeWithContext(new TransformContext(BNNewTransformContextReference(context)), paramMap);
+	}
+	catch (const std::exception& e)
+	{
+		LogError("Transform::DecodeWithContext failed: %s", e.what());
+		return false;
+	}
+	catch (...)
+	{
+		LogError("Transform::DecodeWithContext failed with unknown exception");
+		return false;
+	}
 }
 
 
 bool Transform::CanDecodeCallback(void* ctxt, BNBinaryView* input)
 {
-	CallbackRef<Transform> xform(ctxt);
-	return xform->CanDecode(new BinaryView(BNNewViewReference(input)));
+	try
+	{
+		CallbackRef<Transform> xform(ctxt);
+		return xform->CanDecode(new BinaryView(BNNewViewReference(input)));
+	}
+	catch (const std::exception& e)
+	{
+		LogError("Transform::CanDecode failed: %s", e.what());
+		return false;
+	}
+	catch (...)
+	{
+		LogError("Transform::CanDecode failed with unknown exception");
+		return false;
+	}
 }
 
 

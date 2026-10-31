@@ -4111,6 +4111,14 @@ extern "C"
 		uint32_t annotations;
 	} BNMcpToolDefinition;
 
+	typedef struct BNMcpToolGroup
+	{
+		char* name;
+		char* title;
+		char* description;
+		bool defaultEnabled;
+	} BNMcpToolGroup;
+
 	typedef struct BNMcpToolCallbacks
 	{
 		void* context;
@@ -8954,6 +8962,14 @@ extern "C"
 	// MCP tools
 	BINARYNINJACOREAPI BNMcpTool* BNRegisterMcpTool(
 		const BNMcpToolDefinition* definition, const BNMcpToolCallbacks* callbacks);
+	BINARYNINJACOREAPI bool BNRegisterMcpToolGroup(const BNMcpToolGroup* group);
+	BINARYNINJACOREAPI BNMcpToolGroup* BNGetMcpToolGroupList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeMcpToolGroupList(BNMcpToolGroup* groups, size_t count);
+	BINARYNINJACOREAPI BNMcpTool* BNRegisterMcpToolWithGroup(
+		const BNMcpToolDefinition* definition, const BNMcpToolCallbacks* callbacks, const char* group);
+	BINARYNINJACOREAPI BNMcpTool* BNCreateMcpToolWithGroup(
+		const BNMcpToolDefinition* definition, const BNMcpToolCallbacks* callbacks, const char* group);
+	BINARYNINJACOREAPI char* BNGetMcpToolGroup(BNMcpTool* tool);
 	BINARYNINJACOREAPI BNMcpTool* BNNewMcpToolReference(BNMcpTool* tool);
 	BINARYNINJACOREAPI void BNFreeMcpTool(BNMcpTool* tool);
 	BINARYNINJACOREAPI BNMcpTool** BNGetMcpToolList(size_t* count);

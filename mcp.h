@@ -58,7 +58,20 @@ struct ToolDefinition
 	uint32_t annotations = 0;
 	/*! Empty for no output schema. */
 	std::string outputSchema;
+	/*! Empty membership uses the "other" group. */
+	std::string group;
 };
+
+struct GroupDefinition
+{
+	std::string name;
+	std::string title;
+	std::string description;
+	bool defaultEnabled = true;
+};
+
+bool RegisterGroup(const GroupDefinition& definition);
+std::vector<GroupDefinition> GetGroups();
 
 /*! A converted argument, or the message explaining why the argument is invalid. */
 template <class T>
@@ -130,6 +143,7 @@ public:
 	std::string GetName() const;
 	std::string GetTitle() const;
 	std::string GetDescription() const;
+	std::string GetGroup() const;
 	std::string GetInputSchema() const;
 	/*! Empty when the tool has no output schema. */
 	std::string GetOutputSchema() const;
@@ -949,6 +963,12 @@ public:
 	auto With(Transform&& transform) &&
 	{
 		return std::forward<Transform>(transform)(std::move(*this));
+	}
+
+	ToolBuilder InGroup(std::string group) &&
+	{
+		m_definition.group = std::move(group);
+		return std::move(*this);
 	}
 
 	ToolBuilder OutputSchema(std::string schema) &&

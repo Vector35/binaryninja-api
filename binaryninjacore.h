@@ -6090,6 +6090,18 @@ extern "C"
 	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNGetFunctionLanguageRepresentationIfAvailable(
 		BNFunction* func, const char* language);
 
+	// Code complexity primitives - see core/complexity.cpp. Each is a single whole-function walk;
+	// composite/aggregate metrics built from these (composite, fan-out, code references,
+	// transitive) are implemented in the public API layer instead, on top of these and other
+	// already-public calls.
+	BINARYNINJACOREAPI double BNGetFunctionCyclomaticComplexity(BNFunction* func);
+	BINARYNINJACOREAPI double BNGetFunctionInstructionCountComplexity(BNFunction* func);
+	BINARYNINJACOREAPI double BNGetFunctionTokenCountComplexity(BNFunction* func);
+	BINARYNINJACOREAPI double BNGetFunctionBranchDensityComplexity(BNFunction* func);
+	BINARYNINJACOREAPI double BNGetFunctionHalsteadComplexity(BNFunction* func);
+	BINARYNINJACOREAPI double BNGetFunctionNestingDepthComplexity(BNFunction* func);
+	BINARYNINJACOREAPI double BNGetFunctionCognitiveComplexity(BNFunction* func);
+
 	BINARYNINJACOREAPI BNDataBuffer* BNGetConstantData(BNFunction* func, BNRegisterValueType state, uint64_t value,
 		size_t size, BNBuiltinType* builtin);
 

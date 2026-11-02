@@ -24,22 +24,18 @@ pub type TypeContainerType = BNTypeContainerType;
 
 /// A `TypeContainer` is a generic interface to access various Binary Ninja models
 /// that contain types. Types are stored with both a unique id and a unique name.
+///
+/// Type containers are not reference counted. A container is only valid while the object that
+/// provides it is alive.
 #[repr(transparent)]
 pub struct TypeContainer {
     pub handle: NonNull<BNTypeContainer>,
 }
 
 impl TypeContainer {
+    /// Takes ownership of `handle` and frees it on drop.
     pub(crate) unsafe fn from_raw(handle: NonNull<BNTypeContainer>) -> Self {
-        // NOTE: There does not seem to be any shared ref counting for type containers, it seems if the
-        // NOTE: binary view is freed the type container will be freed and cause this to become invalid
-        // NOTE: but this is how the C++ and Python bindings operate so i guess its fine?
-        // TODO: I really dont get how some of the usage of the TypeContainer doesnt free the underlying container.
-        // TODO: So for now we always duplicate the type container
-        let cloned_ptr = NonNull::new(BNDuplicateTypeContainer(handle.as_ptr()));
-        Self {
-            handle: cloned_ptr.unwrap(),
-        }
+        Self { handle }
     }
 
     /// Wraps a `handle` that core lends for the duration of a callback. The wrapper never frees it.

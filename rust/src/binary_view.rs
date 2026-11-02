@@ -3010,7 +3010,6 @@ impl BinaryView {
     /// NOTE: Modifying an auto type will promote it to a user type.
     pub fn type_container(&self) -> TypeContainer {
         let type_container_ptr = NonNull::new(unsafe { BNGetAnalysisTypeContainer(self.handle) });
-        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
         unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 
@@ -3018,8 +3017,7 @@ impl BinaryView {
     pub fn user_type_container(&self) -> TypeContainer {
         let type_container_ptr =
             NonNull::new(unsafe { BNGetAnalysisUserTypeContainer(self.handle) });
-        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
-        unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }.clone()
+        unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 
     /// Type container for auto types in the Binary View.
@@ -3028,7 +3026,6 @@ impl BinaryView {
     pub fn auto_type_container(&self) -> TypeContainer {
         let type_container_ptr =
             NonNull::new(unsafe { BNGetAnalysisAutoTypeContainer(self.handle) });
-        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
         unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 

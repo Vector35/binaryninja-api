@@ -1,4 +1,5 @@
 #include "binaryninjaapi.h"
+#include "../../arch/arm64/exception.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -146,7 +147,10 @@ public:
 
 		cc = arch->GetCallingConventionByName("apple-syscall");
 		if (cc)
+		{
 			SetSystemCallConvention(cc);
+			Arm64Exception::RegisterSvc(this);
+		}
 	}
 
 	virtual bool GetFallbackEnabled() override
@@ -239,7 +243,10 @@ public:
 
 		cc = arch->GetCallingConventionByName("apple-syscall");
 		if (cc)
+		{
 			SetSystemCallConvention(cc);
+			Arm64Exception::RegisterSvc(this);
+		}
 
 	}
 

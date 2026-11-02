@@ -1,4 +1,6 @@
 #include "binaryninjaapi.h"
+#include "../../arch/arm64/exception.h"
+#include "../../arch/armv7/exception.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -170,6 +172,11 @@ public:
 		cc = arch->GetCallingConventionByName("linux-syscall");
 		if (cc)
 			SetSystemCallConvention(cc);
+
+		SetExceptionModel({Armv7Exception::Encode(Armv7Exception::Svc), Armv7Exception::KindMask,
+			{SystemCallExceptionModel, 0, ContinueAfterException}});
+		SetExceptionDisplay({Armv7Exception::Encode(Armv7Exception::Svc), UINT64_MAX,
+			{"syscall", 0xffffffffULL, 0}});
 	}
 };
 
@@ -192,7 +199,10 @@ public:
 
 		cc = arch->GetCallingConventionByName("linux-syscall");
 		if (cc)
+		{
 			SetSystemCallConvention(cc);
+			Arm64Exception::RegisterSvc(this);
+		}
 	}
 
 	virtual bool GetFallbackEnabled() override
@@ -219,7 +229,10 @@ class LinuxIlp32Platform: public Platform
 
 		cc = arch->GetCallingConventionByName("linux-syscall");
 		if (cc)
+		{
 			SetSystemCallConvention(cc);
+			Arm64Exception::RegisterSvc(this);
+		}
 	}
 
 	virtual size_t GetAddressSize() const override

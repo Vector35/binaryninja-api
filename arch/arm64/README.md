@@ -14,6 +14,67 @@ This is the AArch64 plugin that ships with Binary Ninja.
 
 Disassembly comes from [exarmo](https://crates.io/crates/exarmo-aarch64-capi), through its C API.
 
+## Modeled exceptions and SMCCC
+
+SVC, HVC, SMC, and BRK emit modeled exceptions. Their discriminator is
+`(kind << 32) | immediate`, with kinds SVC=1, HVC=2, SMC=3, and BRK=4.
+Instruction information reports the same discriminator so platform continuation
+rules control both native basic blocks and IL. Bare AArch64 treats SVC, HVC,
+and SMC as opaque, continuing exceptions; BRK terminates by default.
+
+The available SMCCC conventions use the current SMCCC 1.2+ register profile:
+
+| Convention | Eligible instruction | Function ID | Payload | Possible results |
+|---|---|---|---|---|
+| `smccc32` | `hvc #0`, `smc #0` | W0 | W1-W7 | W0-W7 |
+| `smccc64` | `hvc #0`, `smc #0` | W0 | X1-X17 | X0-X17 |
+
+Function Identifier bit 30 distinguishes the 32-bit and 64-bit forms. No
+convention is inferred solely from the opcode or immediate. Select a convention
+on an instruction, or configure a platform service namespace and exception
+model. Nonzero HVC/SMC immediates do not offer these SMCCC conventions.
+
+Argument and result layouts use register storage only, without stack arguments,
+SIMD arguments, or an implicit result pointer. The convention API names backing
+X registers; layouts describe the low 32 bits for W-register values. Without a
+service definition, registers that can contain optional results are conservatively
+considered modified, including X4-X7 or X4-X17. The other general-purpose registers,
+SP, and vector/predicate registers are preserved. The older SMCCC 1.0 rules differ;
+these conventions should not be used to infer preservation for that version.
+
+Linux, macOS/iOS, and Windows supply explicit SVC models using their existing
+syscall conventions. SVC #0 is named `syscall` on those platforms. Immediate zero
+is omitted from IL call text when an effective convention is present. Other
+immediates remain visible. The lifter retains the existing `syscall_info`
+metadata register for compatibility with Windows' immediate-based syscall ABI.
+
+Reference: [Arm SMC Calling Convention, DEN0028](https://developer.arm.com/documentation/den0028/latest),
+sections 2.6, 2.7, and the SMC/HVC immediate-value rules.
+
+## Samsung uH / RKP
+
+`samsung-uh` is an explicit AArch64 convention for the six-argument Samsung uH
+interface: X0 is the application ID, X1 is the command, and X2-X5 are four 64-bit
+arguments. It returns a scalar in X0, with no floating-point or stack arguments
+and no implicit result pointer. It is eligible only for `hvc #0`, is not selected
+automatically, and is excluded from ordinary function-convention heuristics.
+For example, the RKP application ID is `0xc300c002`.
+
+The public interface declaration does not establish a complete preservation
+contract for every Samsung firmware. This convention uses conservative
+AAPCS64 scratch clobbers (X0-X18, V0-V7, V16-V31), preserving X19-X30 and SP.
+LR is preserved because the HVC wrapper returns directly with `ret`. These are
+modeling assumptions, not a claim that all of those scratch registers are
+modified by the hypervisor. Firmware with a verified, narrower preservation
+contract can register a more specific convention.
+
+Selecting this convention supplies argument and register-effect information;
+it does not automatically resolve `(application ID, command)` to command names.
+The default `hvc` display name and platform continuation policy still apply.
+
+Sources: [Samsung kernel uH declaration](https://raw.githubusercontent.com/Impalabs/resources/master/SM-G973F_QQ_Opensource/include/linux/uh.h),
+[Samsung RKP Compendium](https://blog.impalabs.com/2101_samsung-rkp-compendium.html).
+
 ## Testing
 
 - [./arm64test.py](./arm64test.py) runs a very basic "lift to string and compare" test

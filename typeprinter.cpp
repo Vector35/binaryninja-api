@@ -124,10 +124,10 @@ bool TypePrinter::PrintAllTypesCallback(void* ctxt, BNQualifiedName* names, BNTy
 	apiTypes.reserve(typeCount);
 	for (size_t i = 0; i < typeCount; ++i)
 	{
-		apiTypes.push_back({QualifiedName::FromAPIStruct(&names[i]), new Type(types[i])});
+		apiTypes.push_back({QualifiedName::FromAPIStruct(&names[i]), new Type(BNNewTypeReference(types[i]))});
 	}
 
-	string resultStr = printer->PrintAllTypes(apiTypes, new BinaryView(data), paddingCols, escaping);
+	string resultStr = printer->PrintAllTypes(apiTypes, new BinaryView(BNNewViewReference(data)), paddingCols, escaping);
 	*result = BNAllocString(resultStr.c_str());
 	return true;
 }
@@ -153,7 +153,7 @@ void TypePrinter::FreeLinesCallback(void* ctxt, BNTypeDefinitionLine* lines, siz
 
 void TypePrinter::Register(TypePrinter* printer)
 {
-	BNTypePrinterCallbacks cb;
+	BNTypePrinterCallbacks cb {};
 	cb.context = printer;
 	cb.getTypeTokens = GetTypeTokensCallback;
 	cb.getTypeTokensBeforeName = GetTypeTokensBeforeNameCallback;
@@ -162,6 +162,7 @@ void TypePrinter::Register(TypePrinter* printer)
 	cb.getTypeStringBeforeName = GetTypeStringBeforeNameCallback;
 	cb.getTypeStringAfterName = GetTypeStringAfterNameCallback;
 	cb.getTypeLines = GetTypeLinesCallback;
+	cb.printAllTypes = PrintAllTypesCallback;
 	cb.freeTokens = FreeTokensCallback;
 	cb.freeString = FreeStringCallback;
 	cb.freeLines = FreeLinesCallback;

@@ -90,7 +90,7 @@ set(BN_CARGO_COMMAND ${BN_RUSTUP_PATH} run ${CARGO_STABLE_VERSION} cargo)
 # from std, so they depend only on the toolchain and target, and compiling an empty crate reports
 # them. Leave out the C runtime, which CMake already chooses.
 function(bn_rust_native_static_libs OUT_VAR)
-    set(CACHE_VAR BN_RUST_NATIVE_STATIC_LIBS_${CARGO_STABLE_VERSION})
+    set(CACHE_VAR BN_RUST_SYSTEM_LIBS_${CARGO_STABLE_VERSION})
     if(NOT DEFINED CACHE{${CACHE_VAR}})
         set(PROBE_DIR ${CMAKE_BINARY_DIR}/rust-native-static-libs)
         file(WRITE ${PROBE_DIR}/empty.rs "")
@@ -108,7 +108,9 @@ function(bn_rust_native_static_libs OUT_VAR)
         set(LIBS)
         foreach(ITEM ${ITEMS})
             # A MATCHES that fails clears CMAKE_MATCH_1, so each form needs a test of its own.
-            if(ITEM MATCHES "^-l(.+)$")
+            if(APPLE AND ITEM MATCHES "^-l(System|c|m)$")
+                # Clang links libSystem into every binary, and libc and libm are aliases of it.
+            elseif(ITEM MATCHES "^-l(.+)$")
                 list(APPEND LIBS ${CMAKE_MATCH_1})
             elseif(ITEM MATCHES "^(.+)\\.lib$")
                 list(APPEND LIBS ${CMAKE_MATCH_1})

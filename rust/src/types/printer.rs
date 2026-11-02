@@ -685,9 +685,9 @@ unsafe extern "C" fn cb_get_type_tokens<T: TypePrinter>(
     // NOTE: The caller is responsible for freeing name.
     let qualified_name = QualifiedName::from_raw(&*name);
     let inner_result = ctxt.get_type_tokens(
-        unsafe { Type::ref_from_raw(type_) },
+        unsafe { Type::from_raw(type_).to_owned() },
         match platform.is_null() {
-            false => Some(Platform::ref_from_raw(platform)),
+            false => Some(Platform::from_raw(platform).to_owned()),
             true => None,
         },
         qualified_name,
@@ -722,14 +722,14 @@ unsafe extern "C" fn cb_get_type_tokens_before_name<T: TypePrinter>(
 ) -> bool {
     let ctxt: &T = &*(ctxt as *const T);
     let inner_result = ctxt.get_type_tokens_before_name(
-        Type::ref_from_raw(type_),
+        Type::from_raw(type_).to_owned(),
         match platform.is_null() {
-            false => Some(Platform::ref_from_raw(platform)),
+            false => Some(Platform::from_raw(platform).to_owned()),
             true => None,
         },
         base_confidence,
         match parent_type.is_null() {
-            false => Some(Type::ref_from_raw(parent_type)),
+            false => Some(Type::from_raw(parent_type).to_owned()),
             true => None,
         },
         escaping,
@@ -762,14 +762,14 @@ unsafe extern "C" fn cb_get_type_tokens_after_name<T: TypePrinter>(
 ) -> bool {
     let ctxt: &T = &*(ctxt as *const T);
     let inner_result = ctxt.get_type_tokens_after_name(
-        Type::ref_from_raw(type_),
+        Type::from_raw(type_).to_owned(),
         match platform.is_null() {
-            false => Some(Platform::ref_from_raw(platform)),
+            false => Some(Platform::from_raw(platform).to_owned()),
             true => None,
         },
         base_confidence,
         match parent_type.is_null() {
-            false => Some(Type::ref_from_raw(parent_type)),
+            false => Some(Type::from_raw(parent_type).to_owned()),
             true => None,
         },
         escaping,
@@ -802,9 +802,9 @@ unsafe extern "C" fn cb_get_type_string<T: TypePrinter>(
     // NOTE: The caller is responsible for freeing name.
     let qualified_name = QualifiedName::from_raw(&*name);
     let inner_result = ctxt.get_type_string(
-        Type::ref_from_raw(type_),
+        Type::from_raw(type_).to_owned(),
         match platform.is_null() {
-            false => Some(Platform::ref_from_raw(platform)),
+            false => Some(Platform::from_raw(platform).to_owned()),
             true => None,
         },
         qualified_name,
@@ -830,9 +830,9 @@ unsafe extern "C" fn cb_get_type_string_before_name<T: TypePrinter>(
 ) -> bool {
     let ctxt: &T = &*(ctxt as *const T);
     let inner_result = ctxt.get_type_string_before_name(
-        Type::ref_from_raw(type_),
+        Type::from_raw(type_).to_owned(),
         match platform.is_null() {
-            false => Some(Platform::ref_from_raw(platform)),
+            false => Some(Platform::from_raw(platform).to_owned()),
             true => None,
         },
         escaping,
@@ -857,9 +857,9 @@ unsafe extern "C" fn cb_get_type_string_after_name<T: TypePrinter>(
 ) -> bool {
     let ctxt: &T = &*(ctxt as *const T);
     let inner_result = ctxt.get_type_string_after_name(
-        Type::ref_from_raw(type_),
+        Type::from_raw(type_).to_owned(),
         match platform.is_null() {
-            false => Some(Platform::ref_from_raw(platform)),
+            false => Some(Platform::from_raw(platform).to_owned()),
             true => None,
         },
         escaping,
@@ -892,7 +892,7 @@ unsafe extern "C" fn cb_get_type_lines<T: TypePrinter>(
     let types_ptr = NonNull::new(types).unwrap();
     let types = TypeContainer::from_raw(types_ptr);
     let inner_result = ctxt.get_type_lines(
-        Type::ref_from_raw(type_),
+        Type::from_raw(type_).to_owned(),
         &types,
         qualified_name,
         padding_cols as isize,
@@ -931,11 +931,14 @@ unsafe extern "C" fn cb_print_all_types<T: TypePrinter>(
     let names: Vec<_> = raw_names.iter().map(QualifiedName::from_raw).collect();
     let raw_types = std::slice::from_raw_parts(types, type_count);
     // NOTE: The caller is responsible for freeing raw_types.
-    let types: Vec<_> = raw_types.iter().map(|&t| Type::ref_from_raw(t)).collect();
+    let types: Vec<_> = raw_types
+        .iter()
+        .map(|&t| Type::from_raw(t).to_owned())
+        .collect();
     let inner_result = ctxt.print_all_types(
         names,
         types,
-        BinaryView::ref_from_raw(data),
+        BinaryView::from_raw(data).to_owned(),
         padding_cols as isize,
         escaping,
     );

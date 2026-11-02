@@ -310,24 +310,24 @@ test_cases = \
     # vdiv.f32 s0, s1, s2
     ('A', b'\x81\x0a\x80\xee', 'LLIL_SET_REG.d(s0,LLIL_FDIV.d(LLIL_REG.d(s1),LLIL_REG.d(s2)))'),
     # hvc #0
-    ('A', b'\x70\x00\x40\xe1', 'LLIL_INTRINSIC([],__hvc,[LLIL_CONST.w(0x0)])'),
+    ('A', b'\x70\x00\x40\xe1', 'LLIL_EXCEPTION(8589934592)'),
     # smc #0
-    ('A', b'\x70\x00\x60\xe1', 'LLIL_INTRINSIC([],__smc,[LLIL_CONST.b(0x0)])'),
+    ('A', b'\x70\x00\x60\xe1', 'LLIL_EXCEPTION(12884901888)'),
     # smc #0
-    ('T', b'\xf0\xf7\xfa\x8d', 'LLIL_INTRINSIC([],__smc,[LLIL_CONST.b(0x0)])'),
+    ('T', b'\xf0\xf7\xfa\x8d', 'LLIL_EXCEPTION(12884901888)'),
     # hint #0x5
     ('A', b'\x05\xf0\x20\xe3', 'LLIL_INTRINSIC([],__hint,[LLIL_CONST.b(0x5)])'),
     # hint #0xf
     ('T', b'\xf0\xbf', 'LLIL_INTRINSIC([],__hint,[LLIL_CONST.b(0xF)])'),
     # svc #0; svc #1; svc #2; svc #3
-    ('A', b'\x00\x00\x00\xef', 'LLIL_SET_REG.d(syscall_info,LLIL_CONST.d(0x0)); LLIL_SYSCALL()'),
-    ('A', b'\x01\x00\x00\xef', 'LLIL_SET_REG.d(syscall_info,LLIL_CONST.d(0x1)); LLIL_SYSCALL()'),
-    ('A', b'\x02\x00\x00\xef', 'LLIL_SET_REG.d(syscall_info,LLIL_CONST.d(0x2)); LLIL_SYSCALL()'),
-    ('A', b'\x03\x00\x00\xef', 'LLIL_SET_REG.d(syscall_info,LLIL_CONST.d(0x3)); LLIL_SYSCALL()'),
+    ('A', b'\x00\x00\x00\xef', 'LLIL_EXCEPTION(4294967296)'),
+    ('A', b'\x01\x00\x00\xef', 'LLIL_EXCEPTION(4294967297)'),
+    ('A', b'\x02\x00\x00\xef', 'LLIL_EXCEPTION(4294967298)'),
+    ('A', b'\x03\x00\x00\xef', 'LLIL_EXCEPTION(4294967299)'),
     # svcle #0xDEAD
-    ('A', b'\xAD\xDE\x00\xdf', 'LLIL_IF(LLIL_FLAG_GROUP(le),1,4); LLIL_SET_REG.d(syscall_info,LLIL_CONST.d(0xDEAD)); LLIL_SYSCALL(); LLIL_GOTO(4)'),
+    ('A', b'\xAD\xDE\x00\xdf', 'LLIL_IF(LLIL_FLAG_GROUP(le),1,3); LLIL_EXCEPTION(4295024301); LLIL_GOTO(3)'),
     # svcgt #0xdead
-    ('A', b'\xad\xde\x00\xcf', 'LLIL_IF(LLIL_FLAG_GROUP(gt),1,4); LLIL_SET_REG.d(syscall_info,LLIL_CONST.d(0xDEAD)); LLIL_SYSCALL(); LLIL_GOTO(4)'),
+    ('A', b'\xad\xde\x00\xcf', 'LLIL_IF(LLIL_FLAG_GROUP(gt),1,3); LLIL_EXCEPTION(4295024301); LLIL_GOTO(3)'),
     # mov r0, r1
     ('A', b'\x01\x00\xa0\xe1', 'LLIL_SET_REG.d(r0,LLIL_REG.d(r1))'),
     # nop

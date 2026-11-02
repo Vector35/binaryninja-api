@@ -1,6 +1,26 @@
 # arch-armv7
 This is the ARMv7 plugin that ships with Binary Ninja.
 
+## Modeled exceptions and SMCCC
+
+ARMv7 and Thumb expose one `smccc32` calling convention for both `hvc #0` and
+`smc #0`, in either endianness. It follows the current SMCCC 1.2+ AArch32 profile:
+r0 holds the Function Identifier, r1-r7 carry arguments, and r0-r7 can contain
+results. Registers r4-r7 are preserved unless a service defines results there;
+without that information, analysis conservatively treats all r0-r7 as modified.
+Registers r8-r14 and the SIMD registers are preserved. Arguments and results use
+registers only, with up to 32 bytes of composite results and no hidden result
+pointer.
+
+The convention is selected explicitly on an instruction or through a platform's
+exception model and service namespace. Bare ARMv7/Thumb does not infer SMCCC from
+the opcode or immediate; nonzero HVC/SMC immediates are ineligible. This profile
+replaces the older DEN0028B conventions with separate HVC/SMC names and four result
+registers. SVC and breakpoint exception policies are configured independently.
+
+Reference: [Arm SMC Calling Convention, DEN0028](https://developer.arm.com/documentation/den0028/latest),
+section 2.6.
+
 ## Contributing
 
 If you're interested in contributing when you submit your first PR, you'll receive a notice from [CLA Assistant](https://cla-assistant.io/) that allows you to sign our [Contribution License Agreement](https://binary.ninja/cla.pdf) online. 

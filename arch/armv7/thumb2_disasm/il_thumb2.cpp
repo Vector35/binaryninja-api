@@ -1,3 +1,4 @@
+#include "exception.h"
 #include <stdarg.h>
 #include "binaryninjaapi.h"
 #include "lowlevelilinstruction.h"
@@ -2587,7 +2588,8 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		WriteBitClearOperand(il, instr, !ifThenBlock);
 		break;
 	case armv7::ARMV7_BKPT:
-		il.AddInstruction(il.Breakpoint());
+		il.AddInstruction(il.Exception(Armv7Exception::Encode(Armv7Exception::Breakpoint,
+			instr->fields[instr->format->operands[0].field0])));
 		break;
 	case armv7::ARMV7_BL:
 	case armv7::ARMV7_BLX:
@@ -3751,13 +3753,15 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		il.AddInstruction(WriteArithOperand(il, instr, il.Sub(4, ReadArithOperand(il, instr, 0),
 			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_ALL)));
 		break;
-    case armv7::ARMV7_SVC:
-		il.AddInstruction(il.SetRegister(4, FAKEREG_SYSCALL_INFO, il.Const(4, instr->fields[instr->format->operands[0].field0])));
-		il.AddInstruction(il.SystemCall());
+	case armv7::ARMV7_SVC:
+		il.AddInstruction(il.Exception(Armv7Exception::Encode(Armv7Exception::Svc,
+			instr->fields[instr->format->operands[0].field0])));
 		break;
+	case armv7::ARMV7_HVC:
 	case armv7::ARMV7_SMC:
-		il.AddInstruction(il.Intrinsic({}, ARMV7_INTRIN_SMC,
-			{il.Const(1, instr->fields[instr->format->operands[0].field0])}));
+		il.AddInstruction(il.Exception(Armv7Exception::Encode(
+			instr->mnem == armv7::ARMV7_HVC ? Armv7Exception::Hvc : Armv7Exception::Smc,
+			instr->fields[instr->format->operands[0].field0])));
 		break;
 	case armv7::ARMV7_SXTAB:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Add(4, ReadILOperand(il, instr, 1), il.SignExtend(4, il.LowPart(1, ReadRotatedOperand(il, instr, 2))))));

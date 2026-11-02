@@ -1,3 +1,4 @@
+#include "exception.h"
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <inttypes.h>
@@ -548,8 +549,17 @@ public:
 			break;
 
 		case armv7::ARMV7_SVC:
-			result.AddBranch(SystemCall);
+		case armv7::ARMV7_HVC:
+		case armv7::ARMV7_SMC:
+		case armv7::ARMV7_BKPT:
+		{
+			auto kind = decomp.mnem == armv7::ARMV7_SVC ? Armv7Exception::Svc
+				: decomp.mnem == armv7::ARMV7_HVC ? Armv7Exception::Hvc
+				: decomp.mnem == armv7::ARMV7_SMC ? Armv7Exception::Smc : Armv7Exception::Breakpoint;
+			result.AddBranch(ModeledExceptionBranch, Armv7Exception::Encode(kind,
+				decomp.fields[decomp.format->operands[0].field0]));
 			break;
+		}
 
 		case armv7::ARMV7_TBB:
 		case armv7::ARMV7_TBH:

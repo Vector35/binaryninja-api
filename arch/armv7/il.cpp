@@ -1,3 +1,4 @@
+#include "exception.h"
 #include <stdarg.h>
 #include "il.h"
 #include "lowlevelilinstruction.h"
@@ -2422,7 +2423,7 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 			break;
 		}
         case ARMV7_BKPT:
-            il.AddInstruction(il.Breakpoint());
+            il.AddInstruction(il.Exception(Armv7Exception::Encode(Armv7Exception::Breakpoint, op1.imm)));
             break;
 		case ARMV7_CLREX:
 			ConditionExecute(il, instr.cond, il.Intrinsic({}, ARMV7_INTRIN_CLREX, {}));
@@ -4435,21 +4436,13 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 							ReadILOperand(il, op3, addr), flagOperation[instr.setsFlags])));
 			break;
 		case ARMV7_HVC:
-			ConditionExecute(il, instr.cond, il.Intrinsic({}, ARMV7_INTRIN_HVC, {il.Const(2, op1.imm)}));
+			ConditionExecute(il, instr.cond, il.Exception(Armv7Exception::Encode(Armv7Exception::Hvc, op1.imm)));
 			break;
 		case ARMV7_SMC:
-			ConditionExecute(il, instr.cond, il.Intrinsic({}, ARMV7_INTRIN_SMC, {il.Const(1, op1.imm)}));
+			ConditionExecute(il, instr.cond, il.Exception(Armv7Exception::Encode(Armv7Exception::Smc, op1.imm)));
 			break;
 		case ARMV7_SVC:
-			ConditionExecute(addrSize, instr.cond, instr, il,
-					[&](size_t addrSize, Instruction& instr, LowLevelILFunction& il)
-					{
-						(void) addrSize;
-						(void) instr;
-
-						il.AddInstruction(il.SetRegister(4, FAKEREG_SYSCALL_INFO, il.Const(4, op1.imm)));
-						il.AddInstruction(il.SystemCall());
-					});
+			ConditionExecute(il, instr.cond, il.Exception(Armv7Exception::Encode(Armv7Exception::Svc, op1.imm)));
 			break;
 		case ARMV7_SWP:
 			if (op1.reg == op2.reg)

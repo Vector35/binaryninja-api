@@ -3464,6 +3464,13 @@ extern "C"
 		void (*addAction)(void* ctxt, BNMainThreadAction* action);
 	} BNMainThreadCallbacks;
 
+	// Core lends every handle it passes to these callbacks. `platform` is never null.
+	// `existingTypes` is null when there are no existing types. `options` and `includeDirs`
+	// may be null when their count is zero. A callback that returns true owns its output until
+	// core passes it to `freeString`, `freeResult` or `freeQualifiedNameAndType`. Core reads
+	// the error list either way, then passes it to `freeErrorList`. `freeErrorList` receives
+	// null when the callback set none. Core ignores every other output of a callback that
+	// returns false.
 	typedef struct BNTypeParserCallbacks
 	{
 		void* context;

@@ -172,7 +172,7 @@ bool TypeParser::PreprocessSourceCallback(void* ctxt,
 	bool success = parser->PreprocessSource(
 		source,
 		fileName,
-		new CorePlatform(platform),
+		new CorePlatform(BNNewPlatformReference(platform)),
 		ExistingTypesFromAPI(existingTypes),
 		optionsCpp,
 		includeDirsCpp,
@@ -234,7 +234,7 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 	bool success = parser->ParseTypesFromSource(
 		source,
 		fileName,
-		new CorePlatform(platform),
+		new CorePlatform(BNNewPlatformReference(platform)),
 		ExistingTypesFromAPI(existingTypes),
 		optionsCpp,
 		includeDirsCpp,
@@ -308,7 +308,7 @@ bool TypeParser::ParseTypeStringCallback(void* ctxt,
 	vector<TypeParserError> errorsCpp;
 	bool success = parser->ParseTypeString(
 		source,
-		new CorePlatform(platform),
+		new CorePlatform(BNNewPlatformReference(platform)),
 		ExistingTypesFromAPI(existingTypes),
 		resultCpp,
 		errorsCpp

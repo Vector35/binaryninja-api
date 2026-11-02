@@ -1755,6 +1755,14 @@ namespace BinaryNinja
 		}
 	};
 	template <>
+	struct LowLevelILInstructionAccessor<LLIL_EXCEPTION_SSA> : public LowLevelILInstructionAccessor<LLIL_SYSCALL_SSA>
+	{
+		uint64_t GetDiscriminator() const { return GetRawOperandAsInteger(3); }
+	};
+
+
+
+	template <>
 	struct LowLevelILInstructionAccessor<LLIL_TAILCALL_SSA> : public LowLevelILInstructionBase
 	{
 		LowLevelILSSARegisterList GetOutputSSARegisters() const

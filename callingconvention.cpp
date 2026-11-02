@@ -677,6 +677,18 @@ bool CallingConvention::IsStackAdjustedOnReturn()
 }
 
 
+bool CallingConvention::IsExceptionArgumentForwardingEnabled() const
+{
+	return BNIsExceptionArgumentForwardingEnabled(m_object);
+}
+
+
+void CallingConvention::SetExceptionArgumentForwarding(bool enabled)
+{
+	BNSetExceptionArgumentForwarding(m_object, enabled);
+}
+
+
 bool CallingConvention::IsEligibleForHeuristics()
 {
 	return true;

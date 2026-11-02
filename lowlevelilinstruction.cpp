@@ -353,6 +353,7 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{LLIL_MAXU, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
 	OperandUsage{LLIL_ABS, {SourceExprLowLevelOperandUsage}},
 	OperandUsage{LLIL_EXCEPTION, {DiscriminatorLowLevelOperandUsage}},
+	OperandUsage{LLIL_EXCEPTION_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage, StackMemoryVersionLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage, DiscriminatorLowLevelOperandUsage}},
 };
 
 
@@ -1477,7 +1478,7 @@ LowLevelILOperandList LowLevelILInstructionBase::GetOperands() const
 {
 	if (operation >= s_instructionOperandUsage.size())
 		throw LowLevelILInstructionAccessException();
-	
+
 	const auto& info = s_instructionOperandUsage[operation];
 	return LowLevelILOperandList(*(const LowLevelILInstruction*)this, info.usages, info.indices, info.count);
 }
@@ -1999,6 +2000,11 @@ void LowLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const LowLeve
 		for (auto i : GetParameterExprs<LLIL_SYSCALL_SSA>())
 			i.VisitExprs(func);
 		break;
+
+	case LLIL_EXCEPTION_SSA:
+		for (auto i : GetParameterExprs<LLIL_EXCEPTION_SSA>())
+			i.VisitExprs(func);
+		break;
 	case LLIL_TAILCALL_SSA:
 		GetDestExpr<LLIL_TAILCALL_SSA>().VisitExprs(func);
 		for (auto i : GetParameterExprs<LLIL_TAILCALL_SSA>())
@@ -2319,6 +2325,13 @@ ExprId LowLevelILInstruction::CopyTo(
 		return dest->SystemCallSSA(GetOutputSSARegisters<LLIL_SYSCALL_SSA>(), params,
 		    GetStackSSARegister<LLIL_SYSCALL_SSA>(), GetDestMemoryVersion<LLIL_SYSCALL_SSA>(),
 		    GetSourceMemoryVersion<LLIL_SYSCALL_SSA>(), loc);
+
+	case LLIL_EXCEPTION_SSA:
+		for (auto i : GetParameterExprs<LLIL_EXCEPTION_SSA>())
+			params.push_back(subExprHandler(i));
+		return dest->ExceptionSSA(GetOutputSSARegisters<LLIL_EXCEPTION_SSA>(), params,
+		    GetStackSSARegister<LLIL_EXCEPTION_SSA>(), GetDestMemoryVersion<LLIL_EXCEPTION_SSA>(),
+		    GetSourceMemoryVersion<LLIL_EXCEPTION_SSA>(), GetDiscriminator(), loc);
 	case LLIL_TAILCALL_SSA:
 		for (auto i : GetParameterExprs<LLIL_TAILCALL_SSA>())
 			params.push_back(subExprHandler(i));
@@ -2474,7 +2487,7 @@ bool LowLevelILInstruction::GetOperandIndexForUsage(LowLevelILOperandUsage usage
 {
 	if (operation >= s_instructionOperandUsage.size())
 		return false;
-	
+
 	const auto& info = s_instructionOperandUsage[operation];
 	for (uint8_t i = 0; i < info.count; i++)
 	{
@@ -3585,6 +3598,18 @@ ExprId LowLevelILFunction::SystemCallSSA(const vector<SSARegister>& output, cons
 	    AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, 0, 0, stack.reg, stack.version, prevMemoryVer),
 	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
 }
+
+ExprId LowLevelILFunction::ExceptionSSA(const vector<SSARegister>& output, const vector<ExprId>& params,
+    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer, uint64_t discriminator, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_EXCEPTION_SSA, loc, 0, 0,
+	    AddExprWithLocation(
+	        LLIL_CALL_OUTPUT_SSA, loc, 0, 0, newMemoryVer, output.size() * 2, AddSSARegisterList(output)),
+	    AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, 0, 0, stack.reg, stack.version, prevMemoryVer),
+	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)), discriminator);
+}
+
+
 
 
 ExprId LowLevelILFunction::TailCallSSA(const vector<SSARegister>& output, ExprId dest, const vector<ExprId>& params,

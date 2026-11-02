@@ -209,6 +209,15 @@ Ref<Platform> Function::GetPlatform() const
 }
 
 
+std::optional<BNExceptionModel> Function::GetExceptionModelAt(uint64_t address) const
+{
+	BNExceptionModel model;
+	if (!BNGetFunctionExceptionModelAt(m_object, address, &model))
+		return std::nullopt;
+	return model;
+}
+
+
 Ref<Architecture> Function::GetArchitecture() const
 {
 	return new CoreArchitecture(BNGetFunctionArchitecture(m_object));
@@ -3472,4 +3481,29 @@ void AdvancedFunctionAnalysisDataRequestor::SetFunction(Function* func)
 
 	if (m_func)
 		m_func->RequestAdvancedAnalysisData();
+}
+
+std::optional<uint64_t> Function::GetExceptionDiscriminatorAt(uint64_t address) const
+{
+	uint64_t discriminator;
+	if (!BNGetFunctionExceptionDiscriminatorAt(m_object, address, &discriminator))
+		return std::nullopt;
+	return discriminator;
+}
+
+Ref<CallingConvention> Function::GetUserExceptionCallingConvention(uint64_t address) const
+{
+	auto convention = BNGetUserExceptionCallingConvention(m_object, address);
+	return convention ? new CoreCallingConvention(convention) : nullptr;
+}
+
+Ref<CallingConvention> Function::GetExceptionCallingConventionAt(uint64_t address) const
+{
+	auto convention = BNGetExceptionCallingConventionAt(m_object, address);
+	return convention ? new CoreCallingConvention(convention) : nullptr;
+}
+
+bool Function::SetUserExceptionCallingConvention(uint64_t address, CallingConvention* convention)
+{
+	return BNSetUserExceptionCallingConvention(m_object, address, convention ? convention->GetObject() : nullptr);
 }

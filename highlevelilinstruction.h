@@ -124,7 +124,8 @@ namespace BinaryNinja
 		SourceMemoryVersionHighLevelOperandUsage,
 		SourceMemoryVersionsHighLevelOperandUsage,
 		DestMemoryVersionHighLevelOperandUsage,
-		ConstraintHighLevelOperandUsage
+		ConstraintHighLevelOperandUsage,
+		DiscriminatorHighLevelOperandUsage
 	};
 }  // namespace BinaryNinjaCore
 
@@ -629,6 +630,8 @@ namespace BinaryNinja
 			return As<N>().GetConstantData();
 		}
 		template <BNHighLevelILOperation N>
+		uint64_t GetDiscriminator() const { return As<N>().GetDiscriminator(); }
+		template <BNHighLevelILOperation N>
 		int64_t GetVector() const
 		{
 			return As<N>().GetVector();
@@ -819,6 +822,7 @@ namespace BinaryNinja
 		size_t GetMemberIndex() const;
 		int64_t GetConstant() const;
 		ConstantData GetConstantData() const;
+		uint64_t GetDiscriminator() const;
 		int64_t GetVector() const;
 		uint32_t GetIntrinsic() const;
 		uint64_t GetTarget() const;
@@ -1238,6 +1242,14 @@ namespace BinaryNinja
 		HighLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(0); }
 	};
 	template <>
+	struct HighLevelILInstructionAccessor<HLIL_EXCEPTION> : public HighLevelILInstructionAccessor<HLIL_SYSCALL>
+	{
+		uint64_t GetDiscriminator() const { return GetRawOperandAsInteger(2); }
+	};
+
+
+
+	template <>
 	struct HighLevelILInstructionAccessor<HLIL_TAILCALL> : public HighLevelILInstructionBase
 	{
 		HighLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
@@ -1262,6 +1274,14 @@ namespace BinaryNinja
 		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(3); }
 		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(3, version); }
 	};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_EXCEPTION_SSA> : public HighLevelILInstructionAccessor<HLIL_SYSCALL_SSA>
+	{
+		uint64_t GetDiscriminator() const { return GetRawOperandAsInteger(4); }
+	};
+
+
+
 
 	template <>
 	struct HighLevelILInstructionAccessor<HLIL_INTRINSIC> : public HighLevelILInstructionBase

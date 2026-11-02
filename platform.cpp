@@ -922,3 +922,81 @@ bool Platform::ParseTypesFromSourceFile(const string& fileName, map<QualifiedNam
 	BNFreeTypeParserResult(&result);
 	return true;
 }
+
+
+bool Platform::SetExceptionModel(const BNExceptionModelRule& rule)
+{
+	return BNSetPlatformExceptionModel(m_object, &rule);
+}
+
+
+bool Platform::RemoveExceptionModel(uint64_t discriminator, uint64_t mask)
+{
+	return BNRemovePlatformExceptionModel(m_object, discriminator, mask);
+}
+
+
+std::vector<BNExceptionModelRule> Platform::GetExceptionModels() const
+{
+	size_t count;
+	auto rules = BNGetPlatformExceptionModels(m_object, &count);
+	std::vector<BNExceptionModelRule> result(rules, rules + count);
+	BNFreeExceptionModelRuleList(rules);
+	return result;
+}
+
+
+std::optional<BNExceptionModel> Platform::GetExceptionModel(uint64_t discriminator) const
+{
+	BNExceptionModel result;
+	if (!BNGetPlatformExceptionModel(m_object, discriminator, &result))
+		return std::nullopt;
+	return result;
+}
+
+
+bool Platform::SetExceptionDisplay(const ExceptionDisplayRule& rule)
+{
+	if (rule.display.name.find('\0') != string::npos)
+		return false;
+	BNExceptionDisplayRule raw {rule.discriminator, rule.mask,
+		{const_cast<char*>(rule.display.name.c_str()), rule.display.valueMask.has_value(),
+		 rule.display.valueMask.value_or(0), rule.display.valueShift}};
+	return BNSetPlatformExceptionDisplay(m_object, &raw);
+}
+
+
+bool Platform::RemoveExceptionDisplay(uint64_t discriminator, uint64_t mask)
+{
+	return BNRemovePlatformExceptionDisplay(m_object, discriminator, mask);
+}
+
+
+static ExceptionDisplay FromAPIExceptionDisplay(const BNExceptionDisplay& display)
+{
+	return {display.name, display.hasValue ? std::optional<uint64_t>(display.valueMask) : std::nullopt, display.valueShift};
+}
+
+
+std::optional<ExceptionDisplay> Platform::GetExceptionDisplay(uint64_t discriminator) const
+{
+	auto display = BNGetPlatformExceptionDisplay(m_object, discriminator);
+	if (!display)
+		return std::nullopt;
+	auto result = FromAPIExceptionDisplay(*display);
+	BNFreeExceptionDisplay(display);
+	return result;
+}
+
+
+std::vector<ExceptionDisplayRule> Platform::GetExceptionDisplays() const
+{
+	size_t count;
+	auto rules = BNGetPlatformExceptionDisplays(m_object, &count);
+	std::vector<ExceptionDisplayRule> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back({rules[i].discriminator, rules[i].mask, FromAPIExceptionDisplay(rules[i].display)});
+	BNFreeExceptionDisplayRuleList(rules, count);
+	return result;
+}

@@ -41,6 +41,11 @@ std::optional<BinaryNinja::PossibleValueSet> BINARYNINJAUIAPI getPossibleValueSe
 std::optional<BinaryNinja::PossibleValueSet> BINARYNINJAUIAPI getPossibleValueSetForILToken(View* view, HighlightTokenState token);
 std::optional<uint64_t> BINARYNINJAUIAPI getAddressOfILTokenExpr(View* view, HighlightTokenState token);
 void BINARYNINJAUIAPI setCallStackAdjustment(QWidget* parent, FunctionRef func, ArchitectureRef arch, uint64_t instrAddress);
+std::optional<uint64_t> BINARYNINJAUIAPI getExceptionInstructionAddress(
+	View* view, const HighlightTokenState& token, uint64_t cursorAddress);
+bool BINARYNINJAUIAPI canSetExceptionCallingConvention(FunctionRef function, ArchitectureRef arch, uint64_t address);
+void BINARYNINJAUIAPI setExceptionCallingConvention(
+	QWidget* parent, FunctionRef function, ArchitectureRef arch, uint64_t address);
 bool BINARYNINJAUIAPI confirmLargeSelectionSave(QWidget* parent, uint64_t size);
 
 // Resolve the address of the call instruction that the user is currently on,

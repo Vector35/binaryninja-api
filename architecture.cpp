@@ -3361,3 +3361,30 @@ bool FunctionViewType::operator<(const FunctionViewType& other) const
 		return false;
 	return name < other.name;
 }
+
+bool Architecture::RegisterExceptionCallingConvention(CallingConvention* cc, uint64_t discriminator, uint64_t mask)
+{
+	return BNRegisterExceptionCallingConvention(m_object, cc ? cc->GetObject() : nullptr, discriminator, mask);
+}
+
+bool Architecture::UnregisterExceptionCallingConvention(CallingConvention* cc, uint64_t discriminator, uint64_t mask)
+{
+	return BNUnregisterExceptionCallingConvention(m_object, cc ? cc->GetObject() : nullptr, discriminator, mask);
+}
+
+bool Architecture::IsExceptionCallingConventionEligible(CallingConvention* cc, uint64_t discriminator)
+{
+	return BNIsExceptionCallingConventionEligible(m_object, cc ? cc->GetObject() : nullptr, discriminator);
+}
+
+vector<Ref<CallingConvention>> Architecture::GetEligibleExceptionCallingConventions(uint64_t discriminator)
+{
+	size_t count;
+	auto list = BNGetEligibleExceptionCallingConventions(m_object, discriminator, &count);
+	vector<Ref<CallingConvention>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new CoreCallingConvention(BNNewCallingConventionReference(list[i])));
+	BNFreeCallingConventionList(list, count);
+	return result;
+}

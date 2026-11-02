@@ -495,6 +495,7 @@ extern "C"
 		SystemCall = 5,
 		IndirectBranch = 6,
 		ExceptionBranch = 7,
+		ModeledExceptionBranch = 8, // branchTarget holds an opaque discriminator, not a code address
 		UnresolvedBranch = 127,
 		UserDefinedBranch = 128
 	};
@@ -815,7 +816,8 @@ extern "C"
 		LLIL_ABS,     // Signed absolute value of src; abs(INT_MIN) == INT_MIN
 
 		// Opaque architectural exception; platform modeling determines its behavior.
-		LLIL_EXCEPTION
+		LLIL_EXCEPTION,
+		LLIL_EXCEPTION_SSA
 	};
 
 	BN_ENUM(uint8_t, BNLowLevelILFlagCondition)
@@ -1214,6 +1216,7 @@ extern "C"
 
 		// Function call returns its result onto the caller's stack
 		ILStackReturn = 0x4000,
+
 	};
 
 	BN_ENUM(uint8_t, BNIntrinsicClass)
@@ -1608,7 +1611,12 @@ extern "C"
 		MLIL_MAXS,    // Signed maximum of left and right
 		MLIL_MINU,    // Unsigned minimum of left and right
 		MLIL_MAXU,    // Unsigned maximum of left and right
-		MLIL_ABS      // Signed absolute value of src; abs(INT_MIN) == INT_MIN
+		MLIL_ABS,     // Signed absolute value of src; abs(INT_MIN) == INT_MIN
+
+		MLIL_EXCEPTION,
+		MLIL_EXCEPTION_SSA,
+		MLIL_EXCEPTION_UNTYPED,
+		MLIL_EXCEPTION_UNTYPED_SSA,
 	};
 
 	typedef struct BNMediumLevelILInstruction
@@ -1806,7 +1814,10 @@ extern "C"
 		HLIL_MAXS,    // Signed maximum of left and right
 		HLIL_MINU,    // Unsigned minimum of left and right
 		HLIL_MAXU,    // Unsigned maximum of left and right
-		HLIL_ABS      // Signed absolute value of src; abs(INT_MIN) == INT_MIN
+		HLIL_ABS,     // Signed absolute value of src; abs(INT_MIN) == INT_MIN
+
+		HLIL_EXCEPTION,
+		HLIL_EXCEPTION_SSA,
 	};
 
 	typedef struct BNHighLevelILInstruction
@@ -3697,6 +3708,50 @@ extern "C"
 		BNQualifiedName name;
 		BNType* type;
 	} BNSystemCallInfo;
+
+	/** Declarative ABI treatment of an architectural exception event. */
+	BN_ENUM(uint8_t, BNExceptionModelKind)
+	{
+		TrapExceptionModel = 0,
+		BreakpointExceptionModel = 1,
+		SystemCallExceptionModel = 2
+	};
+
+	BN_ENUM(uint8_t, BNExceptionContinuation)
+	{
+		ContinueAfterException = 0,
+		TerminateAfterException = 1
+	};
+
+	typedef struct BNExceptionModel
+	{
+		BNExceptionModelKind kind;
+		uint32_t nameSpace;
+		BNExceptionContinuation continuation;
+	} BNExceptionModel;
+
+	typedef struct BNExceptionModelRule
+	{
+		uint64_t discriminator;
+		uint64_t mask;
+		BNExceptionModel model;
+	} BNExceptionModelRule;
+
+	/** Owned exception presentation metadata. Returned names are freed with the matching display free API. */
+	typedef struct BNExceptionDisplay
+	{
+		char* name;
+		bool hasValue;
+		uint64_t valueMask;
+		uint8_t valueShift;
+	} BNExceptionDisplay;
+
+	typedef struct BNExceptionDisplayRule
+	{
+		uint64_t discriminator;
+		uint64_t mask;
+		BNExceptionDisplay display;
+	} BNExceptionDisplayRule;
 
 	/** A platform syscall ABI. Namespace 0 is always present and is named "default". */
 	typedef struct BNSystemCallNamespaceInfo
@@ -8529,6 +8584,14 @@ extern "C"
 	BINARYNINJACOREAPI BNCallingConvention* BNCreateCallingConvention(
 	    BNArchitecture* arch, const char* name, BNCustomCallingConvention* cc);
 	BINARYNINJACOREAPI void BNRegisterCallingConvention(BNArchitecture* arch, BNCallingConvention* cc);
+	BINARYNINJACOREAPI bool BNRegisterExceptionCallingConvention(BNArchitecture* arch, BNCallingConvention* cc,
+		uint64_t discriminator, uint64_t mask);
+	BINARYNINJACOREAPI bool BNUnregisterExceptionCallingConvention(BNArchitecture* arch, BNCallingConvention* cc,
+		uint64_t discriminator, uint64_t mask);
+	BINARYNINJACOREAPI bool BNIsExceptionCallingConventionEligible(BNArchitecture* arch, BNCallingConvention* cc,
+		uint64_t discriminator);
+	BINARYNINJACOREAPI BNCallingConvention** BNGetEligibleExceptionCallingConventions(BNArchitecture* arch,
+		uint64_t discriminator, size_t* count);
 	BINARYNINJACOREAPI BNCallingConvention* BNNewCallingConventionReference(BNCallingConvention* cc);
 	BINARYNINJACOREAPI void BNFreeCallingConvention(BNCallingConvention* cc);
 
@@ -8551,6 +8614,10 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsStackReservedForArgumentRegisters(BNCallingConvention* cc);
 	BINARYNINJACOREAPI bool BNIsStackAdjustedOnReturn(BNCallingConvention* cc);
 	BINARYNINJACOREAPI bool BNIsEligibleForHeuristics(BNCallingConvention* cc);
+	// Opt in before analysis to forwarding all incoming register arguments for untyped exceptions.
+	// Defaults to false; known service prototypes still determine their own arity.
+	BINARYNINJACOREAPI bool BNIsExceptionArgumentForwardingEnabled(BNCallingConvention* cc);
+	BINARYNINJACOREAPI void BNSetExceptionArgumentForwarding(BNCallingConvention* cc, bool enabled);
 
 	BINARYNINJACOREAPI uint32_t BNGetIntegerReturnValueRegister(BNCallingConvention* cc);
 	BINARYNINJACOREAPI uint32_t BNGetHighIntegerReturnValueRegister(BNCallingConvention* cc);
@@ -8670,6 +8737,27 @@ extern "C"
 	BINARYNINJACOREAPI BNCallingConvention* BNGetPlatformFastcallCallingConvention(BNPlatform* platform);
 	BINARYNINJACOREAPI BNCallingConvention** BNGetPlatformCallingConventions(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNCallingConvention* BNGetPlatformSystemCallConvention(BNPlatform* platform);
+	// Rules match (discriminator & mask) == rule.discriminator. The most specific mask wins.
+	// Equal-specificity overlapping rules are rejected. Replacing an identical key is allowed.
+	// Display rules use the same mask matching/specificity as exception models, without affecting analysis.
+	BINARYNINJACOREAPI bool BNSetPlatformExceptionDisplay(BNPlatform* platform, const BNExceptionDisplayRule* rule);
+	BINARYNINJACOREAPI bool BNRemovePlatformExceptionDisplay(BNPlatform* platform, uint64_t discriminator, uint64_t mask);
+	BINARYNINJACOREAPI BNExceptionDisplay* BNGetPlatformExceptionDisplay(BNPlatform* platform, uint64_t discriminator);
+	BINARYNINJACOREAPI void BNFreeExceptionDisplay(BNExceptionDisplay* display);
+	BINARYNINJACOREAPI BNExceptionDisplayRule* BNGetPlatformExceptionDisplays(BNPlatform* platform, size_t* count);
+	BINARYNINJACOREAPI void BNFreeExceptionDisplayRuleList(BNExceptionDisplayRule* rules, size_t count);
+
+	BINARYNINJACOREAPI bool BNSetPlatformExceptionModel(BNPlatform* platform, const BNExceptionModelRule* rule);
+	BINARYNINJACOREAPI bool BNRemovePlatformExceptionModel(BNPlatform* platform, uint64_t discriminator, uint64_t mask);
+	BINARYNINJACOREAPI BNExceptionModelRule* BNGetPlatformExceptionModels(BNPlatform* platform, size_t* count);
+	BINARYNINJACOREAPI void BNFreeExceptionModelRuleList(BNExceptionModelRule* rules);
+	BINARYNINJACOREAPI bool BNGetPlatformExceptionModel(BNPlatform* platform, uint64_t discriminator, BNExceptionModel* model);
+	BINARYNINJACOREAPI bool BNGetFunctionExceptionModelAt(BNFunction* function, uint64_t address, BNExceptionModel* model);
+	BINARYNINJACOREAPI bool BNGetFunctionExceptionDiscriminatorAt(BNFunction* function, uint64_t address, uint64_t* discriminator);
+	BINARYNINJACOREAPI BNCallingConvention* BNGetUserExceptionCallingConvention(BNFunction* function, uint64_t address);
+	BINARYNINJACOREAPI BNCallingConvention* BNGetExceptionCallingConventionAt(BNFunction* function, uint64_t address);
+	BINARYNINJACOREAPI bool BNSetUserExceptionCallingConvention(BNFunction* function, uint64_t address, BNCallingConvention* convention);
+
 	BINARYNINJACOREAPI BNSystemCallNamespaceInfo* BNGetPlatformSystemCallNamespaces(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI void BNFreeSystemCallNamespaceList(BNSystemCallNamespaceInfo* namespaces, size_t count);
 	BINARYNINJACOREAPI bool BNRegisterPlatformSystemCallNamespace(

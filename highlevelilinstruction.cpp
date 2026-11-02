@@ -93,7 +93,8 @@ static constexpr std::array s_operandTypeForUsage = {
 	OperandUsageType{SourceSSAVariablesHighLevelOperandUsage, SSAVariableListHighLevelOperand},
 	OperandUsageType{SourceMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand},
 	OperandUsageType{SourceMemoryVersionsHighLevelOperandUsage, IndexListHighLevelOperand},
-	OperandUsageType{DestMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand}
+	OperandUsageType{DestMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand},
+	OperandUsageType{DiscriminatorHighLevelOperandUsage, IntegerHighLevelOperand},
 };
 
 static_assert(std::is_sorted(s_operandTypeForUsage.begin(), s_operandTypeForUsage.end()),
@@ -282,6 +283,8 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{HLIL_MINU, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
 	OperandUsage{HLIL_MAXU, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
 	OperandUsage{HLIL_ABS, {SourceExprHighLevelOperandUsage}},
+	OperandUsage{HLIL_EXCEPTION, {ParameterExprsHighLevelOperandUsage, DiscriminatorHighLevelOperandUsage}},
+	OperandUsage{HLIL_EXCEPTION_SSA, {ParameterExprsHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage, DiscriminatorHighLevelOperandUsage}},
 };
 
 
@@ -1271,6 +1274,12 @@ void HighLevelILInstruction::CollectSubExprs(stack<size_t>& toProcess) const
 		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
 			toProcess.push(i->exprIndex);
 		break;
+
+	case HLIL_EXCEPTION:
+		exprs = GetParameterExprs<HLIL_EXCEPTION>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
 	case HLIL_TAILCALL:
 		toProcess.push(GetDestExpr<HLIL_TAILCALL>().exprIndex);
 		exprs = GetParameterExprs<HLIL_TAILCALL>();
@@ -1285,6 +1294,12 @@ void HighLevelILInstruction::CollectSubExprs(stack<size_t>& toProcess) const
 		break;
 	case HLIL_SYSCALL_SSA:
 		exprs = GetParameterExprs<HLIL_SYSCALL_SSA>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+
+	case HLIL_EXCEPTION_SSA:
+		exprs = GetParameterExprs<HLIL_EXCEPTION_SSA>();
 		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
 			toProcess.push(i->exprIndex);
 		break;
@@ -1603,6 +1618,11 @@ ExprId HighLevelILInstruction::CopyTo(
 		for (auto i : GetParameterExprs<HLIL_SYSCALL>())
 			params.push_back(subExprHandler(i));
 		return dest->Syscall(params, loc);
+
+	case HLIL_EXCEPTION:
+		for (auto i : GetParameterExprs<HLIL_EXCEPTION>())
+			params.push_back(subExprHandler(i));
+		return dest->Exception(params, GetDiscriminator(), loc);
 	case HLIL_TAILCALL:
 		for (auto i : GetParameterExprs<HLIL_TAILCALL>())
 			params.push_back(subExprHandler(i));
@@ -1617,6 +1637,12 @@ ExprId HighLevelILInstruction::CopyTo(
 			params.push_back(subExprHandler(i));
 		return dest->SyscallSSA(
 		    params, GetDestMemoryVersion<HLIL_SYSCALL_SSA>(), GetSourceMemoryVersion<HLIL_SYSCALL_SSA>(), loc);
+
+	case HLIL_EXCEPTION_SSA:
+		for (auto i : GetParameterExprs<HLIL_EXCEPTION_SSA>())
+			params.push_back(subExprHandler(i));
+		return dest->ExceptionSSA(
+		    params, GetDestMemoryVersion<HLIL_EXCEPTION_SSA>(), GetSourceMemoryVersion<HLIL_EXCEPTION_SSA>(), GetDiscriminator(), loc);
 	case HLIL_RET:
 		for (auto i : GetSourceExprs<HLIL_RET>())
 			params.push_back(subExprHandler(i));
@@ -2098,6 +2124,11 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 		return CompareExprList(GetParameterExprs<HLIL_CALL>(), other.GetParameterExprs<HLIL_CALL>());
 	case HLIL_SYSCALL:
 		return CompareExprList(GetParameterExprs<HLIL_SYSCALL>(), other.GetParameterExprs<HLIL_SYSCALL>());
+
+	case HLIL_EXCEPTION:
+		if (GetDiscriminator() != other.GetDiscriminator())
+			return GetDiscriminator() < other.GetDiscriminator();
+		return CompareExprList(GetParameterExprs<HLIL_EXCEPTION>(), other.GetParameterExprs<HLIL_EXCEPTION>());
 	case HLIL_TAILCALL:
 		if (GetDestExpr<HLIL_TAILCALL>() < other.GetDestExpr<HLIL_TAILCALL>())
 			return true;
@@ -2134,6 +2165,19 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 		if (other.GetSourceMemoryVersion<HLIL_SYSCALL_SSA>() < GetSourceMemoryVersion<HLIL_SYSCALL_SSA>())
 			return false;
 		return CompareExprList(GetParameterExprs<HLIL_SYSCALL_SSA>(), other.GetParameterExprs<HLIL_SYSCALL_SSA>());
+
+	case HLIL_EXCEPTION_SSA:
+		if (GetDiscriminator() != other.GetDiscriminator())
+			return GetDiscriminator() < other.GetDiscriminator();
+		if (GetDestMemoryVersion<HLIL_EXCEPTION_SSA>() < other.GetDestMemoryVersion<HLIL_EXCEPTION_SSA>())
+			return true;
+		if (other.GetDestMemoryVersion<HLIL_EXCEPTION_SSA>() < GetDestMemoryVersion<HLIL_EXCEPTION_SSA>())
+			return false;
+		if (GetSourceMemoryVersion<HLIL_EXCEPTION_SSA>() < other.GetSourceMemoryVersion<HLIL_EXCEPTION_SSA>())
+			return true;
+		if (other.GetSourceMemoryVersion<HLIL_EXCEPTION_SSA>() < GetSourceMemoryVersion<HLIL_EXCEPTION_SSA>())
+			return false;
+		return CompareExprList(GetParameterExprs<HLIL_EXCEPTION_SSA>(), other.GetParameterExprs<HLIL_EXCEPTION_SSA>());
 	case HLIL_INTRINSIC_SSA:
 		if (GetIntrinsic<HLIL_INTRINSIC_SSA>() < other.GetIntrinsic<HLIL_INTRINSIC_SSA>())
 			return true;
@@ -2578,6 +2622,16 @@ int64_t HighLevelILInstruction::GetVector() const
 		return GetRawOperandAsInteger(operandIndex);
 	throw HighLevelILInstructionAccessException();
 }
+
+uint64_t HighLevelILInstruction::GetDiscriminator() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(DiscriminatorHighLevelOperandUsage, operandIndex))
+		return GetRawOperandAsInteger(operandIndex);
+	throw HighLevelILInstructionAccessException();
+}
+
+
 
 
 uint32_t HighLevelILInstruction::GetIntrinsic() const
@@ -3341,6 +3395,13 @@ ExprId HighLevelILFunction::Syscall(const vector<ExprId>& params, const ILSource
 	return AddExprWithLocation(HLIL_SYSCALL, loc, 0, params.size(), AddOperandList(params));
 }
 
+ExprId HighLevelILFunction::Exception(const vector<ExprId>& params, uint64_t discriminator, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_EXCEPTION, loc, 0, params.size(), AddOperandList(params), discriminator);
+}
+
+
+
 
 ExprId HighLevelILFunction::TailCall(ExprId dest, const vector<ExprId>& params, const ILSourceLocation& loc)
 {
@@ -3362,6 +3423,15 @@ ExprId HighLevelILFunction::SyscallSSA(
 	return AddExprWithLocation(
 	    HLIL_SYSCALL_SSA, loc, 0, params.size(), AddOperandList(params), destMemVersion, srcMemVersion);
 }
+
+ExprId HighLevelILFunction::ExceptionSSA(
+    const vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion, uint64_t discriminator, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(
+	    HLIL_EXCEPTION_SSA, loc, 0, params.size(), AddOperandList(params), destMemVersion, srcMemVersion, discriminator);
+}
+
+
 
 
 ExprId HighLevelILFunction::CompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)

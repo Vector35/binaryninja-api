@@ -330,6 +330,18 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 				for (size_t i = 0; i < info.branchCount; i++)
 				{
 					bool fastPath;
+					if (info.branchType[i] == FalseBranch)
+					{
+						bool continuingException = false;
+						for (size_t j = 0; j < info.branchCount; j++)
+							if (info.branchType[j] == ModeledExceptionBranch)
+							{
+								auto model = funcPlatform->GetExceptionModel(info.branchTarget[j]);
+								continuingException = model && model->continuation == ContinueAfterException;
+							}
+						if (continuingException)
+							continue;
+					}
 
 					auto handleAsFallback = [&]() {
 						// Undefined type or target, check for targets from analysis and stop disassembling this block
@@ -575,6 +587,19 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							}
 						}
 						break;
+
+					case ModeledExceptionBranch:
+					{
+						auto model = funcPlatform->GetExceptionModel(info.branchTarget[i]);
+						if (!model || model->continuation == TerminateAfterException)
+						{
+							endsBlock = true;
+							block->SetCanExit(false);
+							if (!model)
+								block->SetUndeterminedOutgoingEdges(true);
+						}
+						break;
+					}
 
 					case SystemCall:
 						break;

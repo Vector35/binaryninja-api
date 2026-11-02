@@ -9408,7 +9408,7 @@ namespace BinaryNinja {
 		bool IsEndOfFile() const;
 
 		/*! Create a new reader that represents a bounded slice of this reader
-		
+
 			\param offset The start offset for the new slice
 			\param length The length of the new slice
 
@@ -10515,6 +10515,12 @@ namespace BinaryNinja {
 			\param cc calling convention to register
 		*/
 		void RegisterCallingConvention(CallingConvention* cc);
+		// Exception eligibility is opt-in and independent of ordinary function convention selection.
+		// Rules match (event & mask) == discriminator; multiple rules for a convention are ORed.
+		bool RegisterExceptionCallingConvention(CallingConvention* cc, uint64_t discriminator, uint64_t mask = UINT64_MAX);
+		bool UnregisterExceptionCallingConvention(CallingConvention* cc, uint64_t discriminator, uint64_t mask = UINT64_MAX);
+		bool IsExceptionCallingConventionEligible(CallingConvention* cc, uint64_t discriminator);
+		std::vector<Ref<CallingConvention>> GetEligibleExceptionCallingConventions(uint64_t discriminator);
 
 		/*! List of registered calling conventions
 
@@ -13365,6 +13371,15 @@ namespace BinaryNinja {
 		*/
 		Ref<Platform> GetPlatform() const;
 
+		/*! Resolve the architectural exception emitted at an instruction address, if present. */
+		std::optional<BNExceptionModel> GetExceptionModelAt(uint64_t address) const;
+		// Exception origins include events without a platform model. Calling-convention overrides
+		// are instruction-specific, persisted, undoable, and do not change continuation or namespace.
+		std::optional<uint64_t> GetExceptionDiscriminatorAt(uint64_t address) const;
+		Ref<CallingConvention> GetUserExceptionCallingConvention(uint64_t address) const;
+		Ref<CallingConvention> GetExceptionCallingConventionAt(uint64_t address) const;
+		bool SetUserExceptionCallingConvention(uint64_t address, CallingConvention* convention);
+
 		/*! Get the starting virtual address of this function
 
 			\return the start address
@@ -15459,6 +15474,10 @@ namespace BinaryNinja {
 		ExprId SystemCallSSA(const std::vector<SSARegister>& output, const std::vector<ExprId>& params,
 		    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExceptionSSA(const std::vector<SSARegister>& output, const std::vector<ExprId>& params,
+		    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
+		    uint64_t discriminator, const ILSourceLocation& loc = ILSourceLocation());
+
 		ExprId TailCallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
 		    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 		    const ILSourceLocation& loc = ILSourceLocation());
@@ -16319,8 +16338,13 @@ namespace BinaryNinja {
 			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Syscall(const std::vector<ExprId>& output, const std::vector<ExprId>& params,
 		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Exception(const std::vector<ExprId>& output, const std::vector<ExprId>& params,
+		    uint64_t discriminator, const ILSourceLocation& loc = ILSourceLocation());
+
 		ExprId SyscallUntyped(const std::vector<ExprId>& output, const std::vector<ExprId>& params, ExprId stack,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExceptionUntyped(const std::vector<ExprId>& output, const std::vector<ExprId>& params, ExprId stack,
+			uint64_t discriminator, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCall(const std::vector<ExprId>& output, ExprId dest, const std::vector<ExprId>& params,
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCallUntyped(const std::vector<ExprId>& output, ExprId dest, const std::vector<ExprId>& params,
@@ -16332,9 +16356,15 @@ namespace BinaryNinja {
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SyscallSSA(const std::vector<ExprId>& output, const std::vector<ExprId>& params,
 		    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExceptionSSA(const std::vector<ExprId>& output, const std::vector<ExprId>& params,
+		    size_t newMemVersion, size_t prevMemVersion, uint64_t discriminator, const ILSourceLocation& loc = ILSourceLocation());
+
 		ExprId SyscallUntypedSSA(const std::vector<ExprId>& output, const std::vector<ExprId>& params,
 			size_t newMemVersion, size_t prevMemVersion, ExprId stack,
 			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExceptionUntypedSSA(const std::vector<ExprId>& output, const std::vector<ExprId>& params,
+			size_t newMemVersion, size_t prevMemVersion, ExprId stack,
+			uint64_t discriminator, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCallSSA(const std::vector<ExprId>& output, ExprId dest, const std::vector<ExprId>& params,
 		    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCallUntypedSSA(const std::vector<ExprId>& output, ExprId dest,
@@ -16730,12 +16760,17 @@ namespace BinaryNinja {
 		ExprId LowPart(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(ExprId dest, const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Syscall(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Exception(const std::vector<ExprId>& params, uint64_t discriminator, const ILSourceLocation& loc = ILSourceLocation());
+
 		ExprId TailCall(
 		    ExprId dest, const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(ExprId dest, const std::vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion,
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SyscallSSA(const std::vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion,
 		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExceptionSSA(const std::vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion,
+		    uint64_t discriminator, const ILSourceLocation& loc = ILSourceLocation());
+
 		ExprId CompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CompareNotEqual(
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
@@ -19279,6 +19314,11 @@ namespace BinaryNinja {
 		*/
 		virtual bool IsEligibleForHeuristics();
 
+		/*! Whether untyped exceptions eagerly forward incoming register arguments. Defaults to false.
+		    Configure before analysis; known service prototypes still determine their own arity. */
+		bool IsExceptionArgumentForwardingEnabled() const;
+		void SetExceptionArgumentForwarding(bool enabled);
+
 		/*! Gets the register that holds the integer return value.
 
 			\return The integer return value register index
@@ -19669,6 +19709,26 @@ namespace BinaryNinja {
 			const std::optional<ValueLocation>& returnValue, const std::vector<ValueLocation>& params) override;
 	};
 
+	/** Presentation only; valueMask unset omits the discriminator from the displayed operands. */
+	struct ExceptionDisplay
+	{
+		std::string name;
+		std::optional<uint64_t> valueMask;
+		uint8_t valueShift = 0;
+
+		std::optional<uint64_t> GetValue(uint64_t discriminator) const
+		{
+			return valueMask ? std::optional<uint64_t>((discriminator & *valueMask) >> valueShift) : std::nullopt;
+		}
+	};
+
+	struct ExceptionDisplayRule
+	{
+		uint64_t discriminator;
+		uint64_t mask;
+		ExceptionDisplay display;
+	};
+
 	/*! An owned description of a platform syscall ABI. Namespace 0 is the legacy default. */
 	struct SystemCallNamespaceInfo
 	{
@@ -19819,6 +19879,20 @@ namespace BinaryNinja {
 		Ref<CallingConvention> GetSystemCallConvention() const;
 
 		/*! Namespace 0 is always present, named "default", and backs the legacy syscall APIs. */
+		bool SetExceptionDisplay(const ExceptionDisplayRule& rule);
+		bool RemoveExceptionDisplay(uint64_t discriminator, uint64_t mask = UINT64_MAX);
+		std::vector<ExceptionDisplayRule> GetExceptionDisplays() const;
+		std::optional<ExceptionDisplay> GetExceptionDisplay(uint64_t discriminator) const;
+		ExceptionDisplay GetExceptionDisplayOrDefault(uint64_t discriminator) const
+		{
+			return GetExceptionDisplay(discriminator).value_or(ExceptionDisplay{"exception", UINT64_MAX, 0});
+		}
+
+		bool SetExceptionModel(const BNExceptionModelRule& rule);
+		bool RemoveExceptionModel(uint64_t discriminator, uint64_t mask = UINT64_MAX);
+		std::vector<BNExceptionModelRule> GetExceptionModels() const;
+		std::optional<BNExceptionModel> GetExceptionModel(uint64_t discriminator) const;
+
 		std::vector<SystemCallNamespaceInfo> GetSystemCallNamespaces() const;
 		/*! Register before analysis. Rejects duplicate IDs/names, empty names, and mismatched architectures.
 		    The nullable convention is retained without adding it to the platform's heuristic conventions. */

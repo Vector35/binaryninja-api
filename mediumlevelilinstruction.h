@@ -156,7 +156,8 @@ namespace BinaryNinja
 		ParameterSSAMemoryVersionMediumLevelOperandUsage,
 		SourceSSAVariablesMediumLevelOperandUsages,
 		ConstraintMediumLevelOperandUsage,
-		ForceVersionReasonMediumLevelOperandUsage
+		ForceVersionReasonMediumLevelOperandUsage,
+		DiscriminatorMediumLevelOperandUsage
 	};
 }  // namespace BinaryNinjaCore
 
@@ -723,6 +724,8 @@ namespace BinaryNinja
 			return As<N>().GetConstantData();
 		}
 		template <BNMediumLevelILOperation N>
+		uint64_t GetDiscriminator() const { return As<N>().GetDiscriminator(); }
+		template <BNMediumLevelILOperation N>
 		int64_t GetVector() const
 		{
 			return As<N>().GetVector();
@@ -891,6 +894,7 @@ namespace BinaryNinja
 		uint64_t GetOffset() const;
 		int64_t GetConstant() const;
 		ConstantData GetConstantData() const;
+		uint64_t GetDiscriminator() const;
 		int64_t GetVector() const;
 		uint32_t GetIntrinsic() const;
 		size_t GetTarget() const;
@@ -1352,6 +1356,14 @@ namespace BinaryNinja
 		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(2); }
 	};
 	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_EXCEPTION> : public MediumLevelILInstructionAccessor<MLIL_SYSCALL>
+	{
+		uint64_t GetDiscriminator() const { return GetRawOperandAsInteger(4); }
+	};
+
+
+
+	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_SYSCALL_UNTYPED> : public MediumLevelILCallInstruction
 	{
 		MediumLevelILInstructionList GetParameterExprs() const
@@ -1360,6 +1372,12 @@ namespace BinaryNinja
 		}
 		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(3); }
 	};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_EXCEPTION_UNTYPED> : public MediumLevelILInstructionAccessor<MLIL_SYSCALL_UNTYPED>
+	{
+		uint64_t GetDiscriminator() const { return GetRawOperandAsInteger(4); }
+	};
+
 	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_TAILCALL> : public MediumLevelILCallInstruction
 	{
@@ -1455,6 +1473,14 @@ namespace BinaryNinja
 		void SetParameterExprs(const _STD_VECTOR<ExprId>& params) { UpdateRawOperandAsExprList(1, params); }
 	};
 	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_EXCEPTION_SSA> : public MediumLevelILInstructionAccessor<MLIL_SYSCALL_SSA>
+	{
+		uint64_t GetDiscriminator() const { return GetRawOperandAsInteger(4); }
+	};
+
+
+
+	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_SYSCALL_UNTYPED_SSA> : public MediumLevelILCallSSAInstruction
 	{
 		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
@@ -1475,6 +1501,12 @@ namespace BinaryNinja
 			GetRawOperandAsExpr(1).UpdateRawOperandAsExprList(1, params);
 		}
 	};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_EXCEPTION_UNTYPED_SSA> : public MediumLevelILInstructionAccessor<MLIL_SYSCALL_UNTYPED_SSA>
+	{
+		uint64_t GetDiscriminator() const { return GetRawOperandAsInteger(3); }
+	};
+
 	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_TAILCALL_SSA> : public MediumLevelILCallSSAInstruction
 	{

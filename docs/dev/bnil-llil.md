@@ -250,11 +250,225 @@ C++ exposes `GetDiscriminator()` / `GetDiscriminator<LLIL_EXCEPTION>()`; Python 
 Copying and operand enumeration preserve the complete value, and rendering uses
 `exception(0x...)`.
 
-This is the emission primitive for a later platform-modeling stage. It specifies no calling
-convention, register or memory effects, or continuation policy. Resolve it through that stage
-before semantic analysis; this change does not yet provide platform resolution or migrate
-existing architecture lifters. Existing syscall, breakpoint, and trap operations keep their
-current behavior.
+Platforms register declarative exception rules using `SetExceptionModel` (C++),
+`set_exception_model` (Python), or `BNSetPlatformExceptionModel` (C). Rules match
+`(discriminator & mask) == rule.discriminator`. The most specific mask wins; exact rules
+can override a kind-wide default. Overlapping rules with equal specificity are rejected.
+Setting an existing `(discriminator, mask)` replaces it. Both matches and misses are cached
+in core, with a bounded cache invalidated whenever rules change. No platform callback or
+Python invocation is needed for analysis lookups.
+
+A rule selects `TrapExceptionModel`, `BreakpointExceptionModel`, or `SystemCallExceptionModel`,
+a syscall namespace (only for service calls), and `ContinueAfterException` or
+`TerminateAfterException`. Namespace conventions are looked up when needed, so changing a
+convention does not leave a stale convention pointer in the exception cache. Register rules
+before analysis; after changing them, request function reanalysis to rebuild control flow and IL.
+
+```python
+from binaryninja.enums import ExceptionModelKind, ExceptionContinuation
+from binaryninja.platform import ExceptionModel
+
+# ARMv7 HVC -> the platform's registered hypervisor ABI in namespace 1.
+platform.set_exception_model(2 << 32,
+    ExceptionModel(ExceptionModelKind.SystemCallExceptionModel, 1,
+        ExceptionContinuation.ContinueAfterException), mask=0xffffffff00000000)
+```
+
+ARMv7 and Thumb-2 use `(kind << 32) | immediate`: kind 1 is SVC, 2 HVC, 3 SMC,
+and 4 BKPT. The immediate stays in the low 32 bits. The shared architecture helper is
+`arch/armv7/exception.h`. These lifters emit `LLIL_EXCEPTION` and report
+`ModeledExceptionBranch`, whose `branchTarget` is the discriminator, not a code address.
+The existing instruction-info structure and other branch kinds are unchanged. Basic-block
+analysis resolves each instruction's `ModeledExceptionBranch` directly through the platform
+cache, without lifting temporary LLIL. Platform-dependent control flow for exceptions inside
+Thumb IT streams is not modeled in this implementation.
+
+ARMv7 standalone platforms install defaults that concrete platforms snapshot on creation:
+SVC, HVC, and SMC are continuing opaque traps for every immediate, including zero;
+BKPT is a terminating breakpoint. The architecture does not assign service namespaces
+or calling conventions. Both endian variants of ARMv7 and Thumb-2 register one
+`smccc32` convention for explicit platform or instruction use. Linux ARM platforms
+explicitly select the namespace-0 service model and Linux syscall convention for SVC. Other architecture lifters and legacy
+`LLIL_SYSCALL`, `LLIL_BP`, and `LLIL_TRAP` behavior are unchanged.
+
+The AArch32 convention follows the current SMCCC 1.2+ profile in Arm DEN0028 section 2.6:
+`r0` carries the complete 32-bit Function Identifier, `r1-r7` carry arguments, and
+`r0-r7` can contain up to eight result words. `r4-r7` must be preserved unless the
+service defines results there. Without a service definition, analysis conservatively
+treats every possible result register as modified. `r8-r14` and SIMD/FP state are
+preserved. The convention supplies register-only argument layouts and supports composite
+results of up to 32 bytes without hidden return pointers or stack arguments.
+It is excluded from ordinary function calling-convention heuristics. Fast and yielding
+calls use the same register convention. AArch32 does not support the 64-bit convention
+selected by the Function Identifier's bit 30.
+
+AArch64 also exposes `smccc32` for both HVC #0 and SMC #0, using W0-W7, and `smccc64`
+for those same instructions, using W0 for the Function Identifier and X1-X17 for payloads.
+Its possible results span W0-W7 or X0-X17 respectively. The convention API uses backing
+X-register storage with typed layouts for narrow values. Bare AArch64 uses the same opaque
+exception policy as ARMv7, with BRK as its terminating breakpoint.
+
+SMCCC requires instruction immediate zero for compliant calls, but zero
+alone does not establish that SMCCC applies. A platform that knows its environment uses
+SMCCC can explicitly register namespaces and exact exception models:
+
+```python
+# IDs 1 and 2 are choices made by this platform, not architecture reservations.
+for namespace, kind, name, convention in [
+    (1, 2, "hvc", "smccc32"),
+    (2, 3, "smc", "smccc32"),
+]:
+    platform.register_system_call_namespace(namespace, name,
+        platform.arch.calling_conventions[convention])
+    platform.set_exception_model(kind << 32,
+        ExceptionModel(ExceptionModelKind.SystemCallExceptionModel, namespace,
+            ExceptionContinuation.ContinueAfterException))
+```
+
+Other ABIs can select different conventions, discriminator matches, and continuation
+policies. The immediate remains part of the architectural discriminator and is independent
+of the SMCCC Function Identifier in `r0`. Concrete platforms inherit any explicitly
+registered nonzero namespaces from the standalone platform before installing its exception
+rules; namespace 0 remains controlled by the existing syscall APIs. Changing semantic
+rules requires reanalysis of existing functions.
+
+Exception rules are consulted only for exception operations. The raw discriminator remains
+on `LLIL_EXCEPTION` and `LLIL_EXCEPTION_SSA`, and on the corresponding `MLIL_EXCEPTION` /
+`MLIL_EXCEPTION_SSA` and `HLIL_EXCEPTION` / `HLIL_EXCEPTION_SSA` forms. MLIL also has untyped
+exception forms while service argument and return layouts are being resolved. These are
+independent opcodes; no legacy trap, breakpoint, or syscall operation is reinterpreted.
+
+For individually reported exception events, basic-block analysis and exception IL analysis
+consult the same cached rule resolver.
+Unknown exceptions conservatively terminate. Continuation applies only to exception
+operations, without an attribute that changes the meaning of `TRAP` or `BP`. A service
+exception obtains its register effects, argument layout, and namespace-qualified service
+name/type from its model and namespace convention. Existing syscall calling-convention
+fallbacks and parameter heuristics remain unchanged for directly emitted `SYSCALL`.
+
+The existing IL layouts and opcode numbers are preserved. Exception SSA forms have their
+own effect operands and retain the full architectural discriminator. `GetExceptionModelAt`
+(C++), `get_exception_model_at` (Python), and `exception_model_at` (Rust) expose a function
+instruction's resolved model. Exception origins are saved with function analysis and
+restored on database reload.
+
+### Instruction-specific calling conventions
+
+In graph or linear views, select an exception instruction and choose **Set Exception
+Calling Convention...** from the context menu. The chooser lists conventions registered
+as eligible for the instruction's discriminator. ARMv7 and Thumb (both byte orders) allow
+`smccc32` on both HVC #0 and SMC #0, and `linux-syscall` only on
+the SVC family. Other conventions require explicit eligibility registration. Exclusion
+from automatic function-convention heuristics does not exclude explicit exception selection.
+**Use platform default** removes the override. Choices that match the platform default
+are omitted, and the context-menu action is hidden when no distinct alternative remains.
+
+Architecture plugins register eligibility separately from ordinary calling conventions:
+
+```python
+for kind in (2, 3):
+    arch.register_exception_calling_convention(arch.calling_conventions["smccc32"], kind << 32)
+arch.register_exception_calling_convention(arch.calling_conventions["linux-syscall"],
+    1 << 32, mask=0xffffffff00000000)
+eligible = arch.get_eligible_exception_calling_conventions(discriminator)
+```
+
+Rules match `(discriminator & mask) == registered_discriminator`; the default mask is
+an exact 64-bit match. Multiple rules for one convention are ORed, duplicate registrations
+are idempotent, and query lists contain each convention once. Registration requires an
+already registered convention on the same architecture with integer argument registers
+and an integer return register. Rules are stored natively, so lookups invoke no Python
+callbacks. `is_exception_calling_convention_eligible` checks one convention;
+`unregister_exception_calling_convention` removes one rule. Register these rules during
+plugin initialization; they are not stored in the database. After removing a rule, request
+reanalysis to rebuild existing IL. Stored overrides without a matching rule are inactive
+and can still be cleared. Eligibility does not automatically assign any convention and
+does not alter platform namespace models or ordinary function/call-site convention selection.
+The core instruction-override setter enforces the same rules as the menu.
+
+LLIL SSA conservatively retains all candidate register inputs described by an exception
+convention. Register capacity alone does not establish service arity. Untyped exception
+argument recovery uses the ordinary evidence-based heuristics by default, including for
+Linux and Apple syscall conventions; unsupported trailing entry values are discarded from
+higher IL without changing the raw LLIL dependencies. A known service prototype determines
+argument count and types.
+
+Profiles may explicitly enable full-input forwarding before analysis with
+`CallingConvention::SetExceptionArgumentForwarding(true)` (C++),
+`BNSetExceptionArgumentForwarding` (C), or `set_exception_argument_forwarding` on the Rust
+core convention. Python custom conventions declare `exception_argument_forwarding = True`;
+core convention wrappers expose the same property. Reanalyze existing functions after
+changing a profile's policy. SMCCC and Samsung uH enable this policy, so an `hvc; ret`
+wrapper can forward incoming registers without local assignments. It only affects untyped
+exception argument recovery, and a known service prototype takes precedence.
+Non-SSA LLIL still shows only the exception discriminator's presentation; recovered
+arguments appear in higher IL forms.
+
+The choice applies only to that instruction in that function. It takes precedence over
+the platform namespace's convention and supplies argument locations and register effects
+even when the platform models the exception as an opaque trap. It does not register a
+namespace, infer a service name, or change the platform's continuation policy. Other
+instructions with the same discriminator remain unchanged. Overrides are saved in the
+analysis database and support undo/redo.
+
+```python
+function.set_user_exception_calling_convention(address,
+    function.arch.calling_conventions["smccc32"])
+bv.update_analysis_and_wait()
+
+# Restore inheritance from the platform.
+function.set_user_exception_calling_convention(address, None)
+bv.update_analysis_and_wait()
+```
+
+`get_user_exception_calling_convention` returns only the explicit override;
+`get_exception_calling_convention_at` returns the effective convention. The existing
+`get_exception_model_at` still returns the platform's categorization, namespace, and
+continuation policy. `get_exception_discriminator_at` also identifies exception sites
+that have no platform model. C, C++, and Rust expose corresponding function APIs.
+
+### Exception display rules
+
+Platforms can name exception operations independently of their semantic models. Display
+rules use the same discriminator/mask matching and specificity rules as exception models,
+with a separate bounded native cache. They do not change calling conventions, continuation,
+IL operands, or the discriminator. No Python callback runs during rendering.
+
+```python
+# HVC family: show its architectural immediate, rather than the packed discriminator.
+platform.set_exception_display(2 << 32, name="hvc", mask=0xffffffff00000000,
+    value_mask=0xffffffff)
+
+# One platform-specific event: omit the discriminator from the displayed operands.
+platform.set_exception_display((4 << 32) | 0x42, name="warn_once")
+```
+
+`value_mask=None` (the default) omits the displayed discriminator. Otherwise the first
+displayed value is `(discriminator & value_mask) >> value_shift`, with shifts from 0 to 63.
+A zero mask displays zero; it is distinct from omitting the value. The matching mask and
+value-extraction mask are independent. Ordinary IL arguments, outputs, and SSA memory
+annotations continue to render normally. Service names are still resolved using the
+exception model's namespace.
+
+ARMv7 standalone platforms register `svc`, `hvc`, `smc`, and `bkpt` display defaults that
+show the immediate in the low 32 bits. Concrete platforms snapshot those defaults on
+creation, and can replace a family or override an exact event. Raw LLIL without a function
+owner uses the architecture's standalone display rules. An unmatched event retains the
+`exception(0x...)` fallback, including the full unsigned discriminator.
+
+The same rules apply to LLIL, SSA, MLIL (including untyped forms), HLIL, pseudo-C, and
+pseudo-Rust. Existing IL objects pick up display changes on their next render; refresh the
+view to display the new text. Function reanalysis is unnecessary for presentation changes.
+The full value remains accessible through each exception instruction's `discriminator`.
+
+Python exposes `get_exception_display`, `remove_exception_display`, and the owned
+`exception_displays` list. C/C++ provide the corresponding platform get/set/remove/list
+APIs. C getter/list results own their names and must be released using
+`BNFreeExceptionDisplay` or `BNFreeExceptionDisplayRuleList`; setters copy input names.
+Rust exposes owned `ExceptionDisplay` and `ExceptionDisplayRule` structs and platform
+registry methods. Display and semantic rules are registered again by the platform plugin
+when it initializes; display rules are not stored in the analysis database.
+
 
 ### The Arithmetic & Logical Instructions
 

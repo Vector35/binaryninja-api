@@ -2887,6 +2887,61 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 		}();
 		break;
 
+
+	case HLIL_EXCEPTION:
+		[&]() {
+			auto displayPlatform = GetFunction() ? GetFunction()->GetPlatform() : GetArchitecture()->GetStandalonePlatform();
+			auto display = displayPlatform->GetExceptionDisplayOrDefault(instr.GetDiscriminator());
+			auto displayValue = display.GetValue(instr.GetDiscriminator());
+			if (displayValue == 0 && GetFunction() && GetFunction()->GetExceptionCallingConventionAt(instr.address))
+				displayValue.reset();
+			tokens.Append(KeywordToken, display.name);
+			tokens.AppendOpenParen();
+			if (displayValue)
+				tokens.Append(IntegerToken, fmt::format("{:#x}", *displayValue), *displayValue, 8);
+			if (displayValue && instr.GetParameterExprs().size() != 0)
+				tokens.Append(TextToken, ", ");
+			const auto operandList = instr.GetParameterExprs<HLIL_EXCEPTION>();
+			auto exceptionModel = GetFunction() ? GetFunction()->GetPlatform()->GetExceptionModel(instr.GetDiscriminator()) : std::nullopt;
+			vector<FunctionParameter> namedParams;
+			bool skipSyscallNumber = false;
+			if (exceptionModel && exceptionModel->kind == SystemCallExceptionModel && (operandList.size() > 0) && operandList[0].GetValue().IsConstant())
+			{
+				const auto platform = GetFunction()->GetPlatform();
+				const auto view = GetFunction()->GetView();
+				if (platform)
+				{
+					const auto syscall = (uint32_t)operandList[0].GetValue().value;
+					const auto syscallName = view->GetSystemCallNameInNamespace(platform, exceptionModel->nameSpace, syscall);
+					if (settings && settings->GetCallParameterHints() != NeverShowParameterHints)
+					{
+						const auto functionType = view->GetSystemCallTypeInNamespace(platform, exceptionModel->nameSpace, syscall);
+						if (functionType && (functionType->GetClass() == FunctionTypeClass))
+							namedParams = functionType->GetParameters();
+					}
+					if (syscallName.length())
+					{
+						tokens.Append(TextToken, syscallName);
+						tokens.Append(TextToken, " ");
+						tokens.AppendOpenBrace();
+						GetExprText(operandList[0], tokens, settings);
+						tokens.AppendCloseBrace();
+						skipSyscallNumber = true;
+					}
+				}
+			}
+			for (size_t i = (skipSyscallNumber ? 1 : 0); i < operandList.size(); i++)
+			{
+				if (i != 0)
+					tokens.Append(TextToken, ", ");
+				GetExprText(operandList[i], tokens, settings);
+			}
+			tokens.AppendCloseParen();
+			if (exprType != InnerExpression)
+				tokens.AppendSemicolon();
+		}();
+		break;
+
 	case HLIL_BP:
 		[&]() {
 			tokens.Append(KeywordToken, "breakpoint");

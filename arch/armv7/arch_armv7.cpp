@@ -1,3 +1,4 @@
+#include "exception.h"
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
 
@@ -821,9 +822,18 @@ protected:
 			}
 			break;
 		case ARMV7_SVC:
-			if (instr.operands[0].cls == IMM && instr.operands[0].imm == 0)
-				result.AddBranch(SystemCall);
+		case ARMV7_HVC:
+		case ARMV7_SMC:
+		case ARMV7_BKPT:
+		{
+			auto kind = instr.operation == ARMV7_SVC ? Armv7Exception::Svc
+				: instr.operation == ARMV7_HVC ? Armv7Exception::Hvc
+				: instr.operation == ARMV7_SMC ? Armv7Exception::Smc : Armv7Exception::Breakpoint;
+			result.AddBranch(ModeledExceptionBranch, Armv7Exception::Encode(kind, instr.operands[0].imm));
+			if (!UNCONDITIONAL(instr.cond) && instr.operation != ARMV7_BKPT)
+				result.AddBranch(FalseBranch, addr + 4, this);
 			break;
+		}
 		case ARMV7_UDF:
 			result.AddBranch(ExceptionBranch);
 			break;
@@ -3598,6 +3608,91 @@ public:
 };
 
 
+// Arm DEN0028 (SMCCC 1.2+), section 2.6: shared AArch32 SMC32/HVC32 profile.
+// This ABI is shared by fast/yielding calls; it is not an ordinary AAPCS function call.
+class ArmSmcccCallingConvention: public CallingConvention
+{
+public:
+	ArmSmcccCallingConvention(Architecture* arch): CallingConvention(arch, "smccc32") { SetExceptionArgumentForwarding(true); }
+
+	vector<uint32_t> GetIntegerArgumentRegisters() override
+	{
+		// r0 is the complete 32-bit Function Identifier; r1-r7 are the payload.
+		return {REG_R0, REG_R1, REG_R2, REG_R3, REG_R4, REG_R5, REG_R6, REG_R7};
+	}
+
+	vector<uint32_t> GetCallerSavedRegisters() override
+	{
+		// r4-r7 may contain service-defined results. Without a service type,
+		// conservatively treat every possible result register as modified.
+		return {REG_R0, REG_R1, REG_R2, REG_R3, REG_R4, REG_R5, REG_R6, REG_R7};
+	}
+
+	vector<uint32_t> GetCalleeSavedRegisters() override
+	{
+		vector<uint32_t> result {REG_R8, REG_R9,
+			REG_R10, REG_R11, REG_R12, REG_SP, REG_LR};
+		for (uint32_t reg = REG_Q0; reg <= REG_Q15; reg++)
+			result.push_back(reg);
+		return result;
+	}
+
+	uint32_t GetIntegerReturnValueRegister() override { return REG_R0; }
+	uint32_t GetHighIntegerReturnValueRegister() override { return REG_R1; }
+	bool IsEligibleForHeuristics() override { return false; }
+
+	bool IsArgumentTypeRegisterCompatible(BinaryView*, Type* type) override
+	{
+		return type && !type->IsFloat() && type->GetWidth() > 0 && type->GetWidth() <= 4;
+	}
+
+	bool IsReturnTypeRegisterCompatible(BinaryView*, Type* type) override
+	{
+		return type && !type->IsFloat() && type->GetWidth() > 0 && type->GetWidth() <= 32;
+	}
+
+	ValueLocation GetReturnValueLocation(BinaryView* view, const ReturnValue& returnValue) override
+	{
+		Ref<Type> type = returnValue.type.GetValue();
+		if (view && type && type->IsNamedTypeRefer())
+			type = type->DerefNamedTypeReference(view);
+		if (!IsReturnTypeRegisterCompatible(view, type))
+			return {}; // SMCCC never supplies an implicit result pointer.
+		if (type->GetWidth() <= 4)
+			return Variable::Register(REG_R0);
+		ValueLocation result;
+		for (uint64_t offset = 0; offset < type->GetWidth(); offset += 4)
+			result.components.emplace_back(Variable::Register(REG_R0 + offset / 4), offset,
+				std::min(uint64_t(4), type->GetWidth() - offset));
+		return result;
+	}
+
+	vector<ValueLocation> GetParameterLocations(BinaryView*, const std::optional<ValueLocation>&,
+		const vector<FunctionParameter>& params,
+		const std::optional<std::set<uint32_t>>& permittedRegs = std::nullopt) override
+	{
+		auto registers = GetIntegerArgumentRegisters();
+		if (params.size() > registers.size())
+			return {};
+		vector<ValueLocation> result;
+		for (size_t i = 0; i < params.size(); i++)
+		{
+			if (params[i].locationSource == CustomLocationSource)
+			{
+				result.push_back(params[i].location);
+				continue;
+			}
+			if (!params[i].type.GetValue() || params[i].type->IsFloat()
+				|| params[i].type->GetWidth() == 0 || params[i].type->GetWidth() > 4
+				|| (permittedRegs && !permittedRegs->count(registers[i])))
+				return {}; // No stack, SIMD, or hidden pointer arguments in this ABI.
+			result.emplace_back(Variable::Register(registers[i]));
+		}
+		return result;
+	}
+};
+
+
 class Thumb2ImportedFunctionRecognizer: public FunctionRecognizer
 {
 public:
@@ -4716,6 +4811,17 @@ static void RegisterArmArchitecture(const char* armName, const char* thumbName, 
 
 	conv = new LinuxArmv7SystemCallConvention(thumb2);
 	thumb2->RegisterCallingConvention(conv);
+
+	for (auto arch : {armv7, thumb2})
+	{
+		Ref<CallingConvention> smccc = new ArmSmcccCallingConvention(arch);
+		arch->RegisterCallingConvention(smccc);
+		for (auto kind : {Armv7Exception::Hvc, Armv7Exception::Smc})
+			arch->RegisterExceptionCallingConvention(smccc, Armv7Exception::Encode(kind));
+		arch->RegisterExceptionCallingConvention(arch->GetCallingConventionByName("linux-syscall"),
+			Armv7Exception::Encode(Armv7Exception::Svc), Armv7Exception::KindMask);
+		Armv7Exception::RegisterDefaults(arch->GetStandalonePlatform());
+	}
 
 	thumb2->RegisterFunctionRecognizer(new Thumb2ImportedFunctionRecognizer());
 

@@ -206,6 +206,7 @@ int shsax(struct decomp_request *req, struct decomp_result *res);
 int shsub16(struct decomp_request *req, struct decomp_result *res);
 int shsub8(struct decomp_request *req, struct decomp_result *res);
 int smc(struct decomp_request *req, struct decomp_result *res);
+int hvc(struct decomp_request *req, struct decomp_result *res);
 int smlabb_smlabt_smlatb_smlatt(struct decomp_request *req, struct decomp_result *res);
 int smlad(struct decomp_request *req, struct decomp_result *res);
 int smlal(struct decomp_request *req, struct decomp_result *res);
@@ -4015,6 +4016,7 @@ int branches_misc_control(struct decomp_request *req, struct decomp_result *res)
 	if(((op1 & 0x7)==0x0) && ((op & 0x7F)==0x3B) && 1) return misc_control(req, res);
 	if(((op1 & 0x7)==0x0) && ((op & 0x7F)==0x3C) && 1) return bxj(req, res);
 	if(((op1 & 0x7)==0x0) && ((op & 0x7F)==0x3D) && 1) return subs_pc_lr_related(req, res);
+	if(((op1 & 0x7)==0x0) && ((op & 0x7F)==0x7E) && 1) return hvc(req, res);
 	if(((op1 & 0x7)==0x0) && ((op & 0x7F)==0x7F) && 1) return smc(req, res);
 	if(((op1 & 0x7)==0x2) && ((op & 0x7F)==0x7F) && 1) return undefined(req, res);
 	if(((op1 & 0x7)==0x0) && ((op & 0x7E)==0x3E) && 1) return mrs(req, res);
@@ -19091,6 +19093,32 @@ int shsub8(struct decomp_request *req, struct decomp_result *res)
 
 	/* if fall-thru here, no encoding block matched */
 	return undefined(req, res);
+}
+
+// HVC T1: the older generated decoder did not cover the virtualization extension.
+int hvc(struct decomp_request *req, struct decomp_result *res)
+{
+	uint32_t instr = req->instr_word32;
+	if ((instr & 0xFFF0F000) != 0xF7E08000)
+		return undefined(req, res);
+	res->instrSize = 32;
+	res->mnem = armv7::ARMV7_HVC;
+	res->group = INSN_GROUP_UNKNOWN;
+	res->fields[FIELD_cond] = COND_AL;
+	res->fields_mask[FIELD_cond >> 6] |= 1LL << (FIELD_cond & 63);
+	res->fields[FIELD_imm16] = ((instr >> 16) & 0xF) << 12 | (instr & 0xFFF);
+	res->fields_mask[FIELD_imm16 >> 6] |= 1LL << (FIELD_imm16 & 63);
+	static const instruction_format formats[] = {{
+		"hvc", 0,
+		{{OPERAND_FORMAT_IMM, FIELD_imm16, FIELD_UNINIT, "#", "", WRITEBACK_NO},
+		 {OPERAND_FORMAT_END, FIELD_UNINIT, FIELD_UNINIT, "", "", WRITEBACK_NO}},
+		1
+	}};
+	res->formats = formats;
+	res->formatCount = 1;
+	if (req->inIfThen == IFTHEN_YES)
+		res->flags |= FLAG_UNPREDICTABLE;
+	return success();
 }
 
 // gen_crc: 0976DAC5

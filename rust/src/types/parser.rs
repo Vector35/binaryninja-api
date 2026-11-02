@@ -82,7 +82,7 @@ impl TypeParser for CoreTypeParser {
         source: &str,
         file_name: &str,
         platform: &Platform,
-        existing_types: &TypeContainer,
+        existing_types: Option<&TypeContainer>,
         options: &[String],
         include_directories: &[PathBuf],
     ) -> Result<String, Vec<TypeParserError>> {
@@ -105,7 +105,7 @@ impl TypeParser for CoreTypeParser {
                 source_cstr.as_ptr(),
                 file_name_cstr.as_ptr(),
                 platform.handle,
-                existing_types.handle.as_ptr(),
+                existing_types.map_or(std::ptr::null_mut(), |types| types.handle.as_ptr()),
                 options_raw.as_ptr(),
                 options_raw.len(),
                 include_directories_raw.as_ptr(),
@@ -130,7 +130,7 @@ impl TypeParser for CoreTypeParser {
         source: &str,
         file_name: &str,
         platform: &Platform,
-        existing_types: &TypeContainer,
+        existing_types: Option<&TypeContainer>,
         options: &[String],
         include_directories: &[PathBuf],
         auto_type_source: &str,
@@ -155,7 +155,7 @@ impl TypeParser for CoreTypeParser {
                 source_cstr.as_ptr(),
                 file_name_cstr.as_ptr(),
                 platform.handle,
-                existing_types.handle.as_ptr(),
+                existing_types.map_or(std::ptr::null_mut(), |types| types.handle.as_ptr()),
                 options_raw.as_ptr(),
                 options_raw.len(),
                 include_directories_raw.as_ptr(),
@@ -177,7 +177,7 @@ impl TypeParser for CoreTypeParser {
         &self,
         source: &str,
         platform: &Platform,
-        existing_types: &TypeContainer,
+        existing_types: Option<&TypeContainer>,
     ) -> Result<QualifiedNameAndType, Vec<TypeParserError>> {
         let source_cstr = BnString::new(source);
         let mut output = BNQualifiedNameAndType::default();
@@ -188,7 +188,7 @@ impl TypeParser for CoreTypeParser {
                 self.handle.as_ptr(),
                 source_cstr.as_ptr(),
                 platform.handle,
-                existing_types.handle.as_ptr(),
+                existing_types.map_or(std::ptr::null_mut(), |types| types.handle.as_ptr()),
                 &mut output,
                 &mut errors,
                 &mut error_count,
@@ -234,7 +234,7 @@ pub trait TypeParser {
         source: &str,
         file_name: &str,
         platform: &Platform,
-        existing_types: &TypeContainer,
+        existing_types: Option<&TypeContainer>,
         options: &[String],
         include_dirs: &[PathBuf],
     ) -> Result<String, Vec<TypeParserError>>;
@@ -253,7 +253,7 @@ pub trait TypeParser {
         source: &str,
         file_name: &str,
         platform: &Platform,
-        existing_types: &TypeContainer,
+        existing_types: Option<&TypeContainer>,
         options: &[String],
         include_dirs: &[PathBuf],
         auto_type_source: &str,
@@ -268,7 +268,7 @@ pub trait TypeParser {
         &self,
         source: &str,
         platform: &Platform,
-        existing_types: &TypeContainer,
+        existing_types: Option<&TypeContainer>,
     ) -> Result<QualifiedNameAndType, Vec<TypeParserError>>;
 }
 
@@ -544,8 +544,8 @@ unsafe extern "C" fn cb_preprocess_source<T: TypeParser>(
 ) -> bool {
     let ctxt: &mut T = &mut *(ctxt as *mut T);
     let platform = Platform { handle: platform };
-    let existing_types_ptr = NonNull::new(existing_types).unwrap();
-    let existing_types = TypeContainer::from_raw(existing_types_ptr);
+    let existing_types =
+        NonNull::new(existing_types).map(|handle| TypeContainer::from_lent_raw(handle));
     let options_raw = unsafe { std::slice::from_raw_parts(options, option_count) };
     let options: Vec<_> = options_raw
         .iter()
@@ -560,7 +560,7 @@ unsafe extern "C" fn cb_preprocess_source<T: TypeParser>(
         &raw_to_string(source).unwrap(),
         &raw_to_string(file_name).unwrap(),
         &platform,
-        &existing_types,
+        existing_types.as_deref(),
         &options,
         &includes,
     ) {
@@ -604,8 +604,8 @@ unsafe extern "C" fn cb_parse_types_from_source<T: TypeParser>(
 ) -> bool {
     let ctxt: &mut T = &mut *(ctxt as *mut T);
     let platform = Platform { handle: platform };
-    let existing_types_ptr = NonNull::new(existing_types).unwrap();
-    let existing_types = TypeContainer::from_raw(existing_types_ptr);
+    let existing_types =
+        NonNull::new(existing_types).map(|handle| TypeContainer::from_lent_raw(handle));
     let options_raw = unsafe { std::slice::from_raw_parts(options, option_count) };
     let options: Vec<_> = options_raw
         .iter()
@@ -620,7 +620,7 @@ unsafe extern "C" fn cb_parse_types_from_source<T: TypeParser>(
         &raw_to_string(source).unwrap(),
         &raw_to_string(file_name).unwrap(),
         &platform,
-        &existing_types,
+        existing_types.as_deref(),
         &options,
         &includes,
         &raw_to_string(auto_type_source).unwrap(),
@@ -656,9 +656,13 @@ unsafe extern "C" fn cb_parse_type_string<T: TypeParser>(
 ) -> bool {
     let ctxt: &mut T = &mut *(ctxt as *mut T);
     let platform = Platform { handle: platform };
-    let existing_types_ptr = NonNull::new(existing_types).unwrap();
-    let existing_types = TypeContainer::from_raw(existing_types_ptr);
-    match ctxt.parse_type_string(&raw_to_string(source).unwrap(), &platform, &existing_types) {
+    let existing_types =
+        NonNull::new(existing_types).map(|handle| TypeContainer::from_lent_raw(handle));
+    match ctxt.parse_type_string(
+        &raw_to_string(source).unwrap(),
+        &platform,
+        existing_types.as_deref(),
+    ) {
         Ok(inner_result) => {
             *result = QualifiedNameAndType::into_raw(inner_result);
             *errors = std::ptr::null_mut();

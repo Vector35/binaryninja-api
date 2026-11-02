@@ -17,6 +17,7 @@ use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void};
 use std::fmt::{Debug, Formatter};
+use std::mem::ManuallyDrop;
 use std::ptr::NonNull;
 
 pub type TypeContainerType = BNTypeContainerType;
@@ -39,6 +40,11 @@ impl TypeContainer {
         Self {
             handle: cloned_ptr.unwrap(),
         }
+    }
+
+    /// Wraps a `handle` that core lends for the duration of a callback. The wrapper never frees it.
+    pub(crate) unsafe fn from_lent_raw(handle: NonNull<BNTypeContainer>) -> ManuallyDrop<Self> {
+        ManuallyDrop::new(Self { handle })
     }
 
     /// Get an empty type container that contains no types (immutable)

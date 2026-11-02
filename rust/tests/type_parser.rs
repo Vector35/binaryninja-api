@@ -37,7 +37,7 @@ fn test_string_to_type() {
     let plat_type_container = platform.type_container();
     let parser = CoreTypeParser::default();
     let parsed_type = parser
-        .parse_type_string("int32_t", &platform, &plat_type_container)
+        .parse_type_string("int32_t", &platform, Some(&plat_type_container))
         .expect("Parsed int32_t");
     let test_type = Type::int(4, true);
     assert_eq!(test_type, parsed_type.ty);
@@ -58,7 +58,7 @@ impl TypeParser for OptionTextTypeParser {
         _source: &str,
         _file_name: &str,
         _platform: &Platform,
-        _existing_types: &TypeContainer,
+        _existing_types: Option<&TypeContainer>,
         _options: &[String],
         _include_dirs: &[PathBuf],
     ) -> Result<String, Vec<TypeParserError>> {
@@ -70,7 +70,7 @@ impl TypeParser for OptionTextTypeParser {
         _source: &str,
         _file_name: &str,
         _platform: &Platform,
-        _existing_types: &TypeContainer,
+        _existing_types: Option<&TypeContainer>,
         _options: &[String],
         _include_dirs: &[PathBuf],
         _auto_type_source: &str,
@@ -82,7 +82,7 @@ impl TypeParser for OptionTextTypeParser {
         &self,
         _source: &str,
         _platform: &Platform,
-        _existing_types: &TypeContainer,
+        _existing_types: Option<&TypeContainer>,
     ) -> Result<QualifiedNameAndType, Vec<TypeParserError>> {
         Err(vec![])
     }
@@ -113,7 +113,7 @@ fn test_string_to_types() {
             TEST_TYPES,
             "test_file.h",
             &platform,
-            &plat_type_container,
+            Some(&plat_type_container),
             &[],
             &[],
             "",
@@ -129,7 +129,7 @@ fn test_parse_error() {
     let plat_type_container = platform.type_container();
     let parser = CoreTypeParser::default();
     let parser_error = parser
-        .parse_type_string("AAAAA", &platform, &plat_type_container)
+        .parse_type_string("AAAAA", &platform, Some(&plat_type_container))
         .expect_err("Parsing should fail!");
     assert_eq!(
         parser_error,

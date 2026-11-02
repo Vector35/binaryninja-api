@@ -6,6 +6,15 @@ using namespace std;
 namespace fs = std::filesystem;
 
 
+static std::optional<TypeContainer> ExistingTypesFromAPI(BNTypeContainer* existingTypes)
+{
+	if (!existingTypes)
+		return std::nullopt;
+
+	return TypeContainer {BNDuplicateTypeContainer(existingTypes)};
+}
+
+
 TypeParser::TypeParser(const string& name) : m_nameForRegister(name) {}
 
 
@@ -163,7 +172,7 @@ bool TypeParser::PreprocessSourceCallback(void* ctxt,
 		source,
 		fileName,
 		new CorePlatform(platform),
-		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
+		ExistingTypesFromAPI(existingTypes),
 		optionsCpp,
 		includeDirsCpp,
 		outputCpp,
@@ -225,7 +234,7 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 		source,
 		fileName,
 		new CorePlatform(platform),
-		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
+		ExistingTypesFromAPI(existingTypes),
 		optionsCpp,
 		includeDirsCpp,
 		autoTypeSource,
@@ -296,7 +305,7 @@ bool TypeParser::ParseTypeStringCallback(void* ctxt,
 	bool success = parser->ParseTypeString(
 		source,
 		new CorePlatform(platform),
-		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
+		ExistingTypesFromAPI(existingTypes),
 		resultCpp,
 		errorsCpp
 	);

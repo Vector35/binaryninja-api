@@ -265,6 +265,7 @@ where
     Intrinsic(Operation<'func, M, F, operation::Intrinsic>),
     Bp(Operation<'func, M, F, operation::NoArgs>),
     Trap(Operation<'func, M, F, operation::Trap>),
+    ExceptionSsa(Operation<'func, M, F, operation::ExceptionSsa>),
     Exception(Operation<'func, M, F, operation::Exception>),
     Undef(Operation<'func, M, F, operation::NoArgs>),
     Assert(Operation<'func, M, F, operation::Assert>),
@@ -367,6 +368,9 @@ where
             }
             LLIL_BP => LowLevelILInstructionKind::Bp(Operation::new(function, op, expr_index)),
             LLIL_TRAP => LowLevelILInstructionKind::Trap(Operation::new(function, op, expr_index)),
+            LLIL_EXCEPTION_SSA => {
+                LowLevelILInstructionKind::ExceptionSsa(Operation::new(function, op, expr_index))
+            }
             LLIL_EXCEPTION => {
                 LowLevelILInstructionKind::Exception(Operation::new(function, op, expr_index))
             }
@@ -441,6 +445,11 @@ where
                 visit!(&op.output_expr());
                 visit!(&op.stack_expr());
                 visit!(&op.param_expr());
+            }
+            ExceptionSsa(ref op) => {
+                visit!(&op.output_expr());
+                visit!(&op.param_expr());
+                visit!(&op.stack_expr());
             }
             Call(ref op) | TailCall(ref op) => visit!(&op.target()),
             CallSsa(ref op) | TailCallSsa(ref op) => {

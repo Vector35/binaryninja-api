@@ -507,6 +507,10 @@ class LowLevelILInstruction(BaseILInstruction):
 		LowLevelILOperation.LLIL_ASSERT_SSA: [("src", "reg_ssa"), ("constraint", "constraint")],
 		LowLevelILOperation.LLIL_FORCE_VER: [("dest", "reg")],
 		LowLevelILOperation.LLIL_FORCE_VER_SSA: [("dest", "reg_ssa"), ("src", "reg_ssa")],
+
+	    LowLevelILOperation.LLIL_EXCEPTION_SSA: [
+	        ("output", "expr"), ("stack", "expr"), ("param", "expr"), ("discriminator", "int")
+	    ],
 	}
 
 	@staticmethod
@@ -3004,6 +3008,55 @@ class LowLevelILSyscallSsa(LowLevelILInstruction, Syscall, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILExceptionSsa(LowLevelILInstruction, SSA):
+	@property
+	def discriminator(self) -> int:
+		return self.instr.operands[3]
+
+	@property
+	def output(self) -> List[SSARegister]:
+		inst = self._get_expr(0)
+		assert isinstance(inst, LowLevelILCallOutputSsa), "LowLevelILExceptionSsa return bad type for output"
+		return inst.dest
+
+	@property
+	def stack(self) -> LowLevelILCallStackSsa:
+		result = self._get_expr(1)
+		assert isinstance(result, LowLevelILCallStackSsa)
+		return result
+
+	@property
+	def stack_reg(self) -> SSARegister:
+		return self.stack.src
+
+	@property
+	def stack_memory(self) -> int:
+		return self.stack.src_memory
+
+	@property
+	def param(self) -> LowLevelILCallParam:
+		# kept for backwards compatibility use 'params' instead
+		result = self._get_expr(2)
+		assert isinstance(result, LowLevelILCallParam)
+		return result
+
+	@property
+	def params(self) -> List[LowLevelILInstruction]:
+		return self.param.src
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			('discriminator', self.discriminator, 'int'),
+			("output", self.output, "List[SSARegister]"),
+			("stack_reg", self.stack_reg, "SSARegister"),
+			("stack_memory", self.stack_memory, "int"),
+			("params", self.params, "List[LowLevelILInstruction]"),
+		]
+
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 	@property
 	def stack(self) -> LowLevelILInstruction:
@@ -3352,6 +3405,8 @@ ILInstruction:Dict[LowLevelILOperation, LowLevelILInstruction] = {  # type: igno
     LowLevelILOperation.LLIL_ASSERT_SSA: LowLevelILAssertSsa,                       #  [("src", "reg_ssa"), ("constraint", "constraint")]
     LowLevelILOperation.LLIL_FORCE_VER: LowLevelILForceVer,                         #  [("dest", "reg"), ("src", "reg")]
     LowLevelILOperation.LLIL_FORCE_VER_SSA: LowLevelILForceVerSsa,                  #  [("dest", "reg_ssa"), ("src", "reg_ssa")]
+
+    LowLevelILOperation.LLIL_EXCEPTION_SSA: LowLevelILExceptionSsa,
 }
 
 

@@ -117,6 +117,9 @@ class CallingConvention:
 		in cdecl).
 	:cvar eligible_for_heuristics: Whether this calling convention may be selected by heuristic
 		calling convention detection.
+	:cvar exception_argument_forwarding: Opt in before analysis to eagerly forwarding incoming
+		register arguments for untyped exceptions. Defaults to ``False``. ABI register capacity
+		alone does not establish arity; known service prototypes take precedence.
 	:cvar int_return_reg: The register that holds the integer return value.
 	:cvar high_int_return_reg: The register that holds the high part of an integer return value
 		that is too large to fit in a single register, or ``None`` if there is none.
@@ -146,6 +149,7 @@ class CallingConvention:
 	stack_reserved_for_arg_regs = False
 	stack_adjusted_on_return = False
 	eligible_for_heuristics = True
+	exception_argument_forwarding = False
 	int_return_reg = None
 	high_int_return_reg = None
 	float_return_reg = None
@@ -265,6 +269,7 @@ class CallingConvention:
 				self._free_register_stack_adjustments
 			)
 			_handle = core.BNCreateCallingConvention(arch.handle, name, self._cb)
+			core.BNSetExceptionArgumentForwarding(_handle, self.exception_argument_forwarding)
 			self.__class__._registered_calling_conventions.append(self)
 		else:
 			_handle = handle
@@ -1439,6 +1444,15 @@ class CallingConvention:
 
 
 class CoreCallingConvention(CallingConvention):
+	@property
+	def exception_argument_forwarding(self) -> bool:
+		return core.BNIsExceptionArgumentForwardingEnabled(self.handle)
+
+	@exception_argument_forwarding.setter
+	def exception_argument_forwarding(self, enabled: bool) -> None:
+		"""Configure before analysis; existing functions require reanalysis after changes."""
+		core.BNSetExceptionArgumentForwarding(self.handle, enabled)
+
 	def __init__(self, handle, confidence: int = core.max_confidence):
 		super().__init__(handle=handle, confidence=confidence)
 

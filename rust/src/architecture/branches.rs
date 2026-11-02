@@ -17,6 +17,7 @@ pub enum BranchKind {
     SystemCall,
     Indirect,
     Exception,
+    ModeledException(u64),
     UserDefined,
 }
 
@@ -49,6 +50,7 @@ impl BranchInfo {
             BranchKind::False(target) => Some(target),
             BranchKind::True(target) => Some(target),
             BranchKind::Call(target) => Some(target),
+            BranchKind::ModeledException(discriminator) => Some(discriminator),
             _ => None,
         }
     }
@@ -66,6 +68,7 @@ impl From<BranchInfo> for BNBranchType {
             BranchKind::SystemCall => BNBranchType::SystemCall,
             BranchKind::Indirect => BNBranchType::IndirectBranch,
             BranchKind::Exception => BNBranchType::ExceptionBranch,
+            BranchKind::ModeledException(_) => BNBranchType::ModeledExceptionBranch,
             BranchKind::UserDefined => BNBranchType::UserDefinedBranch,
         }
     }
@@ -92,6 +95,7 @@ impl From<BranchKind> for BranchType {
             BranchKind::SystemCall => BranchType::SystemCall,
             BranchKind::Indirect => BranchType::IndirectBranch,
             BranchKind::Exception => BranchType::ExceptionBranch,
+            BranchKind::ModeledException(_) => BranchType::ModeledExceptionBranch,
             BranchKind::UserDefined => BranchType::UserDefinedBranch,
         }
     }

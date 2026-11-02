@@ -637,3 +637,120 @@ unsafe impl CoreArrayProviderInner for Platform {
         Guard::new(Self::from_raw(*raw), context)
     }
 }
+
+/// Declarative exception rules are copied into core; lookups do not call back into the plugin.
+pub use binaryninjacore_sys::{
+    BNExceptionContinuation as ExceptionContinuation, BNExceptionModel as ExceptionModel,
+    BNExceptionModelKind as ExceptionModelKind, BNExceptionModelRule as ExceptionModelRule,
+};
+
+impl Platform {
+    pub fn set_exception_model(&self, rule: ExceptionModelRule) -> bool {
+        unsafe { BNSetPlatformExceptionModel(self.handle, &rule) }
+    }
+
+    pub fn remove_exception_model(&self, discriminator: u64, mask: u64) -> bool {
+        unsafe { BNRemovePlatformExceptionModel(self.handle, discriminator, mask) }
+    }
+
+    pub fn exception_model(&self, discriminator: u64) -> Option<ExceptionModel> {
+        let mut model = std::mem::MaybeUninit::uninit();
+        unsafe {
+            BNGetPlatformExceptionModel(self.handle, discriminator, model.as_mut_ptr())
+                .then(|| model.assume_init())
+        }
+    }
+
+    pub fn exception_models(&self) -> Vec<ExceptionModelRule> {
+        unsafe {
+            let mut count = 0;
+            let list = BNGetPlatformExceptionModels(self.handle, &mut count);
+            let result = if count == 0 {
+                Vec::new()
+            } else {
+                std::slice::from_raw_parts(list, count).to_vec()
+            };
+            BNFreeExceptionModelRuleList(list);
+            result
+        }
+    }
+}
+
+/// Presentation metadata only; it never changes an exception's analysis model.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExceptionDisplay {
+    pub name: String,
+    pub value_mask: Option<u64>,
+    pub value_shift: u8,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExceptionDisplayRule {
+    pub discriminator: u64,
+    pub mask: u64,
+    pub display: ExceptionDisplay,
+}
+
+impl ExceptionDisplay {
+    unsafe fn from_raw(raw: &BNExceptionDisplay) -> Self {
+        Self {
+            name: ffi::CStr::from_ptr(raw.name).to_string_lossy().into_owned(),
+            value_mask: raw.hasValue.then_some(raw.valueMask),
+            value_shift: raw.valueShift,
+        }
+    }
+}
+
+impl Platform {
+    pub fn set_exception_display(&self, rule: &ExceptionDisplayRule) -> bool {
+        let Ok(name) = ffi::CString::new(rule.display.name.as_str()) else {
+            return false;
+        };
+        let raw = BNExceptionDisplayRule {
+            discriminator: rule.discriminator,
+            mask: rule.mask,
+            display: BNExceptionDisplay {
+                name: name.as_ptr() as *mut _,
+                hasValue: rule.display.value_mask.is_some(),
+                valueMask: rule.display.value_mask.unwrap_or(0),
+                valueShift: rule.display.value_shift,
+            },
+        };
+        unsafe { BNSetPlatformExceptionDisplay(self.handle, &raw) }
+    }
+
+    pub fn remove_exception_display(&self, discriminator: u64, mask: u64) -> bool {
+        unsafe { BNRemovePlatformExceptionDisplay(self.handle, discriminator, mask) }
+    }
+
+    pub fn exception_display(&self, discriminator: u64) -> Option<ExceptionDisplay> {
+        unsafe {
+            let raw = BNGetPlatformExceptionDisplay(self.handle, discriminator);
+            if raw.is_null() {
+                return None;
+            }
+            let result = ExceptionDisplay::from_raw(&*raw);
+            BNFreeExceptionDisplay(raw);
+            Some(result)
+        }
+    }
+
+    pub fn exception_displays(&self) -> Vec<ExceptionDisplayRule> {
+        unsafe {
+            let mut count = 0;
+            let raw = BNGetPlatformExceptionDisplays(self.handle, &mut count);
+            let result = (0..count)
+                .map(|i| {
+                    let rule = &*raw.add(i);
+                    ExceptionDisplayRule {
+                        discriminator: rule.discriminator,
+                        mask: rule.mask,
+                        display: ExceptionDisplay::from_raw(&rule.display),
+                    }
+                })
+                .collect();
+            BNFreeExceptionDisplayRuleList(raw, count);
+            result
+        }
+    }
+}

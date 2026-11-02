@@ -1115,6 +1115,17 @@ impl CoreCallingConvention {
         self.arch_handle
     }
 
+    /// Whether untyped exceptions eagerly forward incoming register arguments.
+    pub fn is_exception_argument_forwarding_enabled(&self) -> bool {
+        unsafe { BNIsExceptionArgumentForwardingEnabled(self.handle) }
+    }
+
+    /// Configure before analysis. Known service prototypes still determine their own arity.
+    /// Reanalyze existing functions after changing this policy.
+    pub fn set_exception_argument_forwarding(&self, enabled: bool) {
+        unsafe { BNSetExceptionArgumentForwarding(self.handle, enabled) }
+    }
+
     fn raw_permitted_args(permitted_registers: Option<&[RegisterId]>) -> Option<Vec<u32>> {
         permitted_registers.map(|regs| regs.iter().map(|r| r.0).collect())
     }

@@ -176,7 +176,7 @@ class ProjectFile:
 		"""
 		Set the folder that contains this file
 
-		:param new_parent: The folder that will contain this file, or None
+		:param new_folder: The folder that will contain this file, or None
 		"""
 		folder_handle = None if new_folder is None else new_folder._handle
 		return core.BNProjectFileSetFolder(self._handle, folder_handle)

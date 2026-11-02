@@ -49,7 +49,7 @@ Alternatively, it might be easier to save debug logs to a file instead:
 
 When investigating bugs it can be useful to keep a stable and a development build installed simultaneously.
 
-Each installation updates only itself and the update setting and [update channels](index.md#updates) are settings that are saved per-install. Othewise however they share the same [user folder](index.md#user-folder), sharing settings, plugins, license, and the `lastrun` file that records the most recently launched install path. If you want to keep separate profiles, use the `BN_USER_DIRECTORY` environment variable along with the [`BN_QSETTINGS_POSTFIX`](#resetting-qsettings) variable to also separate window layout, recent files, and dialog history.
+Each installation updates only itself and the update setting and [update channels](index.md#updates) are settings that are saved per-install. Otherwise, they share the same [user folder](index.md#user-folder), sharing settings, plugins, license, and the `lastrun` file that records the most recently launched install path. If you want to keep separate profiles, use the `BN_USER_DIRECTORY` environment variable along with the [`BN_QSETTINGS_POSTFIX`](#resetting-qsettings) variable to also separate window layout, recent files, and dialog history.
 
 ### Installing
 
@@ -109,7 +109,7 @@ The below steps are specific to different platforms that Binary Ninja runs on.  
 
 When launching Binary Ninja on windows, Defender can cause extremely long start-up times when first run after reboot. The fix is to explicitly <a href="https://learn.microsoft.com/en-us/defender-endpoint/configure-extension-file-exclusions-microsoft-defender-antivirus">white-list</a> the binaryninja.exe file.
 
-Note that the problem is especially exaccerbated by adding a large number of python dependencies for plugins as the initial python plugin loading triggering accessing all of the python modules is the slowest part of the scan process.
+The problem is exacerbated by adding many Python dependencies for plugins: initial plugin loading accesses the Python modules, which is the slowest part of the scan process.
 
 #### Some Graphics Chipsets
 
@@ -200,7 +200,7 @@ apt-get install libgl1-mesa-glx libfontconfig1 libxrender1 libegl1-mesa libxi6 l
 
 #### Firefox Snap on Ubuntu 22.04 and Newer
 
-If you have installed Binary Ninja into a path outside your home folder such as `/opt`, you will likely run into this limitation. 
+If you have installed Binary Ninja into a path outside your home folder such as `/opt`, you will likely run into this limitation.
 
 Ubuntu 22.04 and newer ship Firefox as a snap that is confined by AppArmor. The confinement blocks `snap.firefox.firefox` from reading arbitrary system paths outside the user's home directory, so paths such as `/opt/binaryninja/docs` are inaccessible. Binary Ninja's local help viewer fails under these conditions because Firefox cannot open the documentation files it launches from `/opt/binaryninja/`, and `dmesg` will show `apparmor="DENIED"` entries similar to:
 

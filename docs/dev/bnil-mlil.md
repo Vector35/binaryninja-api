@@ -174,22 +174,22 @@ The function type describes the return type, parameter list, and calling convent
 * `calling_convention` - the calling convention this function uses
 * `const` - boolean value indicating if this a const function
 * `has_variable_arguments` - boolean value indicating if this function is variadic
-* `parameters` - contains a list of `Type` objects
+* `parameters` - a list of `FunctionParameter` objects, including each parameter's name, type, and optional storage location
 * `platform` - the `Platform` object associated with this function
 * `return_value` - the return type of this function
 * `stack_adjustment` - the size in bytes of the stack adjustment that this function makes
 
 ### PointerTypeClass
 
-A pointer type simply describes a pointer and what it points to in the `target`/`element_type` property.
+A pointer type simply describes a pointer and what it points to in the `target` property.
 
 ### ArrayTypeClass
 
 Array types function similarly to pointer types however the array type knows how large the object that it points to is:
 
-* `target`/`element_type` - the type of element this array is constructed of
+* `element_type` - the type of element this array is constructed of
 * `count` - the count of array elements
-* `width` - the size of the array (`count * target.width`)
+* `width` - the size of the array (`count * element_type.width`)
 
 ### FragmentTypeClass
 
@@ -209,7 +209,7 @@ Structure types are simple in principle but are complicated by the need for them
 
 ### NamedTypeReferenceClass
 
-NamedTypeReference types are symbolic references to other types. They function much like a C `typedef` (i.e. Name X corresponds to type Y). The NamedTypeReference has a `type_class` property describing what sort of type it is pointing at.
+NamedTypeReference types are symbolic references to other types. They function much like a C `typedef` (i.e. Name X corresponds to type Y). The NamedTypeReference has a `named_type_class` property describing what sort of type it is pointing at.
 
 ```c
 enum NamedTypeReferenceClass
@@ -303,7 +303,7 @@ The parameter list can be accessed through the `params` property:
 
 * `MLIL_SET_VAR` - Sets a variable `dest` to the result of an expression `src`
 * `MLIL_SET_VAR_ALIASED` - Sets a variable `prev` to the result of an expression `src` with the additional information that other variables point to the same variable destination
-* `MLIL_SET_VAR_ALIASED_FIELD` - Sets a field at an `offset` of the variable `prev` with the expression `src` with the additional information that the variable is alised by other variables
+* `MLIL_SET_VAR_ALIASED_FIELD` - Sets a field at an `offset` of the variable `prev` with the expression `src` with the additional information that the variable is aliased by other variables
 * `MLIL_SET_VAR_FIELD` - Sets variable `dest` at `offset` to the `src` expression
 * `MLIL_SET_VAR_SPLIT` - Sets a pair of variables `high`:`low` to the result of the `src` expression
 * `MLIL_LOAD` - Read `size` bytes from the memory address `src`
@@ -380,7 +380,7 @@ The parameter list can be accessed through the `params` property:
 * `MLIL_FLOAT_CONV` - Convert bytes in `src` expression to IEEE754 floating point
 * `MLIL_ROUND_TO_INT` - Rounds the IEEE754 floating point number `src` expression
 * `MLIL_FLOOR` - Computes the floating point floor of the IEEE754 number in `src`
-* `MLIL_CEIL` - Computes the floating point floor of the IEEE754 number in `src`
+* `MLIL_CEIL` - Computes the floating point ceiling of the IEEE754 number in `src`
 * `MLIL_FTRUNC` - Computes the floating point truncation of the IEEE754 number in `src`
 * `MLIL_SX` - Sign extends the `src` expression
 * `MLIL_ZX` - Zero extends the `src` expression

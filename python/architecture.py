@@ -2539,7 +2539,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 	def is_invert_branch_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
-		``is_always_branch_patch_available`` determines if the instruction ``data`` at ``addr`` can be inverted.
+		``is_invert_branch_patch_available`` determines if the instruction ``data`` at ``addr`` can be inverted.
 
 		.. note:: Architecture subclasses should implement this method.
 
@@ -3260,7 +3260,7 @@ class CoreArchitecture(Architecture):
 
 	def is_invert_branch_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
-		``is_always_branch_patch_available`` determines if the instruction ``data`` at ``addr`` can be inverted.
+		``is_invert_branch_patch_available`` determines if the instruction ``data`` at ``addr`` can be inverted.
 
 		:param str data: bytes for the instruction to be checked
 		:param int addr: the virtual address of the instruction to be patched

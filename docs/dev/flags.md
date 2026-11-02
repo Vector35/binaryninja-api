@@ -234,11 +234,11 @@ What happens when you mark an instruction the producer of a certain flag, but no
 
 Here, `sbb` is an `s` producer and a `pv` producer.
 
-Flag `s` is mapped to FlagRole.NegativeSignRole which is "yes" in the table, so Binary Ninja emits the default LLIL to set it.
+Flag `s` is mapped to FlagRole.NegativeSignFlagRole which is "yes" in the table, so Binary Ninja emits the default LLIL to set it.
 
-Flag `pv` is mapped to FlagRole.OverflowFlagRole which is not "yes", so Binary Ninja doesn't have an implementation and emits LLIL_UNIMPLEMENTED.
+Flag `pv` is mapped to FlagRole.OverflowFlagRole which is not "yes", so Binary Ninja doesn't have an implementation and emits LLIL_UNIMPL.
 
-If you need to define your own flag setting code, set the flag role to SpecialFlagRole and override `get_flag_write_low_level_il()`. There are two contraints you must work around:
+If you need to define your own flag setting code, set the flag role to SpecialFlagRole and override `get_flag_write_low_level_il()`. There are two constraints you must work around:
 
 * you do not have access to the operation result, which is tempting to use in negative and overflow calculation
 * the operands given are not expressions, they're the registers or constants themselves
@@ -252,7 +252,8 @@ In 6502, the subtraction carry flag (borrow) is inverted from the textbook behav
 ```python
 flag_roles = {
 	"c": FlagRole.SpecialFlagRole,  # Not a normal carry flag, subtract result is inverted
-	...
+	# Other flag roles...
+}
 ```
 
 Then, later in `get_flag_write_low_level_il()` there is:
@@ -261,10 +262,10 @@ Then, later in `get_flag_write_low_level_il()` there is:
 def get_flag_write_low_level_il(self, op, size, write_type, flag, operands, il):
 	if flag == 'c':
 		if (op == LowLevelILOperation.LLIL_SUB) or (op == LowLevelILOperation.LLIL_SBB):
-			# Subtraction carry flag is inverted from the commom implementation
+			# Subtraction carry flag is inverted from the common implementation
 			return il.not_expr(0, self.get_default_flag_write_low_level_il(op, size, FlagRole.CarryFlagRole, operands, il))
-			# Other operations use a normal carry flag
-			return self.get_default_flag_write_low_level_il(op, size, FlagRole.CarryFlagRole, operands, il)
+		# Other operations use a normal carry flag
+		return self.get_default_flag_write_low_level_il(op, size, FlagRole.CarryFlagRole, operands, il)
 	...
 ```
 

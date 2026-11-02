@@ -500,6 +500,13 @@ impl MediumLevelILInstruction {
                 num_params: op.operands[2] as usize,
                 first_param: op.operands[3] as usize,
             }),
+            MLIL_EXCEPTION => Op::Exception(Exception {
+                discriminator: op.operands[4],
+                num_outputs: op.operands[0] as usize,
+                first_output: op.operands[1] as usize,
+                num_params: op.operands[2] as usize,
+                first_param: op.operands[3] as usize,
+            }),
             MLIL_INTRINSIC => Op::Intrinsic(Intrinsic {
                 num_outputs: op.operands[0] as usize,
                 first_output: op.operands[1] as usize,
@@ -560,7 +567,20 @@ impl MediumLevelILInstruction {
                 first_param: op.operands[2] as usize,
                 src_memory: op.operands[3],
             }),
+            MLIL_EXCEPTION_SSA => Op::ExceptionSsa(ExceptionSsa {
+                discriminator: op.operands[4],
+                output: MediumLevelExpressionIndex::from(op.operands[0]),
+                num_params: op.operands[1] as usize,
+                first_param: op.operands[2] as usize,
+                src_memory: op.operands[3],
+            }),
             MLIL_SYSCALL_UNTYPED_SSA => Op::SyscallUntypedSsa(SyscallUntypedSsa {
+                output: MediumLevelExpressionIndex::from(op.operands[0]),
+                params: MediumLevelExpressionIndex::from(op.operands[1]),
+                stack: MediumLevelExpressionIndex::from(op.operands[2]),
+            }),
+            MLIL_EXCEPTION_UNTYPED_SSA => Op::ExceptionUntypedSsa(ExceptionUntypedSsa {
+                discriminator: op.operands[3],
                 output: MediumLevelExpressionIndex::from(op.operands[0]),
                 params: MediumLevelExpressionIndex::from(op.operands[1]),
                 stack: MediumLevelExpressionIndex::from(op.operands[2]),
@@ -580,6 +600,13 @@ impl MediumLevelILInstruction {
                 stack: MediumLevelExpressionIndex::from(op.operands[4]),
             }),
             MLIL_SYSCALL_UNTYPED => Op::SyscallUntyped(SyscallUntyped {
+                num_outputs: op.operands[0] as usize,
+                first_output: op.operands[1] as usize,
+                params: MediumLevelExpressionIndex::from(op.operands[2]),
+                stack: MediumLevelExpressionIndex::from(op.operands[3]),
+            }),
+            MLIL_EXCEPTION_UNTYPED => Op::ExceptionUntyped(ExceptionUntyped {
+                discriminator: op.operands[4],
                 num_outputs: op.operands[0] as usize,
                 first_output: op.operands[1] as usize,
                 params: MediumLevelExpressionIndex::from(op.operands[2]),
@@ -1037,6 +1064,19 @@ impl MediumLevelILInstruction {
                     .map(|expr| expr.lift())
                     .collect(),
             }),
+            Exception(op) => Lifted::Exception(LiftedExceptionCall {
+                discriminator: op.discriminator,
+                output: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
+                params: self
+                    .get_expr_list(2)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
+            }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
                 output: self.get_ssa_var_list(0),
                 intrinsic: CoreIntrinsic::new(
@@ -1095,6 +1135,25 @@ impl MediumLevelILInstruction {
                     src_memory: op.src_memory,
                 })
             }
+            ExceptionSsa(op) => {
+                let output_instr = self
+                    .function
+                    .instruction_from_expr_index(op.output)
+                    .expect("Valid output expression index");
+                Lifted::ExceptionSsa(LiftedExceptionSsa {
+                    discriminator: op.discriminator,
+                    output: get_call_output_ssa(&output_instr)
+                        .iter()
+                        .map(|expr| expr.lift())
+                        .collect(),
+                    params: self
+                        .get_expr_list(1)
+                        .iter()
+                        .map(|expr| expr.lift())
+                        .collect(),
+                    src_memory: op.src_memory,
+                })
+            }
             SyscallUntypedSsa(op) => {
                 let output_instr = self
                     .function
@@ -1117,6 +1176,29 @@ impl MediumLevelILInstruction {
                 })
             }
 
+            ExceptionUntypedSsa(op) => {
+                let output_instr = self
+                    .function
+                    .instruction_from_expr_index(op.output)
+                    .expect("Valid output expression index");
+                let params_instr = self
+                    .function
+                    .instruction_from_expr_index(op.params)
+                    .expect("Valid params expression index");
+                Lifted::ExceptionUntypedSsa(LiftedExceptionUntypedSsa {
+                    discriminator: op.discriminator,
+                    output: get_call_output_ssa(&output_instr)
+                        .iter()
+                        .map(|expr| expr.lift())
+                        .collect(),
+                    params: get_call_params_ssa(&params_instr)
+                        .iter()
+                        .map(|param| param.lift())
+                        .collect(),
+                    stack: self.lift_operand(op.stack),
+                })
+            }
+
             CallUntyped(op) => Lifted::CallUntyped(self.lift_call_untyped(op)),
             TailcallUntyped(op) => Lifted::TailcallUntyped(self.lift_call_untyped(op)),
             SyscallUntyped(op) => {
@@ -1125,6 +1207,26 @@ impl MediumLevelILInstruction {
                     .instruction_from_expr_index(op.params)
                     .expect("Valid params expression index");
                 Lifted::SyscallUntyped(LiftedSyscallUntyped {
+                    output: self
+                        .get_expr_list(0)
+                        .iter()
+                        .map(|expr| expr.lift())
+                        .collect(),
+                    params: get_call_params(&params_instr)
+                        .iter()
+                        .map(|param| param.lift())
+                        .collect(),
+                    stack: self.lift_operand(op.stack),
+                })
+            }
+
+            ExceptionUntyped(op) => {
+                let params_instr = self
+                    .function
+                    .instruction_from_expr_index(op.params)
+                    .expect("Valid params expression index");
+                Lifted::ExceptionUntyped(LiftedExceptionUntyped {
+                    discriminator: op.discriminator,
                     output: self
                         .get_expr_list(0)
                         .iter()
@@ -1906,6 +2008,7 @@ pub enum MediumLevelILInstructionKind {
     CallParamSsa(CallParamSsa),
     Tailcall(Call),
     Syscall(Syscall),
+    Exception(Exception),
     Intrinsic(Intrinsic),
     IntrinsicSsa(IntrinsicSsa),
     MemoryIntrinsicSsa(MemoryIntrinsicSsa),
@@ -1915,10 +2018,13 @@ pub enum MediumLevelILInstructionKind {
     CallUntypedSsa(CallUntypedSsa),
     TailcallUntypedSsa(CallUntypedSsa),
     SyscallSsa(SyscallSsa),
+    ExceptionSsa(ExceptionSsa),
     SyscallUntypedSsa(SyscallUntypedSsa),
+    ExceptionUntypedSsa(ExceptionUntypedSsa),
     CallUntyped(CallUntyped),
     TailcallUntyped(CallUntyped),
     SyscallUntyped(SyscallUntyped),
+    ExceptionUntyped(ExceptionUntyped),
     SeparateParamList(SeparateParamList),
     SharedParamSlot(SharedParamSlot),
     VarOutput(VarOutput),

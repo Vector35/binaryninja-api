@@ -363,6 +363,66 @@ impl Function {
         }
     }
 
+    /// Resolve the architectural exception emitted at this instruction address, if present.
+    pub fn exception_discriminator_at(&self, address: u64) -> Option<u64> {
+        let mut value = 0;
+        unsafe { BNGetFunctionExceptionDiscriminatorAt(self.handle, address, &mut value) }
+            .then_some(value)
+    }
+
+    pub fn user_exception_calling_convention(&self, address: u64) -> Option<Ref<CoreCallingConvention>> {
+        let value = unsafe { BNGetUserExceptionCallingConvention(self.handle, address) };
+        if value.is_null() {
+            None
+        } else {
+            Some(unsafe {
+                CoreCallingConvention::ref_from_raw(
+                    value,
+                    CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(value)),
+                )
+            })
+        }
+    }
+
+    pub fn exception_calling_convention_at(&self, address: u64) -> Option<Ref<CoreCallingConvention>> {
+        let value = unsafe { BNGetExceptionCallingConventionAt(self.handle, address) };
+        if value.is_null() {
+            None
+        } else {
+            Some(unsafe {
+                CoreCallingConvention::ref_from_raw(
+                    value,
+                    CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(value)),
+                )
+            })
+        }
+    }
+
+    /// Override one exception's ABI without changing its platform model or continuation.
+    /// Pass None to restore the platform convention. Saved in the database; supports undo.
+    pub fn set_user_exception_calling_convention(
+        &self,
+        address: u64,
+        convention: Option<&CoreCallingConvention>,
+    ) -> bool {
+        unsafe {
+            BNSetUserExceptionCallingConvention(
+                self.handle,
+                address,
+                convention.map_or(std::ptr::null_mut(), |cc| cc.handle),
+            )
+        }
+    }
+
+    /// Return the platform model, independently of any instruction-specific ABI override.
+    pub fn exception_model_at(&self, address: u64) -> Option<crate::platform::ExceptionModel> {
+        let mut model = std::mem::MaybeUninit::uninit();
+        unsafe {
+            BNGetFunctionExceptionModelAt(self.handle, address, model.as_mut_ptr())
+                .then(|| model.assume_init())
+        }
+    }
+
     pub fn view(&self) -> Ref<BinaryView> {
         unsafe {
             let view = BNGetFunctionData(self.handle);

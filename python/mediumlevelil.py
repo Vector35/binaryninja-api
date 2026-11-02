@@ -435,8 +435,21 @@ class MediumLevelILInstruction(BaseILInstruction):
 	                                               ], MediumLevelILOperation.MLIL_VAR_PHI: [
 	                                                   ("dest", "var_ssa"), ("src", "var_ssa_list")
 	                                               ], MediumLevelILOperation.MLIL_MEM_PHI: [("dest_memory", "int"),
-	                                                                                        ("src_memory", "int_list")]
-	}
+	                                                                                        ("src_memory", "int_list")],
+
+	    MediumLevelILOperation.MLIL_EXCEPTION: [
+	        ("output", "expr_list"), ("params", "expr_list"), ("discriminator", "int")
+	    ],
+	    MediumLevelILOperation.MLIL_EXCEPTION_UNTYPED: [
+	        ("output", "expr_list"), ("params", "expr"), ("stack", "expr"), ("discriminator", "int")
+	    ],
+	    MediumLevelILOperation.MLIL_EXCEPTION_SSA: [
+	        ("output", "expr"), ("params", "expr_list"), ("src_memory", "int"), ("discriminator", "int")
+	    ],
+	    MediumLevelILOperation.MLIL_EXCEPTION_UNTYPED_SSA: [
+	        ("output", "expr"), ("params", "expr"), ("stack", "expr"), ("discriminator", "int")
+	    ],
+}
 
 	@staticmethod
 	def show_mlil_hierarchy():
@@ -2228,6 +2241,39 @@ class MediumLevelILSyscall(MediumLevelILInstruction, Syscall):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILException(MediumLevelILInstruction):
+	@property
+	def discriminator(self) -> int:
+		return self.instr.operands[4]
+
+	@property
+	def output(self) -> List[variable.Variable]:
+		result = []
+		for expr in self.output_exprs:
+			var = expr._var_written_for_function_call_output()
+			if var is not None:
+				result.append(var)
+		return result
+
+	@property
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(2, 3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('discriminator', self.discriminator, 'int'),
+			('output', self.output, 'List[Variable]'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
+		]
+
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVarSsaField(MediumLevelILInstruction, SSA):
 	@property
 	def src(self) -> SSAVariable:
@@ -2565,6 +2611,46 @@ class MediumLevelILSyscallUntyped(MediumLevelILCallBase, Syscall):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILExceptionUntyped(MediumLevelILCallBase):
+	@property
+	def discriminator(self) -> int:
+		return self.instr.operands[4]
+
+	@property
+	def output(self) -> List[variable.Variable]:
+		result = []
+		for expr in self.output_exprs:
+			var = expr._var_written_for_function_call_output()
+			if var is not None:
+				result.append(var)
+		return result
+
+	@property
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		inst = self._get_expr(2)
+		assert isinstance(inst, MediumLevelILCallParam), "MediumLevelILCallUntyped return bad type for 'params'"
+		return inst.src
+
+	@property
+	def stack(self) -> MediumLevelILInstruction:
+		return self._get_expr(3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('discriminator', self.discriminator, 'int'),
+			('output', self.output, 'List[Variable]'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
+			('stack', self.stack, 'MediumLevelILInstruction'),
+		]
+
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILIntrinsic(MediumLevelILInstruction, Intrinsic):
 	@property
 	def output(self) -> List[variable.Variable]:
@@ -2828,6 +2914,50 @@ class MediumLevelILSyscallSsa(MediumLevelILCallBase, Syscall, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILExceptionSsa(MediumLevelILCallBase, SSA):
+	@property
+	def discriminator(self) -> int:
+		return self.instr.operands[4]
+
+	@property
+	def output(self) -> List[SSAVariable]:
+		inst = self._get_expr(0)
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILExceptionSsa return bad type for output"
+		return inst.dest
+
+	@property
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		inst = self._get_expr(0)
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILExceptionSsa return bad type for output"
+		return inst.dest_exprs
+
+	@property
+	def output_dest_memory(self) -> int:
+		inst = self._get_expr(0)
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILExceptionSsa return bad type for output"
+		return inst.dest_memory
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(1, 2)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('discriminator', self.discriminator, 'int'),
+			('output', self.output, 'List[SSAVariable]'),
+			('output_dest_memory', self.output_dest_memory, 'int'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
+			('src_memory', self.src_memory, 'int'),
+		]
+
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSyscallUntypedSsa(MediumLevelILCallBase, Syscall, SSA):
 	@property
 	def output(self) -> List[SSAVariable]:
@@ -2880,6 +3010,67 @@ class MediumLevelILSyscallUntypedSsa(MediumLevelILCallBase, Syscall, SSA):
 			('params_src_memory', self.params_src_memory, 'int'),
 			('stack', self.stack, 'MediumLevelILInstruction'),
 		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILExceptionUntypedSsa(MediumLevelILCallBase, SSA):
+	@property
+	def discriminator(self) -> int:
+		return self.instr.operands[3]
+
+	@property
+	def output(self) -> List[SSAVariable]:
+		inst = self._get_expr(0)
+		assert isinstance(
+		    inst, MediumLevelILCallOutputSsa
+		), "MediumLevelILExceptionUntypedSsa return bad type for 'output'"
+		return inst.dest
+
+	@property
+	def output_exprs(self) -> List[MediumLevelILInstruction]:
+		inst = self._get_expr(0)
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILExceptionSsa return bad type for output"
+		return inst.dest_exprs
+
+	@property
+	def output_dest_memory(self) -> int:
+		inst = self._get_expr(0)
+		assert isinstance(
+		    inst, MediumLevelILCallOutputSsa
+		), "MediumLevelILExceptionUntypedSsa return bad type for 'output_dest_memory'"
+		return inst.dest_memory
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		inst = self._get_expr(1)
+		assert isinstance(
+		    inst, MediumLevelILCallParamSsa
+		), "MediumLevelILExceptionUntypedSsa return bad type for 'params'"
+		return inst.src
+
+	@property
+	def params_src_memory(self) -> int:
+		inst = self._get_expr(1)
+		assert isinstance(
+		    inst, MediumLevelILCallParamSsa
+		), "MediumLevelILExceptionUntypedSsa return bad type for 'params_src_memory'"
+		return inst.src_memory
+
+	@property
+	def stack(self) -> MediumLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('discriminator', self.discriminator, 'int'),
+			('output', self.output, 'List[SSAVariable]'),
+			('output_dest_memory', self.output_dest_memory, 'int'),
+			('params', self.params, 'List[SSAVariable]'),
+			('params_src_memory', self.params_src_memory, 'int'),
+			('stack', self.stack, 'MediumLevelILInstruction'),
+		]
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILLoadStructSsa(MediumLevelILInstruction, Load, SSA):
@@ -3662,6 +3853,11 @@ ILInstruction = {
     MediumLevelILOperation.MLIL_FORCE_VER: MediumLevelILForceVer,
     MediumLevelILOperation.MLIL_FORCE_VER_SSA: MediumLevelILForceVerSsa,
 	MediumLevelILOperation.MLIL_BLOCK_TO_EXPAND: MediumLevelILBlockToExpand,  # [("exprs", "expr_list")],
+
+    MediumLevelILOperation.MLIL_EXCEPTION: MediumLevelILException,
+    MediumLevelILOperation.MLIL_EXCEPTION_UNTYPED: MediumLevelILExceptionUntyped,
+    MediumLevelILOperation.MLIL_EXCEPTION_SSA: MediumLevelILExceptionSsa,
+    MediumLevelILOperation.MLIL_EXCEPTION_UNTYPED_SSA: MediumLevelILExceptionUntypedSsa,
 }
 
 
@@ -5693,6 +5889,25 @@ class MediumLevelILFunction:
 			self.add_operand_list(self._call_output_list(output)),
 			len(params),
 			self.add_operand_list(params),
+			size=0,
+			source_location=loc
+		)
+
+
+	def exception(
+		self, discriminator: int, output: CallOutputList, params: List[ExpressionIndex],
+		loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""Build an exception retaining its architectural discriminator and explicit operands."""
+		if not isinstance(discriminator, int) or not 0 <= discriminator <= 0xffffffffffffffff:
+			raise ValueError("Exception discriminator must be a uint64")
+		return self.expr(
+			MediumLevelILOperation.MLIL_EXCEPTION,
+			len(output),
+			self.add_operand_list(self._call_output_list(output)),
+			len(params),
+			self.add_operand_list(params),
+			discriminator,
 			size=0,
 			source_location=loc
 		)

@@ -2693,6 +2693,48 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		core.BNRegisterCallingConvention(self.handle, cc.handle)
 
+	@staticmethod
+	def _validate_exception_convention_rule(discriminator: int, mask: int = 0xffffffffffffffff) -> None:
+		if not isinstance(discriminator, int) or not 0 <= discriminator <= 0xffffffffffffffff:
+			raise ValueError('Exception discriminator must be an unsigned 64-bit integer')
+		if not isinstance(mask, int) or not 0 <= mask <= 0xffffffffffffffff or discriminator & ~mask:
+			raise ValueError('Exception mask must be unsigned 64-bit and include all discriminator bits')
+
+	def register_exception_calling_convention(self, cc: 'callingconvention.CallingConvention',
+			discriminator: int, mask: int = 0xffffffffffffffff) -> None:
+		"""Allow explicit exception ABI selection when ``(event & mask) == discriminator``.
+
+		The convention must already be registered on this architecture and support integer
+		register arguments/results. Duplicate rules are harmless; multiple rules are ORed.
+		Register rules during plugin initialization. This does not select an ABI or change
+		ordinary function convention eligibility. Rules are not saved in analysis databases.
+		"""
+		self._validate_exception_convention_rule(discriminator, mask)
+		if not core.BNRegisterExceptionCallingConvention(self.handle, cc.handle, discriminator, mask):
+			raise ValueError('Invalid exception rule or unregistered/incompatible calling convention')
+
+	def unregister_exception_calling_convention(self, cc: 'callingconvention.CallingConvention',
+			discriminator: int, mask: int = 0xffffffffffffffff) -> bool:
+		"""Remove one eligibility rule; reanalyze affected functions to refresh their IL."""
+		self._validate_exception_convention_rule(discriminator, mask)
+		return core.BNUnregisterExceptionCallingConvention(self.handle, cc.handle, discriminator, mask)
+
+	def is_exception_calling_convention_eligible(self, cc: 'callingconvention.CallingConvention', discriminator: int) -> bool:
+		"""Check eligibility for explicit exception overrides, independently of heuristic eligibility."""
+		self._validate_exception_convention_rule(discriminator)
+		return core.BNIsExceptionCallingConventionEligible(self.handle, cc.handle, discriminator)
+
+	def get_eligible_exception_calling_conventions(self, discriminator: int) -> List['callingconvention.CallingConvention']:
+		"""Return an owned, deduplicated snapshot of conventions allowed for this exception."""
+		self._validate_exception_convention_rule(discriminator)
+		count = ctypes.c_ulonglong()
+		values = core.BNGetEligibleExceptionCallingConventions(self.handle, discriminator, count)
+		try:
+			return [callingconvention.CoreCallingConvention(handle=core.BNNewCallingConventionReference(values[i]))
+				for i in range(count.value)]
+		finally:
+			core.BNFreeCallingConventionList(values, count.value)
+
 	@property
 	def default_calling_convention(self):
 		"""

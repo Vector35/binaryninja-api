@@ -1518,6 +1518,32 @@ pub trait ArchitectureExt: Architecture {
         }
     }
 
+    /// Register an opt-in exception rule for an already registered convention.
+    /// Rules match `(event & mask) == discriminator` and are independent of heuristic eligibility.
+    fn register_exception_calling_convention(
+        &self, convention: &CoreCallingConvention, discriminator: u64, mask: u64,
+    ) -> bool {
+        unsafe { BNRegisterExceptionCallingConvention(self.as_ref().handle, convention.handle, discriminator, mask) }
+    }
+
+    fn unregister_exception_calling_convention(
+        &self, convention: &CoreCallingConvention, discriminator: u64, mask: u64,
+    ) -> bool {
+        unsafe { BNUnregisterExceptionCallingConvention(self.as_ref().handle, convention.handle, discriminator, mask) }
+    }
+
+    fn is_exception_calling_convention_eligible(&self, convention: &CoreCallingConvention, discriminator: u64) -> bool {
+        unsafe { BNIsExceptionCallingConventionEligible(self.as_ref().handle, convention.handle, discriminator) }
+    }
+
+    fn eligible_exception_calling_conventions(&self, discriminator: u64) -> Array<CoreCallingConvention> {
+        unsafe {
+            let mut count = 0;
+            let values = BNGetEligibleExceptionCallingConventions(self.as_ref().handle, discriminator, &mut count);
+            Array::new(values, count, self.as_ref().handle())
+        }
+    }
+
     cc_func!(
         get_default_calling_convention,
         BNGetArchitectureDefaultCallingConvention,

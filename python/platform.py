@@ -28,6 +28,7 @@ from typing import List, Dict, Optional, Tuple, Any
 # Binary Ninja components
 import binaryninja
 from . import _binaryninjacore as core
+from .enums import ExceptionModelKind, ExceptionContinuation
 from . import types
 from . import typeparser
 from . import callingconvention
@@ -36,6 +37,47 @@ from . import architecture
 from . import typecontainer
 from . import binaryview
 from .log import log_error_for_exception
+
+
+@dataclass(frozen=True)
+class ExceptionModel:
+	kind: ExceptionModelKind
+	namespace: int = 0
+	continuation: ExceptionContinuation = ExceptionContinuation.TerminateAfterException
+
+	@classmethod
+	def _from_core(cls, model):
+		return cls(ExceptionModelKind(model.kind), model.nameSpace, ExceptionContinuation(model.continuation))
+
+	def _to_core(self):
+		_validate_namespace_id(self.namespace)
+		return core.BNExceptionModel(ExceptionModelKind(self.kind), self.namespace, ExceptionContinuation(self.continuation))
+
+
+@dataclass(frozen=True)
+class ExceptionModelRule:
+	discriminator: int
+	mask: int
+	model: ExceptionModel
+
+
+@dataclass(frozen=True)
+class ExceptionDisplay:
+	"""Presentation only. A value mask displays ``(discriminator & value_mask) >> value_shift``."""
+	name: str
+	value_mask: Optional[int] = None
+	value_shift: int = 0
+
+	@classmethod
+	def _from_core(cls, display):
+		return cls(core.pyNativeStr(display.name), display.valueMask if display.hasValue else None, display.valueShift)
+
+
+@dataclass(frozen=True)
+class ExceptionDisplayRule:
+	discriminator: int
+	mask: int
+	display: ExceptionDisplay
 
 
 @dataclass(frozen=True)
@@ -161,7 +203,8 @@ class Platform(metaclass=_PlatformMetaClass):
 				    len(self.__class__.type_include_dirs)
 				)
 				assert _handle is not None
-				self.__class__._registered_platforms.append(self)
+			# The core retains these callbacks for every custom platform, with or without types.
+			self.__class__._registered_platforms.append(self)
 		else:
 			if type(self) is Platform:
 				binaryninja.log_warn(
@@ -485,6 +528,91 @@ class Platform(metaclass=_PlatformMetaClass):
 		Sets the system call convention
 		"""
 		self.set_system_call_convention_in_namespace(0, value)
+
+	def set_exception_display(
+			self, discriminator: int, name: str, mask: int = 0xffffffffffffffff,
+			value_mask: Optional[int] = None, value_shift: int = 0) -> None:
+		"""Register a presentation-only rule, copied and cached in core.
+
+		The most specific matching mask wins. ``value_mask=None`` omits the displayed discriminator;
+		otherwise the displayed value is ``(discriminator & value_mask) >> value_shift``.
+		Changes are visible on the next render without function reanalysis.
+		"""
+		for value in (discriminator, mask, value_mask if value_mask is not None else 0):
+			if not isinstance(value, int) or not 0 <= value <= 0xffffffffffffffff:
+				raise ValueError("Exception discriminators and masks must be uint64 values")
+		if not isinstance(name, str) or not name or '\0' in name:
+			raise ValueError("Exception display name must be a nonempty string without NUL characters")
+		if not isinstance(value_shift, int) or not 0 <= value_shift < 64:
+			raise ValueError("Exception display value shift must be between 0 and 63")
+		display = core.BNExceptionDisplay(name.encode('utf-8'), value_mask is not None, value_mask or 0, value_shift)
+		rule = core.BNExceptionDisplayRule(discriminator, mask, display)
+		if not core.BNSetPlatformExceptionDisplay(self.handle, rule):
+			raise ValueError("Noncanonical exception display rule or ambiguous overlapping mask")
+
+	def remove_exception_display(self, discriminator: int, mask: int = 0xffffffffffffffff) -> bool:
+		for value in (discriminator, mask):
+			if not isinstance(value, int) or not 0 <= value <= 0xffffffffffffffff:
+				raise ValueError("Exception discriminators and masks must be uint64 values")
+		return core.BNRemovePlatformExceptionDisplay(self.handle, discriminator, mask)
+
+	def get_exception_display(self, discriminator: int) -> Optional[ExceptionDisplay]:
+		if not isinstance(discriminator, int) or not 0 <= discriminator <= 0xffffffffffffffff:
+			raise ValueError("Exception discriminator must be a uint64")
+		display = core.BNGetPlatformExceptionDisplay(self.handle, discriminator)
+		if not display:
+			return None
+		try:
+			return ExceptionDisplay._from_core(display.contents)
+		finally:
+			core.BNFreeExceptionDisplay(display)
+
+	@property
+	def exception_displays(self) -> List[ExceptionDisplayRule]:
+		count = ctypes.c_ulonglong()
+		rules = core.BNGetPlatformExceptionDisplays(self.handle, count)
+		try:
+			return [ExceptionDisplayRule(rules[i].discriminator, rules[i].mask,
+				ExceptionDisplay._from_core(rules[i].display)) for i in range(count.value)]
+		finally:
+			core.BNFreeExceptionDisplayRuleList(rules, count.value)
+
+	def set_exception_model(self, discriminator: int, model: ExceptionModel, mask: int = 0xffffffffffffffff) -> None:
+		"""Register or replace a declarative rule before analysis; matching is cached in core.
+
+		The most specific mask wins. Equal-specificity overlapping rules are rejected.
+		After changing rules on an analyzed view, explicitly request function reanalysis.
+		"""
+		for value in (discriminator, mask):
+			if not isinstance(value, int) or not 0 <= value <= 0xffffffffffffffff:
+				raise ValueError("Exception discriminator and mask must be uint64 values")
+		rule = core.BNExceptionModelRule(discriminator, mask, model._to_core())
+		if not core.BNSetPlatformExceptionModel(self.handle, rule):
+			raise ValueError("Invalid exception rule, namespace, or ambiguous overlapping mask")
+
+	def remove_exception_model(self, discriminator: int, mask: int = 0xffffffffffffffff) -> bool:
+		for value in (discriminator, mask):
+			if not isinstance(value, int) or not 0 <= value <= 0xffffffffffffffff:
+				raise ValueError("Exception discriminator and mask must be uint64 values")
+		return core.BNRemovePlatformExceptionModel(self.handle, discriminator, mask)
+
+	def get_exception_model(self, discriminator: int) -> Optional[ExceptionModel]:
+		if not isinstance(discriminator, int) or not 0 <= discriminator <= 0xffffffffffffffff:
+			raise ValueError("Exception discriminator must be a uint64")
+		model = core.BNExceptionModel()
+		if not core.BNGetPlatformExceptionModel(self.handle, discriminator, model):
+			return None
+		return ExceptionModel._from_core(model)
+
+	@property
+	def exception_models(self) -> List[ExceptionModelRule]:
+		count = ctypes.c_ulonglong()
+		rules = core.BNGetPlatformExceptionModels(self.handle, count)
+		try:
+			return [ExceptionModelRule(rules[i].discriminator, rules[i].mask,
+				ExceptionModel._from_core(rules[i].model)) for i in range(count.value)]
+		finally:
+			core.BNFreeExceptionModelRuleList(rules)
 
 	@property
 	def system_call_namespaces(self) -> Dict[int, SystemCallNamespaceInfo]:

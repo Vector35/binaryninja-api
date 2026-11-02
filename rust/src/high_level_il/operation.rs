@@ -575,3 +575,33 @@ pub struct LiftedWhileSsa {
     pub condition: Box<HighLevelILLiftedInstruction>,
     pub body: Box<HighLevelILLiftedInstruction>,
 }
+
+#[derive(Debug, Copy, Clone)]
+pub struct Exception {
+    pub discriminator: u64,
+    pub first_param: usize,
+    pub num_params: usize,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedException {
+    pub discriminator: u64,
+    pub params: Vec<HighLevelILLiftedInstruction>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct ExceptionSsa {
+    pub discriminator: u64,
+    pub first_param: usize,
+    pub num_params: usize,
+    pub dest_memory: u64,
+    pub src_memory: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedExceptionSsa {
+    pub discriminator: u64,
+    pub params: Vec<HighLevelILLiftedInstruction>,
+    pub dest_memory: u64,
+    pub src_memory: u64,
+}

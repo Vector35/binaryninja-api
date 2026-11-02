@@ -1578,6 +1578,64 @@ where
     }
 }
 
+pub struct ExceptionSsa;
+
+impl<'func, M, F> Operation<'func, M, F, ExceptionSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    /// Get the output expression of the call.
+    ///
+    /// NOTE: This is currently always [`CallOutputSsa`].
+    pub fn output_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[0] as usize),
+        )
+    }
+
+    /// Get the parameter expression of the call.
+    ///
+    /// NOTE: This is currently always [`CallParamSsa`].
+    pub fn param_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[2] as usize),
+        )
+    }
+
+    /// Get the stack expression of the call.
+    ///
+    /// NOTE: This is currently always [`CallStackSsa`].
+    pub fn stack_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[1] as usize),
+        )
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, ExceptionSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ExceptionSsa")
+            .field("output_expr", &self.output_expr())
+            .field("param_expr", &self.param_expr())
+            .field("stack_expr", &self.stack_expr())
+            .finish()
+    }
+}
+
+impl<M: FunctionMutability, F: FunctionForm> Operation<'_, M, F, ExceptionSsa> {
+    pub fn discriminator(&self) -> u64 {
+        self.op.operands[3]
+    }
+}
+
 // LLIL_EXCEPTION
 pub struct Exception;
 
@@ -2342,6 +2400,7 @@ impl OperationArguments for FlagCond {}
 impl OperationArguments for FlagGroup {}
 impl OperationArguments for Trap {}
 impl OperationArguments for Exception {}
+impl OperationArguments for ExceptionSsa {}
 impl OperationArguments for RegPhi {}
 impl OperationArguments for FlagPhi {}
 impl OperationArguments for MemPhi {}

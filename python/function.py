@@ -1939,6 +1939,41 @@ class Function:
 		_name = types.QualifiedName(name)._to_core_struct()
 		core.BNRemoveUserTypeFieldReference(self.handle, from_arch.handle, from_addr, _name, offset, size)
 
+	def get_exception_model_at(self, address: int) -> Optional['_platform.ExceptionModel']:
+		"""Return the model of the architectural exception originating at this instruction address."""
+		model = core.BNExceptionModel()
+		if not core.BNGetFunctionExceptionModelAt(self.handle, address, model):
+			return None
+		return _platform.ExceptionModel._from_core(model)
+
+	def get_exception_discriminator_at(self, address: int) -> Optional[int]:
+		"""Return an exception's architectural discriminator, including unmodeled events."""
+		value = ctypes.c_ulonglong()
+		if not core.BNGetFunctionExceptionDiscriminatorAt(self.handle, address, value):
+			return None
+		return value.value
+
+	def get_user_exception_calling_convention(self, address: int) -> Optional['callingconvention.CallingConvention']:
+		"""Return the instruction-specific user override, or None to inherit the platform."""
+		value = core.BNGetUserExceptionCallingConvention(self.handle, address)
+		return callingconvention.CoreCallingConvention(handle=value) if value else None
+
+	def get_exception_calling_convention_at(self, address: int) -> Optional['callingconvention.CallingConvention']:
+		"""Return the effective convention after applying the instruction-specific override."""
+		value = core.BNGetExceptionCallingConventionAt(self.handle, address)
+		return callingconvention.CoreCallingConvention(handle=value) if value else None
+
+	def set_user_exception_calling_convention(self, address: int, convention: Optional['callingconvention.CallingConvention']) -> None:
+		"""Override one exception's ABI. None restores the platform default.
+
+		The override is saved in the database and supports undo. It does not change the
+		platform's namespace, service definitions, or exception continuation policy.
+		Conventions must match the instruction architecture and have an exception-eligibility
+		rule matching its discriminator. Update analysis to rebuild existing IL.
+		"""
+		if not core.BNSetUserExceptionCallingConvention(self.handle, address, convention.handle if convention else None):
+			raise ValueError('Invalid exception address or incompatible calling convention')
+
 	def get_low_level_il_at(
 	    self, addr: int, arch: Optional['architecture.Architecture'] = None
 	) -> Optional['lowlevelil.LowLevelILInstruction']:

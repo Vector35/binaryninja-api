@@ -592,7 +592,19 @@ impl HighLevelILInstruction {
                 num_params: op.operands[0] as usize,
                 first_param: op.operands[1] as usize,
             }),
+            HLIL_EXCEPTION => Op::Exception(Exception {
+                discriminator: op.operands[2],
+                num_params: op.operands[0] as usize,
+                first_param: op.operands[1] as usize,
+            }),
             HLIL_SYSCALL_SSA => Op::SyscallSsa(SyscallSsa {
+                num_params: op.operands[0] as usize,
+                first_param: op.operands[1] as usize,
+                dest_memory: op.operands[2],
+                src_memory: op.operands[3],
+            }),
+            HLIL_EXCEPTION_SSA => Op::ExceptionSsa(ExceptionSsa {
+                discriminator: op.operands[4],
                 num_params: op.operands[0] as usize,
                 first_param: op.operands[1] as usize,
                 dest_memory: op.operands[2],
@@ -973,7 +985,25 @@ impl HighLevelILInstruction {
                     .map(|expr| expr.lift())
                     .collect(),
             }),
+            Exception(op) => Lifted::Exception(LiftedException {
+                discriminator: op.discriminator,
+                params: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
+            }),
             SyscallSsa(op) => Lifted::SyscallSsa(LiftedSyscallSsa {
+                params: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
+                dest_memory: op.dest_memory,
+                src_memory: op.src_memory,
+            }),
+            ExceptionSsa(op) => Lifted::ExceptionSsa(LiftedExceptionSsa {
+                discriminator: op.discriminator,
                 params: self
                     .get_expr_list(0)
                     .iter()
@@ -1290,7 +1320,9 @@ pub enum HighLevelILInstructionKind {
     StructInitField(StructField),
     Switch(Switch),
     Syscall(Syscall),
+    Exception(Exception),
     SyscallSsa(SyscallSsa),
+    ExceptionSsa(ExceptionSsa),
     Trap(Trap),
     VarDeclare(Var),
     Var(Var),

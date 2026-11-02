@@ -723,3 +723,69 @@ pub struct BlockToExpand {
 pub struct LiftedBlockToExpand {
     pub exprs: Vec<MediumLevelILLiftedInstruction>,
 }
+
+#[derive(Debug, Copy, Clone)]
+pub struct Exception {
+    pub discriminator: u64,
+    pub first_output: usize,
+    pub num_outputs: usize,
+    pub first_param: usize,
+    pub num_params: usize,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedExceptionCall {
+    pub discriminator: u64,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct ExceptionSsa {
+    pub discriminator: u64,
+    pub output: MediumLevelExpressionIndex,
+    pub first_param: usize,
+    pub num_params: usize,
+    pub src_memory: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedExceptionSsa {
+    pub discriminator: u64,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+    pub src_memory: u64,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct ExceptionUntyped {
+    pub discriminator: u64,
+    pub first_output: usize,
+    pub num_outputs: usize,
+    pub params: MediumLevelExpressionIndex,
+    pub stack: MediumLevelExpressionIndex,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedExceptionUntyped {
+    pub discriminator: u64,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+    pub stack: Box<MediumLevelILLiftedInstruction>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct ExceptionUntypedSsa {
+    pub discriminator: u64,
+    pub output: MediumLevelExpressionIndex,
+    pub params: MediumLevelExpressionIndex,
+    pub stack: MediumLevelExpressionIndex,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedExceptionUntypedSsa {
+    pub discriminator: u64,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+    pub stack: Box<MediumLevelILLiftedInstruction>,
+}

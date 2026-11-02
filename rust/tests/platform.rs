@@ -124,3 +124,116 @@ fn test_namespaced_syscall_services() {
     assert!(p.define_syscall_in_namespace(1, 7, "updated", &small));
     assert_eq!(p.syscall_type_in_namespace(1, 7).unwrap(), small);
 }
+
+#[test]
+fn test_declarative_exception_models() {
+    use binaryninja::platform::{
+        ExceptionContinuation::*, ExceptionModel, ExceptionModelKind::*, ExceptionModelRule,
+    };
+    let _session = Session::new().expect("Failed to initialize session");
+    let arch = CoreArchitecture::by_name("x86_64").unwrap();
+    let platform = Platform::new(&arch, "test-exception-models");
+    assert!(platform.register_syscall_namespace(1, "hypervisor", None));
+    let kind = 2u64 << 32;
+    let mask = 0xffffffff00000000;
+    assert!(platform.exception_model(kind | 7).is_none());
+    assert!(platform.set_exception_model(ExceptionModelRule {
+        discriminator: kind,
+        mask,
+        model: ExceptionModel {
+            kind: SystemCallExceptionModel,
+            nameSpace: 1,
+            continuation: ContinueAfterException
+        },
+    }));
+    assert_eq!(platform.exception_model(kind | 7).unwrap().nameSpace, 1);
+    assert!(platform.set_exception_model(ExceptionModelRule {
+        discriminator: kind | 7,
+        mask: u64::MAX,
+        model: ExceptionModel {
+            kind: TrapExceptionModel,
+            nameSpace: 0,
+            continuation: TerminateAfterException
+        },
+    }));
+    assert_eq!(
+        platform.exception_model(kind | 7).unwrap().kind,
+        TrapExceptionModel
+    );
+    let snapshot = platform.exception_models();
+    assert_eq!(snapshot.len(), 2);
+    assert!(platform.remove_exception_model(kind | 7, u64::MAX));
+    assert_eq!(
+        platform.exception_model(kind | 7).unwrap().kind,
+        SystemCallExceptionModel
+    );
+    assert_eq!(snapshot.len(), 2);
+}
+
+#[test]
+fn test_exception_display_registry_owns_names_and_preserves_models() {
+    use binaryninja::platform::{ExceptionDisplay, ExceptionDisplayRule};
+    let _session = Session::new().expect("Failed to initialize session");
+    let arch = CoreArchitecture::by_name("x86_64").unwrap();
+    let p = Platform::new(&arch, "test-exception-displays");
+    let event = (2u64 << 32) | 7;
+    assert!(p.exception_display(event).is_none());
+    let broad = ExceptionDisplayRule {
+        discriminator: 2u64 << 32,
+        mask: 0xffffffff00000000,
+        display: ExceptionDisplay {
+            name: "hvc".into(),
+            value_mask: Some(0xffff),
+            value_shift: 0,
+        },
+    };
+    assert!(p.set_exception_display(&broad));
+    let exact = ExceptionDisplayRule {
+        discriminator: event,
+        mask: u64::MAX,
+        display: ExceptionDisplay {
+            name: "warn_once".into(),
+            value_mask: None,
+            value_shift: 0,
+        },
+    };
+    assert!(p.set_exception_display(&exact));
+    let snapshot = p.exception_displays();
+    let resolved = p.exception_display(event).unwrap();
+    assert_eq!(resolved, exact.display);
+    assert!(p.remove_exception_display(event, u64::MAX));
+    assert_eq!(p.exception_display(event).unwrap(), broad.display);
+    assert_eq!(snapshot[0].display, exact.display);
+    assert_eq!(resolved, exact.display);
+    assert!(p.exception_model(event).is_none());
+    let invalid = ExceptionDisplayRule {
+        display: ExceptionDisplay {
+            name: "bad\0name".into(),
+            value_mask: None,
+            value_shift: 0,
+        },
+        ..exact
+    };
+    assert!(!p.set_exception_display(&invalid));
+}
+
+#[test]
+fn test_exception_convention_eligibility() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let arch = CoreArchitecture::by_name("armv7").unwrap();
+    let smccc = arch.calling_convention_by_name("smccc32").unwrap();
+    assert!(arch.is_exception_calling_convention_eligible(&smccc, 2 << 32));
+    assert!(arch.is_exception_calling_convention_eligible(&smccc, 3 << 32));
+    assert!(!arch.is_exception_calling_convention_eligible(&smccc, (2 << 32) | 7));
+    assert!(!arch.is_exception_calling_convention_eligible(&smccc, 1 << 32));
+    let conventions = arch.eligible_exception_calling_conventions(2 << 32);
+    assert_eq!(conventions.len(), 1);
+    assert_eq!(conventions.get(0).name(), "smccc32");
+    let event = 0xfedcba9800000000;
+    assert!(arch.register_exception_calling_convention(&smccc, event, u64::MAX));
+    let snapshot = arch.eligible_exception_calling_conventions(event);
+    assert!(arch.unregister_exception_calling_convention(&smccc, event, u64::MAX));
+    assert!(!arch.is_exception_calling_convention_eligible(&smccc, event));
+    assert_eq!(snapshot.len(), 1);
+    assert_eq!(snapshot.get(0).name(), "smccc32");
+}

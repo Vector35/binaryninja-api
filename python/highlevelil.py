@@ -327,8 +327,13 @@ class HighLevelILInstruction(BaseILInstruction):
 	        ("left", "expr"), ("right", "expr")
 	    ], HighLevelILOperation.HLIL_FCMP_GT: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_FCMP_O: [
 	        ("left", "expr"), ("right", "expr")
-	    ], HighLevelILOperation.HLIL_FCMP_UO: [("left", "expr"), ("right", "expr")]
-	}
+	    ], HighLevelILOperation.HLIL_FCMP_UO: [("left", "expr"), ("right", "expr")],
+
+	    HighLevelILOperation.HLIL_EXCEPTION: [("params", "expr_list"), ("discriminator", "int")],
+	    HighLevelILOperation.HLIL_EXCEPTION_SSA: [
+	        ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int"), ("discriminator", "int")
+	    ],
+}
 
 	@staticmethod
 	def show_hlil_hierarchy():
@@ -2267,6 +2272,25 @@ class HighLevelILSyscall(HighLevelILInstruction, Syscall):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILException(HighLevelILInstruction):
+	@property
+	def discriminator(self) -> int:
+		return self.core_instr.operands[2]
+
+	@property
+	def params(self) -> List[HighLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			('discriminator', self.discriminator, 'int'),
+			("params", self.params, "List[HighLevelILInstruction]"),
+		]
+
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILSyscallSsa(HighLevelILInstruction, Syscall, SSA):
 	@property
 	def params(self) -> List[HighLevelILInstruction]:
@@ -2287,6 +2311,35 @@ class HighLevelILSyscallSsa(HighLevelILInstruction, Syscall, SSA):
 			("dest_memory", self.dest_memory, "int"),
 			("src_memory", self.src_memory, "int"),
 		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILExceptionSsa(HighLevelILInstruction, SSA):
+	@property
+	def discriminator(self) -> int:
+		return self.core_instr.operands[4]
+
+	@property
+	def params(self) -> List[HighLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def dest_memory(self) -> int:
+		return self._get_int(2)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			('discriminator', self.discriminator, 'int'),
+			("params", self.params, "List[HighLevelILInstruction]"),
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "int"),
+		]
+
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2694,6 +2747,9 @@ ILInstruction = {
     HighLevelILOperation.HLIL_ASSERT_SSA: HighLevelILAssertSsa,
     HighLevelILOperation.HLIL_FORCE_VER: HighLevelILForceVer,
     HighLevelILOperation.HLIL_FORCE_VER_SSA: HighLevelILForceVerSsa,
+
+    HighLevelILOperation.HLIL_EXCEPTION: HighLevelILException,
+    HighLevelILOperation.HLIL_EXCEPTION_SSA: HighLevelILExceptionSsa,
 }
 
 
@@ -4359,6 +4415,22 @@ class HighLevelILFunction:
 			HighLevelILOperation.HLIL_SYSCALL,
 			len(params),
 			self.add_operand_list(params),
+			size=0,
+			source_location=loc
+		)
+
+
+	def exception(
+		self, discriminator: int, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""Build an exception retaining its architectural discriminator and explicit operands."""
+		if not isinstance(discriminator, int) or not 0 <= discriminator <= 0xffffffffffffffff:
+			raise ValueError("Exception discriminator must be a uint64")
+		return self.expr(
+			HighLevelILOperation.HLIL_EXCEPTION,
+			len(params),
+			self.add_operand_list(params),
+			discriminator,
 			size=0,
 			source_location=loc
 		)

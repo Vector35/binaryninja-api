@@ -142,6 +142,7 @@ pub enum MediumLevelILLiftedInstructionKind {
     Tailcall(LiftedCall),
     Intrinsic(LiftedIntrinsic),
     Syscall(LiftedSyscallCall),
+    Exception(LiftedExceptionCall),
     IntrinsicSsa(LiftedIntrinsicSsa),
     MemoryIntrinsicSsa(LiftedMemoryIntrinsicSsa),
     MemoryIntrinsicOutputSsa(LiftedMemoryIntrinsicOutputSsa),
@@ -150,10 +151,13 @@ pub enum MediumLevelILLiftedInstructionKind {
     CallUntypedSsa(LiftedCallUntypedSsa),
     TailcallUntypedSsa(LiftedCallUntypedSsa),
     SyscallSsa(LiftedSyscallSsa),
+    ExceptionSsa(LiftedExceptionSsa),
     SyscallUntypedSsa(LiftedSyscallUntypedSsa),
+    ExceptionUntypedSsa(LiftedExceptionUntypedSsa),
     CallUntyped(LiftedCallUntyped),
     TailcallUntyped(LiftedCallUntyped),
     SyscallUntyped(LiftedSyscallUntyped),
+    ExceptionUntyped(LiftedExceptionUntyped),
     SeparateParamList(LiftedSeparateParamList),
     SharedParamSlot(LiftedSharedParamSlot),
     Neg(LiftedUnaryOp),
@@ -308,6 +312,7 @@ impl MediumLevelILLiftedInstruction {
             CallParamSsa(_) => "CallParamSsa",
             Tailcall(_) => "Tailcall",
             Syscall(_) => "Syscall",
+            Exception(_) => "Exception",
             Intrinsic(_) => "Intrinsic",
             IntrinsicSsa(_) => "IntrinsicSsa",
             MemoryIntrinsicSsa(_) => "MemoryIntrinsicSsa",
@@ -317,10 +322,13 @@ impl MediumLevelILLiftedInstruction {
             CallUntypedSsa(_) => "CallUntypedSsa",
             TailcallUntypedSsa(_) => "TailcallUntypedSsa",
             SyscallSsa(_) => "SyscallSsa",
+            ExceptionSsa(_) => "ExceptionSsa",
             SyscallUntypedSsa(_) => "SyscallUntypedSsa",
+            ExceptionUntypedSsa(_) => "ExceptionUntypedSsa",
             CallUntyped(_) => "CallUntyped",
             TailcallUntyped(_) => "TailcallUntyped",
             SyscallUntyped(_) => "SyscallUntyped",
+            ExceptionUntyped(_) => "ExceptionUntyped",
             SeparateParamList(_) => "SeparateParamList",
             SharedParamSlot(_) => "SharedParamSlot",
             VarOutput(_) => "VarOutput",
@@ -512,6 +520,11 @@ impl MediumLevelILLiftedInstruction {
                 ("output", Operand::ExprList(op.output.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
             ],
+            Exception(op) => vec![
+                ("discriminator", Operand::Int(op.discriminator)),
+                ("output", Operand::ExprList(op.output.clone())),
+                ("params", Operand::ExprList(op.params.clone())),
+            ],
             Intrinsic(op) => vec![
                 ("output", Operand::VarList(op.output.clone())),
                 ("intrinsic", Operand::Intrinsic(op.intrinsic)),
@@ -549,7 +562,19 @@ impl MediumLevelILLiftedInstruction {
                 ("params", Operand::ExprList(op.params.clone())),
                 ("src_memory", Operand::Int(op.src_memory)),
             ],
+            ExceptionSsa(op) => vec![
+                ("discriminator", Operand::Int(op.discriminator)),
+                ("output", Operand::ExprList(op.output.clone())),
+                ("params", Operand::ExprList(op.params.clone())),
+                ("src_memory", Operand::Int(op.src_memory)),
+            ],
             SyscallUntypedSsa(op) => vec![
+                ("output", Operand::ExprList(op.output.clone())),
+                ("params", Operand::ExprList(op.params.clone())),
+                ("stack", Operand::Expr(*op.stack.clone())),
+            ],
+            ExceptionUntypedSsa(op) => vec![
+                ("discriminator", Operand::Int(op.discriminator)),
                 ("output", Operand::ExprList(op.output.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
                 ("stack", Operand::Expr(*op.stack.clone())),
@@ -571,6 +596,13 @@ impl MediumLevelILLiftedInstruction {
             | RoundToInt(op) | Floor(op) | Ceil(op) | Ftrunc(op) | Load(op) => {
                 vec![("src", Operand::Expr(*op.src.clone()))]
             }
+            ExceptionUntyped(op) => vec![
+                ("discriminator", Operand::Int(op.discriminator)),
+                ("output", Operand::ExprList(op.output.clone())),
+                ("params", Operand::ExprList(op.params.clone())),
+                ("stack", Operand::Expr(*op.stack.clone())),
+            ],
+
             LoadStruct(op) => vec![
                 ("src", Operand::Expr(*op.src.clone())),
                 ("offset", Operand::Int(op.offset)),

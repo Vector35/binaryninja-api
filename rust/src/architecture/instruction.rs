@@ -54,6 +54,9 @@ impl From<BNInstructionInfo> for InstructionInfo {
                     BNBranchType::SystemCall => BranchKind::SystemCall,
                     BNBranchType::IndirectBranch => BranchKind::Indirect,
                     BNBranchType::ExceptionBranch => BranchKind::Exception,
+                    BNBranchType::ModeledExceptionBranch => {
+                        BranchKind::ModeledException(branch_target)
+                    }
                     BNBranchType::UnresolvedBranch => BranchKind::Unresolved,
                     BNBranchType::UserDefinedBranch => BranchKind::UserDefined,
                 },

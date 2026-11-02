@@ -53,6 +53,26 @@ fn test_type_printer() {
     println!("{:#?}", printed_types);
 }
 
+#[test]
+fn test_type_string_before_and_after_name() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("mac-aarch64").expect("Failed to get platform");
+    let type_printer = CoreTypePrinter::default();
+    let array = Type::array(&Type::int(4, true), 4);
+
+    let before = type_printer
+        .get_type_string_before_name(&array, &platform, TokenEscapingType::NoTokenEscapingType)
+        .expect("Failed to print the type before the name");
+    let after = type_printer
+        .get_type_string_after_name(&array, &platform, TokenEscapingType::NoTokenEscapingType)
+        .expect("Failed to print the type after the name");
+    assert!(
+        !before.to_string_lossy().contains('['),
+        "before: {before:?}"
+    );
+    assert!(after.to_string_lossy().contains('['), "after: {after:?}");
+}
+
 struct MyTypePrinter;
 
 impl TypePrinter for MyTypePrinter {

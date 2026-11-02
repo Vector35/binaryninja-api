@@ -188,7 +188,7 @@ impl CoreTypePrinter {
     ) -> Option<BnString> {
         let mut result = std::ptr::null_mut();
         let success = unsafe {
-            BNGetTypePrinterTypeStringAfterName(
+            BNGetTypePrinterTypeStringBeforeName(
                 self.handle.as_ptr(),
                 type_.handle,
                 platform.handle,
@@ -210,7 +210,7 @@ impl CoreTypePrinter {
     ) -> Option<BnString> {
         let mut result = std::ptr::null_mut();
         let success = unsafe {
-            BNGetTypePrinterTypeStringBeforeName(
+            BNGetTypePrinterTypeStringAfterName(
                 self.handle.as_ptr(),
                 type_.handle,
                 platform.handle,

@@ -1,4 +1,5 @@
 #include "binaryninjaapi.h"
+#include "../../arch/arm64/exception.h"
 #include "lowlevelilinstruction.h"
 
 using namespace BinaryNinja;
@@ -221,6 +222,7 @@ public:
 		if (cc)
 		{
 			SetSystemCallConvention(cc);
+			Arm64Exception::RegisterSvc(this);
 		}
 	}
 

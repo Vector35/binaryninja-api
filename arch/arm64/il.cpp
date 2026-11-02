@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "il.h"
+#include "exception.h"
 #include "acle_intrinsics.h"
 #include "system_operations.h"
 #include "system_registers.h"
@@ -3816,7 +3817,8 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_HVC:
 	case EXARMO_AARCH64_SMC:
 	{
-		/* b31,b30==xx of fake register mark transition to ELxx */
+		// Preserve architectural event metadata used by the existing Windows SVC ABI.
+		// Bits 31:30 describe the target exception level; bits 15:0 hold the immediate.
 		uint32_t el_mark = 0;
 		if (mnemonic == EXARMO_AARCH64_SVC)
 			el_mark = 0x40000000;
@@ -3824,10 +3826,11 @@ bool GetLowLevelILForInstruction(
 			el_mark = 0x80000000;
 		else if (mnemonic == EXARMO_AARCH64_SMC)
 			el_mark = 0xC0000000;
-		/* b15..b0 of fake register still holds syscall number */
 		il.AddInstruction(
 		    il.SetRegister(4, FAKEREG_SYSCALL_INFO, il.Const(4, el_mark | IMM_O(operand1))));
-		il.AddInstruction(il.SystemCall());
+		auto kind = mnemonic == EXARMO_AARCH64_SVC ? Arm64Exception::Svc
+			: mnemonic == EXARMO_AARCH64_HVC ? Arm64Exception::Hvc : Arm64Exception::Smc;
+		il.AddInstruction(il.Exception(Arm64Exception::Encode(kind, IMM_O(operand1))));
 		break;
 	}
 
@@ -4333,9 +4336,8 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_WFI, {}));
 		break;
 	case EXARMO_AARCH64_BRK:
-		il.AddInstruction(
-		    il.Trap(IMM_O(operand1)));  // FIXME Breakpoint may need a parameter (IMM_O(operand1)));
-		return false;
+		il.AddInstruction(il.Exception(Arm64Exception::Encode(Arm64Exception::Breakpoint, IMM_O(operand1))));
+		break;
 	case EXARMO_AARCH64_DGH:
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_HINT_DGH, {}));
 		break;

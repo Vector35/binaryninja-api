@@ -14,6 +14,7 @@
 #include "binaryninjaapi.h"
 #include "exarmo/aarch64.h"
 #include "il.h"
+#include "exception.h"
 #include "lowlevelilinstruction.h"
 #include "operands.h"
 #include "registers.h"
@@ -502,6 +503,19 @@ class Arm64Architecture : public Architecture
 	{
 		result.length = 4;
 
+		auto mnemonic = exarmo_aarch64_instruction_mnemonic(&instr);
+		if (mnemonic == EXARMO_AARCH64_SVC || mnemonic == EXARMO_AARCH64_HVC
+			|| mnemonic == EXARMO_AARCH64_SMC || mnemonic == EXARMO_AARCH64_BRK)
+		{
+			exarmo_aarch64_operand operands[EXARMO_AARCH64_MAX_OPERANDS];
+			exarmo_aarch64_instruction_operands(&instr, operands, EXARMO_AARCH64_MAX_OPERANDS);
+			auto kind = mnemonic == EXARMO_AARCH64_SVC ? Arm64Exception::Svc
+				: mnemonic == EXARMO_AARCH64_HVC ? Arm64Exception::Hvc
+				: mnemonic == EXARMO_AARCH64_SMC ? Arm64Exception::Smc : Arm64Exception::Breakpoint;
+			result.AddBranch(ModeledExceptionBranch, Arm64Exception::Encode(kind, OperandImmediate(operands[0])));
+			return;
+		}
+
 		exarmo_aarch64_branch branch = exarmo_aarch64_instruction_branch(&instr, addr);
 		switch (branch.kind)
 		{
@@ -550,7 +564,7 @@ class Arm64Architecture : public Architecture
 			result.AddBranch(SystemCall);
 			break;
 
-		// BRK, HLT and UDF all lift to a trap that ends the block.
+		// HLT and UDF still lift to legacy traps that end the block.
 		case EXARMO_AARCH64_BRANCH_EXCEPTION:
 		case EXARMO_AARCH64_BRANCH_HALT:
 			result.AddBranch(ExceptionBranch);
@@ -2629,6 +2643,195 @@ class LinuxArm64SystemCallConvention: public CallingConvention
 	virtual bool IsEligibleForHeuristics() override { return false; }
 };
 
+// Arm DEN0028 (SMCCC 1.2+), sections 2.6-2.7. The instruction is only the conduit;
+// W0[30] selects SMC32/HVC32 versus SMC64/HVC64. Selection remains explicit.
+class Arm64SmcccCallingConvention: public CallingConvention
+{
+	bool m_wide;
+	uint32_t Count() const { return m_wide ? 18 : 8; }
+	uint32_t Width() const { return m_wide ? 8 : 4; }
+
+public:
+	Arm64SmcccCallingConvention(Architecture* arch, bool wide):
+		CallingConvention(arch, wide ? "smccc64" : "smccc32"),
+		m_wide(wide) { SetExceptionArgumentForwarding(true); }
+
+	vector<uint32_t> GetIntegerArgumentRegisters() override
+	{
+		// Convention slots use backing registers so writes to X and W share SSA definitions.
+		vector<uint32_t> result;
+		for (uint32_t i = 0; i < Count(); i++)
+			result.push_back(REG_X0 + i);
+		return result;
+	}
+
+	vector<uint32_t> GetCallerSavedRegisters() override
+	{
+		// Optional result registers depend on the service definition. Without a type,
+		// conservatively treat all registers that can carry results as modified.
+		vector<uint32_t> result;
+		for (uint32_t i = 0; i < Count(); i++)
+			result.push_back(REG_X0 + i);
+		return result;
+	}
+
+	vector<uint32_t> GetCalleeSavedRegisters() override
+	{
+		vector<uint32_t> result {REG_SP};
+		for (uint32_t i = Count(); i <= 30; i++)
+			result.push_back(REG_X0 + i);
+		for (uint32_t reg = REG_V0; reg <= REG_V31; reg++)
+			result.push_back(reg);
+		for (uint32_t reg = REG_Z0; reg <= REG_Z31; reg++)
+			result.push_back(reg);
+		for (uint32_t reg = REG_P0; reg <= REG_P15; reg++)
+			result.push_back(reg);
+		return result;
+	}
+
+	// SSA outputs name the backing registers; typed layouts below select W or X views.
+	uint32_t GetIntegerReturnValueRegister() override { return REG_X0; }
+	uint32_t GetHighIntegerReturnValueRegister() override { return REG_X1; }
+	bool IsEligibleForHeuristics() override { return false; }
+
+	bool IsArgumentTypeRegisterCompatible(BinaryView*, Type* type) override
+	{
+		return type && !type->IsFloat() && type->GetWidth() > 0 && type->GetWidth() <= Width();
+	}
+
+	bool IsReturnTypeRegisterCompatible(BinaryView*, Type* type) override
+	{
+		return type && !type->IsFloat() && type->GetWidth() > 0 && type->GetWidth() <= Count() * Width();
+	}
+
+	ValueLocation GetReturnValueLocation(BinaryView* view, const ReturnValue& returnValue) override
+	{
+		Ref<Type> type = returnValue.type.GetValue();
+		if (view && type && type->IsNamedTypeRefer())
+			type = type->DerefNamedTypeReference(view);
+		if (!IsReturnTypeRegisterCompatible(view, type))
+			return {};
+		uint32_t first = REG_X0;
+		if (type->GetWidth() <= Width())
+			return Variable::Register(first);
+		ValueLocation result;
+		for (uint64_t offset = 0; offset < type->GetWidth(); offset += Width())
+			result.components.emplace_back(Variable::Register(first + offset / Width()), offset,
+				std::min(uint64_t(Width()), type->GetWidth() - offset));
+		return result;
+	}
+
+	vector<ValueLocation> GetParameterLocations(BinaryView*, const std::optional<ValueLocation>&,
+		const vector<FunctionParameter>& params,
+		const std::optional<std::set<uint32_t>>& permittedRegs = std::nullopt) override
+	{
+		auto registers = GetIntegerArgumentRegisters();
+		if (params.size() > registers.size())
+			return {};
+		vector<ValueLocation> result;
+		for (size_t i = 0; i < params.size(); i++)
+		{
+			if (params[i].locationSource == CustomLocationSource)
+			{
+				result.push_back(params[i].location);
+				continue;
+			}
+			auto type = params[i].type.GetValue();
+			// The analysis service-ID operand uses the full register's inferred type.
+			// Service lookup interprets its low 32 bits as W0. Explicit types select narrow layouts.
+			uint32_t width = i == 0 ? 8 : Width();
+			if (!type || type->IsFloat() || type->GetWidth() == 0 || type->GetWidth() > width
+				|| (permittedRegs && !permittedRegs->count(registers[i])))
+				return {};
+			ValueLocation location;
+			location.components.emplace_back(Variable::Register(registers[i]), 0, type->GetWidth());
+			result.push_back(location);
+		}
+		return result;
+	}
+};
+
+// Samsung uH kernel interface: include/linux/uh.h declares app ID, command, and
+// four 64-bit payload arguments. The HVC wrapper returns a scalar in X0.
+class SamsungUhCallingConvention: public CallingConvention
+{
+public:
+	SamsungUhCallingConvention(Architecture* arch): CallingConvention(arch, "samsung-uh") { SetExceptionArgumentForwarding(true); }
+
+	vector<uint32_t> GetIntegerArgumentRegisters() override
+	{
+		return {REG_X0, REG_X1, REG_X2, REG_X3, REG_X4, REG_X5};
+	}
+
+	vector<uint32_t> GetCallerSavedRegisters() override
+	{
+		// The public declaration does not specify a complete hypervisor preservation
+		// contract. Use AAPCS64 scratch clobbers, except LR which hvc; ret requires.
+		vector<uint32_t> result;
+		for (uint32_t reg = REG_X0; reg <= REG_X18; reg++)
+			result.push_back(reg);
+		for (uint32_t reg = REG_V0; reg <= REG_V7; reg++)
+			result.push_back(reg);
+		for (uint32_t reg = REG_V16; reg <= REG_V31; reg++)
+			result.push_back(reg);
+		return result;
+	}
+
+	vector<uint32_t> GetCalleeSavedRegisters() override
+	{
+		vector<uint32_t> result {REG_SP};
+		for (uint32_t reg = REG_X19; reg <= REG_X30; reg++)
+			result.push_back(reg);
+		return result;
+	}
+
+	uint32_t GetIntegerReturnValueRegister() override { return REG_X0; }
+	bool IsEligibleForHeuristics() override { return false; }
+
+	bool IsArgumentTypeRegisterCompatible(BinaryView*, Type* type) override
+	{
+		return type && !type->IsFloat() && type->GetWidth() > 0 && type->GetWidth() <= 8;
+	}
+
+	bool IsReturnTypeRegisterCompatible(BinaryView* view, Type* type) override
+	{
+		return IsArgumentTypeRegisterCompatible(view, type);
+	}
+
+	ValueLocation GetReturnValueLocation(BinaryView* view, const ReturnValue& returnValue) override
+	{
+		Ref<Type> type = returnValue.type.GetValue();
+		if (view && type && type->IsNamedTypeRefer())
+			type = type->DerefNamedTypeReference(view);
+		if (!IsReturnTypeRegisterCompatible(view, type))
+			return {};
+		return Variable::Register(REG_X0);
+	}
+
+	vector<ValueLocation> GetParameterLocations(BinaryView* view, const std::optional<ValueLocation>&,
+		const vector<FunctionParameter>& params,
+		const std::optional<std::set<uint32_t>>& permittedRegs = std::nullopt) override
+	{
+		auto registers = GetIntegerArgumentRegisters();
+		if (params.size() > registers.size())
+			return {};
+		vector<ValueLocation> result;
+		for (size_t i = 0; i < params.size(); i++)
+		{
+			if (params[i].locationSource == CustomLocationSource)
+			{
+				result.push_back(params[i].location);
+				continue;
+			}
+			if (!IsArgumentTypeRegisterCompatible(view, params[i].type.GetValue())
+				|| (permittedRegs && !permittedRegs->count(registers[i])))
+				return {};
+			result.emplace_back(Variable::Register(registers[i]));
+		}
+		return result;
+	}
+};
+
 class WindowsArm64SystemCallConvention : public CallingConvention
 {
  public:
@@ -3771,11 +3974,30 @@ extern "C"
 		conv = new LinuxArm64SystemCallConvention(arm64);
 		arm64->RegisterCallingConvention(conv);
 
+		for (bool wide : {false, true})
+		{
+			Ref<CallingConvention> smccc = new Arm64SmcccCallingConvention(arm64, wide);
+			arm64->RegisterCallingConvention(smccc);
+			for (auto kind : {Arm64Exception::Hvc, Arm64Exception::Smc})
+				arm64->RegisterExceptionCallingConvention(smccc, Arm64Exception::Encode(kind));
+		}
+		arm64->RegisterExceptionCallingConvention(conv, Arm64Exception::Encode(Arm64Exception::Svc),
+			Arm64Exception::KindMask);
+		Arm64Exception::RegisterDefaults(arm64->GetStandalonePlatform());
+
+		Ref<CallingConvention> samsungUh = new SamsungUhCallingConvention(arm64);
+		arm64->RegisterCallingConvention(samsungUh);
+		arm64->RegisterExceptionCallingConvention(samsungUh, Arm64Exception::Encode(Arm64Exception::Hvc));
+
 		conv = new WindowsArm64SystemCallConvention(arm64);
 		arm64->RegisterCallingConvention(conv);
+		arm64->RegisterExceptionCallingConvention(conv, Arm64Exception::Encode(Arm64Exception::Svc),
+			Arm64Exception::KindMask);
 
 		conv = new AppleArm64SystemCallConvention(arm64);
 		arm64->RegisterCallingConvention(conv);
+		arm64->RegisterExceptionCallingConvention(conv, Arm64Exception::Encode(Arm64Exception::Svc),
+			Arm64Exception::KindMask);
 
 		conv = new AppleArm64CallingConvention(arm64);
 		arm64->RegisterCallingConvention(conv);

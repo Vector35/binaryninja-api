@@ -884,6 +884,16 @@ impl DebugInfoBuilder {
             }
         }
 
+        // Rebase data variables
+        let image_base_adjustment = bv.start().wrapping_sub(bv.original_image_base());
+        if image_base_adjustment != 0 {
+            self.data_variables = self
+                .data_variables
+                .drain()
+                .map(|(address, variable)| (address.wrapping_add(image_base_adjustment), variable))
+                .collect();
+        }
+
         self
     }
 

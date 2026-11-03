@@ -4,8 +4,8 @@ use binaryninja::headless::Session;
 use binaryninja::mcp::server::{create_mcp_tool, invoke_mcp_tool, McpToolCallHost};
 use binaryninja::mcp::tool::{
     empty_input_schema, register_mcp_tool, CoreMcpTool, McpIntegerExpression, McpTool,
-    McpToolAnnotations, McpToolCall, McpToolDefinition, McpToolError, McpToolInfo, McpToolResult,
-    McpToolScope,
+    McpToolAnnotations, McpToolCall, McpToolDefinition, McpToolError, McpToolGroup,
+    McpToolGroupDefinition, McpToolInfo, McpToolResult, McpToolScope,
 };
 use binaryninja::rc::Ref;
 use serde_json::{json, Value};
@@ -153,6 +153,67 @@ fn error_code(result: &Value) -> &str {
     result["structuredContent"]["errorCode"]
         .as_str()
         .unwrap_or_default()
+}
+
+#[test]
+fn registers_groups_and_retains_tool_membership() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let definition =
+        McpToolGroupDefinition::new("rust_mcp_group", "Rust Group", "Test grouped tools.");
+    let group = McpToolGroup::register(&definition).expect("group registration failed");
+    assert_eq!(group.name(), "rust_mcp_group");
+    assert_eq!(group.title(), "Rust Group");
+    assert_eq!(group.description(), "Test grouped tools.");
+    assert!(group.enabled_by_default());
+    assert!(group.enabled());
+    assert_eq!(McpToolGroup::register(&definition), Some(group.clone()));
+    assert_eq!(
+        McpToolGroup::from_name("rust_mcp_group"),
+        Some(group.clone())
+    );
+    assert!(McpToolGroup::list()
+        .iter()
+        .any(|item| item.name() == group.name()));
+
+    struct GroupedTool(Ref<McpToolGroup>);
+
+    impl McpTool for GroupedTool {
+        fn definition(&self) -> McpToolDefinition {
+            McpToolInfo::new("rust_mcp_grouped_tool", "Return a value.")
+                .with_scope(McpToolScope::GlobalScope)
+                .with_group(self.0.clone())
+                .with_input_schema(empty_input_schema())
+        }
+
+        fn invoke(
+            &self,
+            _call: &McpToolCall,
+            _arguments: Value,
+        ) -> Result<McpToolResult, McpToolError> {
+            Ok(McpToolResult::structured(json!({"value": 17})))
+        }
+    }
+
+    let tool = register_mcp_tool(GroupedTool(group.clone())).expect("tool registration failed");
+    drop(group);
+    assert_eq!(tool.group().name(), "rust_mcp_group");
+    assert_eq!(
+        invoke(&tool, &json!({}), None)["structuredContent"]["value"],
+        17
+    );
+    let settings = binaryninja::settings::Settings::global();
+    settings.set_bool("mcp.groups.rust_mcp_group", false);
+    assert!(!tool.group().enabled());
+    assert_eq!(
+        error_code(&invoke(&tool, &json!({}), None)),
+        "group_disabled"
+    );
+    settings.set_bool("mcp.groups.rust_mcp_group", true);
+    assert!(tool.group().enabled());
+    assert_eq!(
+        invoke(&tool, &json!({}), None)["structuredContent"]["value"],
+        17
+    );
 }
 
 #[test]

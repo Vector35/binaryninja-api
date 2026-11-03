@@ -216,7 +216,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 	                                              ], MediumLevelILOperation.MLIL_STORE_STRUCT: [("dest", "expr"),
 	                                                                                            ("offset", "int"),
 	                                                                                            ("src", "expr")],
-	    MediumLevelILOperation.MLIL_VAR: [("src", "var")], MediumLevelILOperation.MLIL_VAR_FIELD: [
+	    MediumLevelILOperation.MLIL_VAR: [("var", "var")], MediumLevelILOperation.MLIL_VAR_FIELD: [
 	        ("src", "var"), ("offset", "int")
 	    ], MediumLevelILOperation.MLIL_VAR_SPLIT: [("high", "var"), ("low", "var")],
 	    MediumLevelILOperation.MLIL_ADDRESS_OF: [("src", "var")], MediumLevelILOperation.MLIL_PASS_BY_REF: [
@@ -231,7 +231,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 	        ("constant", "int"), ("offset", "int")
 	    ], MediumLevelILOperation.MLIL_FLOAT_CONST: [("constant", "float")], MediumLevelILOperation.MLIL_IMPORT: [
 	        ("constant", "int")
-	    ], MediumLevelILOperation.MLIL_CONST_DATA: [("constant", "ConstantData")], MediumLevelILOperation.MLIL_CONST_DATA: [
+	    ], MediumLevelILOperation.MLIL_CONST_DATA: [
 	        ("constant", "ConstantData")
 	    ], MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_ADC: [
 	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
@@ -284,9 +284,9 @@ class MediumLevelILInstruction(BaseILInstruction):
 	    ], MediumLevelILOperation.MLIL_JUMP: [("dest", "expr")], MediumLevelILOperation.MLIL_JUMP_TO: [
 	        ("dest", "expr"), ("targets", "target_map")
 	    ], MediumLevelILOperation.MLIL_RET_HINT: [("dest", "expr")], MediumLevelILOperation.MLIL_CALL: [
-	        ("output", "expr_list"), ("dest", "expr"), ("params", "expr_list")
+	        ("output", "var_list"), ("dest", "expr"), ("params", "expr_list")
 	    ], MediumLevelILOperation.MLIL_CALL_UNTYPED: [
-	        ("output", "expr_list"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")
+	        ("output", "var_list"), ("dest", "expr"), ("params", "expr_list"), ("stack", "expr")
 	    ], MediumLevelILOperation.MLIL_CALL_PARAM: [
 	        ("src", "expr_list")
 	    ], MediumLevelILOperation.MLIL_SEPARATE_PARAM_LIST: [
@@ -302,7 +302,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 		], MediumLevelILOperation.MLIL_RET: [
 	        ("src", "expr_list")
 	    ], MediumLevelILOperation.MLIL_BLOCK_TO_EXPAND: [
-			("src", "expr_list")
+			("exprs", "expr_list")
 		], MediumLevelILOperation.MLIL_NORET: [], MediumLevelILOperation.MLIL_IF: [
 	        ("condition", "expr"), ("true", "int"), ("false", "int")
 	    ], MediumLevelILOperation.MLIL_GOTO: [("dest", "int")], MediumLevelILOperation.MLIL_CMP_E: [
@@ -329,12 +329,12 @@ class MediumLevelILInstruction(BaseILInstruction):
 	    MediumLevelILOperation.MLIL_BOOL_TO_INT: [("src", "expr")], MediumLevelILOperation.MLIL_ADD_OVERFLOW: [
 	        ("left", "expr"), ("right", "expr")
 	    ], MediumLevelILOperation.MLIL_SYSCALL: [
-	        ("output", "expr_list"), ("params", "expr_list")
+	        ("output", "var_list"), ("params", "expr_list")
 	    ], MediumLevelILOperation.MLIL_SYSCALL_UNTYPED: [
-	        ("output", "expr_list"), ("params", "expr"), ("stack", "expr")
+	        ("output", "var_list"), ("params", "expr_list"), ("stack", "expr")
 	    ], MediumLevelILOperation.MLIL_TAILCALL: [
-	        ("output", "expr_list"), ("dest", "expr"), ("params", "expr_list")
-	    ], MediumLevelILOperation.MLIL_TAILCALL_UNTYPED: [("output", "expr_list"), ("dest", "expr"), ("params", "expr"),
+	        ("output", "var_list"), ("dest", "expr"), ("params", "expr_list")
+	    ], MediumLevelILOperation.MLIL_TAILCALL_UNTYPED: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list"),
 	                                                      ("stack", "expr")], MediumLevelILOperation.MLIL_BP: [],
 	    MediumLevelILOperation.MLIL_TRAP: [("vector", "int")], MediumLevelILOperation.MLIL_INTRINSIC: [
 	        ("output", "var_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")
@@ -343,11 +343,12 @@ class MediumLevelILInstruction(BaseILInstruction):
 	    ], MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_OUTPUT_SSA: [
 	        ("dest_memory", "int"), ("output", "var_ssa_list")
 	    ], MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_SSA: [
-	        ("output", "expr"), ("intrinsic", "intrinsic"), ("params", "expr_list"), ("src_memory", "int")
+	        ("output", "var_ssa_list"), ("dest_memory", "int"), ("intrinsic", "intrinsic"), ("params", "expr_list"),
+	        ("src_memory", "int")
 	    ], MediumLevelILOperation.MLIL_FREE_VAR_SLOT: [
 	        ("dest", "var")
 	    ], MediumLevelILOperation.MLIL_FREE_VAR_SLOT_SSA: [
-	        ("prev", "var_ssa_dest_and_src")
+	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src")
 	    ], MediumLevelILOperation.MLIL_UNDEF: [], MediumLevelILOperation.MLIL_UNIMPL: [],
 	    MediumLevelILOperation.MLIL_UNIMPL_MEM: [("src", "expr")], MediumLevelILOperation.MLIL_FADD: [
 	        ("left", "expr"), ("right", "expr")
@@ -389,7 +390,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("src", "expr")
 	    ], MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD: [
 	        ("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_VAR_SSA: [("src", "var_ssa")], MediumLevelILOperation.MLIL_VAR_SSA_FIELD: [
+	    ], MediumLevelILOperation.MLIL_VAR_SSA: [("var", "var_ssa")], MediumLevelILOperation.MLIL_VAR_SSA_FIELD: [
 	        ("src", "var_ssa"), ("offset", "int")
 	    ], MediumLevelILOperation.MLIL_VAR_ALIASED: [
 	        ("src", "var_ssa")
@@ -398,7 +399,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 	    ], MediumLevelILOperation.MLIL_VAR_SPLIT_SSA: [
 	        ("high", "var_ssa"), ("low", "var_ssa")
 	    ], MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA: [
-			("dest", "var_ssa")
+			("var", "var_ssa")
 		], MediumLevelILOperation.MLIL_VAR_OUTPUT_SSA_FIELD: [
 			("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("offset", "int")
 		], MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED: [
@@ -406,20 +407,23 @@ class MediumLevelILInstruction(BaseILInstruction):
 		], MediumLevelILOperation.MLIL_VAR_OUTPUT_ALIASED_FIELD: [
 			("dest", "var_ssa_dest_and_src"), ("prev", "var_ssa_dest_and_src"), ("offset", "int")
 		], MediumLevelILOperation.MLIL_CALL_SSA: [
-	        ("output", "expr"), ("output_dest_memory", "int"), ("dest", "expr"),
+	        ("output", "var_ssa_list"), ("output_dest_memory", "int"), ("dest", "expr"),
 	        ("params", "expr_list"), ("src_memory", "int")
 	    ], MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA: [
-	        ("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")
+	        ("output", "var_ssa_list"), ("output_dest_memory", "int"), ("dest", "expr"), ("params", "expr_list"),
+	        ("params_src_memory", "int"), ("stack", "expr")
 	    ], MediumLevelILOperation.MLIL_SYSCALL_SSA: [
-	        ("output", "expr"), ("params", "expr_list"),
+	        ("output", "var_ssa_list"), ("output_dest_memory", "int"), ("params", "expr_list"),
 	        ("src_memory", "int")
 	    ], MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA: [
-	        ("output", "expr"), ("params", "expr"), ("stack", "expr")
+	        ("output", "var_ssa_list"), ("output_dest_memory", "int"), ("params", "expr_list"),
+	        ("params_src_memory", "int"), ("stack", "expr")
 	    ], MediumLevelILOperation.MLIL_TAILCALL_SSA: [
-	        ("output", "expr"), ("output_dest_memory", "int"),
+	        ("output", "var_ssa_list"), ("output_dest_memory", "int"),
 	        ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")
 	    ], MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA: [
-	        ("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")
+	        ("output", "var_ssa_list"), ("output_dest_memory", "int"), ("dest", "expr"), ("params", "expr_list"),
+	        ("params_src_memory", "int"), ("stack", "expr")
 	    ], MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA: [
 	        ("dest_memory", "int"), ("dest", "var_ssa_list")
 	    ], MediumLevelILOperation.MLIL_CALL_PARAM_SSA: [
@@ -435,7 +439,11 @@ class MediumLevelILInstruction(BaseILInstruction):
 	                                               ], MediumLevelILOperation.MLIL_VAR_PHI: [
 	                                                   ("dest", "var_ssa"), ("src", "var_ssa_list")
 	                                               ], MediumLevelILOperation.MLIL_MEM_PHI: [("dest_memory", "int"),
-	                                                                                        ("src_memory", "int_list")]
+	                                                                                        ("src_memory", "int_list")],
+	    MediumLevelILOperation.MLIL_ASSERT: [("src", "var"), ("constraint", "constraint")],
+	    MediumLevelILOperation.MLIL_ASSERT_SSA: [("src", "var_ssa"), ("constraint", "constraint")],
+	    MediumLevelILOperation.MLIL_FORCE_VER: [("dest", "var"), ("src", "var"), ("reason", "int")],
+	    MediumLevelILOperation.MLIL_FORCE_VER_SSA: [("dest", "var_ssa"), ("src", "var_ssa"), ("reason", "int")]
 	}
 
 	@staticmethod
@@ -1606,6 +1614,14 @@ class MediumLevelILVarOutput(MediumLevelILInstruction, RegisterStack):
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [("dest", self.dest, "Variable")]
 
+	@property
+	def vars_read(self) -> List[variable.Variable]:
+		return []
+
+	@property
+	def vars_written(self) -> List[variable.Variable]:
+		return [self.dest]
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVarOutputField(MediumLevelILInstruction, SetVar):
@@ -1800,6 +1816,14 @@ class MediumLevelILVarOutputSsa(MediumLevelILInstruction, SSAVariableInstruction
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [("var", self.var, "SSAVariable")]
+
+	@property
+	def vars_read(self) -> List[SSAVariable]:
+		return []
+
+	@property
+	def vars_written(self) -> List[SSAVariable]:
+		return [self.dest]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2016,6 +2040,10 @@ class MediumLevelILAddressOfField(MediumLevelILInstruction):
 			("offset", self.offset, "int")
 		]
 
+	@property
+	def vars_address_taken(self) -> List[variable.Variable]:
+		return [self.src]
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILExternPtr(MediumLevelILConstBase):
@@ -2201,7 +2229,7 @@ class MediumLevelILAddOverflow(MediumLevelILBinaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILSyscall(MediumLevelILInstruction, Syscall):
+class MediumLevelILSyscall(MediumLevelILCallBase, Syscall):
 	@property
 	def output(self) -> List[variable.Variable]:
 		result = []
@@ -2689,6 +2717,17 @@ class MediumLevelILMemoryIntrinsicSsa(MediumLevelILInstruction, SSA):
 			("src_memory", self.src_memory, "int"),
 		]
 
+	@property
+	def vars_read(self) -> List[SSAVariable]:
+		result: List[SSAVariable] = []
+		for i in self.params:
+			result.extend(i.vars_read)  # type: ignore
+		return result
+
+	@property
+	def vars_written(self) -> List[SSAVariable]:
+		return self.output
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSetVarSsaField(MediumLevelILInstruction, SetVar, SSA):
@@ -2787,6 +2826,10 @@ class MediumLevelILSetVarAliasedField(MediumLevelILInstruction, SetVar, SSA):
 	@property
 	def vars_read(self) -> List[SSAVariable]:
 		return [self.prev, *self.src.vars_read]  # type: ignore # we're guaranteed not to return non-SSAVariables here
+
+	@property
+	def vars_written(self) -> List[SSAVariable]:
+		return [self.dest]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2948,6 +2991,10 @@ class MediumLevelILSetVarSplit(MediumLevelILInstruction, SetVar):
 			('low', self.low, 'Variable'),
 			('src', self.src, 'MediumLevelILInstruction'),
 		]
+
+	@property
+	def vars_read(self) -> List[variable.Variable]:
+		return self.src.vars_read  # type: ignore # we're guaranteed not to return non-Variables here
 
 	@property
 	def vars_written(self) -> List[variable.Variable]:
@@ -3301,6 +3348,14 @@ class MediumLevelILTailcallUntypedSsa(MediumLevelILCallBase, Tailcall, SSA):
 		return inst.src
 
 	@property
+	def params_src_memory(self):
+		inst = self._get_expr(2)
+		assert isinstance(
+		    inst, MediumLevelILCallParamSsa
+		), "MediumLevelILTailcallUntypedSsa return bad type for 'params_src_memory'"
+		return inst.src_memory
+
+	@property
 	def stack(self) -> MediumLevelILInstruction:
 		return self._get_expr(3)
 
@@ -3311,6 +3366,7 @@ class MediumLevelILTailcallUntypedSsa(MediumLevelILCallBase, Tailcall, SSA):
 			('output_dest_memory', self.output_dest_memory, 'int'),
 			('dest', self.dest, 'MediumLevelILInstruction'),
 			('params', self.params, 'List[SSAVariable]'),
+			('params_src_memory', self.params_src_memory, 'int'),
 			('stack', self.stack, 'MediumLevelILInstruction'),
 		]
 
@@ -3424,6 +3480,13 @@ class MediumLevelILAssert(MediumLevelILInstruction):
 	def constraint(self) -> variable.PossibleValueSet:
 		return self._get_constraint(1)
 
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "Variable"),
+			("constraint", self.constraint, "PossibleValueSet"),
+		]
+
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILAssertSsa(MediumLevelILInstruction, SSA):
 	@property
@@ -3433,6 +3496,13 @@ class MediumLevelILAssertSsa(MediumLevelILInstruction, SSA):
 	@property
 	def constraint(self) -> variable.PossibleValueSet:
 		return self._get_constraint(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "SSAVariable"),
+			("constraint", self.constraint, "PossibleValueSet"),
+		]
 
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILForceVer(MediumLevelILInstruction):
@@ -3448,6 +3518,22 @@ class MediumLevelILForceVer(MediumLevelILInstruction):
 	def reason(self) -> ForceVersionReason:
 		return ForceVersionReason(self._get_int(2))
 
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "Variable"),
+			("src", self.src, "Variable"),
+			("reason", self.reason, "ForceVersionReason"),
+		]
+
+	@property
+	def vars_read(self) -> List[variable.Variable]:
+		return [self.src]
+
+	@property
+	def vars_written(self) -> List[variable.Variable]:
+		return [self.dest]
+
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILForceVerSsa(MediumLevelILInstruction, SSA):
 	@property
@@ -3461,6 +3547,22 @@ class MediumLevelILForceVerSsa(MediumLevelILInstruction, SSA):
 	@property
 	def reason(self) -> ForceVersionReason:
 		return ForceVersionReason(self._get_int(4))
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("src", self.src, "SSAVariable"),
+			("reason", self.reason, "ForceVersionReason"),
+		]
+
+	@property
+	def vars_read(self) -> List[SSAVariable]:
+		return [self.src]
+
+	@property
+	def vars_written(self) -> List[SSAVariable]:
+		return [self.dest]
 
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILBlockToExpand(MediumLevelILInstruction):

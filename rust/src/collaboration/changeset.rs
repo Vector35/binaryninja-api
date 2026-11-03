@@ -25,10 +25,10 @@ impl Changeset {
     }
 
     /// Owning database for snapshots
-    pub fn database(&self) -> Result<Database, ()> {
+    pub fn database(&self) -> Result<Ref<Database>, ()> {
         let result = unsafe { BNCollaborationChangesetGetDatabase(self.handle.as_ptr()) };
         let raw = NonNull::new(result).ok_or(())?;
-        Ok(unsafe { Database::from_raw(raw) })
+        Ok(unsafe { Database::ref_from_raw(raw) })
     }
 
     /// Relevant remote File object

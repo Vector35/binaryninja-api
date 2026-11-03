@@ -253,6 +253,47 @@ void TypeLibrary::AddNamedType(const QualifiedName& name, Ref<Type> type)
 }
 
 
+void TypeLibrary::AddNamedTypeDeclaration(const QualifiedName& name, BNNamedTypeReferenceClass typeClass)
+{
+	BNQualifiedName qname = name.ToAPIStruct();
+	BNAddTypeLibraryNamedTypeDeclaration(m_object, &qname, typeClass);
+	QualifiedName::FreeAPIStruct(&qname);
+}
+
+
+void TypeLibrary::RemoveNamedTypeDeclaration(const QualifiedName& name)
+{
+	BNQualifiedName qname = name.ToAPIStruct();
+	BNRemoveTypeLibraryNamedTypeDeclaration(m_object, &qname);
+	QualifiedName::FreeAPIStruct(&qname);
+}
+
+
+std::optional<BNNamedTypeReferenceClass> TypeLibrary::GetNamedTypeDeclaration(const QualifiedName& name)
+{
+	BNQualifiedName qname = name.ToAPIStruct();
+	BNNamedTypeReferenceClass typeClass;
+	bool declared = BNGetTypeLibraryNamedTypeDeclaration(m_object, &qname, &typeClass);
+	QualifiedName::FreeAPIStruct(&qname);
+	if (!declared)
+		return std::nullopt;
+	return typeClass;
+}
+
+
+std::vector<std::pair<QualifiedName, BNNamedTypeReferenceClass>> TypeLibrary::GetNamedTypeDeclarations()
+{
+	size_t count = 0;
+	BNTypeLibraryNamedTypeDeclaration* declarations = BNGetTypeLibraryNamedTypeDeclarations(m_object, &count);
+	std::vector<std::pair<QualifiedName, BNNamedTypeReferenceClass>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.emplace_back(QualifiedName::FromAPIStruct(&declarations[i].name), declarations[i].typeClass);
+	BNFreeTypeLibraryNamedTypeDeclarationList(declarations, count);
+	return result;
+}
+
+
 void TypeLibrary::AddNamedTypeSource(const QualifiedName& name, const std::string& source)
 {
 	BNQualifiedName qname = name.ToAPIStruct();

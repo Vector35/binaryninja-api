@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 191
+#define BN_CURRENT_CORE_ABI_VERSION 192
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 191
+#define BN_MINIMUM_CORE_ABI_VERSION 192
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -2842,6 +2842,12 @@ extern "C"
 		BNType* type;
 	} BNQualifiedNameAndType;
 
+	typedef struct BNTypeLibraryNamedTypeDeclaration
+	{
+		BNQualifiedName name;
+		BNNamedTypeReferenceClass typeClass;
+	} BNTypeLibraryNamedTypeDeclaration;
+
 	typedef struct BNQualifiedNameTypeAndId
 	{
 		BNQualifiedName name;
@@ -3534,7 +3540,8 @@ extern "C"
 	{
 		RemoveUndoData,
 		TrimSnapshots,
-		PurgeOriginalFilenamePath
+		PurgeOriginalFilenamePath,
+		DeferProjectNotification
 	};
 
 	BN_ENUM(uint8_t, BNMessageBoxIcon)
@@ -5122,7 +5129,6 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryView* BNOpenExistingDatabaseWithProgress(BNFileMetadata* file, const char* path,
 	    void* ctxt, BNProgressFunction progress);
 	BINARYNINJACOREAPI BNBinaryView* BNOpenDatabaseForConfiguration(BNFileMetadata* file, const char* path);
-	BINARYNINJACOREAPI bool BNReopenMovedDatabase(BNFileMetadata* file, const char* path);
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshot(BNBinaryView* data, BNSaveSettings* settings);
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshotWithProgress(BNBinaryView* data, void* ctxt,
 	    BNProgressFunction progress, BNSaveSettings* settings);
@@ -5274,8 +5280,7 @@ extern "C"
 	// Database object
 	BINARYNINJACOREAPI BNDatabase* BNNewDatabaseReference(BNDatabase* database);
 	BINARYNINJACOREAPI void BNFreeDatabase(BNDatabase* database);
-	BINARYNINJACOREAPI BNDatabase* BNCreateDatabaseInstance(void);
-	BINARYNINJACOREAPI bool BNDatabaseOpenExisting(BNDatabase* database, const char* path);
+	BINARYNINJACOREAPI BNDatabase* BNOpenDatabase(const char* path);
 	BINARYNINJACOREAPI void BNSetDatabaseCurrentSnapshot(BNDatabase* database, int64_t id);
 	BINARYNINJACOREAPI BNSnapshot* BNGetDatabaseCurrentSnapshot(BNDatabase* database);
 	BINARYNINJACOREAPI BNSnapshot** BNGetDatabaseSnapshots(BNDatabase* database, size_t* count);
@@ -7843,6 +7848,16 @@ extern "C"
 
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetTypeLibraryNamedObjects(BNTypeLibrary* lib, size_t* count);
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetTypeLibraryNamedTypes(BNTypeLibrary* lib, size_t* count);
+
+	BINARYNINJACOREAPI void BNAddTypeLibraryNamedTypeDeclaration(
+		BNTypeLibrary* lib, BNQualifiedName* name, BNNamedTypeReferenceClass typeClass);
+	BINARYNINJACOREAPI void BNRemoveTypeLibraryNamedTypeDeclaration(BNTypeLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI bool BNGetTypeLibraryNamedTypeDeclaration(
+		BNTypeLibrary* lib, BNQualifiedName* name, BNNamedTypeReferenceClass* typeClass);
+	BINARYNINJACOREAPI BNTypeLibraryNamedTypeDeclaration* BNGetTypeLibraryNamedTypeDeclarations(
+		BNTypeLibrary* lib, size_t* count);
+	BINARYNINJACOREAPI void BNFreeTypeLibraryNamedTypeDeclarationList(
+		BNTypeLibraryNamedTypeDeclaration* declarations, size_t count);
 
 	BINARYNINJACOREAPI bool BNWriteTypeLibraryToFile(BNTypeLibrary* lib, const char* path);
 

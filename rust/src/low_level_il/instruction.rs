@@ -244,6 +244,7 @@ where
     Push(Operation<'func, M, F, operation::UnaryOp>),
 
     RegStackPush(Operation<'func, M, F, operation::RegStackPush>),
+    RegStackFreeReg(Operation<'func, M, F, operation::RegStackFreeReg>),
 
     Jump(Operation<'func, M, F, operation::Jump>),
     JumpTo(Operation<'func, M, F, operation::JumpTo>),
@@ -323,6 +324,9 @@ where
 
             LLIL_REG_STACK_PUSH => {
                 LowLevelILInstructionKind::RegStackPush(Operation::new(function, op, expr_index))
+            }
+            LLIL_REG_STACK_FREE_REG => {
+                LowLevelILInstructionKind::RegStackFreeReg(Operation::new(function, op, expr_index))
             }
 
             LLIL_JUMP => LowLevelILInstructionKind::Jump(Operation::new(function, op, expr_index)),
@@ -410,7 +414,11 @@ where
             SetRegSsa(ref op) => visit!(&op.source_expr()),
             SetRegPartialSsa(ref op) => visit!(&op.source_expr()),
             SetRegSplit(ref op) => visit!(&op.source_expr()),
-            SetRegSplitSsa(ref op) => visit!(&op.source_expr()),
+            SetRegSplitSsa(ref op) => {
+                visit!(&op.dest_expr_high());
+                visit!(&op.dest_expr_low());
+                visit!(&op.source_expr());
+            }
             SetFlag(ref op) => visit!(&op.source_expr()),
             SetFlagSsa(ref op) => visit!(&op.source_expr()),
             Store(ref op) => {
@@ -427,21 +435,24 @@ where
             JumpTo(ref op) => visit!(&op.target()),
             SyscallSsa(ref op) => {
                 visit!(&op.output_expr());
-                visit!(&op.param_expr());
                 visit!(&op.stack_expr());
+                visit!(&op.param_expr());
             }
             Call(ref op) | TailCall(ref op) => visit!(&op.target()),
-            CallSsa(ref op) | TailCallSsa(ref op) => visit!(&op.target()),
+            CallSsa(ref op) | TailCallSsa(ref op) => {
+                visit!(&op.output_expr());
+                visit!(&op.target());
+                visit!(&op.stack_expr());
+                visit!(&op.param_expr());
+            }
             Ret(ref op) => visit!(&op.target()),
             If(ref op) => visit!(&op.condition()),
-            Intrinsic(ref _op) => {
-                // TODO: Visit when we support expression lists
-            }
+            Intrinsic(ref op) => visit!(&op.inputs()),
             Value(e) => visit!(e),
             // Do not have any sub expressions.
-            Nop(_) | NoRet(_) | Goto(_) | Syscall(_) | Bp(_) | Trap(_) | Undef(_) | Assert(_)
-            | AssertSsa(_) | ForceVersion(_) | ForceVersionSsa(_) | RegPhi(_) | FlagPhi(_)
-            | MemPhi(_) => {}
+            Nop(_) | RegStackFreeReg(_) | NoRet(_) | Goto(_) | Syscall(_) | Bp(_) | Trap(_)
+            | Undef(_) | Assert(_) | AssertSsa(_) | ForceVersion(_) | ForceVersionSsa(_)
+            | RegPhi(_) | FlagPhi(_) | MemPhi(_) => {}
         }
 
         VisitorAction::Sibling

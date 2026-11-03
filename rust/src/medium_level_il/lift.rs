@@ -2,7 +2,7 @@ use super::operation::*;
 use super::{MediumLevelExpressionIndex, MediumLevelILFunction, MediumLevelInstructionIndex};
 use crate::architecture::CoreIntrinsic;
 use crate::rc::Ref;
-use crate::variable::{ConstantData, SSAVariable, Variable};
+use crate::variable::{ConstantData, PossibleValueSet, SSAVariable, Variable};
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
 
@@ -13,8 +13,10 @@ pub enum MediumLevelILLiftedOperand {
     Expr(MediumLevelILLiftedInstruction),
     ExprList(Vec<MediumLevelILLiftedInstruction>),
     Float(f64),
+    ForceVersionReason(ForceVersionReason),
     Int(u64),
     IntList(Vec<u64>),
+    PossibleValueSet(PossibleValueSet),
     TargetMap(BTreeMap<u64, MediumLevelInstructionIndex>),
     Var(Variable),
     VarList(Vec<Variable>),
@@ -79,8 +81,12 @@ pub enum MediumLevelILLiftedInstructionKind {
     MemPhi(LiftedMemPhi),
     VarSplit(VarSplit),
     SetVarSplit(LiftedSetVarSplit),
+    Assert(LiftedAssert),
+    ForceVer(ForceVer),
     VarSplitSsa(VarSplitSsa),
     SetVarSplitSsa(LiftedSetVarSplitSsa),
+    AssertSsa(LiftedAssertSsa),
+    ForceVerSsa(ForceVerSsa),
     Add(LiftedBinaryOp),
     Sub(LiftedBinaryOp),
     And(LiftedBinaryOp),
@@ -135,7 +141,6 @@ pub enum MediumLevelILLiftedInstructionKind {
     Rlc(LiftedBinaryOpCarry),
     Rrc(LiftedBinaryOpCarry),
     Call(LiftedCall),
-    CallOutput(LiftedCallOutput),
     CallParam(LiftedCallParam),
     CallOutputSsa(LiftedCallOutputSsa),
     CallParamSsa(LiftedCallParamSsa),
@@ -204,9 +209,6 @@ pub enum MediumLevelILLiftedInstructionKind {
     VarOutputAliasedField(VarOutputAliasedField),
     Trap(Trap),
     BlockToExpand(LiftedBlockToExpand),
-    // A placeholder for instructions that the Rust bindings do not yet support.
-    // Distinct from `Unimpl` as that is a valid instruction.
-    NotYetImplemented,
 }
 
 impl MediumLevelILLiftedInstruction {
@@ -218,7 +220,6 @@ impl MediumLevelILLiftedInstruction {
             Bp => "Bp",
             Undef => "Undef",
             Unimpl => "Unimpl",
-            NotYetImplemented => "NotYetImplemented",
             If(_) => "If",
             FloatConst(_) => "FloatConst",
             Const(_) => "Const",
@@ -246,8 +247,12 @@ impl MediumLevelILLiftedInstruction {
             MemPhi(_) => "MemPhi",
             VarSplit(_) => "VarSplit",
             SetVarSplit(_) => "SetVarSplit",
+            Assert(_) => "Assert",
+            ForceVer(_) => "ForceVer",
             VarSplitSsa(_) => "VarSplitSsa",
             SetVarSplitSsa(_) => "SetVarSplitSsa",
+            AssertSsa(_) => "AssertSsa",
+            ForceVerSsa(_) => "ForceVerSsa",
             Add(_) => "Add",
             Sub(_) => "Sub",
             And(_) => "And",
@@ -302,7 +307,6 @@ impl MediumLevelILLiftedInstruction {
             Rlc(_) => "Rlc",
             Rrc(_) => "Rrc",
             Call(_) => "Call",
-            CallOutput(_) => "CallOutput",
             CallParam(_) => "CallParam",
             CallOutputSsa(_) => "CallOutputSsa",
             CallParamSsa(_) => "CallParamSsa",
@@ -378,7 +382,7 @@ impl MediumLevelILLiftedInstruction {
         use MediumLevelILLiftedInstructionKind::*;
         use MediumLevelILLiftedOperand as Operand;
         match &self.kind {
-            Nop | Noret | Bp | Undef | Unimpl | NotYetImplemented => vec![],
+            Nop | Noret | Bp | Undef | Unimpl => vec![],
             If(op) => vec![
                 ("condition", Operand::Expr(*op.condition.clone())),
                 ("dest_true", Operand::InstructionIndex(op.dest_true)),
@@ -468,6 +472,18 @@ impl MediumLevelILLiftedInstruction {
                 ("low", Operand::Var(op.low)),
                 ("src", Operand::Expr(*op.src.clone())),
             ],
+            Assert(op) => vec![
+                ("src", Operand::Var(op.src)),
+                (
+                    "constraint",
+                    Operand::PossibleValueSet(op.constraint.clone()),
+                ),
+            ],
+            ForceVer(op) => vec![
+                ("dest", Operand::Var(op.dest)),
+                ("src", Operand::Var(op.src)),
+                ("reason", Operand::ForceVersionReason(op.reason)),
+            ],
             VarSplitSsa(op) => vec![
                 ("high", Operand::VarSsa(op.high)),
                 ("low", Operand::VarSsa(op.low)),
@@ -476,6 +492,18 @@ impl MediumLevelILLiftedInstruction {
                 ("high", Operand::VarSsa(op.high)),
                 ("low", Operand::VarSsa(op.low)),
                 ("src", Operand::Expr(*op.src.clone())),
+            ],
+            AssertSsa(op) => vec![
+                ("src", Operand::VarSsa(op.src)),
+                (
+                    "constraint",
+                    Operand::PossibleValueSet(op.constraint.clone()),
+                ),
+            ],
+            ForceVerSsa(op) => vec![
+                ("dest", Operand::VarSsa(op.dest)),
+                ("src", Operand::VarSsa(op.src)),
+                ("reason", Operand::ForceVersionReason(op.reason)),
             ],
             Add(op) | Sub(op) | And(op) | Or(op) | Xor(op) | Lsl(op) | Lsr(op) | Asr(op)
             | Rol(op) | Ror(op) | Mul(op) | MuluDp(op) | MulsDp(op) | Divu(op) | DivuDp(op)
@@ -498,10 +526,9 @@ impl MediumLevelILLiftedInstruction {
                 ("dest", Operand::Expr(*op.dest.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
             ],
-            CallOutput(op) => vec![("output", Operand::VarList(op.output.clone()))],
             CallParam(op) => vec![("params", Operand::ExprList(op.params.clone()))],
             CallOutputSsa(op) => vec![
-                ("output", Operand::VarSsaList(op.output.clone())),
+                ("output", Operand::ExprList(op.output.clone())),
                 ("dest_memory", Operand::Int(op.dest_memory)),
             ],
             CallParamSsa(op) => vec![

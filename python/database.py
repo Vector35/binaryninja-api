@@ -253,10 +253,10 @@ class Database:
 		:param path: Path to file containing database
 		:return: Database instance
 		"""
-		db = Database(handle=core.BNCreateDatabaseInstance())
-		if not core.BNDatabaseOpenExisting(db.handle, path):
-			raise RuntimeError("BNDatabaseOpenExisting returned False")
-		return db
+		handle = core.BNOpenDatabase(path)
+		if not handle:
+			raise RuntimeError("BNOpenDatabase failed")
+		return cls(handle=handle)
 
 	def __getitem__(self, item: int) -> Optional[Snapshot]:
 		return self.get_snapshot(item)

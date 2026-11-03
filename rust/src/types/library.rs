@@ -6,7 +6,7 @@ use crate::{
     platform::Platform,
     rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref},
     string::{BnString, IntoCStr},
-    types::{QualifiedName, QualifiedNameAndType, Type},
+    types::{NamedTypeReferenceClass, QualifiedName, QualifiedNameAndType, Type},
 };
 use binaryninjacore_sys::*;
 use std::fmt::{Debug, Formatter};
@@ -298,6 +298,55 @@ impl TypeLibrary {
         QualifiedName::free_raw(raw_name);
     }
 
+    /// Declares a named type without defining it, as C does with `struct name;`.
+    ///
+    /// Use it for a type the library refers to only through pointers, such as an opaque struct
+    /// whose layout comes from the binary or another source. Importing the type into a view does
+    /// not define it there. References to it resolve to the view's type of that name and follow
+    /// later renames. Defining a declared name removes the declaration, and declaring a defined
+    /// name does nothing.
+    ///
+    /// `type_class` must be `StructNamedTypeClass`, `ClassNamedTypeClass`, `UnionNamedTypeClass`
+    /// or `EnumNamedTypeClass`. This logs an error and ignores other classes.
+    pub fn add_named_type_declaration(
+        &self,
+        name: QualifiedName,
+        type_class: NamedTypeReferenceClass,
+    ) {
+        let mut raw_name = QualifiedName::into_raw(name);
+        unsafe { BNAddTypeLibraryNamedTypeDeclaration(self.as_raw(), &mut raw_name, type_class) }
+        QualifiedName::free_raw(raw_name);
+    }
+
+    /// Removes a declaration made with [`TypeLibrary::add_named_type_declaration`].
+    pub fn remove_named_type_declaration(&self, name: QualifiedName) {
+        let mut raw_name = QualifiedName::into_raw(name);
+        unsafe { BNRemoveTypeLibraryNamedTypeDeclaration(self.as_raw(), &mut raw_name) }
+        QualifiedName::free_raw(raw_name);
+    }
+
+    /// The type class the library declares for `name`, or `None` if it does not declare `name`.
+    pub fn get_named_type_declaration(
+        &self,
+        name: QualifiedName,
+    ) -> Option<NamedTypeReferenceClass> {
+        let mut raw_name = QualifiedName::into_raw(name);
+        let mut type_class = NamedTypeReferenceClass::UnknownNamedTypeClass;
+        let declared = unsafe {
+            BNGetTypeLibraryNamedTypeDeclaration(self.as_raw(), &mut raw_name, &mut type_class)
+        };
+        QualifiedName::free_raw(raw_name);
+        declared.then_some(type_class)
+    }
+
+    /// The named types the library declares without defining, and the type class of each.
+    pub fn named_type_declarations(&self) -> Array<NamedTypeDeclaration> {
+        let mut count = 0;
+        let result = unsafe { BNGetTypeLibraryNamedTypeDeclarations(self.as_raw(), &mut count) };
+        assert!(!result.is_null());
+        unsafe { Array::new(result, count, ()) }
+    }
+
     /// Flag any outgoing named type reference with the given `name` as belonging to the `source` type library.
     ///
     /// This allows type libraries to share types between them, automatically pulling in dependencies
@@ -428,3 +477,35 @@ unsafe impl CoreArrayProviderInner for TypeLibrary {
 
 unsafe impl Send for TypeLibrary {}
 unsafe impl Sync for TypeLibrary {}
+
+/// A named type that a [`TypeLibrary`] declares without defining.
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct NamedTypeDeclaration {
+    pub name: QualifiedName,
+    pub type_class: NamedTypeReferenceClass,
+}
+
+impl NamedTypeDeclaration {
+    pub(crate) fn from_raw(value: &BNTypeLibraryNamedTypeDeclaration) -> Self {
+        Self {
+            name: QualifiedName::from_raw(&value.name),
+            type_class: value.typeClass,
+        }
+    }
+}
+
+impl CoreArrayProvider for NamedTypeDeclaration {
+    type Raw = BNTypeLibraryNamedTypeDeclaration;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for NamedTypeDeclaration {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTypeLibraryNamedTypeDeclarationList(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        NamedTypeDeclaration::from_raw(raw)
+    }
+}

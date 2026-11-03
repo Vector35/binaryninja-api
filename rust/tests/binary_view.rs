@@ -145,10 +145,10 @@ fn test_binary_view_search() {
 
     // Test constant search.
     let constant = 0x80000000;
-    let const_2607b = view
+    let const_26080 = view
         .find_next_constant(0, view.end(), constant, FunctionViewType::MediumLevelIL)
         .expect("Failed to find constant");
-    assert_eq!(const_2607b, image_base + 0x2607b);
+    assert_eq!(const_26080, image_base + 0x26080);
 
     // Test binary search.
     let query = SearchQuery::new("42 2e 64 65 ?? 75 67 24");

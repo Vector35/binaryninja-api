@@ -3861,7 +3861,10 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 			if (symbolTypeRef)
 			{
 				m_logger->LogDebug("pe: type library '%s' found hit for '%s'", lib->GetGuid().c_str(), name.c_str());
-				RecordImportedObjectLibrary(GetDefaultPlatform(), address, appliedLib, n);
+				// An external symbol only gets its address when the view is finalized, which
+				// records its library then.
+				if (type != ExternalSymbol)
+					RecordImportedObjectLibrary(GetDefaultPlatform(), address, appliedLib, n);
 			}
 		}
 	}

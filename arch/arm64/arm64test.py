@@ -140,6 +140,11 @@ tests_pac = [
     (b'\xFF\x0B\x5F\xD6', 'LLIL_RET(LLIL_REG.q(lr))', ATTR_PTR_AUTH), # retaa
     # RETAB_64E_branch_reg 11010110010111110000111111111111
     (b'\xFF\x0F\x5F\xD6', 'LLIL_RET(LLIL_REG.q(lr))', ATTR_PTR_AUTH), # retab
+    # PACGA computes a code rather than signing a pointer, so it always lifts as an intrinsic.
+    # PACGA_64P_dp_2src 10011010110xxxxx001100xxxxxxxxxx
+    (b'\xE1\x33\xCC\x9A', 'LLIL_INTRINSIC([x1],__pacga,[LLIL_CONST.q(0x0),LLIL_REG.q(x12)])'), # pacga x1, xzr, x12
+    (b'\x22\x30\xCD\x9A', 'LLIL_INTRINSIC([x2],__pacga,[LLIL_REG.q(x1),LLIL_REG.q(x13)])'), # pacga x2, x1, x13
+    (b'\x99\x32\xD3\x9A', 'LLIL_INTRINSIC([x25],__pacga,[LLIL_REG.q(x20),LLIL_REG.q(x19)])'), # pacga x25, x20, x19
 ]
 
 # pac tests depend on whether the architecture is configured to lift them as
@@ -186,8 +191,6 @@ if '#define LIFT_PAC_AS_INTRINSIC 1\n' in open(path_il_h).readlines():
     (b'\x6E\x0C\xC1\xDA', 'LLIL_INTRINSIC([x14],__pacdb,[LLIL_REG.q(x14),LLIL_REG.q(x3)])'),
     # pacdzb x1 (example of encoding: PACDZB_64Z_dp_1src)
     (b'\xE1\x2F\xC1\xDA', 'LLIL_INTRINSIC([x1],__pacdb,[LLIL_REG.q(x1),LLIL_CONST.q(0x0)])'),
-    # pacga x1, xzr, x12 (example of encoding: PACGA_64P_dp_2src)
-    (b'\xE1\x33\xCC\x9A', 'LLIL_INTRINSIC([x1],__pacga,[LLIL_CONST.q(0x0),LLIL_REG.q(x12)])'),
     # pacia x6, x14 (example of encoding: PACIA_64P_dp_1src)
     (b'\xC6\x01\xC1\xDA', 'LLIL_INTRINSIC([x6],__pacia,[LLIL_REG.q(x6),LLIL_REG.q(x14)])'),
     # paciza x21 (example of encoding: PACIZA_64Z_dp_1src)
@@ -234,9 +237,6 @@ if '#define LIFT_PAC_AS_INTRINSIC 1\n' in open(path_il_h).readlines():
     # PACDZB_64Z_dp_1src 1101101011000001001xxxxxxxxxxxxx
     (b'\xE6\x2F\xC1\xDA', 'LLIL_INTRINSIC([x6],__pacdb,[LLIL_REG.q(x6),LLIL_CONST.q(0x0)])'), # pacdzb x6
     (b'\xE0\x2F\xC1\xDA', 'LLIL_INTRINSIC([x0],__pacdb,[LLIL_REG.q(x0),LLIL_CONST.q(0x0)])'), # pacdzb x0
-    # PACGA_64P_dp_2src 10011010110xxxxx001100xxxxxxxxxx
-    (b'\x22\x30\xCD\x9A', 'LLIL_INTRINSIC([x2],__pacga,[LLIL_REG.q(x1),LLIL_REG.q(x13)])'), # pacga x2, x1, x13
-    (b'\x99\x32\xD3\x9A', 'LLIL_INTRINSIC([x25],__pacga,[LLIL_REG.q(x20),LLIL_REG.q(x19)])'), # pacga x25, x20, x19
     # PACIA1716_HI_hints 1101010100000011001000010xxxxxxx
     (b'\x1F\x21\x03\xD5', 'LLIL_INTRINSIC([x17],__pacia,[LLIL_REG.q(x17),LLIL_REG.q(x16)])'), # pacia1716
     # PACIAZ_HI_hints 11010101000000110010001100xxxxxx
@@ -312,7 +312,6 @@ else:
     (b'\xE5\x2B\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
     (b'\x6E\x0C\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
     (b'\xE1\x2F\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
-    (b'\xE1\x33\xCC\x9A', 'LLIL_NOP()', ATTR_PTR_AUTH),
     (b'\xC6\x01\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
     (b'\xF5\x23\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
     (b'\x9D\x04\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH),
@@ -329,8 +328,6 @@ else:
     (b'\xF7\x2B\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacdza x23
     (b'\xE6\x2F\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacdzb x6
     (b'\xE0\x2F\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacdzb x0
-    (b'\x22\x30\xCD\x9A', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacga x2, x1, x13
-    (b'\x99\x32\xD3\x9A', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacga x25, x20, x19
     (b'\x1F\x21\x03\xD5', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacia1716
     (b'\x1F\x23\x03\xD5', 'LLIL_NOP()', ATTR_PTR_AUTH), # paciaz
     (b'\x4A\x02\xC1\xDA', 'LLIL_NOP()', ATTR_PTR_AUTH), # pacia x10, x18
@@ -3966,49 +3963,57 @@ tests_orr = [
     # orr x24, x0, x26, lsr #0xc                                       ORR_64_log_shift
     (b'\x18\x30\x5A\xAA', 'LLIL_SET_REG.q(x24,LLIL_OR.q(LLIL_REG.q(x0),LLIL_LSR.q(LLIL_REG.q(x26),LLIL_CONST.b(0xC))))'),
     # orr v22.4h, #0x93, lsl #0x8                                      ORR_asimdimm_L_hl
-    (b'\x76\xB6\x04\x0F', 'LLIL_SET_REG.w(v22.h[0],LLIL_CONST.w(0x9300));' + \
-                         ' LLIL_SET_REG.w(v22.h[1],LLIL_CONST.w(0x9300));' + \
-                         ' LLIL_SET_REG.w(v22.h[2],LLIL_CONST.w(0x9300));' + \
-                         ' LLIL_SET_REG.w(v22.h[3],LLIL_CONST.w(0x9300))'),
+    (b'\x76\xB6\x04\x0F', 'LLIL_SET_REG.w(v22.h[0],LLIL_OR.w(LLIL_REG.w(v22.h[0]),LLIL_CONST.w(0x9300)));' + \
+                         ' LLIL_SET_REG.w(v22.h[1],LLIL_OR.w(LLIL_REG.w(v22.h[1]),LLIL_CONST.w(0x9300)));' + \
+                         ' LLIL_SET_REG.w(v22.h[2],LLIL_OR.w(LLIL_REG.w(v22.h[2]),LLIL_CONST.w(0x9300)));' + \
+                         ' LLIL_SET_REG.w(v22.h[3],LLIL_OR.w(LLIL_REG.w(v22.h[3]),LLIL_CONST.w(0x9300)))'),
     # orr v7.4h, #0xa9                                                 ORR_asimdimm_L_hl
-    (b'\x27\x95\x05\x0F', 'LLIL_SET_REG.w(v7.h[0],LLIL_CONST.w(0xA9));' + \
-                         ' LLIL_SET_REG.w(v7.h[1],LLIL_CONST.w(0xA9));' + \
-                         ' LLIL_SET_REG.w(v7.h[2],LLIL_CONST.w(0xA9));' + \
-                         ' LLIL_SET_REG.w(v7.h[3],LLIL_CONST.w(0xA9))'),
+    (b'\x27\x95\x05\x0F', 'LLIL_SET_REG.w(v7.h[0],LLIL_OR.w(LLIL_REG.w(v7.h[0]),LLIL_CONST.w(0xA9)));' + \
+                         ' LLIL_SET_REG.w(v7.h[1],LLIL_OR.w(LLIL_REG.w(v7.h[1]),LLIL_CONST.w(0xA9)));' + \
+                         ' LLIL_SET_REG.w(v7.h[2],LLIL_OR.w(LLIL_REG.w(v7.h[2]),LLIL_CONST.w(0xA9)));' + \
+                         ' LLIL_SET_REG.w(v7.h[3],LLIL_OR.w(LLIL_REG.w(v7.h[3]),LLIL_CONST.w(0xA9)))'),
     # orr v10.8h, #0x86                                                ORR_asimdimm_L_hl
-    (b'\xCA\x94\x04\x4F', 'LLIL_SET_REG.w(v10.h[0],LLIL_CONST.w(0x86));' + \
-                         ' LLIL_SET_REG.w(v10.h[1],LLIL_CONST.w(0x86));' + \
-                         ' LLIL_SET_REG.w(v10.h[2],LLIL_CONST.w(0x86));' + \
-                         ' LLIL_SET_REG.w(v10.h[3],LLIL_CONST.w(0x86));' + \
-                         ' LLIL_SET_REG.w(v10.h[4],LLIL_CONST.w(0x86));' + \
-                         ' LLIL_SET_REG.w(v10.h[5],LLIL_CONST.w(0x86));' + \
-                         ' LLIL_SET_REG.w(v10.h[6],LLIL_CONST.w(0x86));' + \
-                         ' LLIL_SET_REG.w(v10.h[7],LLIL_CONST.w(0x86))'),
+    (b'\xCA\x94\x04\x4F', 'LLIL_SET_REG.w(v10.h[0],LLIL_OR.w(LLIL_REG.w(v10.h[0]),LLIL_CONST.w(0x86)));' + \
+                         ' LLIL_SET_REG.w(v10.h[1],LLIL_OR.w(LLIL_REG.w(v10.h[1]),LLIL_CONST.w(0x86)));' + \
+                         ' LLIL_SET_REG.w(v10.h[2],LLIL_OR.w(LLIL_REG.w(v10.h[2]),LLIL_CONST.w(0x86)));' + \
+                         ' LLIL_SET_REG.w(v10.h[3],LLIL_OR.w(LLIL_REG.w(v10.h[3]),LLIL_CONST.w(0x86)));' + \
+                         ' LLIL_SET_REG.w(v10.h[4],LLIL_OR.w(LLIL_REG.w(v10.h[4]),LLIL_CONST.w(0x86)));' + \
+                         ' LLIL_SET_REG.w(v10.h[5],LLIL_OR.w(LLIL_REG.w(v10.h[5]),LLIL_CONST.w(0x86)));' + \
+                         ' LLIL_SET_REG.w(v10.h[6],LLIL_OR.w(LLIL_REG.w(v10.h[6]),LLIL_CONST.w(0x86)));' + \
+                         ' LLIL_SET_REG.w(v10.h[7],LLIL_OR.w(LLIL_REG.w(v10.h[7]),LLIL_CONST.w(0x86)))'),
     # orr v22.8h, #0x93, lsl #0x8                                      ORR_asimdimm_L_hl
-    (b'\x76\xB6\x04\x4F', 'LLIL_SET_REG.w(v22.h[0],LLIL_CONST.w(0x9300));' + \
-                         ' LLIL_SET_REG.w(v22.h[1],LLIL_CONST.w(0x9300));' + \
-                         ' LLIL_SET_REG.w(v22.h[2],LLIL_CONST.w(0x9300));' + \
-                         ' LLIL_SET_REG.w(v22.h[3],LLIL_CONST.w(0x9300));' + \
-                         ' LLIL_SET_REG.w(v22.h[4],LLIL_CONST.w(0x9300));' + \
-                         ' LLIL_SET_REG.w(v22.h[5],LLIL_CONST.w(0x9300));' + \
-                         ' LLIL_SET_REG.w(v22.h[6],LLIL_CONST.w(0x9300));' + \
-                         ' LLIL_SET_REG.w(v22.h[7],LLIL_CONST.w(0x9300))'),
+    (b'\x76\xB6\x04\x4F', 'LLIL_SET_REG.w(v22.h[0],LLIL_OR.w(LLIL_REG.w(v22.h[0]),LLIL_CONST.w(0x9300)));' + \
+                         ' LLIL_SET_REG.w(v22.h[1],LLIL_OR.w(LLIL_REG.w(v22.h[1]),LLIL_CONST.w(0x9300)));' + \
+                         ' LLIL_SET_REG.w(v22.h[2],LLIL_OR.w(LLIL_REG.w(v22.h[2]),LLIL_CONST.w(0x9300)));' + \
+                         ' LLIL_SET_REG.w(v22.h[3],LLIL_OR.w(LLIL_REG.w(v22.h[3]),LLIL_CONST.w(0x9300)));' + \
+                         ' LLIL_SET_REG.w(v22.h[4],LLIL_OR.w(LLIL_REG.w(v22.h[4]),LLIL_CONST.w(0x9300)));' + \
+                         ' LLIL_SET_REG.w(v22.h[5],LLIL_OR.w(LLIL_REG.w(v22.h[5]),LLIL_CONST.w(0x9300)));' + \
+                         ' LLIL_SET_REG.w(v22.h[6],LLIL_OR.w(LLIL_REG.w(v22.h[6]),LLIL_CONST.w(0x9300)));' + \
+                         ' LLIL_SET_REG.w(v22.h[7],LLIL_OR.w(LLIL_REG.w(v22.h[7]),LLIL_CONST.w(0x9300)))'),
     # orr v10.4s, #0x8                                                 ORR_asimdimm_L_sl
-    (b'\x0A\x15\x00\x4F', 'LLIL_SET_REG.d(v10.s[0],LLIL_CONST.d(0x8));' + \
-                         ' LLIL_SET_REG.d(v10.s[1],LLIL_CONST.d(0x8));' + \
-                         ' LLIL_SET_REG.d(v10.s[2],LLIL_CONST.d(0x8));' + \
-                         ' LLIL_SET_REG.d(v10.s[3],LLIL_CONST.d(0x8))'),
+    (b'\x0A\x15\x00\x4F', 'LLIL_SET_REG.d(v10.s[0],LLIL_OR.d(LLIL_REG.d(v10.s[0]),LLIL_CONST.d(0x8)));' + \
+                         ' LLIL_SET_REG.d(v10.s[1],LLIL_OR.d(LLIL_REG.d(v10.s[1]),LLIL_CONST.d(0x8)));' + \
+                         ' LLIL_SET_REG.d(v10.s[2],LLIL_OR.d(LLIL_REG.d(v10.s[2]),LLIL_CONST.d(0x8)));' + \
+                         ' LLIL_SET_REG.d(v10.s[3],LLIL_OR.d(LLIL_REG.d(v10.s[3]),LLIL_CONST.d(0x8)))'),
     # orr v6.2s, #0x59, lsl #0x10                                      ORR_asimdimm_L_sl
-    (b'\x26\x57\x02\x0F', 'LLIL_SET_REG.d(v6.s[0],LLIL_CONST.d(0x590000));' + \
-                         ' LLIL_SET_REG.d(v6.s[1],LLIL_CONST.d(0x590000))'),
+    (b'\x26\x57\x02\x0F', 'LLIL_SET_REG.d(v6.s[0],LLIL_OR.d(LLIL_REG.d(v6.s[0]),LLIL_CONST.d(0x590000)));' + \
+                         ' LLIL_SET_REG.d(v6.s[1],LLIL_OR.d(LLIL_REG.d(v6.s[1]),LLIL_CONST.d(0x590000)))'),
     # orr v31.2s, #0xca, lsl #0x8                                      ORR_asimdimm_L_sl
-    (b'\x5F\x35\x06\x0F', 'LLIL_SET_REG.d(v31.s[0],LLIL_CONST.d(0xCA00));' + \
-                         ' LLIL_SET_REG.d(v31.s[1],LLIL_CONST.d(0xCA00))'),
+    (b'\x5F\x35\x06\x0F', 'LLIL_SET_REG.d(v31.s[0],LLIL_OR.d(LLIL_REG.d(v31.s[0]),LLIL_CONST.d(0xCA00)));' + \
+                         ' LLIL_SET_REG.d(v31.s[1],LLIL_OR.d(LLIL_REG.d(v31.s[1]),LLIL_CONST.d(0xCA00)))'),
     # orr v20.4s, #0x59, lsl #0x18                                     ORR_asimdimm_L_sl
-    (b'\x34\x77\x02\x4F', 'LLIL_SET_REG.d(v20.s[0],LLIL_CONST.d(0x59000000));' + \
-                         ' LLIL_SET_REG.d(v20.s[1],LLIL_CONST.d(0x59000000));' + \
-                         ' LLIL_SET_REG.d(v20.s[2],LLIL_CONST.d(0x59000000));' + \
-                         ' LLIL_SET_REG.d(v20.s[3],LLIL_CONST.d(0x59000000))'),
+    (b'\x34\x77\x02\x4F', 'LLIL_SET_REG.d(v20.s[0],LLIL_OR.d(LLIL_REG.d(v20.s[0]),LLIL_CONST.d(0x59000000)));' + \
+                         ' LLIL_SET_REG.d(v20.s[1],LLIL_OR.d(LLIL_REG.d(v20.s[1]),LLIL_CONST.d(0x59000000)));' + \
+                         ' LLIL_SET_REG.d(v20.s[2],LLIL_OR.d(LLIL_REG.d(v20.s[2]),LLIL_CONST.d(0x59000000)));' + \
+                         ' LLIL_SET_REG.d(v20.s[3],LLIL_OR.d(LLIL_REG.d(v20.s[3]),LLIL_CONST.d(0x59000000)))'),
+    # bic v0.4h, #0x12, lsl #0x8                                       BIC_asimdimm_L_hl
+    (b'\x40\xB6\x00\x2F', 'LLIL_SET_REG.w(v0.h[0],LLIL_AND.w(LLIL_REG.w(v0.h[0]),LLIL_NOT.w(LLIL_CONST.w(0x1200))));' + \
+                         ' LLIL_SET_REG.w(v0.h[1],LLIL_AND.w(LLIL_REG.w(v0.h[1]),LLIL_NOT.w(LLIL_CONST.w(0x1200))));' + \
+                         ' LLIL_SET_REG.w(v0.h[2],LLIL_AND.w(LLIL_REG.w(v0.h[2]),LLIL_NOT.w(LLIL_CONST.w(0x1200))));' + \
+                         ' LLIL_SET_REG.w(v0.h[3],LLIL_AND.w(LLIL_REG.w(v0.h[3]),LLIL_NOT.w(LLIL_CONST.w(0x1200))))'),
+    # bic v3.2s, #0xff, lsl #0x18                                      BIC_asimdimm_L_sl
+    (b'\xE3\x77\x07\x2F', 'LLIL_SET_REG.d(v3.s[0],LLIL_AND.d(LLIL_REG.d(v3.s[0]),LLIL_NOT.d(LLIL_CONST.d(0xFF000000))));' + \
+                         ' LLIL_SET_REG.d(v3.s[1],LLIL_AND.d(LLIL_REG.d(v3.s[1]),LLIL_NOT.d(LLIL_CONST.d(0xFF000000))))'),
 ]
 
 tests_bsl_bit_bif = [
@@ -5171,7 +5176,7 @@ tests_fcvt = [
     # fcvtas w0, d28                                                   FCVTAS_32D_float2int
     (b'\x80\x03\x64\x1E', 'LLIL_INTRINSIC([w0],vcvtad_s32_f64,[LLIL_REG.q(d28)])'),
     # fcvtas wzr, s20                                                  FCVTAS_32S_float2int
-    (b'\x9F\x02\x24\x1E', 'LLIL_INTRINSIC([wzr],vcvtas_s32_f32,[LLIL_REG.d(s20)])'),
+    (b'\x9F\x02\x24\x1E', 'LLIL_INTRINSIC([temp0],vcvtas_s32_f32,[LLIL_REG.d(s20)])'),
     # fcvtas w17, s19                                                  FCVTAS_32S_float2int
     (b'\x71\x02\x24\x1E', 'LLIL_INTRINSIC([w17],vcvtas_s32_f32,[LLIL_REG.d(s19)])'),
     # fcvtas x27, d9                                                   FCVTAS_64D_float2int
@@ -5243,21 +5248,21 @@ tests_fcvt = [
     # fcvtms s27, s15                                                  FCVTMS_asisdmisc_R
     (b'\xFB\xB9\x21\x5E', 'LLIL_INTRINSIC([s27],vcvtms_s32_f32,[LLIL_REG.d(s15)])'),
     # fcvtmu w1, d3                                                    FCVTMU_32D_float2int
-    (b'\x61\x00\x71\x1E', 'LLIL_SET_REG.d(w1,LLIL_FLOAT_TO_INT.d(LLIL_FLOOR.q(LLIL_REG.q(d3))))'),
+    (b'\x61\x00\x71\x1E', 'LLIL_SET_REG.d(w1,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FLOOR.q(LLIL_REG.q(d3)))))'),
     # fcvtmu w5, d13                                                   FCVTMU_32D_float2int
-    (b'\xA5\x01\x71\x1E', 'LLIL_SET_REG.d(w5,LLIL_FLOAT_TO_INT.d(LLIL_FLOOR.q(LLIL_REG.q(d13))))'),
+    (b'\xA5\x01\x71\x1E', 'LLIL_SET_REG.d(w5,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FLOOR.q(LLIL_REG.q(d13)))))'),
     # fcvtmu w5, s23                                                   FCVTMU_32S_float2int
-    (b'\xE5\x02\x31\x1E', 'LLIL_SET_REG.d(w5,LLIL_FLOAT_TO_INT.d(LLIL_FLOOR.d(LLIL_REG.d(s23))))'),
+    (b'\xE5\x02\x31\x1E', 'LLIL_SET_REG.d(w5,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FLOOR.d(LLIL_REG.d(s23)))))'),
     # fcvtmu w28, s31                                                  FCVTMU_32S_float2int
-    (b'\xFC\x03\x31\x1E', 'LLIL_SET_REG.d(w28,LLIL_FLOAT_TO_INT.d(LLIL_FLOOR.d(LLIL_REG.d(s31))))'),
+    (b'\xFC\x03\x31\x1E', 'LLIL_SET_REG.d(w28,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FLOOR.d(LLIL_REG.d(s31)))))'),
     # fcvtmu x26, d24                                                  FCVTMU_64D_float2int
-    (b'\x1A\x03\x71\x9E', 'LLIL_SET_REG.q(x26,LLIL_FLOAT_TO_INT.q(LLIL_FLOOR.q(LLIL_REG.q(d24))))'),
+    (b'\x1A\x03\x71\x9E', 'LLIL_INTRINSIC([x26],vcvtmd_u64_f64,[LLIL_REG.q(d24)])'),
     # fcvtmu x5, d20                                                   FCVTMU_64D_float2int
-    (b'\x85\x02\x71\x9E', 'LLIL_SET_REG.q(x5,LLIL_FLOAT_TO_INT.q(LLIL_FLOOR.q(LLIL_REG.q(d20))))'),
+    (b'\x85\x02\x71\x9E', 'LLIL_INTRINSIC([x5],vcvtmd_u64_f64,[LLIL_REG.q(d20)])'),
     # fcvtmu xzr, s3                                                   FCVTMU_64S_float2int
-    (b'\x7F\x00\x31\x9E', 'LLIL_FLOAT_TO_INT.q(LLIL_FLOOR.d(LLIL_REG.d(s3)))'),
+    (b'\x7F\x00\x31\x9E', 'LLIL_INTRINSIC([temp0],vcvtms_u64_f32,[LLIL_REG.d(s3)])'),
     # fcvtmu x23, s24                                                  FCVTMU_64S_float2int
-    (b'\x17\x03\x31\x9E', 'LLIL_SET_REG.q(x23,LLIL_FLOAT_TO_INT.q(LLIL_FLOOR.d(LLIL_REG.d(s24))))'),
+    (b'\x17\x03\x31\x9E', 'LLIL_INTRINSIC([x23],vcvtms_u64_f32,[LLIL_REG.d(s24)])'),
     # fcvtmu v20.4s, v1.4s                                             FCVTMU_asimdmisc_R
     (b'\x34\xB8\x21\x6E', 'LLIL_INTRINSIC([v20],vcvtmq_u32_f32,[LLIL_REG.o(v1)])'),
     # fcvtmu v29.2d, v19.2d                                            FCVTMU_asimdmisc_R
@@ -5291,21 +5296,21 @@ tests_fcvt = [
     # fcvtns d7, d16                                                   FCVTNS_asisdmisc_R
     (b'\x07\xAA\x61\x5E', 'LLIL_INTRINSIC([d7],vcvtn_s64_f64,[LLIL_REG.q(d16)])'),
     # fcvtnu w17, d18                                                  FCVTNU_32D_float2int
-    (b'\x51\x02\x61\x1E', 'LLIL_SET_REG.d(w17,LLIL_FLOAT_TO_INT.d(LLIL_ROUND_TO_INT.q(LLIL_REG.q(d18))))'),
+    (b'\x51\x02\x61\x1E', 'LLIL_SET_REG.d(w17,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_ROUND_TO_INT.q(LLIL_REG.q(d18)))))'),
     # fcvtnu w30, d16                                                  FCVTNU_32D_float2int
-    (b'\x1E\x02\x61\x1E', 'LLIL_SET_REG.d(w30,LLIL_FLOAT_TO_INT.d(LLIL_ROUND_TO_INT.q(LLIL_REG.q(d16))))'),
+    (b'\x1E\x02\x61\x1E', 'LLIL_SET_REG.d(w30,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_ROUND_TO_INT.q(LLIL_REG.q(d16)))))'),
     # fcvtnu w27, s6                                                   FCVTNU_32S_float2int
-    (b'\xDB\x00\x21\x1E', 'LLIL_SET_REG.d(w27,LLIL_FLOAT_TO_INT.d(LLIL_ROUND_TO_INT.d(LLIL_REG.d(s6))))'),
+    (b'\xDB\x00\x21\x1E', 'LLIL_SET_REG.d(w27,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_ROUND_TO_INT.d(LLIL_REG.d(s6)))))'),
     # fcvtnu w4, s14                                                   FCVTNU_32S_float2int
-    (b'\xC4\x01\x21\x1E', 'LLIL_SET_REG.d(w4,LLIL_FLOAT_TO_INT.d(LLIL_ROUND_TO_INT.d(LLIL_REG.d(s14))))'),
+    (b'\xC4\x01\x21\x1E', 'LLIL_SET_REG.d(w4,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_ROUND_TO_INT.d(LLIL_REG.d(s14)))))'),
     # fcvtnu x10, d11                                                  FCVTNU_64D_float2int
-    (b'\x6A\x01\x61\x9E', 'LLIL_SET_REG.q(x10,LLIL_FLOAT_TO_INT.q(LLIL_ROUND_TO_INT.q(LLIL_REG.q(d11))))'),
+    (b'\x6A\x01\x61\x9E', 'LLIL_INTRINSIC([x10],vcvtnd_u64_f64,[LLIL_REG.q(d11)])'),
     # fcvtnu x2, d27                                                   FCVTNU_64D_float2int
-    (b'\x62\x03\x61\x9E', 'LLIL_SET_REG.q(x2,LLIL_FLOAT_TO_INT.q(LLIL_ROUND_TO_INT.q(LLIL_REG.q(d27))))'),
+    (b'\x62\x03\x61\x9E', 'LLIL_INTRINSIC([x2],vcvtnd_u64_f64,[LLIL_REG.q(d27)])'),
     # fcvtnu x17, s3                                                   FCVTNU_64S_float2int
-    (b'\x71\x00\x21\x9E', 'LLIL_SET_REG.q(x17,LLIL_FLOAT_TO_INT.q(LLIL_ROUND_TO_INT.d(LLIL_REG.d(s3))))'),
+    (b'\x71\x00\x21\x9E', 'LLIL_INTRINSIC([x17],vcvtns_u64_f32,[LLIL_REG.d(s3)])'),
     # fcvtnu lr, s18                                                   FCVTNU_64S_float2int
-    (b'\x5E\x02\x21\x9E', 'LLIL_SET_REG.q(lr,LLIL_FLOAT_TO_INT.q(LLIL_ROUND_TO_INT.d(LLIL_REG.d(s18))))'),
+    (b'\x5E\x02\x21\x9E', 'LLIL_INTRINSIC([lr],vcvtns_u64_f32,[LLIL_REG.d(s18)])'),
     # fcvtnu v29.4s, v22.4s                                            FCVTNU_asimdmisc_R
     (b'\xDD\xAA\x21\x6E', 'LLIL_INTRINSIC([v29],vcvtnq_u32_f32,[LLIL_REG.o(v22)])'),
     # fcvtnu v24.2s, v15.2s                                            FCVTNU_asimdmisc_R
@@ -5343,21 +5348,21 @@ tests_fcvt = [
     # fcvtps s23, s17                                                  FCVTPS_asisdmisc_R
     (b'\x37\xAA\xA1\x5E', 'LLIL_INTRINSIC([s23],vcvtps_s32_f32,[LLIL_REG.d(s17)])'),
     # fcvtpu w1, d13                                                   FCVTPU_32D_float2int
-    (b'\xA1\x01\x69\x1E', 'LLIL_SET_REG.d(w1,LLIL_FLOAT_TO_INT.d(LLIL_CEIL.q(LLIL_REG.q(d13))))'),
+    (b'\xA1\x01\x69\x1E', 'LLIL_SET_REG.d(w1,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_CEIL.q(LLIL_REG.q(d13)))))'),
     # fcvtpu w17, d3                                                   FCVTPU_32D_float2int
-    (b'\x71\x00\x69\x1E', 'LLIL_SET_REG.d(w17,LLIL_FLOAT_TO_INT.d(LLIL_CEIL.q(LLIL_REG.q(d3))))'),
+    (b'\x71\x00\x69\x1E', 'LLIL_SET_REG.d(w17,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_CEIL.q(LLIL_REG.q(d3)))))'),
     # fcvtpu w17, s3                                                   FCVTPU_32S_float2int
-    (b'\x71\x00\x29\x1E', 'LLIL_SET_REG.d(w17,LLIL_FLOAT_TO_INT.d(LLIL_CEIL.d(LLIL_REG.d(s3))))'),
+    (b'\x71\x00\x29\x1E', 'LLIL_SET_REG.d(w17,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_CEIL.d(LLIL_REG.d(s3)))))'),
     # fcvtpu w14, s26                                                  FCVTPU_32S_float2int
-    (b'\x4E\x03\x29\x1E', 'LLIL_SET_REG.d(w14,LLIL_FLOAT_TO_INT.d(LLIL_CEIL.d(LLIL_REG.d(s26))))'),
+    (b'\x4E\x03\x29\x1E', 'LLIL_SET_REG.d(w14,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_CEIL.d(LLIL_REG.d(s26)))))'),
     # fcvtpu x5, d18                                                   FCVTPU_64D_float2int
-    (b'\x45\x02\x69\x9E', 'LLIL_SET_REG.q(x5,LLIL_FLOAT_TO_INT.q(LLIL_CEIL.q(LLIL_REG.q(d18))))'),
+    (b'\x45\x02\x69\x9E', 'LLIL_INTRINSIC([x5],vcvtpd_u64_f64,[LLIL_REG.q(d18)])'),
     # fcvtpu x24, d30                                                  FCVTPU_64D_float2int
-    (b'\xD8\x03\x69\x9E', 'LLIL_SET_REG.q(x24,LLIL_FLOAT_TO_INT.q(LLIL_CEIL.q(LLIL_REG.q(d30))))'),
+    (b'\xD8\x03\x69\x9E', 'LLIL_INTRINSIC([x24],vcvtpd_u64_f64,[LLIL_REG.q(d30)])'),
     # fcvtpu x21, s18                                                  FCVTPU_64S_float2int
-    (b'\x55\x02\x29\x9E', 'LLIL_SET_REG.q(x21,LLIL_FLOAT_TO_INT.q(LLIL_CEIL.d(LLIL_REG.d(s18))))'),
+    (b'\x55\x02\x29\x9E', 'LLIL_INTRINSIC([x21],vcvtps_u64_f32,[LLIL_REG.d(s18)])'),
     # fcvtpu x3, s8                                                    FCVTPU_64S_float2int
-    (b'\x03\x01\x29\x9E', 'LLIL_SET_REG.q(x3,LLIL_FLOAT_TO_INT.q(LLIL_CEIL.d(LLIL_REG.d(s8))))'),
+    (b'\x03\x01\x29\x9E', 'LLIL_INTRINSIC([x3],vcvtps_u64_f32,[LLIL_REG.d(s8)])'),
     # fcvtpu v12.2s, v20.2s                                            FCVTPU_asimdmisc_R
     (b'\x8C\xAA\xA1\x2E', 'LLIL_INTRINSIC([v12],vcvtp_u32_f32,[LLIL_REG.o(v20)])'),
     # fcvtpu v21.2s, v15.2s                                            FCVTPU_asimdmisc_R
@@ -5423,53 +5428,65 @@ tests_fcvt = [
     # fcvtzs d4, d2, #0x30                                             FCVTZS_asisdshf_C
     (b'\x44\xFC\x50\x5F', 'LLIL_INTRINSIC([d4],vcvt_n_s64_f64,[LLIL_REG.q(d2),LLIL_CONST.q(0x30)])'),
     # fcvtzu w22, d30, #0x18                                           FCVTZU_32D_float2fix
-    (b'\xD6\xA3\x59\x1E', 'LLIL_SET_REG.d(w22,LLIL_FLOAT_TO_INT.d(LLIL_FMUL.q(LLIL_REG.q(d30),LLIL_FLOAT_CONST.q(16777216.0))))'),
+    (b'\xD6\xA3\x59\x1E', 'LLIL_SET_REG.d(w22,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FMUL.q(LLIL_REG.q(d30),LLIL_FLOAT_CONST.q(16777216.0)))))'),
     # fcvtzu w23, d16, #0x1d                                           FCVTZU_32D_float2fix
-    (b'\x17\x8E\x59\x1E', 'LLIL_SET_REG.d(w23,LLIL_FLOAT_TO_INT.d(LLIL_FMUL.q(LLIL_REG.q(d16),LLIL_FLOAT_CONST.q(536870912.0))))'),
+    (b'\x17\x8E\x59\x1E', 'LLIL_SET_REG.d(w23,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FMUL.q(LLIL_REG.q(d16),LLIL_FLOAT_CONST.q(536870912.0)))))'),
     # fcvtzu w16, d29, #0x5                                            FCVTZU_32D_float2fix
-    (b'\xB0\xEF\x59\x1E', 'LLIL_SET_REG.d(w16,LLIL_FLOAT_TO_INT.d(LLIL_FMUL.q(LLIL_REG.q(d29),LLIL_FLOAT_CONST.q(32.0))))'),
+    (b'\xB0\xEF\x59\x1E', 'LLIL_SET_REG.d(w16,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FMUL.q(LLIL_REG.q(d29),LLIL_FLOAT_CONST.q(32.0)))))'),
     # fcvtzu w10, d14, #0x1f                                           FCVTZU_32D_float2fix
-    (b'\xCA\x85\x59\x1E', 'LLIL_SET_REG.d(w10,LLIL_FLOAT_TO_INT.d(LLIL_FMUL.q(LLIL_REG.q(d14),LLIL_FLOAT_CONST.q(2147483648.0))))'),
+    (b'\xCA\x85\x59\x1E', 'LLIL_SET_REG.d(w10,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FMUL.q(LLIL_REG.q(d14),LLIL_FLOAT_CONST.q(2147483648.0)))))'),
     # fcvtzu w8, d19                                                   FCVTZU_32D_float2int
-    (b'\x68\x02\x79\x1E', 'LLIL_SET_REG.d(w8,LLIL_FLOAT_TO_INT.d(LLIL_REG.q(d19)))'),
+    (b'\x68\x02\x79\x1E', 'LLIL_SET_REG.d(w8,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_REG.q(d19))))'),
     # fcvtzu w11, d24                                                  FCVTZU_32D_float2int
-    (b'\x0B\x03\x79\x1E', 'LLIL_SET_REG.d(w11,LLIL_FLOAT_TO_INT.d(LLIL_REG.q(d24)))'),
+    (b'\x0B\x03\x79\x1E', 'LLIL_SET_REG.d(w11,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_REG.q(d24))))'),
+    # fcvtzu w0, h1                                                    FCVTZU_32H_float2int
+    (b'\x20\x00\xF9\x1E', 'LLIL_SET_REG.d(w0,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FLOAT_CONV.d(LLIL_REG.w(h1)))))'),
     # fcvtzu w18, s24, #0x1f                                           FCVTZU_32S_float2fix
-    (b'\x12\x87\x19\x1E', 'LLIL_SET_REG.d(w18,LLIL_FLOAT_TO_INT.d(LLIL_FMUL.d(LLIL_REG.d(s24),LLIL_FLOAT_CONST.d(2147483648.0))))'),
+    (b'\x12\x87\x19\x1E', 'LLIL_SET_REG.d(w18,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FMUL.d(LLIL_REG.d(s24),LLIL_FLOAT_CONST.d(2147483648.0)))))'),
     # fcvtzu w9, s9, #0x1b                                             FCVTZU_32S_float2fix
-    (b'\x29\x95\x19\x1E', 'LLIL_SET_REG.d(w9,LLIL_FLOAT_TO_INT.d(LLIL_FMUL.d(LLIL_REG.d(s9),LLIL_FLOAT_CONST.d(134217728.0))))'),
+    (b'\x29\x95\x19\x1E', 'LLIL_SET_REG.d(w9,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FMUL.d(LLIL_REG.d(s9),LLIL_FLOAT_CONST.d(134217728.0)))))'),
     # fcvtzu w5, s25, #0x14                                            FCVTZU_32S_float2fix
-    (b'\x25\xB3\x19\x1E', 'LLIL_SET_REG.d(w5,LLIL_FLOAT_TO_INT.d(LLIL_FMUL.d(LLIL_REG.d(s25),LLIL_FLOAT_CONST.d(1048576.0))))'),
+    (b'\x25\xB3\x19\x1E', 'LLIL_SET_REG.d(w5,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FMUL.d(LLIL_REG.d(s25),LLIL_FLOAT_CONST.d(1048576.0)))))'),
     # fcvtzu w19, s16, #0x1f                                           FCVTZU_32S_float2fix
-    (b'\x13\x86\x19\x1E', 'LLIL_SET_REG.d(w19,LLIL_FLOAT_TO_INT.d(LLIL_FMUL.d(LLIL_REG.d(s16),LLIL_FLOAT_CONST.d(2147483648.0))))'),
+    (b'\x13\x86\x19\x1E', 'LLIL_SET_REG.d(w19,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_FMUL.d(LLIL_REG.d(s16),LLIL_FLOAT_CONST.d(2147483648.0)))))'),
     # fcvtzu w4, s18                                                   FCVTZU_32S_float2int
-    (b'\x44\x02\x39\x1E', 'LLIL_SET_REG.d(w4,LLIL_FLOAT_TO_INT.d(LLIL_REG.d(s18)))'),
+    (b'\x44\x02\x39\x1E', 'LLIL_SET_REG.d(w4,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_REG.d(s18))))'),
     # fcvtzu w17, s27                                                  FCVTZU_32S_float2int
-    (b'\x71\x03\x39\x1E', 'LLIL_SET_REG.d(w17,LLIL_FLOAT_TO_INT.d(LLIL_REG.d(s27)))'),
+    (b'\x71\x03\x39\x1E', 'LLIL_SET_REG.d(w17,LLIL_LOW_PART.d(LLIL_FLOAT_TO_INT.q(LLIL_REG.d(s27))))'),
     # fcvtzu fp, d13, #0x37                                            FCVTZU_64D_float2fix
-    (b'\xBD\x25\x59\x9E', 'LLIL_SET_REG.q(fp,LLIL_FLOAT_TO_INT.q(LLIL_FMUL.q(LLIL_REG.q(d13),LLIL_FLOAT_CONST.q(3.602879701896397e+16))))'),
+    (b'\xBD\x25\x59\x9E', 'LLIL_INTRINSIC([fp],vcvtd_n_u64_f64,[LLIL_REG.q(d13),LLIL_CONST.q(0x37)])'),
     # fcvtzu x4, d6, #0x17                                             FCVTZU_64D_float2fix
-    (b'\xC4\xA4\x59\x9E', 'LLIL_SET_REG.q(x4,LLIL_FLOAT_TO_INT.q(LLIL_FMUL.q(LLIL_REG.q(d6),LLIL_FLOAT_CONST.q(8388608.0))))'),
+    (b'\xC4\xA4\x59\x9E', 'LLIL_INTRINSIC([x4],vcvtd_n_u64_f64,[LLIL_REG.q(d6),LLIL_CONST.q(0x17)])'),
     # fcvtzu x17, d24, #0x9                                            FCVTZU_64D_float2fix
-    (b'\x11\xDF\x59\x9E', 'LLIL_SET_REG.q(x17,LLIL_FLOAT_TO_INT.q(LLIL_FMUL.q(LLIL_REG.q(d24),LLIL_FLOAT_CONST.q(512.0))))'),
+    (b'\x11\xDF\x59\x9E', 'LLIL_INTRINSIC([x17],vcvtd_n_u64_f64,[LLIL_REG.q(d24),LLIL_CONST.q(0x9)])'),
     # fcvtzu x4, d26, #0x36                                            FCVTZU_64D_float2fix
-    (b'\x44\x2B\x59\x9E', 'LLIL_SET_REG.q(x4,LLIL_FLOAT_TO_INT.q(LLIL_FMUL.q(LLIL_REG.q(d26),LLIL_FLOAT_CONST.q(1.8014398509481984e+16))))'),
+    (b'\x44\x2B\x59\x9E', 'LLIL_INTRINSIC([x4],vcvtd_n_u64_f64,[LLIL_REG.q(d26),LLIL_CONST.q(0x36)])'),
     # fcvtzu x9, d6                                                    FCVTZU_64D_float2int
-    (b'\xC9\x00\x79\x9E', 'LLIL_SET_REG.q(x9,LLIL_FLOAT_TO_INT.q(LLIL_REG.q(d6)))'),
+    (b'\xC9\x00\x79\x9E', 'LLIL_INTRINSIC([x9],vcvtd_u64_f64,[LLIL_REG.q(d6)])'),
     # fcvtzu x9, d25                                                   FCVTZU_64D_float2int
-    (b'\x29\x03\x79\x9E', 'LLIL_SET_REG.q(x9,LLIL_FLOAT_TO_INT.q(LLIL_REG.q(d25)))'),
+    (b'\x29\x03\x79\x9E', 'LLIL_INTRINSIC([x9],vcvtd_u64_f64,[LLIL_REG.q(d25)])'),
+    # fcvtzu xzr, d0                                                   FCVTZU_64D_float2int
+    (b'\x1F\x00\x79\x9E', 'LLIL_INTRINSIC([temp0],vcvtd_u64_f64,[LLIL_REG.q(d0)])'),
+    # fcvtzu x0, h1, #0x4                                              FCVTZU_64H_float2fix
+    (b'\x20\xF0\xD9\x9E', 'LLIL_INTRINSIC([x0],vcvth_n_u64_f16,[LLIL_REG.w(h1),LLIL_CONST.q(0x4)])'),
+    # fcvtzu x0, h1, #0x11                                             FCVTZU_64H_float2fix
+    (b'\x20\xBC\xD9\x9E', 'LLIL_INTRINSIC([x0],vcvtd_n_u64_f64,[LLIL_FLOAT_CONV.q(LLIL_REG.w(h1)),LLIL_CONST.q(0x11)])'),
+    # fcvtzu x0, h1                                                    FCVTZU_64H_float2int
+    (b'\x20\x00\xF9\x9E', 'LLIL_INTRINSIC([x0],vcvth_u64_f16,[LLIL_REG.w(h1)])'),
     # fcvtzu x26, s31, #0x15                                           FCVTZU_64S_float2fix
-    (b'\xFA\xAF\x19\x9E', 'LLIL_SET_REG.q(x26,LLIL_FLOAT_TO_INT.q(LLIL_FMUL.d(LLIL_REG.d(s31),LLIL_FLOAT_CONST.d(2097152.0))))'),
+    (b'\xFA\xAF\x19\x9E', 'LLIL_INTRINSIC([x26],vcvtd_n_u64_f64,[LLIL_FLOAT_CONV.q(LLIL_REG.d(s31)),LLIL_CONST.q(0x15)])'),
     # fcvtzu x27, s11, #0x21                                           FCVTZU_64S_float2fix
-    (b'\x7B\x7D\x19\x9E', 'LLIL_SET_REG.q(x27,LLIL_FLOAT_TO_INT.q(LLIL_FMUL.d(LLIL_REG.d(s11),LLIL_FLOAT_CONST.d(8589934592.0))))'),
+    (b'\x7B\x7D\x19\x9E', 'LLIL_INTRINSIC([x27],vcvtd_n_u64_f64,[LLIL_FLOAT_CONV.q(LLIL_REG.d(s11)),LLIL_CONST.q(0x21)])'),
     # fcvtzu fp, s6, #0x38                                             FCVTZU_64S_float2fix
-    (b'\xDD\x20\x19\x9E', 'LLIL_SET_REG.q(fp,LLIL_FLOAT_TO_INT.q(LLIL_FMUL.d(LLIL_REG.d(s6),LLIL_FLOAT_CONST.d(7.205759403792794e+16))))'),
+    (b'\xDD\x20\x19\x9E', 'LLIL_INTRINSIC([fp],vcvtd_n_u64_f64,[LLIL_FLOAT_CONV.q(LLIL_REG.d(s6)),LLIL_CONST.q(0x38)])'),
     # fcvtzu x22, s10, #0x13                                           FCVTZU_64S_float2fix
-    (b'\x56\xB5\x19\x9E', 'LLIL_SET_REG.q(x22,LLIL_FLOAT_TO_INT.q(LLIL_FMUL.d(LLIL_REG.d(s10),LLIL_FLOAT_CONST.d(524288.0))))'),
+    (b'\x56\xB5\x19\x9E', 'LLIL_INTRINSIC([x22],vcvtd_n_u64_f64,[LLIL_FLOAT_CONV.q(LLIL_REG.d(s10)),LLIL_CONST.q(0x13)])'),
+    # fcvtzu xzr, s0, #0x1                                             FCVTZU_64S_float2fix
+    (b'\x1F\xFC\x19\x9E', 'LLIL_INTRINSIC([temp0],vcvtd_n_u64_f64,[LLIL_FLOAT_CONV.q(LLIL_REG.d(s0)),LLIL_CONST.q(0x1)])'),
     # fcvtzu x5, s19                                                   FCVTZU_64S_float2int
-    (b'\x65\x02\x39\x9E', 'LLIL_SET_REG.q(x5,LLIL_FLOAT_TO_INT.q(LLIL_REG.d(s19)))'),
+    (b'\x65\x02\x39\x9E', 'LLIL_INTRINSIC([x5],vcvts_u64_f32,[LLIL_REG.d(s19)])'),
     # fcvtzu xzr, s22                                                  FCVTZU_64S_float2int
-    (b'\xDF\x02\x39\x9E', 'LLIL_FLOAT_TO_INT.q(LLIL_REG.d(s22))'),
+    (b'\xDF\x02\x39\x9E', 'LLIL_INTRINSIC([temp0],vcvts_u64_f32,[LLIL_REG.d(s22)])'),
     # fcvtzu v23.4s, v22.4s                                            FCVTZU_asimdmisc_R
     (b'\xD7\xBA\xA1\x6E', 'LLIL_INTRINSIC([v23],vcvtq_u32_f32,[LLIL_REG.o(v22)])'),
     # fcvtzu v25.4s, v15.4s                                            FCVTZU_asimdmisc_R
@@ -6324,9 +6341,9 @@ tests_fmov = [
     # fmov x7, v8.d[1]
     (b'\x07\x01\xAE\x9E', 'LLIL_SET_REG.q(x7,LLIL_REG.q(v8.d[1]))'),
     # fmov d19, x0
-    (b'\x13\x00\x67\x9E', 'LLIL_SET_REG.q(d19,LLIL_INT_TO_FLOAT.q(LLIL_REG.q(x0)))'),
+    (b'\x13\x00\x67\x9E', 'LLIL_SET_REG.q(d19,LLIL_REG.q(x0))'),
     # fmov d8, x21
-    (b'\xA8\x02\x67\x9E', 'LLIL_SET_REG.q(d8,LLIL_INT_TO_FLOAT.q(LLIL_REG.q(x21)))'),
+    (b'\xA8\x02\x67\x9E', 'LLIL_SET_REG.q(d8,LLIL_REG.q(x21))'),
     # fmov d24, d27
     (b'\x78\x43\x60\x1E', 'LLIL_SET_REG.q(d24,LLIL_REG.q(d27))'),
     # fmov d19, d19
@@ -6336,13 +6353,13 @@ tests_fmov = [
     # TODO fmov d19, #-3.125
     (b'\x13\x30\x71\x1E', 'LLIL_SET_REG.q(d19,LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-3.125)))'),
     # fmov h28, w19
-    (b'\x7C\x02\xE7\x1E', 'LLIL_SET_REG.w(h28,LLIL_INT_TO_FLOAT.w(LLIL_REG.d(w19)))'),
+    (b'\x7C\x02\xE7\x1E', 'LLIL_SET_REG.w(h28,LLIL_LOW_PART.w(LLIL_REG.d(w19)))'),
     # fmov h2, w5
-    (b'\xA2\x00\xE7\x1E', 'LLIL_SET_REG.w(h2,LLIL_INT_TO_FLOAT.w(LLIL_REG.d(w5)))'),
+    (b'\xA2\x00\xE7\x1E', 'LLIL_SET_REG.w(h2,LLIL_LOW_PART.w(LLIL_REG.d(w5)))'),
     # fmov h10, x14
-    (b'\xCA\x01\xE7\x9E', 'LLIL_SET_REG.w(h10,LLIL_INT_TO_FLOAT.w(LLIL_REG.q(x14)))'),
+    (b'\xCA\x01\xE7\x9E', 'LLIL_SET_REG.w(h10,LLIL_LOW_PART.w(LLIL_REG.q(x14)))'),
     # fmov h9, fp
-    (b'\xA9\x03\xE7\x9E', 'LLIL_SET_REG.w(h9,LLIL_INT_TO_FLOAT.w(LLIL_REG.q(fp)))'),
+    (b'\xA9\x03\xE7\x9E', 'LLIL_SET_REG.w(h9,LLIL_LOW_PART.w(LLIL_REG.q(fp)))'),
     # fmov h6, h23
     (b'\xE6\x42\xE0\x1E', 'LLIL_SET_REG.w(h6,LLIL_REG.w(h23))'),
     # fmov h6, h28
@@ -6352,9 +6369,9 @@ tests_fmov = [
     # fmov h25, #11.0
     (b'\x19\xD0\xE4\x1E', 'LLIL_SET_REG.w(h25,LLIL_FLOAT_CONV.w(LLIL_FLOAT_CONST.d(11.0)))'),
     # fmov s17, w2
-    (b'\x51\x00\x27\x1E', 'LLIL_SET_REG.d(s17,LLIL_INT_TO_FLOAT.d(LLIL_REG.d(w2)))'),
+    (b'\x51\x00\x27\x1E', 'LLIL_SET_REG.d(s17,LLIL_REG.d(w2))'),
     # fmov s1, wzr
-    (b'\xE1\x03\x27\x1E', 'LLIL_SET_REG.d(s1,LLIL_INT_TO_FLOAT.d(LLIL_CONST.d(0x0)))'),
+    (b'\xE1\x03\x27\x1E', 'LLIL_SET_REG.d(s1,LLIL_CONST.d(0x0))'),
     # fmov s4, s11
     (b'\x64\x41\x20\x1E', 'LLIL_SET_REG.d(s4,LLIL_REG.d(s11))'),
     # fmov s23, s2
@@ -6364,9 +6381,9 @@ tests_fmov = [
     # fmov s14, #21.0
     (b'\x0E\xB0\x26\x1E', 'LLIL_SET_REG.d(s14,LLIL_FLOAT_CONV.d(LLIL_FLOAT_CONST.d(21.0)))'),
     # fmov v14.d[1], x26
-    (b'\x4E\x03\xAF\x9E', 'LLIL_SET_REG.q(v14.d[1],LLIL_REG.o(x26))'),
+    (b'\x4E\x03\xAF\x9E', 'LLIL_SET_REG.q(v14.d[1],LLIL_REG.q(x26))'),
     # fmov v28.d[1], x14
-    (b'\xDC\x01\xAF\x9E', 'LLIL_SET_REG.q(v28.d[1],LLIL_REG.o(x14))'),
+    (b'\xDC\x01\xAF\x9E', 'LLIL_SET_REG.q(v28.d[1],LLIL_REG.q(x14))'),
     # TODO fmov v13.2d, #-3.0 (.d in arm namespace is 64-bit, .q in binja namespce is 64-bit)
     (b'\x0D\xF5\x04\x6F', 'LLIL_SET_REG.q(v13.d[0],LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-3.0)));' + \
                          ' LLIL_SET_REG.q(v13.d[1],LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-3.0)))'),
@@ -12068,17 +12085,19 @@ tests_umul_uadd = [
     # umull fp, w19, w2                                                UMULL_UMADDL_64WA_dp_3src
     (b'\x7D\x7E\xA2\x9B', 'LLIL_SET_REG.q(fp,LLIL_MULU_DP.q(LLIL_REG.d(w19),LLIL_REG.d(w2)))'),
     # umull v27.2d, v28.2s, v8.2s                                      UMULL_asimddiff_L
-    (b'\x9B\xC3\xA8\x2E', 'LLIL_SET_REG.o(v27,LLIL_MULU_DP.o(LLIL_REG.o(v28),LLIL_REG.o(v8)))'),
+    (b'\x9B\xC3\xA8\x2E', 'LLIL_INTRINSIC([v27],vmull_u32,[LLIL_REG.o(v28),LLIL_REG.o(v8)])'),
     # umull2 v12.4s, v14.8h, v26.8h                                    UMULL_asimddiff_L
     (b'\xCC\xC1\x7A\x6E', 'LLIL_INTRINSIC([v12],vmull_high_u16,[LLIL_REG.o(v14),LLIL_REG.o(v26)])'),
     # umull v8.8h, v4.8b, v14.8b                                       UMULL_asimddiff_L
-    (b'\x88\xC0\x2E\x2E', 'LLIL_SET_REG.o(v8,LLIL_MULU_DP.o(LLIL_REG.o(v4),LLIL_REG.o(v14)))'),
+    (b'\x88\xC0\x2E\x2E', 'LLIL_INTRINSIC([v8],vmull_u8,[LLIL_REG.o(v4),LLIL_REG.o(v14)])'),
     # umull2 v26.2d, v6.4s, v5.s[0]                                    UMULL_asimdelem_L
     (b'\xDA\xA0\x85\x6F', 'LLIL_INTRINSIC([v26],vmull_high_laneq_u32,[LLIL_REG.o(v6),LLIL_REG.o(v5),LLIL_CONST.b(0x0)])'),
     # umull2 v19.2d, v29.4s, v18.s[1]                                  UMULL_asimdelem_L
     (b'\xB3\xA3\xB2\x6F', 'LLIL_INTRINSIC([v19],vmull_high_laneq_u32,[LLIL_REG.o(v29),LLIL_REG.o(v18),LLIL_CONST.b(0x1)])'),
     # umull2 v3.2d, v15.4s, v14.s[2]                                   UMULL_asimdelem_L
     (b'\xE3\xA9\x8E\x6F', 'LLIL_INTRINSIC([v3],vmull_high_laneq_u32,[LLIL_REG.o(v15),LLIL_REG.o(v14),LLIL_CONST.b(0x2)])'),
+    # umull v0.2d, v1.2s, v2.s[1]                                      UMULL_asimdelem_L
+    (b'\x20\xA0\xA2\x2F', 'LLIL_INTRINSIC([v0],vmull_laneq_u32,[LLIL_REG.o(v1),LLIL_REG.o(v2),LLIL_CONST.b(0x1)])'),
 ]
 
 tests_smov = [
@@ -12346,21 +12365,21 @@ tests_vmul = [
     # smull x24, w0, wzr                                               SMULL_SMADDL_64WA_dp_3src
     (b'\x18\x7C\x3F\x9B', 'LLIL_SET_REG.q(x24,LLIL_MULS_DP.d(LLIL_REG.d(w0),LLIL_CONST.d(0x0)))'),
     # smull v4.8h, v22.8b, v18.8b                                      SMULL_asimddiff_L
-    (b'\xC4\xC2\x32\x0E', 'LLIL_SET_REG.o(v4,LLIL_MULS_DP.o(LLIL_REG.o(v22),LLIL_REG.o(v18)))'),
+    (b'\xC4\xC2\x32\x0E', 'LLIL_INTRINSIC([v4],vmull_s8,[LLIL_REG.o(v22),LLIL_REG.o(v18)])'),
     # smull2 v1.4s, v13.8h, v24.8h                                     SMULL_asimddiff_L
     (b'\xA1\xC1\x78\x4E', 'LLIL_INTRINSIC([v1],vmull_high_s16,[LLIL_REG.o(v13),LLIL_REG.o(v24)])'),
     # smull v6.4s, v3.4h, v31.4h                                       SMULL_asimddiff_L
-    (b'\x66\xC0\x7F\x0E', 'LLIL_SET_REG.o(v6,LLIL_MULS_DP.o(LLIL_REG.o(v3),LLIL_REG.o(v31)))'),
+    (b'\x66\xC0\x7F\x0E', 'LLIL_INTRINSIC([v6],vmull_s16,[LLIL_REG.o(v3),LLIL_REG.o(v31)])'),
     # smull2 v16.2d, v31.4s, v20.4s                                    SMULL_asimddiff_L
     (b'\xF0\xC3\xB4\x4E', 'LLIL_INTRINSIC([v16],vmull_high_s32,[LLIL_REG.o(v31),LLIL_REG.o(v20)])'),
     # smull v6.4s, v8.4h, v12.h[0]                                     SMULL_asimdelem_L
-    (b'\x06\xA1\x4C\x0F', 'LLIL_SET_REG.o(v6,LLIL_MULS_DP.o(LLIL_REG.o(v8),LLIL_REG.o(v12)))'),
+    (b'\x06\xA1\x4C\x0F', 'LLIL_INTRINSIC([v6],vmull_laneq_s16,[LLIL_REG.o(v8),LLIL_REG.o(v12),LLIL_CONST.b(0x0)])'),
     # smull2 v11.2d, v31.4s, v8.s[1]                                   SMULL_asimdelem_L
     (b'\xEB\xA3\xA8\x4F', 'LLIL_INTRINSIC([v11],vmull_high_laneq_s32,[LLIL_REG.o(v31),LLIL_REG.o(v8),LLIL_CONST.b(0x1)])'),
     # smull v11.2d, v3.2s, v19.s[2]                                    SMULL_asimdelem_L
-    (b'\x6B\xA8\x93\x0F', 'LLIL_SET_REG.o(v11,LLIL_MULS_DP.o(LLIL_REG.o(v3),LLIL_REG.o(v19)))'),
+    (b'\x6B\xA8\x93\x0F', 'LLIL_INTRINSIC([v11],vmull_laneq_s32,[LLIL_REG.o(v3),LLIL_REG.o(v19),LLIL_CONST.b(0x2)])'),
     # smull v27.4s, v0.4h, v7.h[5]                                     SMULL_asimdelem_L
-    (b'\x1B\xA8\x57\x0F', 'LLIL_SET_REG.o(v27,LLIL_MULS_DP.o(LLIL_REG.o(v0),LLIL_REG.o(v7)))'),
+    (b'\x1B\xA8\x57\x0F', 'LLIL_INTRINSIC([v27],vmull_laneq_s16,[LLIL_REG.o(v0),LLIL_REG.o(v7),LLIL_CONST.b(0x5)])'),
     # umaddl x7, w3, w18, x1                                           UMADDL_64WA_dp_3src
     (b'\x67\x04\xB2\x9B',
      'LLIL_SET_REG.q(x7,LLIL_ADD.q(LLIL_REG.q(x1),LLIL_MULU_DP.d(LLIL_REG.d(w3),LLIL_REG.d(w18))))'),
@@ -12417,13 +12436,13 @@ tests_vmul = [
     # umull x18, w18, w18                                              UMULL_UMADDL_64WA_dp_3src
     (b'\x52\x7E\xB2\x9B', 'LLIL_SET_REG.q(x18,LLIL_MULU_DP.d(LLIL_REG.d(w18),LLIL_REG.d(w18)))'),
     # umull v27.2d, v28.2s, v8.2s                                      UMULL_asimddiff_L
-    (b'\x9B\xC3\xA8\x2E', 'LLIL_SET_REG.o(v27,LLIL_MULU_DP.o(LLIL_REG.o(v28),LLIL_REG.o(v8)))'),
+    (b'\x9B\xC3\xA8\x2E', 'LLIL_INTRINSIC([v27],vmull_u32,[LLIL_REG.o(v28),LLIL_REG.o(v8)])'),
     # umull2 v12.4s, v14.8h, v26.8h                                    UMULL_asimddiff_L
     (b'\xCC\xC1\x7A\x6E', 'LLIL_INTRINSIC([v12],vmull_high_u16,[LLIL_REG.o(v14),LLIL_REG.o(v26)])'),
     # umull v8.8h, v4.8b, v14.8b                                       UMULL_asimddiff_L
-    (b'\x88\xC0\x2E\x2E', 'LLIL_SET_REG.o(v8,LLIL_MULU_DP.o(LLIL_REG.o(v4),LLIL_REG.o(v14)))'),
+    (b'\x88\xC0\x2E\x2E', 'LLIL_INTRINSIC([v8],vmull_u8,[LLIL_REG.o(v4),LLIL_REG.o(v14)])'),
     # umull v30.2d, v1.2s, v4.2s                                       UMULL_asimddiff_L
-    (b'\x3E\xC0\xA4\x2E', 'LLIL_SET_REG.o(v30,LLIL_MULU_DP.o(LLIL_REG.o(v1),LLIL_REG.o(v4)))'),
+    (b'\x3E\xC0\xA4\x2E', 'LLIL_INTRINSIC([v30],vmull_u32,[LLIL_REG.o(v1),LLIL_REG.o(v4)])'),
     # umull2 v26.2d, v6.4s, v5.s[0]                                    UMULL_asimdelem_L
     (b'\xDA\xA0\x85\x6F', 'LLIL_INTRINSIC([v26],vmull_high_laneq_u32,[LLIL_REG.o(v6),LLIL_REG.o(v5),LLIL_CONST.b(0x0)])'),
     # umull2 v19.2d, v29.4s, v18.s[1]                                  UMULL_asimdelem_L
@@ -12621,6 +12640,57 @@ tests_grab_bag = [
     (b'\xB6\x72\xC9\xA8', 'LLIL_SET_REG.q(x22,LLIL_LOAD.q(LLIL_REG.q(x21)));' + \
                          ' LLIL_SET_REG.q(x28,LLIL_LOAD.q(LLIL_ADD.q(LLIL_REG.q(x21),LLIL_CONST.q(0x8))));' + \
                          ' LLIL_SET_REG.q(x21,LLIL_ADD.q(LLIL_REG.q(x21),LLIL_CONST.q(0x90)))'),
+    # ldp w2, w4, [x2] -- the second address uses x2 before the first load writes w2
+    (b'\x42\x10\x40\x29', 'LLIL_SET_REG.q(temp0,LLIL_ADD.q(LLIL_REG.q(x2),LLIL_CONST.q(0x4)));' + \
+                         ' LLIL_SET_REG.d(w2,LLIL_LOAD.d(LLIL_REG.q(x2)));' + \
+                         ' LLIL_SET_REG.d(w4,LLIL_LOAD.d(LLIL_REG.q(temp0)))'),
+    # ldp w3, w2, [x3, #-0x8]
+    (b'\x63\x08\x7F\x29', 'LLIL_SET_REG.q(temp0,LLIL_ADD.q(LLIL_REG.q(x3),LLIL_CONST.q(0xFFFFFFFFFFFFFFFC)));' + \
+                         ' LLIL_SET_REG.d(w3,LLIL_LOAD.d(LLIL_ADD.q(LLIL_REG.q(x3),LLIL_CONST.q(0xFFFFFFFFFFFFFFF8))));' + \
+                         ' LLIL_SET_REG.d(w2,LLIL_LOAD.d(LLIL_REG.q(temp0)))'),
+    # ldnp w0, w1, [x0]
+    (b'\x00\x04\x40\x28', 'LLIL_SET_REG.q(temp0,LLIL_ADD.q(LLIL_REG.q(x0),LLIL_CONST.q(0x4)));' + \
+                         ' LLIL_SET_REG.d(w0,LLIL_LOAD.d(LLIL_REG.q(x0)));' + \
+                         ' LLIL_SET_REG.d(w1,LLIL_LOAD.d(LLIL_REG.q(temp0)))'),
+    # ldp w0, wzr, [x0]
+    (b'\x00\x7C\x40\x29', 'LLIL_SET_REG.q(temp0,LLIL_ADD.q(LLIL_REG.q(x0),LLIL_CONST.q(0x4)));' + \
+                         ' LLIL_SET_REG.d(w0,LLIL_LOAD.d(LLIL_REG.q(x0)));' + \
+                         ' LLIL_LOAD.d(LLIL_REG.q(temp0))'),
+    # ldpsw x0, x1, [x0, #0x8] -- the temporary holds the whole 64-bit address
+    (b'\x00\x04\x41\x69', 'LLIL_SET_REG.q(temp0,LLIL_ADD.q(LLIL_REG.q(x0),LLIL_CONST.q(0xC)));' + \
+                         ' LLIL_SET_REG.q(x0,LLIL_SX.q(LLIL_LOAD.d(LLIL_ADD.q(LLIL_REG.q(x0),LLIL_CONST.q(0x8)))));' + \
+                         ' LLIL_SET_REG.q(x1,LLIL_SX.q(LLIL_LOAD.d(LLIL_REG.q(temp0))))'),
+    # ldpsw x1, x2, [x0]
+    (b'\x01\x08\x40\x69', 'LLIL_SET_REG.q(x1,LLIL_SX.q(LLIL_LOAD.d(LLIL_REG.q(x0))));' + \
+                         ' LLIL_SET_REG.q(x2,LLIL_SX.q(LLIL_LOAD.d(LLIL_ADD.q(LLIL_REG.q(x0),LLIL_CONST.q(0x4)))))'),
+    # add v0.4s, v1.4s, v2.4s -- lanes, not one 128-bit add
+    (b'\x20\x84\xA2\x4E', 'LLIL_INTRINSIC([v0],vaddq_s32,[LLIL_REG.o(v1),LLIL_REG.o(v2)])'),
+    # add v2.2s, v2.2s, v0.2s
+    (b'\x42\x84\xA0\x0E', 'LLIL_INTRINSIC([v2],vadd_s32,[LLIL_REG.o(v2),LLIL_REG.o(v0)])'),
+    # sub v0.4s, v1.4s, v2.4s
+    (b'\x20\x84\xA2\x6E', 'LLIL_INTRINSIC([v0],vsubq_s32,[LLIL_REG.o(v1),LLIL_REG.o(v2)])'),
+    # add d0, d1, d2 -- the scalar form is one 64-bit add
+    (b'\x20\x84\xE2\x5E', 'LLIL_SET_REG.q(d0,LLIL_ADD.q(LLIL_REG.q(d1),LLIL_REG.q(d2)))'),
+    # add za.s[w8, 0, vgx2], {z0.s-z1.s}
+    (b'\x10\x1C\xA0\xC1', 'LLIL_UNIMPL()'),
+    # add {z0.s-z1.s}, {z0.s-z1.s}, z2.s
+    (b'\x00\xA3\xA2\xC1', 'LLIL_UNIMPL()'),
+    # sub za.s[w8, 0, vgx2], {z0.s-z1.s}, {z2.s-z3.s}
+    (b'\x18\x18\xA2\xC1', 'LLIL_UNIMPL()'),
+    # clz v0.4s, v1.4s -- lanes, not one 128-bit count
+    (b'\x20\x48\xA0\x6E', 'LLIL_INTRINSIC([v0],vclzq_s32,[LLIL_REG.o(v1)])'),
+    # clz v0.8b, v1.8b
+    (b'\x20\x48\x20\x2E', 'LLIL_INTRINSIC([v0],vclz_s8,[LLIL_REG.o(v1)])'),
+    # cls v0.8h, v1.8h
+    (b'\x20\x48\x60\x4E', 'LLIL_INTRINSIC([v0],vclsq_s16,[LLIL_REG.o(v1)])'),
+    # clz z0.s, p0/m, z1.s
+    (b'\x20\xA0\x99\x04', 'LLIL_UNIMPL()'),
+    # cls z0.s, p0/m, z1.s
+    (b'\x20\xA0\x98\x04', 'LLIL_UNIMPL()'),
+    # clz w0, w1
+    (b'\x20\x10\xC0\x5A', 'LLIL_SET_REG.d(w0,LLIL_CLZ.d(LLIL_REG.d(w1)))'),
+    # cls x0, x1
+    (b'\x20\x14\xC0\xDA', 'LLIL_SET_REG.q(x0,LLIL_CLS.q(LLIL_REG.q(x1)))'),
     # # cset w8, ne
     (b'\xE8\x07\x9F\x1A', 'LLIL_SET_REG.d(w8,LLIL_BOOL_TO_INT.d(LLIL_FLAG_GROUP(ne)))'),
     # some vector loads/stores

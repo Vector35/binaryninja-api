@@ -7,7 +7,7 @@ use crate::architecture::CoreIntrinsic;
 use crate::function::Function;
 use crate::rc::Ref;
 use crate::string::{BnString, IntoCStr};
-use crate::variable::{ConstantData, SSAVariable, Variable};
+use crate::variable::{ConstantData, PossibleValueSet, SSAVariable, Variable};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct GotoLabel {
@@ -91,6 +91,30 @@ pub struct LiftedArrayIndexSsa {
     pub src: Box<HighLevelILLiftedInstruction>,
     pub src_memory: u64,
     pub index: Box<HighLevelILLiftedInstruction>,
+}
+
+// ASSERT
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct Assert {
+    pub src: Variable,
+    pub constraint_index: usize,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LiftedAssert {
+    pub src: Variable,
+    pub constraint: PossibleValueSet,
+}
+
+// ASSERT_SSA
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct AssertSsa {
+    pub src: SSAVariable,
+    pub constraint_index: usize,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LiftedAssertSsa {
+    pub src: SSAVariable,
+    pub constraint: PossibleValueSet,
 }
 
 // ASSIGN
@@ -310,6 +334,20 @@ pub struct LiftedForLoopSsa {
     pub condition: Box<HighLevelILLiftedInstruction>,
     pub update: Box<HighLevelILLiftedInstruction>,
     pub body: Box<HighLevelILLiftedInstruction>,
+}
+
+// FORCE_VER
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct ForceVer {
+    pub dest: Variable,
+    pub src: Variable,
+}
+
+// FORCE_VER_SSA
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct ForceVerSsa {
+    pub dest: SSAVariable,
+    pub src: SSAVariable,
 }
 
 // GOTO, LABEL

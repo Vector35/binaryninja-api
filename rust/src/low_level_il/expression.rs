@@ -269,7 +269,6 @@ where
     ExternPtr(Operation<'func, M, F, operation::Extern>),
 
     RegStackPop(Operation<'func, M, F, operation::RegStackPop>),
-    RegStackFreeReg(Operation<'func, M, F, operation::RegStackPop>),
 
     CallOutputSsa(Operation<'func, M, F, operation::CallOutputSsa>),
     CallParamSsa(Operation<'func, M, F, operation::CallParamSsa>),
@@ -429,9 +428,6 @@ where
             LLIL_REG_STACK_POP => {
                 LowLevelILExpressionKind::RegStackPop(Operation::new(function, op, index))
             }
-            LLIL_REG_STACK_FREE_REG => {
-                LowLevelILExpressionKind::RegStackFreeReg(Operation::new(function, op, index))
-            }
 
             LLIL_CALL_OUTPUT_SSA => {
                 LowLevelILExpressionKind::CallOutputSsa(Operation::new(function, op, index))
@@ -572,7 +568,7 @@ where
         }
     }
 
-    /// Returns the size of the result of this expression
+    /// Returns the size of the operation in bytes
     ///
     /// If the expression is malformed or is `Unimpl` there
     /// is no meaningful size associated with the result.
@@ -582,10 +578,7 @@ where
         match *self {
             Undef(..) | Unimpl(..) => None,
 
-            FlagCond(..) | FlagGroup(..) | CmpE(..) | CmpNe(..) | CmpSlt(..) | CmpUlt(..)
-            | CmpSle(..) | CmpUle(..) | CmpSge(..) | CmpUge(..) | CmpSgt(..) | CmpUgt(..) => {
-                Some(0)
-            }
+            FlagCond(..) | FlagGroup(..) => Some(0),
 
             _ => Some(self.raw_struct().size),
         }
@@ -628,9 +621,8 @@ where
             | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op)
             | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op)
             | DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op)
-            | MinSigned(ref op) | MaxSigned(ref op) | MinUnsigned(ref op) | MaxUnsigned(ref op) => {
-                Some(op)
-            }
+            | MinSigned(ref op) | MaxSigned(ref op) | MinUnsigned(ref op) | MaxUnsigned(ref op)
+            | TestBit(ref op) | AddOverflow(ref op) => Some(op),
             _ => None,
         }
     }
@@ -723,8 +715,8 @@ where
             // Do not have any sub expressions.
             Pop(_) | Reg(_) | RegSsa(_) | RegPartialSsa(_) | RegSplit(_) | RegSplitSsa(_)
             | Const(_) | ConstPtr(_) | Flag(_) | FlagBit(_) | ExternPtr(_) | FlagCond(_)
-            | FlagGroup(_) | Unimpl(_) | Undef(_) | RegStackPop(_) | RegStackFreeReg(_)
-            | CallOutputSsa(_) | CallStackSsa(_) | FloatConst(_) => {}
+            | FlagGroup(_) | Unimpl(_) | Undef(_) | RegStackPop(_) | CallOutputSsa(_)
+            | CallStackSsa(_) | FloatConst(_) => {}
         }
 
         VisitorAction::Sibling
@@ -773,7 +765,6 @@ where
             ExternPtr(ref op) => &op.op,
 
             RegStackPop(ref op) => &op.op,
-            RegStackFreeReg(ref op) => &op.op,
 
             CallOutputSsa(ref op) => &op.op,
             CallParamSsa(ref op) => &op.op,
@@ -848,7 +839,6 @@ impl LowLevelILExpressionKind<'_, Mutable, NonSSA> {
             ExternPtr(ref op) => op.flag_write(),
 
             RegStackPop(ref op) => op.flag_write(),
-            RegStackFreeReg(ref op) => op.flag_write(),
 
             CallOutputSsa(ref op) => op.flag_write(),
             CallParamSsa(ref op) => op.flag_write(),

@@ -3801,15 +3801,15 @@ class NamedTypeReferenceType(Type):
 		return NamedTypeReferenceType.create(type_class, type_id, name)
 
 	def _target_helper(self, bv: 'binaryview.BinaryView', type_ids=None) -> Optional[Type]:
-		t = bv.get_type_by_id(self.type_id)
+		t = bv.get_type_by_ref(self)
 		if t is None:
 			return None
 		if type_ids is None:
-			type_ids = set()
+			type_ids = {self.type_id}
 		if isinstance(t, NamedTypeReferenceType):
 			if t.type_id in type_ids:
 				raise TypeError("Can't get target for recursively defined type")
-			type_ids.add(t)
+			type_ids.add(t.type_id)
 			return t._target_helper(bv, type_ids)
 		else:
 			return t

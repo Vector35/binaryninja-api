@@ -2719,7 +2719,10 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 		if (symbolTypeRef)
 		{
 			m_logger->LogDebugF("mach-o: type Library {:?} found hit for {:?}", appliedLib->GetName(), name);
-			RecordImportedObjectLibrary(GetDefaultPlatform(), addr, appliedLib, n);
+			// An external symbol only gets its address when the view is finalized, which
+			// records its library then.
+			if (type != ExternalSymbol)
+				RecordImportedObjectLibrary(GetDefaultPlatform(), addr, appliedLib, n);
 		}
 
 	}

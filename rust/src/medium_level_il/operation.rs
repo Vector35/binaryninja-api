@@ -2,8 +2,10 @@ use super::{
     MediumLevelExpressionIndex, MediumLevelILLiftedInstruction, MediumLevelInstructionIndex,
 };
 use crate::architecture::CoreIntrinsic;
-use crate::variable::{ConstantData, SSAVariable, Variable};
+use crate::variable::{ConstantData, PossibleValueSet, SSAVariable, Variable};
 use std::collections::BTreeMap;
+
+pub use binaryninjacore_sys::BNForceVersionReason as ForceVersionReason;
 
 // IF
 #[derive(Debug, Copy, Clone)]
@@ -267,6 +269,26 @@ pub struct LiftedSetVarSplit {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 
+// ASSERT
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct Assert {
+    pub src: Variable,
+    pub constraint_index: usize,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LiftedAssert {
+    pub src: Variable,
+    pub constraint: PossibleValueSet,
+}
+
+// FORCE_VER
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct ForceVer {
+    pub dest: Variable,
+    pub src: Variable,
+    pub reason: ForceVersionReason,
+}
+
 // VAR_SPLIT_SSA
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct VarSplitSsa {
@@ -286,6 +308,26 @@ pub struct LiftedSetVarSplitSsa {
     pub high: SSAVariable,
     pub low: SSAVariable,
     pub src: Box<MediumLevelILLiftedInstruction>,
+}
+
+// ASSERT_SSA
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct AssertSsa {
+    pub src: SSAVariable,
+    pub constraint_index: usize,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LiftedAssertSsa {
+    pub src: SSAVariable,
+    pub constraint: PossibleValueSet,
+}
+
+// FORCE_VER_SSA
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct ForceVerSsa {
+    pub dest: SSAVariable,
+    pub src: SSAVariable,
+    pub reason: ForceVersionReason,
 }
 
 // ADD, SUB, AND, OR, XOR, LSL, LSR, ASR, ROL, ROR, MUL, MULU_DP, MULS_DP, DIVU, DIVU_DP, DIVS, DIVS_DP, MODU, MODU_DP, MODS, MODS_DP, CMP_E, CMP_NE, CMP_SLT, CMP_ULT, CMP_SLE, CMP_ULE, CMP_SGE, CMP_UGE, CMP_SGT, CMP_UGT, TEST_BIT, ADD_OVERFLOW, FCMP_E, FCMP_NE, FCMP_LT, FCMP_LE, FCMP_GE, FCMP_GT, FCMP_O, FCMP_UO, FADD, FSUB, FMUL, FDIV
@@ -330,17 +372,6 @@ pub struct LiftedCall {
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
 
-// CALL_OUTPUT
-#[derive(Debug, Copy, Clone)]
-pub struct CallOutput {
-    pub first_output: usize,
-    pub num_outputs: usize,
-}
-#[derive(Clone, Debug, PartialEq)]
-pub struct LiftedCallOutput {
-    pub output: Vec<Variable>,
-}
-
 // CALL_PARAM_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct CallParam {
@@ -362,7 +393,7 @@ pub struct CallOutputSsa {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCallOutputSsa {
     pub dest_memory: u64,
-    pub output: Vec<SSAVariable>,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
 }
 
 // CALL_PARAM_SSA

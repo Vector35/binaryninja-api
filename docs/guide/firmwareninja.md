@@ -94,10 +94,8 @@ memory regions for selected devices`.
 
 !!! Important "Loading an SVD File"
 
-    Binary Ninja can load System View Description (SVD) files and create memory regions for peripherals as well as create
-    and name data variables to represent control and status registers. SVD files typically contain more information than
-    bundled board descriptions. It is recommended to use SVD files when available. To load an SVD file, click `Plugins ->
-    Load SVD File`.
+    SVD files typically contain more information than bundled board descriptions, so it is recommended to use them when
+    available. See [Loading an SVD File](index.md#loading-an-svd-file).
 
 ### Auto Identifying a Board
 

@@ -4,7 +4,7 @@ use std::fmt::{Debug, Formatter};
 
 use crate::architecture::CoreIntrinsic;
 use crate::rc::Ref;
-use crate::variable::{ConstantData, SSAVariable, Variable};
+use crate::variable::{ConstantData, PossibleValueSet, SSAVariable, Variable};
 
 #[derive(Clone, Debug)]
 pub enum HighLevelILLiftedOperand {
@@ -17,6 +17,7 @@ pub enum HighLevelILLiftedOperand {
     Intrinsic(CoreIntrinsic),
     Label(GotoLabel),
     MemberIndex(Option<usize>),
+    PossibleValueSet(PossibleValueSet),
     Var(Variable),
     VarSsa(SSAVariable),
     VarSsaList(Vec<SSAVariable>),
@@ -101,6 +102,8 @@ pub enum HighLevelILLiftedInstructionKind {
     FcmpUo(LiftedBinaryOp),
     ArrayIndex(LiftedArrayIndex),
     ArrayIndexSsa(LiftedArrayIndexSsa),
+    Assert(LiftedAssert),
+    AssertSsa(LiftedAssertSsa),
     Assign(LiftedAssign),
     AssignMemSsa(LiftedAssignMemSsa),
     AssignUnpack(LiftedAssignUnpack),
@@ -148,6 +151,8 @@ pub enum HighLevelILLiftedInstructionKind {
     FloatConst(FloatConst),
     For(LiftedForLoop),
     ForSsa(LiftedForLoopSsa),
+    ForceVer(ForceVer),
+    ForceVerSsa(ForceVerSsa),
     Goto(LiftedLabel),
     Label(LiftedLabel),
     If(LiftedIf),
@@ -245,6 +250,8 @@ impl HighLevelILLiftedInstruction {
             FcmpUo(_) => "FcmpUo",
             ArrayIndex(_) => "ArrayIndex",
             ArrayIndexSsa(_) => "ArrayIndexSsa",
+            Assert(_) => "Assert",
+            AssertSsa(_) => "AssertSsa",
             Assign(_) => "Assign",
             AssignMemSsa(_) => "AssignMemSsa",
             AssignUnpack(_) => "AssignUnpack",
@@ -292,6 +299,8 @@ impl HighLevelILLiftedInstruction {
             FloatConst(_) => "FloatConst",
             For(_) => "For",
             ForSsa(_) => "ForSsa",
+            ForceVer(_) => "ForceVer",
+            ForceVerSsa(_) => "ForceVerSsa",
             Goto(_) => "Goto",
             Label(_) => "Label",
             If(_) => "If",
@@ -352,6 +361,20 @@ impl HighLevelILLiftedInstruction {
                 ("src", Operand::Expr(*op.src.clone())),
                 ("src_memory", Operand::Int(op.src_memory)),
                 ("index", Operand::Expr(*op.index.clone())),
+            ],
+            Assert(op) => vec![
+                ("src", Operand::Var(op.src)),
+                (
+                    "constraint",
+                    Operand::PossibleValueSet(op.constraint.clone()),
+                ),
+            ],
+            AssertSsa(op) => vec![
+                ("src", Operand::VarSsa(op.src)),
+                (
+                    "constraint",
+                    Operand::PossibleValueSet(op.constraint.clone()),
+                ),
             ],
             Assign(op) => vec![
                 ("dest", Operand::Expr(*op.dest.clone())),
@@ -428,6 +451,14 @@ impl HighLevelILLiftedInstruction {
                 ("update", Operand::Expr(*op.update.clone())),
                 ("body", Operand::Expr(*op.body.clone())),
             ],
+            ForceVer(op) => vec![
+                ("dest", Operand::Var(op.dest)),
+                ("src", Operand::Var(op.src)),
+            ],
+            ForceVerSsa(op) => vec![
+                ("dest", Operand::VarSsa(op.dest)),
+                ("src", Operand::VarSsa(op.src)),
+            ],
             Goto(op) | Label(op) => vec![("target", Operand::Label(op.target.clone()))],
             If(op) => vec![
                 ("condition", Operand::Expr(*op.condition.clone())),
@@ -495,14 +526,23 @@ impl HighLevelILLiftedInstruction {
                 ("dest", Operand::VarSsa(op.dest)),
                 ("prev", Operand::VarSsa(op.prev)),
             ],
-            While(op) | DoWhile(op) => vec![
+            While(op) => vec![
                 ("condition", Operand::Expr(*op.condition.clone())),
                 ("body", Operand::Expr(*op.body.clone())),
             ],
-            WhileSsa(op) | DoWhileSsa(op) => vec![
+            DoWhile(op) => vec![
+                ("body", Operand::Expr(*op.body.clone())),
+                ("condition", Operand::Expr(*op.condition.clone())),
+            ],
+            WhileSsa(op) => vec![
                 ("condition_phi", Operand::Expr(*op.condition_phi.clone())),
                 ("condition", Operand::Expr(*op.condition.clone())),
                 ("body", Operand::Expr(*op.body.clone())),
+            ],
+            DoWhileSsa(op) => vec![
+                ("body", Operand::Expr(*op.body.clone())),
+                ("condition_phi", Operand::Expr(*op.condition_phi.clone())),
+                ("condition", Operand::Expr(*op.condition.clone())),
             ],
         }
     }

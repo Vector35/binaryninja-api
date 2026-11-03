@@ -712,7 +712,7 @@ bool Resolver::resolveGuidInterfaceAtCallsite(const GuidInterfaceCallsite& calls
 				continue;
 			if (ssa.GetSSAVariable().version != 0)
 			{
-				auto incomming_def = hlil->GetSSAVarDefinition(ssa.GetSSAVariable());
+				auto incomming_def = hlilSsa->GetSSAVarDefinition(ssa.GetSSAVariable());
 				if (incomming_def >= hlilSsa->GetExprCount())
 					continue;
 				auto incomming_def_ssa = hlilSsa->GetExpr(incomming_def);

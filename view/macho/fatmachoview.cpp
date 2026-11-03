@@ -87,7 +87,7 @@ static bool ExtractFatArchForCPU(BinaryView* data, fat_arch_64& arch, cpu_type_t
 	header.nfat_arch = reader.Read32();
 
 	// Malformed header, too many archs
-	size_t expectSize = header.nfat_arch * (fat64 ? 32 /* sizeof(fat_arch_64) */ : 20 /* sizeof(fat_arch) */) + 8 /* sizeof(fat_header) */;
+	size_t expectSize = (size_t)header.nfat_arch * (fat64 ? 32 /* sizeof(fat_arch_64) */ : 20 /* sizeof(fat_arch) */) + 8 /* sizeof(fat_header) */;
 	if (expectSize > data->GetLength())
 	{
 		return false;

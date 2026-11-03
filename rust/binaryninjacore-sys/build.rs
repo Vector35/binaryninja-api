@@ -122,6 +122,7 @@ fn main() {
         .allowlist_var("BN_CURRENT_CORE_ABI_VERSION")
         .allowlist_var("BN_MINIMUM_CORE_ABI_VERSION")
         .allowlist_var("MAX_RELOCATION_SIZE")
+        .allowlist_type("BNForceVersionReason")
         .allowlist_type("BNLinearSweepAnalysisCapability")
         .allowlist_type("BNMcpToolAnnotation")
         .raw_line(format!(

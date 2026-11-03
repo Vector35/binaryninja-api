@@ -382,10 +382,12 @@ Database::Database(BNDatabase* database)
 
 Ref<Database> Database::OpenExisting(const std::string& path)
 {
-	Ref<Database> db = new Database(BNCreateDatabaseInstance());
-	if (!BNDatabaseOpenExisting(db->GetObject(), path.c_str()))
-		throw DatabaseException("BNDatabaseOpenExisting");
-	return db;
+	auto handle = BNOpenDatabase(path.c_str());
+	if (!handle)
+	{
+		throw DatabaseException("BNOpenDatabase");
+	}
+	return new Database(handle);
 }
 
 

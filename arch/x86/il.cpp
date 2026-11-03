@@ -807,7 +807,26 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					}
 				}
 
-				parameters.push_back(ReadILOperand(il, xedd, addr, i, i));
+				// XED describes only the number of bits consumed by legacy high
+				// unpack register sources (XMMq/MMXd), not their bit offset.
+				// Pass the whole source to the intrinsic so its high half is available.
+				size_t readSize = 0;
+				if (i == 1)
+				{
+					switch (xed_decoded_inst_get_iclass(xedd))
+					{
+					case XED_ICLASS_PUNPCKHBW:
+					case XED_ICLASS_PUNPCKHWD:
+					case XED_ICLASS_PUNPCKHDQ:
+					case XED_ICLASS_PUNPCKHQDQ:
+					case XED_ICLASS_UNPCKHPD:
+						readSize = xed_decoded_inst_operand_length_bits(xedd, 0) / 8;
+						break;
+					default:
+						break;
+					}
+				}
+				parameters.push_back(ReadILOperand(il, xedd, addr, i, i, readSize));
 			}
 		}
 		X86_INTRINSIC intrinsic = (X86_INTRINSIC)(xedd_iForm + 1000);
@@ -4485,7 +4504,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	case XED_ICLASS_CTESTF:
 		AssignEvexDfv(xedd, il);
 		break;
-	
+
 	case XED_ICLASS_XCHG:
 		il.AddInstruction(il.SetRegister(opOneLen, LLIL_TEMP(0), ReadILOperand(il, xedd, addr, 0, 0)));
 		il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0, ReadILOperand(il, xedd, addr, 1, 1)));
@@ -4608,6 +4627,23 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 		break;
 	}
+	case XED_ICLASS_PCMPEQB:
+	case XED_ICLASS_PCMPEQW:
+	case XED_ICLASS_PCMPEQD:
+		// Comparing a register with itself sets every lane to all ones
+		if (xed_operand_is_register(opTwo_name) && (regOne == regTwo))
+		{
+			// Const carries at most 64 bits; complement zero at the full width
+			// so the 128-bit XMM form also sets its upper 64 bits.
+			il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+				il.Not(opOneLen, il.Const(opOneLen, 0))));
+		}
+		else
+		{
+			LiftAsIntrinsic();
+		}
+		break;
+	case XED_ICLASS_XORPD:
 	case XED_ICLASS_XORPS:
 	case XED_ICLASS_PXOR:
 		il.AddInstruction(

@@ -272,7 +272,7 @@ fn binary_view_scope_requires_a_view() {
 
     assert_eq!(
         error_code(&invoke(&tool, &json!({}), None)),
-        "no_active_binary_view"
+        "binary_not_found"
     );
 
     let view = raw_view();

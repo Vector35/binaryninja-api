@@ -40,7 +40,7 @@ public:
 };
 
 /*! Creates a tool without registering it. This can be used to expose a tool that is specific to
-	one MCP server, such as one that manages that server's active binary view. Returns null when the
+	one MCP server, such as one that opens and lists binaries. Returns null when the
 	definition is invalid.
 */
 Ref<Tool> CreateTool(ToolSpec spec);

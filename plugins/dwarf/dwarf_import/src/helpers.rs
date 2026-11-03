@@ -294,6 +294,66 @@ pub(crate) fn get_size_as_u64<R: ReaderType>(entry: &DebuggingInformationEntry<R
     }
 }
 
+/// Get the ordering of an array from its unit and entry
+pub(crate) fn get_array_ordering<R: ReaderType>(
+    unit: &Unit<R>,
+    entry: &DebuggingInformationEntry<R>,
+) -> Option<constants::DwOrd> {
+    /*
+    DWARF v5 spec section 5.5 says:
+    The array type entry describing a multidimensional array may have a
+    DW_AT_ordering attribute whose integer constant value is interpreted to mean
+    either row-major or column-major ordering of array elements. The set of values
+    and their meanings for the ordering attribute are listed in Table 5.4 following. If
+    no ordering attribute is present, the default ordering for the source language
+    (which is indicated by the DW_AT_language attribute of the enclosing
+    compilation unit entry) is assumed.
+    */
+    if let Ok(Some(AttributeValue::Ordering(ordering))) =
+        entry.attr_value(constants::DW_AT_ordering)
+    {
+        return Some(ordering);
+    }
+
+    let mut entries = unit.entries();
+    let (_, root) = entries.next_dfs().ok()??;
+    let AttributeValue::Language(language) = root.attr_value(constants::DW_AT_language).ok()??
+    else {
+        return None;
+    };
+
+    match language {
+        constants::DW_LANG_Fortran77
+        | constants::DW_LANG_Fortran90
+        | constants::DW_LANG_Fortran95
+        | constants::DW_LANG_Fortran03
+        | constants::DW_LANG_Fortran08
+        | constants::DW_LANG_Fortran18
+        | constants::DW_LANG_Julia => Some(constants::DW_ORD_col_major),
+        constants::DW_LANG_C89
+        | constants::DW_LANG_C
+        | constants::DW_LANG_C99
+        | constants::DW_LANG_C11
+        | constants::DW_LANG_C17
+        | constants::DW_LANG_C_plus_plus
+        | constants::DW_LANG_C_plus_plus_03
+        | constants::DW_LANG_C_plus_plus_11
+        | constants::DW_LANG_C_plus_plus_14
+        | constants::DW_LANG_C_plus_plus_17
+        | constants::DW_LANG_C_plus_plus_20
+        | constants::DW_LANG_ObjC
+        | constants::DW_LANG_ObjC_plus_plus
+        | constants::DW_LANG_Rust
+        | constants::DW_LANG_Java
+        | constants::DW_LANG_Go
+        | constants::DW_LANG_Ada83
+        | constants::DW_LANG_Ada95
+        | constants::DW_LANG_Ada2005
+        | constants::DW_LANG_Ada2012 => Some(constants::DW_ORD_row_major),
+        _ => None,
+    }
+}
+
 // Get the size of a subrange as a u64
 pub(crate) fn get_subrange_size<R: ReaderType>(entry: &DebuggingInformationEntry<R>) -> u64 {
     if let Ok(Some(attr)) = entry.attr(constants::DW_AT_upper_bound) {

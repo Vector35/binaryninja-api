@@ -280,23 +280,29 @@ pub(crate) fn handle_array<R: ReaderType>(
     };
     let mut children = tree_root.children();
 
-    // TODO : This is currently applying the size in reverse order
-    let mut result_type: Option<Ref<Type>> = None;
+    let mut dimensions = Vec::new();
     while let Ok(Some(child)) = children.next() {
-        if let Some(inner_type) = result_type {
-            result_type = Some(Type::array(
-                inner_type.as_ref(),
-                get_subrange_size(child.entry()),
-            ));
-        } else {
-            result_type = Some(Type::array(
-                parent_type.as_ref(),
-                get_subrange_size(child.entry()),
-            ));
-        }
+        dimensions.push(get_subrange_size(child.entry()));
     }
 
-    result_type.map_or(Some(Type::array(parent_type.as_ref(), 0)), Some)
+    if dimensions.is_empty() {
+        return Some(Type::array(parent_type.as_ref(), 0));
+    }
+
+    let ordering = get_array_ordering(unit, entry).unwrap_or(constants::DW_ORD_row_major);
+    match ordering {
+        constants::DW_ORD_col_major => {}
+        constants::DW_ORD_row_major => dimensions.reverse(),
+        ord => {
+            tracing::warn!("Unknown array ordering {}", ord)
+        }
+    }
+    let mut result_type = parent_type;
+    for dimension in dimensions {
+        result_type = Type::array(result_type.as_ref(), dimension);
+    }
+
+    Some(result_type)
 }
 
 pub(crate) fn handle_function<R: ReaderType>(

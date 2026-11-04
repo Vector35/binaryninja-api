@@ -123,6 +123,68 @@ static bool CallTargetDiscardsReturnAddress(BinaryView* data, Architecture* arch
 }
 
 
+// A retpoline replaces `jmp reg` with a call to a "setup" whose speculation is steered into a trap:
+//
+//     thunk:  call setup        ; pushes the address of the trap
+//             <trap>            ; `pause; lfence; jmp $`, `int3`, ... (only reached speculatively)
+//     setup:  mov [sp], reg     ; overwrite that return address with the target
+//             ret               ; return into the target
+//
+// When the setup returns, the stack is exactly as it was before the call, with the target in place of
+// the trap. So the call is `jmp reg`: it never returns to its fallthrough.
+//
+// Returns true, and the register holding the target, if the code at `target` is exactly
+// `[sp] = reg; ret`, where reg is not the stack pointer. At a function's entry the register can only hold
+// the caller's value, so this is the same shape that core's retpoline setup recognition rewrites inside a
+// setup function.
+static bool CallTargetIsRetpolineSetup(BinaryView* data, Architecture* arch, uint64_t target, uint32_t& targetReg)
+{
+	if (arch->GetLinkRegister() != BN_INVALID_REGISTER)
+		return false;
+
+	size_t maxLen = arch->GetMaxInstructionLength();
+	DataBuffer buffer = data->ReadBuffer(target, maxLen * 2);
+	size_t available = buffer.GetLength();
+	if (available == 0)
+		return false;
+	const uint8_t* bytes = (const uint8_t*)buffer.GetData();
+
+	Ref<LowLevelILFunction> il = new LowLevelILFunction(arch, nullptr);
+	il->SetCurrentAddress(arch, target);
+	size_t storeLen = available;
+	if (!arch->GetInstructionLowLevelIL(bytes, target, storeLen, *il) || (il->GetInstructionCount() != 1)
+		|| (storeLen == 0) || (storeLen >= available))
+		return false;
+
+	size_t addressSize = arch->GetAddressSize();
+	uint32_t sp = arch->GetStackPointerRegister();
+	LowLevelILInstruction store = (*il)[0];
+	if ((store.operation != LLIL_STORE) || (store.size != addressSize))
+		return false;
+	LowLevelILInstruction slot = store.GetDestExpr<LLIL_STORE>();
+	LowLevelILInstruction value = store.GetSourceExpr<LLIL_STORE>();
+	if ((slot.operation != LLIL_REG) || (slot.GetSourceRegister<LLIL_REG>() != sp))
+		return false;
+	if ((value.operation != LLIL_REG) || (value.size != addressSize))
+		return false;
+	// `mov [sp], sp` stores the stack pointer as decremented by the call, which `jmp sp` would not
+	// reproduce, so only other registers are a target.
+	if (arch->GetRegisterInfo(value.GetSourceRegister<LLIL_REG>()).fullWidthRegister == sp)
+		return false;
+
+	uint64_t retAddr = target + storeLen;
+	il->SetCurrentAddress(arch, retAddr);
+	size_t retLen = available - storeLen;
+	if (!arch->GetInstructionLowLevelIL(bytes + storeLen, retAddr, retLen, *il) || (il->GetInstructionCount() != 2))
+		return false;
+	if ((*il)[1].operation != LLIL_RET)
+		return false;
+
+	targetReg = value.GetSourceRegister<LLIL_REG>();
+	return true;
+}
+
+
 void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context)
 {
 	auto data = function->GetView();
@@ -604,6 +666,18 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 								break;
 							}
 
+							// A call to a retpoline setup is `jmp reg` (see CallTargetIsRetpolineSetup). End the
+							// block here like an unresolved indirect jump: no fallthrough (the trap after the
+							// call is only reached speculatively) and no function at the setup. The lifter
+							// emits the jump in place of the call.
+							if (uint32_t targetReg; CallTargetIsRetpolineSetup(data, target.arch, target.address, targetReg))
+							{
+								directRefs[target.address].insert(location);
+								endsBlock = true;
+								block->SetUndeterminedOutgoingEdges(true);
+								break;
+							}
+
 							Ref<Function> func = data->AddFunctionForAnalysis(platform, target.address, true);
 							if (!func)
 							{
@@ -980,11 +1054,13 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 				}
 			}
 
-			// A call whose target discards the return address was followed as a branch by basic block
-			// analysis (see CallTargetDiscardsReturnAddress). Lift it as what it does: adjust the stack
-			// pointer, then jump to the target block. This requires both a branch edge to the target from
-			// basic block analysis and a specific target code shape. That restricts the rewrite to this
-			// pattern; it does not establish general semantic equivalence with the call.
+			// Calls that are really jumps, recognized during basic block analysis. Lift them as what they do:
+			//   * a call to a retpoline setup is `jmp reg` (see CallTargetIsRetpolineSetup);
+			//   * a call whose target discards the return address adjusts the stack pointer and jumps to
+			//     the target block (see CallTargetDiscardsReturnAddress).
+			// Each requires both the block's shape from basic block analysis and a specific target code
+			// shape. This restricts the rewrite to those patterns; it does not establish general semantic
+			// equivalence with the call.
 			bool callLiftedAsJump = false;
 			if ((instrCountAfter > instrCountBefore) && ((addr + len) == i->GetEnd()))
 			{
@@ -1006,7 +1082,17 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 						}
 					}
 
-					if (hasBranchEdge && CallTargetDiscardsReturnAddress(data, arch, target))
+					uint32_t retpolineReg;
+					if (i->GetOutgoingEdges().empty() && CallTargetIsRetpolineSetup(data, arch, target, retpolineReg))
+					{
+						// A call to a retpoline setup ended its block with no fallthrough during basic block
+						// analysis (see CallTargetIsRetpolineSetup). It is `jmp reg`.
+						size_t addressSize = arch->GetAddressSize();
+						lastInstr.Replace(
+							function->Jump(function->Register(addressSize, retpolineReg, lastInstr), lastInstr));
+						callLiftedAsJump = true;
+					}
+					else if (hasBranchEdge && CallTargetDiscardsReturnAddress(data, arch, target))
 					{
 						// Lift the call as `push(return address); goto target`: everything the call does
 						// except return to its fallthrough. The return address is still written, so code

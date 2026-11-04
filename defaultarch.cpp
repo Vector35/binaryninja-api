@@ -79,6 +79,50 @@ static bool IsReturnAddressRegisterJumpOrReturn(LowLevelILInstruction instr, con
 }
 
 
+// A call pushes the return address and jumps. If the first instruction at the call target throws that
+// return address away (`add rsp, 8`), the call never returns to its fallthrough. It is a push and a jump,
+// used only for its side effect on the CPU's return stack buffer. RSB-stuffing sequences are the real
+// world case: ntoskrnl's KiFlushCurrentRsb (`add rsp, 8; call <prev>` chains) and Linux's
+// `call 1f; int3; 1: add rsp, 8; lfence`.
+//
+// Returns true if the instruction at `target` is `sp = sp + k`, where k is a positive multiple of the
+// address size. Only applies to architectures that keep the return address on the stack.
+static bool CallTargetDiscardsReturnAddress(BinaryView* data, Architecture* arch, uint64_t target)
+{
+	if (arch->GetLinkRegister() != BN_INVALID_REGISTER)
+		return false;
+
+	DataBuffer buffer = data->ReadBuffer(target, arch->GetMaxInstructionLength());
+	size_t len = buffer.GetLength();
+	if (len == 0)
+		return false;
+
+	Ref<LowLevelILFunction> il = new LowLevelILFunction(arch, nullptr);
+	il->SetCurrentAddress(arch, target);
+	if (!arch->GetInstructionLowLevelIL((const uint8_t*)buffer.GetData(), target, len, *il))
+		return false;
+	if (il->GetInstructionCount() != 1)
+		return false;
+
+	uint32_t sp = arch->GetStackPointerRegister();
+	LowLevelILInstruction instr = (*il)[0];
+	if ((instr.operation != LLIL_SET_REG) || (instr.GetDestRegister<LLIL_SET_REG>() != sp))
+		return false;
+
+	LowLevelILInstruction src = instr.GetSourceExpr<LLIL_SET_REG>();
+	if (src.operation != LLIL_ADD)
+		return false;
+	LowLevelILInstruction left = src.GetLeftExpr<LLIL_ADD>();
+	LowLevelILInstruction right = src.GetRightExpr<LLIL_ADD>();
+	if ((left.operation != LLIL_REG) || (left.GetSourceRegister<LLIL_REG>() != sp) || (right.operation != LLIL_CONST))
+		return false;
+
+	int64_t amount = right.GetConstant();
+	int64_t addressSize = (int64_t)arch->GetAddressSize();
+	return (amount >= addressSize) && ((amount % addressSize) == 0);
+}
+
+
 void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context)
 {
 	auto data = function->GetView();
@@ -540,6 +584,26 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							if (data->ShouldSkipTargetAnalysis(location, function, instrEnd, target))
 								break;
 
+							// A call whose target immediately discards the return address never returns
+							// here, so it is a push and a jump. Follow it as a branch within this function
+							// (no fallthrough, no function at the target). The lifter recognizes this edge
+							// and emits the stack adjustment and the jump in place of the call.
+							if (CallTargetDiscardsReturnAddress(data, target.arch, target.address))
+							{
+								if (isGuidedSourceBlock)
+									guidedSourceBlockTargets.insert(target);
+
+								directRefs[target.address].insert(location);
+								endsBlock = true;
+								block->AddPendingOutgoingEdge(UnconditionalBranch, target.address, target.arch);
+								if (seenBlocks.count(target) == 0)
+								{
+									blocksToProcess.push(target);
+									seenBlocks.insert(target);
+								}
+								break;
+							}
+
 							Ref<Function> func = data->AddFunctionForAnalysis(platform, target.address, true);
 							if (!func)
 							{
@@ -916,10 +980,58 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 				}
 			}
 
+			// A call whose target discards the return address was followed as a branch by basic block
+			// analysis (see CallTargetDiscardsReturnAddress). Lift it as what it does: adjust the stack
+			// pointer, then jump to the target block. This requires both a branch edge to the target from
+			// basic block analysis and a specific target code shape. That restricts the rewrite to this
+			// pattern; it does not establish general semantic equivalence with the call.
+			bool callLiftedAsJump = false;
+			if ((instrCountAfter > instrCountBefore) && ((addr + len) == i->GetEnd()))
+			{
+				LowLevelILInstruction lastInstr = function->GetInstruction(instrCountAfter - 1);
+				if ((lastInstr.operation == LLIL_CALL)
+					&& ((lastInstr.GetDestExpr<LLIL_CALL>().operation == LLIL_CONST)
+						|| (lastInstr.GetDestExpr<LLIL_CALL>().operation == LLIL_CONST_PTR)))
+				{
+					Ref<Architecture> arch = i->GetArchitecture();
+					uint64_t target = lastInstr.GetDestExpr<LLIL_CALL>().GetConstant();
+					bool hasBranchEdge = false;
+					for (const auto& edge : i->GetOutgoingEdges())
+					{
+						if ((edge.type == UnconditionalBranch) && edge.target && (edge.target->GetStart() == target)
+							&& (edge.target->GetArchitecture() == arch))
+						{
+							hasBranchEdge = true;
+							break;
+						}
+					}
+
+					if (hasBranchEdge && CallTargetDiscardsReturnAddress(data, arch, target))
+					{
+						// Lift the call as `push(return address); goto target`: everything the call does
+						// except return to its fallthrough. The return address is still written, so code
+						// that reads the discarded slot below the stack pointer sees it. The call's effect on
+						// the CPU's return stack buffer, which is the point of the idiom, is
+						// microarchitectural and not represented in IL.
+						size_t addressSize = arch->GetAddressSize();
+						lastInstr.Replace(function->Push(addressSize,
+							function->ConstPointer(addressSize, addr + len, lastInstr), 0, lastInstr));
+						if (BNLowLevelILLabel* targetLabel = function->GetLabelForAddress(arch, target))
+							function->AddInstruction(function->Goto(*targetLabel, lastInstr));
+						else
+							function->AddInstruction(
+								function->Jump(function->ConstPointer(addressSize, target, lastInstr), lastInstr));
+						instrCountAfter = function->GetInstructionCount();
+						callLiftedAsJump = true;
+					}
+				}
+			}
+
 			uint64_t prevAddr = addr;
 			addr += len;
 
-			context.CheckForInlinedCall(i, instrCountBefore, instrCountAfter, prevAddr, addr, opcode, len, indirectSource);
+			if (!callLiftedAsJump)
+				context.CheckForInlinedCall(i, instrCountBefore, instrCountAfter, prevAddr, addr, opcode, len, indirectSource);
 
 			// Indirect branch information informs when to translate non-standard returns into jumps
 			if (auto lastInstr = function->GetInstruction(instrCountAfter - 1); (lastInstr.operation == LLIL_RET)

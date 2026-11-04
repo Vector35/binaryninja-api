@@ -884,6 +884,25 @@ impl DebugInfoBuilder {
             }
         }
 
+        // Rebase data variables
+        let image_base_adjustment = bv.start().wrapping_sub(bv.original_image_base());
+        if image_base_adjustment != 0 {
+            self.data_variables = self
+                .data_variables
+                .drain()
+                .map(|(address, variable)| (address.wrapping_add(image_base_adjustment), variable))
+                .collect();
+        }
+
+        // If a data variable exists at original address 0 but its rebased address isn't mapped, then 0 is probably a tombstone value
+        // Require a section if any sections exist because otherwise it'd usually just plop it in the file header
+        // DWARF v6 accepted a change to add a dedicated tombstone value (https://dwarfstd.org/issues/200609.1.html) but previous versions usually just use 0
+        if bv.segment_at(image_base_adjustment).is_none()
+            || (!bv.sections().is_empty() && bv.sections_at(image_base_adjustment).is_empty())
+        {
+            self.data_variables.remove(&image_base_adjustment);
+        }
+
         self
     }
 

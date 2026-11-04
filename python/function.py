@@ -975,7 +975,7 @@ class Function:
 
 	def remove_auto_function_tag(self, tag: 'binaryview.Tag') -> None:
 		"""
-		``remove_user_function_tag`` removes a Tag object as a function tag.
+		``remove_auto_function_tag`` removes a Tag object as a function tag.
 
 		:param Tag tag: Tag object to be added
 		:rtype: None
@@ -984,7 +984,7 @@ class Function:
 
 	def remove_auto_function_tags_of_type(self, tag_type: str):
 		"""
-		``remove_user_function_tags_of_type`` removes all function Tag objects on a function of a given type
+		``remove_auto_function_tags_of_type`` removes all function Tag objects on a function of a given type
 
 		:param TagType tag_type: TagType object to match for removing
 		:rtype: None

@@ -54,13 +54,15 @@ bv.file.close() #close the file handle or else leak memory
 While you might associate actions with UI based actions in the product, many actions can be triggered headlessly. For example:
 
 ```python
+from binaryninja import PluginCommand, PluginCommandContext
+
 cxt = PluginCommandContext(bv)
 PluginCommand.get_valid_list(cxt)['BinExport'].execute(cxt)
 ```
 
 ### Multiple files
 
-Looks good! But what if we just want to parse basic headers or stop any major analysis from happening and scan multiple files quickly? We can use the `update_analysis` named parameter to prevent the usual linear sweep and recursive descent analysis from event occurring:
+Looks good! But what if we just want to parse basic headers or stop any major analysis from happening and scan multiple files quickly? We can use the `update_analysis` named parameter to prevent the usual linear sweep and recursive descent analysis from even occurring:
 
 ```python
 #!/usr/bin/env python3
@@ -109,8 +111,8 @@ Want to trigger another plugin via headless? As long as the other plugin is regi
 ```py
 import binaryninja
 bv = binaryninja.load("testfile")
-ctx = binaryninja.PluginCommandContext(bv);
-PluginCommand.get_valid_list(ctx)["BinExport"].execute(ctx)
+ctx = binaryninja.PluginCommandContext(bv)
+binaryninja.PluginCommand.get_valid_list(ctx)["BinExport"].execute(ctx)
 # Creates a .BinExport file in the same folder as testfile
 ```
 

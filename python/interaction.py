@@ -1451,7 +1451,7 @@ def get_checkbox_input(prompt: str, title: str, default: bool = False):
 
 def get_form_input(fields, title):
 	"""
-	``get_from_input`` Prompts the user for a set of inputs specified in ``fields`` with given title. \
+	``get_form_input`` Prompts the user for a set of inputs specified in ``fields`` with given title. \
 	The fields parameter is a list which can contain the following types:
 
 	===================== ===================================================

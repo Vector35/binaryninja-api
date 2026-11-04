@@ -36,12 +36,12 @@ cmake --build build -j8
 In addition to the default build setup, you may want to:
 
 - **Build examples.** To build the [API examples](#examples), pass `-DBN_API_BUILD_EXAMPLES=ON` to CMake when configuring the build. After the build succeeds, you can install the built plugins by running the `install` target. When using the "Unix Makefiles" build generator, this looks like: `make install`.
-- **Build UI plugins.** You will need Qt 6.8.2 installed to build UI plugins. We use a slightly modified [build configuration](https://github.com/Vector35/qt-build) internally that has some ABI-compatible fixes and changes to defaults, but a stock build can also work. Note that it is not recommended to use pre-built configurations from Homebrew. Either using the official installer or building from our repo is recommended.
+- **Build UI plugins.** You will need Qt 6.11.1 installed to build UI plugins. We use a slightly modified [build configuration](https://github.com/Vector35/qt-build) internally that has some ABI-compatible fixes and changes to defaults, but a stock build can also work. Note that it is not recommended to use pre-built configurations from Homebrew. Either using the official installer or building from our repo is recommended.
 - **Build headlessly.** If you are using a headless Binary Ninja distribution or you do not wish to build UI plugins, pass `-DHEADLESS=ON` to CMake when configuring the build.
 
 ### Troubleshooting
 
-- If Binary Ninja is installed at a different location than the platform default (defined in CMakeLists.txt), you will likely get an error stating "Binary Ninja Core Not Found." Specify the path to your Binary Ninja installation with by passing `-DBN_INSTALL_DIR=/path/to/binaryninja` to CMake when configuring the build setup.
+- If Binary Ninja is installed at a different location than the platform default (defined in CMakeLists.txt), you will likely get an error stating "Binary Ninja Core Not Found." Specify the path to your Binary Ninja installation by passing `-DBN_INSTALL_DIR=/path/to/binaryninja` to CMake when configuring the build setup.
 - Since Binary Ninja is a 64-bit only product, ensure that you are using a 64-bit compiling and linking environment. Errors on Windows like `LNK1107` might indicate that your bits don't match.
 
 ## Examples
@@ -57,7 +57,7 @@ There are many examples available. The [Python examples folder](https://github.c
 - [print_syscalls](https://github.com/Vector35/binaryninja-api/tree/dev/examples/print_syscalls) is a standalone executable that prints the syscalls used in a given binary.\*
 - [triage](https://github.com/Vector35/binaryninja-api/tree/dev/examples/triage) is a fully featured plugin that is shipped and enabled by default, demonstrating how to do a wide variety of tasks including extending the UI through QT.
 - [workflows](https://github.com/Vector35/binaryninja-api/tree/dev/examples/workflows) is a collection of plugins that demonstrate using Workflows to extend the analysis pipeline.
-- [x86 extension](https://github.com/Vector35/binaryninja-api/tree/dev/examples/x86_extension) creates an architecture extension which shows how to modify the behavior of the build-in architectures without creating a complete replacement.
+- [x86 extension](https://github.com/Vector35/binaryninja-api/tree/dev/examples/x86_extension) creates an architecture extension which shows how to modify the behavior of the built-in architectures without creating a complete replacement.
 
 \* Requires license supporting headless API access.
 
@@ -73,7 +73,7 @@ The `dev` branch has the latest updates and tracks the latest development build 
 
 ## Contributing
 
-Public contributions are welcome to this repository. Most of the API and documentation in this repository is licensed under an MIT license, however, the API interfaces with a closed-source commercial application, [Binary Ninja](https://binary.ninja). Additionally, the [Rust API](https://github.com/Vector35/binaryninja-api/tree/dev/rust) is [licensed](https://github.com/Vector35/binaryninja-api/tree/dev/rust/LICENSE) under a Apache 2.0 license.
+Public contributions are welcome to this repository. Most of the API and documentation in this repository is licensed under an MIT license, however, the API interfaces with a closed-source commercial application, [Binary Ninja](https://binary.ninja). Additionally, the [Rust API](https://github.com/Vector35/binaryninja-api/tree/dev/rust) is [licensed](https://github.com/Vector35/binaryninja-api/tree/dev/rust/LICENSE) under an Apache 2.0 license.
 
 If you're interested in contributing when you submit your first PR, you'll receive a notice from [CLA Assistant](https://cla-assistant.io/) that allows you to sign our [Contribution License Agreement](https://binary.ninja/cla.pdf) online.
 
@@ -143,4 +143,4 @@ Some components may be released under compatible but slightly different open sou
 
 Remaining components are released under an [MIT](https://github.com/Vector35/binaryninja-api/blob/dev/LICENSE.txt) license.
 
-Note that `.lib` files are included the native binary builds of Binary Ninja for windows. Those lib files are also released under the same license as this repository and may be distributed accordingly.
+Note that `.lib` files are included in the native binary builds of Binary Ninja for Windows. Those lib files are also released under the same license as this repository and may be distributed accordingly.

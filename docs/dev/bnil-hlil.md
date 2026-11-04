@@ -61,14 +61,14 @@ True
 To observe the transformations that occur from MLIL to HLIL, you can use the built-in [`debug report`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.request_debug_report) API:
 
 ```py
-> current_function.request_debug_report("hlil")
+current_function.request_debug_report("hlil")
 ```
 
 ![HLIL Debug Report](../img/hlil-debug-report.png)
 
 ## The Instruction Set
 
-The instruction set is made up of [`HighLevelILInstruction`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILInstruction) objects. Let's start exploring by using the python console to poke around at some instructions. Open up a binary in Binary Ninja and retrieve an HLIL instruction:+
+The instruction set is made up of [`HighLevelILInstruction`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILInstruction) objects. Let's start exploring by using the python console to poke around at some instructions. Open up a binary in Binary Ninja and retrieve an HLIL instruction:
 
 ```pycon
 >>> current_il_instruction
@@ -79,7 +79,7 @@ The instruction set is made up of [`HighLevelILInstruction`](https://api.binary.
 
 `current_il_instruction` is mapped to whatever il instruction is currently selected viewed and is not generally available to those writing plugins or scripts. You can see a full list of our [magic variables here](../guide/index.md#magic-console-variables).
 
-There are a number of properties that can be queried on the [`HighLevelILInstruction`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILInstruction) object, and the validity of these properties changes depending on what the current operation is. The properties in HLIL are extremely similar to those in MLIL, with one notable exception being that `HLIL_CALL` instruction objects do not have a `.output` property, but instead `HLIL_CALL`s that have return values will be the `inst.right` of a `HighLevelILVarInit`, `HighLevelILVarAssign`, or similar.
+There are a number of properties that can be queried on the [`HighLevelILInstruction`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILInstruction) object, and the validity of these properties changes depending on what the current operation is. The properties in HLIL are extremely similar to those in MLIL, with one notable exception being that `HLIL_CALL` instruction objects do not have a `.output` property, but instead `HLIL_CALL`s that have return values will be the `src` expression of a `HighLevelILVarInit`, `HighLevelILAssign`, or similar instruction.
 
 
 ### Control Flow
@@ -108,7 +108,7 @@ There are a number of properties that can be queried on the [`HighLevelILInstruc
 * `HLIL_ASSIGN_UNPACK` -
 * `HLIL_VAR` - A variable expression `src`
 * `HLIL_VAR_PHI` - A `PHI` represents the combination of several prior versions of a variable when different basic blocks coalesce into a single destination and it's unknown which path was taken.
-* `HLIL_MEM_PHI` - A memory `PHI` represents memory modifications that could have occured down different source basic blocks similar to a `VAR_PHI`.
+* `HLIL_MEM_PHI` - A memory `PHI` represents memory modifications that could have occurred down different source basic blocks similar to a `VAR_PHI`.
 * `HLIL_ADDRESS_OF` - The address of variable `src`
 * `HLIL_CONST` - A constant integral value `constant`
 * `HLIL_CONST_DATA` - A constant data reference `constant data reference`
@@ -177,7 +177,7 @@ There are a number of properties that can be queried on the [`HighLevelILInstruc
 * `HLIL_FLOAT_CONV` - Convert bytes in `src` expression to IEEE754 floating point
 * `HLIL_ROUND_TO_INT` - Rounds the IEEE754 floating point number `src` expression
 * `HLIL_FLOOR` - Computes the floating point floor of the IEEE754 number in `src`
-* `HLIL_CEIL` - Computes the floating point floor of the IEEE754 number in `src`
+* `HLIL_CEIL` - Computes the floating point ceiling of the IEEE754 number in `src`
 * `HLIL_FTRUNC` - Computes the floating point truncation of the IEEE754 number in `src`
 * `HLIL_SX` - Sign extends the `src` expression
 * `HLIL_ZX` - Zero extends the `src` expression

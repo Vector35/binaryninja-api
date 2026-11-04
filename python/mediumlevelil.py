@@ -6370,7 +6370,7 @@ class MediumLevelILFunction:
 		self, size: int, value: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``int_to_float`` converts floating point value of expression ``value`` to size ``size``
+		``float_convert`` converts floating point value of expression ``value`` to size ``size``
 
 		:param int size: the size of the result in bytes
 		:param ExpressionIndex value: the expression to negate
@@ -7115,7 +7115,7 @@ class MediumLevelILFunction:
 		and update the type of related expressions.
 
 		:param int expr_index: index of the expression to set
-		:param StringOrType: new type of the expression
+		:param StringOrType expr_type: new type of the expression
 		"""
 		if expr_type is not None:
 			if isinstance(expr_type, str):

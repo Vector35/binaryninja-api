@@ -21,21 +21,21 @@ if isinstance(i, int):
 
 Prior to 3.0 `Enumeration`, `NamedTypeReference` and `Structure` objects were members rather than subclasses of `Type`. In Binary Ninja 3.0 these types derive from `Type` thus where previously you'd need to do something like this:
 
-```python
+```pycon
 >>> bv.types['_GUID'].structure.members
 [<DWORD Data1, offset 0x0>, <WORD Data2, offset 0x4>, <WORD Data3, offset 0x6>, <BYTE Data4[0x8], offset 0x8>]
 ```
 
 Now these can be accessed simply like this:
 
-```python
+```pycon
 >>> bv.types['_GUID'].members
-[<DWORD Data1, offset 0x0>, <WORD Data2, offset 0x4>, <WORD Data3, offset 0x8>, <BYTE Data4[0x8], offset 0xc>]
+[<DWORD Data1, offset 0x0>, <WORD Data2, offset 0x4>, <WORD Data3, offset 0x6>, <BYTE Data4[0x8], offset 0x8>]
 ```
 
 Similarly with `NamedTypeReference`s and `Enumeration`s.
 
-# 3.0 Python API Improvements 
+# 3.0 Python API Improvements
 
 ## `Symbol` -> `CoreSymbol`
 
@@ -59,11 +59,11 @@ _types.Symbol(sym_type, addr, short_name, full_name, raw_name, GlobalBinding, na
 
 ## BNIL Instructions
 
-As of Binary Ninja 3.0 IL instructions have been substantially refactored. In Binary Ninja 2.4 an instruction was defined by an `operation` and a dictionary entry. Although this was easy to implement there were some down sides to this implementation. The new implementation creates a class for each instruction operand this helps in many different ways:
+As of Binary Ninja 3.0, IL instructions have been substantially refactored. In Binary Ninja 2.4 an instruction was defined by an `operation` and a dictionary entry. Although this was easy to implement there were some down sides to this implementation. The new implementation creates a class for each instruction operand this helps in many different ways:
 
-1. Speed - because we do it this way we don't have to generate the entire operand tree like we did in the past. Resulting in a substantial performance increase in iteration. 3x faster for HLIL and a more marginal 30% faster for MLIL and LILL as the instructions are less complicated.
+1. Speed - because we do it this way we don't have to generate the entire operand tree like we did in the past. Resulting in a substantial performance increase in iteration. 3x faster for HLIL and a more marginal 30% faster for MLIL and LLIL as the instructions are less complicated.
 2. Type Hinting - It was impossible to know what properties are available for which instructions without consulting the ILInstructions map. We would never be able to get good type checking on any of the IL instructions if it were not changed.
-3. Instruction Hierarchies - By implementing instructions in terms of of a class hierarchy IL code is now much more portable across ILs. You can do things like this and it will work for all ILs
+3. Instruction Hierarchies - By implementing instructions in terms of a class hierarchy IL code is now much more portable across ILs. You can do things like this and it will work for all ILs
 
 ```python
 for i in il:
@@ -87,11 +87,13 @@ The only real drawback to this approach is that the instruction hierarchies are 
 
 ## `Variable` Objects
 
-In the Binary Ninja 3.0 Python API the Variable object(s) have been completely overhauled. To understand what prompted these changes and its important to understand how the core differs from the API. In Binary Ninja core Variable objects are a simple 3-tuple of:
- * Storage Location Type - Register, Flag, or Stack
- * Storage Location - An integer which represents a register index, flag index, or stack offset
- * Offset - An offset into the function which initially stores the value and thus creates the variable. Negative values represent passed in parameters, and their storage on the stack.
- * Identifier - This is simply a hash of the other items.
+In the Binary Ninja 3.0 Python API the Variable object(s) have been completely overhauled. To understand what prompted these changes, it is important to understand how the core differs from the API. In Binary Ninja core, Variable objects store three fields:
+
+ * `source_type` - The storage location type: flag, register, or stack.
+ * `index` - An internal index that distinguishes variables with the same storage location.
+ * `storage` - A register index, flag index, or stack offset, depending on `source_type`.
+
+The `identifier` property is derived from these three fields and uniquely identifies the variable.
 
 During analysis thousands of these objects are created, so its important that this object be performant. When using the Python API convenience frequently trumps performance as the main goal. Thus in Binary Ninja 3.0 the Variable object has been split into 3 separate objects 2 of which you'll probably never use but are there for some specific purposes.
 
@@ -99,7 +101,7 @@ During analysis thousands of these objects are created, so its important that th
  * VariableNameAndType - Inherits from CoreVariable. This is a special type of object only returned from function parameters when a parameter specifies its storage location.
  * Variable - Inherits from CoreVariable. This is the one you probably care about and is returned from most APIs, and is the focus of this section.
 
-Regardless of which of the above variable object you have its possible to convert one into another. 
+Regardless of which of the above variable object you have its possible to convert one into another.
 
 ### To CoreVariable
 
@@ -150,9 +152,9 @@ v.type = Type.char()
 
 ## DataVariable Objects
 
-DataVariable objects have been greatly enhanced in Binary Ninja 3.0. In the core a DataVariable is simply a `Type` and an `int` address. The 2.4 API roughly replicated that abstraction. In Binary Ninja 3.0 the object has a lot more utility. Again similar to what was done with Variable and Symbol, we now have a `CoreDataVariable` object from which `DataVariable`. The `CoreDataVariable` object is a dataclass simple dataclass which maps to the core's representation of the object. The `DataVariable` class inherits from it and provides a lot of additional utility.
+DataVariable objects have been greatly enhanced in Binary Ninja 3.0. In the core a DataVariable is simply a `Type` and an `int` address. The 2.4 API roughly replicated that abstraction. In Binary Ninja 3.0 the object has a lot more utility. Again similar to what was done with Variable and Symbol, we now have a `CoreDataVariable` object from which `DataVariable` inherits. The `CoreDataVariable` object is a simple dataclass which maps to the core's representation of the object. The `DataVariable` class inherits from it and provides a lot of additional utility.
 
-Prior to 3.0 a frequent question was: "Through the API how do you set the name of a DataVariable?" The answer was always "You don't, instead create a symbol at that location." This is the same way function names are handled. Although this abstraction serves us well it doesn't make for an intuitive API, thus DataVariable now has a convenient method for setting the variables name and name.
+Prior to 3.0, a frequent question was: "Through the API how do you set the name of a DataVariable?" The answer was always "You don't, instead create a symbol at that location." This is the same way function names are handled. Although this abstraction serves us well it doesn't make for an intuitive API, thus DataVariable now has a convenient method for setting the variable's name and type.
 
 ```python
 >>> data_var = bv.get_data_var_at(here)
@@ -182,7 +184,7 @@ Prior to 3.0 there was really no way to read the contents of a DataVariable it w
 
 ```
 100207a78  int64_t data_100207a78 = 0x10019142a
-100207a80  struct struct_1 data_100207a80 = 
+100207a80  struct struct_1 data_100207a80 =
 100207a80  {
 100207a80      int64_t field_0 = 0x1001f409b
 100207a88      int64_t field_8 = 0x10100

@@ -87,7 +87,6 @@ class TypeLibrary:
 		Decompresses the type library file to a file on disk.
 
 		:param str path:
-		:rtype: bool
 		:raises: OSError if saving the file fails
 		"""
 		if not core.BNTypeLibraryDecompressToFile(self.handle, path):
@@ -377,7 +376,7 @@ class TypeLibrary:
 		all referenced types and record additional dependencies as needed.
 
 		:param QualifiedName name:
-		:param Type t:
+		:param Type type:
 		:rtype: None
 		"""
 		if not isinstance(name, types.QualifiedName):
@@ -391,7 +390,7 @@ class TypeLibrary:
 		"""
 		`remove_named_object` removes a named object from the type library's object store.
 		This does not remove any types that are referenced by the object, only the object itself.
-		
+
 		:param QualifiedName name:
 		:rtype: None
 		"""
@@ -401,7 +400,7 @@ class TypeLibrary:
 
 	def add_named_type(self, name: 'types.QualifiedNameType', type: 'types.Type') -> None:
 		"""
-		`add_named_type` directly inserts a named object into the type library's object store.
+		`add_named_type` directly inserts a named type into the type library's type store.
 		This is not done recursively, so care should be taken that types referring to other types
 		through NamedTypeReferences are already appropriately prepared.
 
@@ -410,7 +409,7 @@ class TypeLibrary:
 		all referenced types and record additional dependencies as needed.
 
 		:param QualifiedName name:
-		:param Type t:
+		:param Type type:
 		:rtype: None
 		"""
 		if not isinstance(name, types.QualifiedName):

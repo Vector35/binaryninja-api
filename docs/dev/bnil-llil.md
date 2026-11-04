@@ -285,7 +285,7 @@ The double precision instruction multiply, divide, modulus instructions are part
 * `LLIL_FLOAT_CONV` -
 * `LLIL_ROUND_TO_INT` - Rounds to the nearest integer
 * `LLIL_FLOOR` - Returns the floor of a floating point value
-* `LLIL_CEILING` - Returns the ceiling of a floating point value
+* `LLIL_CEIL` - Returns the ceiling of a floating point value
 * `LLIL_FTRUNC` - Computes the floating point truncation of the IEEE754 number in `src`
 
 ### Floating Point Conditionals
@@ -317,7 +317,7 @@ The rest of the instructions are pretty much self-explanatory to anyone with fam
 * `LLIL_UNIMPL` - Unimplemented instruction
 * `LLIL_UNIMPL_MEM` - Unimplemented memory access instruction
 * `LLIL_ZX` - Zero extend
-* `LLIL_MEM_PHI ` - A memory `PHI` represents memory modifications that could have occured down different source basic blocks similar to a `VAR_PHI`.
+* `LLIL_MEM_PHI` - A memory `PHI` represents memory modifications that could have occurred down different source basic blocks similar to a `VAR_PHI`.
 * `LLIL_LOW_PART ` - `size` bytes from the low end of `src` expression
 
 ### Currently Undocumented

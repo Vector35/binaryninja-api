@@ -5200,6 +5200,25 @@ static Ref<Type> CreateFloatComparePredicateType(size_t count)
 
 vector<NameAndType> X86CommonArchitecture::GetIntrinsicInputs(uint32_t intrinsic)
 {
+    // Match the full-width source passed by the lifter for high unpacks.
+    // XED's XMMq/MMXd widths describe the consumed half, not its location.
+    switch (intrinsic)
+    {
+    case INTRINSIC_XED_IFORM_PUNPCKHBW_MMXq_MMXd:
+    case INTRINSIC_XED_IFORM_PUNPCKHWD_MMXq_MMXd:
+    case INTRINSIC_XED_IFORM_PUNPCKHDQ_MMXq_MMXd:
+        return GetDefaultIntrinsicInputs(INTRINSIC_XED_IFORM_PUNPCKHBW_MMXq_MEMq);
+    case INTRINSIC_XED_IFORM_PUNPCKHBW_XMMdq_XMMq:
+    case INTRINSIC_XED_IFORM_PUNPCKHWD_XMMdq_XMMq:
+    case INTRINSIC_XED_IFORM_PUNPCKHDQ_XMMdq_XMMq:
+    case INTRINSIC_XED_IFORM_PUNPCKHQDQ_XMMdq_XMMq:
+        return GetDefaultIntrinsicInputs(INTRINSIC_XED_IFORM_PUNPCKHBW_XMMdq_MEMdq);
+    case INTRINSIC_XED_IFORM_UNPCKHPD_XMMpd_XMMq:
+        return GetDefaultIntrinsicInputs(INTRINSIC_XED_IFORM_UNPCKHPD_XMMpd_MEMdq);
+    default:
+        break;
+    }
+
     if (const auto* family = X86::GetFloatComparePseudoIntrinsicFamily(intrinsic))
     {
         auto inputs = GetDefaultIntrinsicInputs(family->registerIntrinsic);

@@ -5429,7 +5429,7 @@ class BinaryView:
 			>>> bv.remove(0,4)
 			4
 			>>> bv.read(0,4)
-			'AAAA'
+			b'AAAA'
 		"""
 		return core.BNRemoveViewData(self.handle, addr, length)
 
@@ -9151,7 +9151,7 @@ class BinaryView:
 		type_obj = type_obj.immutable_copy()
 		core.BNDefineUserAnalysisType(self.handle, _name, type_obj.handle)
 
-	def define_types(self, types: Sequence[Tuple[str, Optional['_types.QualifiedNameType'], StringOrType]], progress_func: Optional[ProgressFuncType]) -> Mapping[str, '_types.QualifiedName']:
+	def define_types(self, types: Sequence[Tuple[str, Optional['_types.QualifiedNameType'], StringOrType]], progress_func: Optional[ProgressFuncType] = None) -> Mapping[str, '_types.QualifiedName']:
 		"""
 		``define_types`` registers multiple types as though calling :py:func:`define_type` multiple times.
 		The difference with this plural version is that it is optimized for adding many types
@@ -9164,7 +9164,7 @@ class BinaryView:
 		(which may be different from the requested name).
 
 		:param types: List of type ids/names/definitions for the new types. Check :py:func:`define_type` for more details.
-		:param progress: Function to call for progress updates
+		:param progress_func: Function to call for progress updates, or None
 		:return: A map of all the chosen names for the defined types with their ids.
 		"""
 		api_types = (core.BNQualifiedNameTypeAndId * len(types))()
@@ -9203,7 +9203,7 @@ class BinaryView:
 			core.BNFreeStringList(result_ids, result_count)
 			core.BNFreeTypeNameList(result_names, result_count)
 
-	def define_user_types(self, types: Sequence[Tuple[Optional['_types.QualifiedNameType'], StringOrType]], progress_func: Optional[ProgressFuncType]):
+	def define_user_types(self, types: Sequence[Tuple[Optional['_types.QualifiedNameType'], StringOrType]], progress_func: Optional[ProgressFuncType] = None):
 		"""
 		``define_user_types`` registers multiple types as though calling :py:func:`define_user_type` multiple times.
 		The difference with this plural version is that it is optimized for adding many types
@@ -9211,7 +9211,7 @@ class BinaryView:
 		There is an optional ``progress_func`` callback function in case you want updates for a long-running call.
 
 		:param types: List of type names/definitions for the new types. Check :py:func:`define_user_type` for more details.
-		:param progress: Function to call for progress updates
+		:param progress_func: Function to call for progress updates, or None
 		"""
 		api_types = (core.BNQualifiedNameAndType * len(types))()
 		for i, (default_name, type_obj) in enumerate(types):
@@ -11930,17 +11930,17 @@ class BinaryWriter:
 		"""
 		``write`` writes ``len(value)`` bytes to the internal offset, without regard to endianness.
 
-		:param str bytes: bytes to be written at current offset
+		:param bytes value: bytes to be written at current offset
 		:param int address: offset to set the internal offset before writing
 		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		:Example:
 
-			>>> bw.write("AAAA")
+			>>> bw.write(b"AAAA")
 			True
 			>>> br.read(4)
-			'AAAA'
+			b'AAAA'
 			>>>
 		"""
 		if address is not None:

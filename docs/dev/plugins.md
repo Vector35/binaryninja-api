@@ -161,6 +161,7 @@ git submodule add https://github.com/Vector35/binaryninja-api.git binaryninjaapi
 cd binaryninjaapi
 # Pick the revision from api_REVISION.txt
 git checkout 6466fba3341b2ea7dbfceeeebbc6c0322a5d8514
+git submodule update --init --recursive
 ```
 
 If you're not using git, you can clone the repository elsewhere:
@@ -170,6 +171,7 @@ git clone https://github.com/Vector35/binaryninja-api.git binaryninjaapi
 cd binaryninjaapi
 # Pick the revision from api_REVISION.txt
 git checkout 6466fba3341b2ea7dbfceeeebbc6c0322a5d8514
+git submodule update --init --recursive
 ```
 
 Now that you have the correct copy of the api, you need to point CMake at it and include it for use.
@@ -226,7 +228,7 @@ extern "C" {
     BINARYNINJAPLUGIN void CorePluginDependencies()
     {
         // For example, if you require the x86 to be loaded before your plugin
-        AddRequiredPluginDependency("arch_x86");
+        BinaryNinja::AddRequiredPluginDependency("arch_x86");
     }
 }
 ```

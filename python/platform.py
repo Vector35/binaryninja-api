@@ -809,11 +809,17 @@ class CorePlatform(Platform):
 	def _from_cache(cls, handle) -> 'Platform':
 		"""
 		Look up a platform from a given BNPlatform handle
-		:param handle: BNPlatform pointer
+		:param handle: Owned BNPlatform reference
 		:return: Platform instance responsible for this handle
 		"""
 		global _platform_cache
-		return _platform_cache.get(ctypes.addressof(handle.contents)) or cls(handle)
+		cached = _platform_cache.get(ctypes.addressof(handle.contents))
+		if cached is None:
+			return cls(handle)
+
+		# The cached platform already holds a reference
+		core.BNFreePlatform(handle)
+		return cached
 
 	def adjust_type_parser_input(
 			self,

@@ -185,6 +185,54 @@ static bool CallTargetIsRetpolineSetup(BinaryView* data, Architecture* arch, uin
 }
 
 
+// A whole retpoline thunk (see above), such as `__x86_indirect_thunk_rax` or `__llvm_retpoline_r11`:
+//
+//     thunk:  call setup        ; the call into the thunk pushed the caller's return address; this
+//             <trap>            ; pushes a second one, which setup replaces with the target
+//     setup:  mov [sp], reg
+//             ret
+//
+// Entering the thunk with `call thunk` therefore transfers to `reg` with only the caller's return
+// address on the stack and no register or flag changed: it is `call reg`. Entering it with `jmp thunk` is
+// `jmp reg`. The setup's store leaves the target in the dead slot below the stack pointer, which is
+// not modeled (the same as the return address of a call).
+//
+// Returns true, and the register, if the code at `target` is a direct call to a setup a short distance
+// ahead (past the trap) that CallTargetIsRetpolineSetup verifies. The thunk is matched by its code, not
+// its name, and any register can be the target, so this covers every register's thunk.
+static bool TargetIsRetpolineThunk(BinaryView* data, Architecture* arch, uint64_t target, uint32_t& targetReg)
+{
+	if (arch->GetLinkRegister() != BN_INVALID_REGISTER)
+		return false;
+
+	DataBuffer buffer = data->ReadBuffer(target, arch->GetMaxInstructionLength());
+	size_t len = buffer.GetLength();
+	if (len == 0)
+		return false;
+
+	Ref<LowLevelILFunction> il = new LowLevelILFunction(arch, nullptr);
+	il->SetCurrentAddress(arch, target);
+	if (!arch->GetInstructionLowLevelIL((const uint8_t*)buffer.GetData(), target, len, *il)
+		|| (il->GetInstructionCount() != 1) || (len == 0))
+		return false;
+
+	LowLevelILInstruction call = (*il)[0];
+	if (call.operation != LLIL_CALL)
+		return false;
+	LowLevelILInstruction dest = call.GetDestExpr<LLIL_CALL>();
+	if ((dest.operation != LLIL_CONST_PTR) && (dest.operation != LLIL_CONST))
+		return false;
+
+	// The setup follows the trap, which follows the call. Known traps are a few bytes long.
+	const uint64_t maxTrapLength = 64;
+	uint64_t setup = dest.GetConstant();
+	if ((setup < target + len) || (setup > target + len + maxTrapLength))
+		return false;
+
+	return CallTargetIsRetpolineSetup(data, arch, setup, targetReg);
+}
+
+
 // A return thunk replaces a function's `ret` with `jmp thunk`, where the thunk performs the return. With
 // the return-thunk mitigation in Linux and Xen (`-mfunction-return=thunk-extern`), the static body of
 // `__x86_return_thunk` is a plain `ret` (followed by an `int3` speculation trap that is never reached).
@@ -1090,6 +1138,26 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 				}
 			}
 
+			// A direct call to a retpoline thunk is an indirect call through the thunk's register (see
+			// TargetIsRetpolineThunk). Lift it as `call(reg)` here, at the call site, so call-site analysis
+			// sees the real target and its arguments. The thunk remains a function and a reference.
+			for (size_t instrIndex = instrCountBefore; instrIndex < instrCountAfter; instrIndex++)
+			{
+				LowLevelILInstruction instr = function->GetInstruction(instrIndex);
+				if (instr.operation != LLIL_CALL)
+					continue;
+				LowLevelILInstruction dest = instr.GetDestExpr<LLIL_CALL>();
+				if ((dest.operation != LLIL_CONST_PTR) && (dest.operation != LLIL_CONST))
+					continue;
+				Ref<Architecture> arch = i->GetArchitecture();
+				uint32_t thunkReg;
+				if (TargetIsRetpolineThunk(data, arch, dest.GetConstant(), thunkReg))
+				{
+					size_t addressSize = arch->GetAddressSize();
+					instr.Replace(function->Call(function->Register(addressSize, thunkReg, instr), instr));
+				}
+			}
+
 			// Control transfers that are really something else, recognized from the block's shape after basic
 			// block analysis. Lift them as what they do:
 			//   * a call to a retpoline setup is `jmp reg` (see CallTargetIsRetpolineSetup);
@@ -1166,11 +1234,19 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 					uint64_t target = lastInstr.GetDestExpr<LLIL_JUMP>().GetConstant();
 					Ref<Function> owner = function->GetFunction();
 					bool atEntry = owner && (addr == owner->GetStart()) && (arch == owner->GetArchitecture());
+					uint32_t thunkReg;
 					if (!atEntry && BranchTargetIsReturn(data, arch, target))
 					{
 						size_t addressSize = arch->GetAddressSize();
 						lastInstr.Replace(
 							function->Return(function->Pop(addressSize, 0, lastInstr), lastInstr));
+					}
+					else if (TargetIsRetpolineThunk(data, arch, target, thunkReg))
+					{
+						// A tail jump to a retpoline thunk is a tail call through the thunk's register.
+						size_t addressSize = arch->GetAddressSize();
+						lastInstr.Replace(
+							function->TailCall(function->Register(addressSize, thunkReg, lastInstr), lastInstr));
 					}
 				}
 			}

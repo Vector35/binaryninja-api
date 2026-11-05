@@ -185,6 +185,42 @@ static bool CallTargetIsRetpolineSetup(BinaryView* data, Architecture* arch, uin
 }
 
 
+// A return thunk replaces a function's `ret` with `jmp thunk`, where the thunk performs the return. With
+// the return-thunk mitigation in Linux and Xen (`-mfunction-return=thunk-extern`), the static body of
+// `__x86_return_thunk` is a plain `ret` (followed by an `int3` speculation trap that is never reached).
+// Jumping to a plain `ret` leaves the stack untouched, so the `ret` pops the jumping function's own
+// return address: the jump is that function's return, not a tail call.
+//
+// Returns true if the instruction at `target` lifts to exactly `ret` through a popped return address
+// (`<return> jump(pop)`). `ret imm` and anything else that adjusts the stack does not match. Only applies
+// to architectures that keep the return address on the stack. The thunk is matched by its code, not its
+// name, so a jump to any function whose body is a plain `ret` (an empty function) matches too. The
+// lifter does not apply this to a jump at the jumping function's entry; see the scope note there.
+static bool BranchTargetIsReturn(BinaryView* data, Architecture* arch, uint64_t target)
+{
+	if (arch->GetLinkRegister() != BN_INVALID_REGISTER)
+		return false;
+
+	DataBuffer buffer = data->ReadBuffer(target, arch->GetMaxInstructionLength());
+	size_t len = buffer.GetLength();
+	if (len == 0)
+		return false;
+
+	Ref<LowLevelILFunction> il = new LowLevelILFunction(arch, nullptr);
+	il->SetCurrentAddress(arch, target);
+	if (!arch->GetInstructionLowLevelIL((const uint8_t*)buffer.GetData(), target, len, *il))
+		return false;
+	if (il->GetInstructionCount() != 1)
+		return false;
+
+	LowLevelILInstruction ret = (*il)[0];
+	if (ret.operation != LLIL_RET)
+		return false;
+	LowLevelILInstruction dest = ret.GetDestExpr<LLIL_RET>();
+	return (dest.operation == LLIL_POP) && (dest.size == arch->GetAddressSize());
+}
+
+
 void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context)
 {
 	auto data = function->GetView();
@@ -1054,10 +1090,12 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 				}
 			}
 
-			// Calls that are really jumps, recognized during basic block analysis. Lift them as what they do:
+			// Control transfers that are really something else, recognized from the block's shape after basic
+			// block analysis. Lift them as what they do:
 			//   * a call to a retpoline setup is `jmp reg` (see CallTargetIsRetpolineSetup);
 			//   * a call whose target discards the return address adjusts the stack pointer and jumps to
-			//     the target block (see CallTargetDiscardsReturnAddress).
+			//     the target block (see CallTargetDiscardsReturnAddress);
+			//   * a tail jump to a plain `ret` (a return thunk) is a return (see BranchTargetIsReturn).
 			// Each requires both the block's shape from basic block analysis and a specific target code
 			// shape. This restricts the rewrite to those patterns; it does not establish general semantic
 			// equivalence with the call.
@@ -1109,6 +1147,30 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 								function->Jump(function->ConstPointer(addressSize, target, lastInstr), lastInstr));
 						instrCountAfter = function->GetInstructionCount();
 						callLiftedAsJump = true;
+					}
+				}
+				else if ((lastInstr.operation == LLIL_JUMP) && i->GetOutgoingEdges().empty()
+					&& ((lastInstr.GetDestExpr<LLIL_JUMP>().operation == LLIL_CONST)
+						|| (lastInstr.GetDestExpr<LLIL_JUMP>().operation == LLIL_CONST_PTR)))
+				{
+					// A direct jump that basic block analysis left with no edge (a tail call) to a plain `ret`
+					// is this function's return (see BranchTargetIsReturn). Lift it as that `ret`.
+					//
+					// Scope boundary: a jump at the function's entry (a jump-only wrapper such as MSVC's
+					// `j__guard_check_icall_nop`) is left as a tail call. Lifting it as `ret` is equally
+					// correct, but the wrapper is then inferred `__pure` and its call sites disappear from
+					// callers' HLIL, hiding instrumentation such as CFG checks. That is a separate
+					// behavior change from restoring returns in function bodies. This is a conservative
+					// compatibility boundary, not a semantic distinction: it also skips empty functions.
+					Ref<Architecture> arch = i->GetArchitecture();
+					uint64_t target = lastInstr.GetDestExpr<LLIL_JUMP>().GetConstant();
+					Ref<Function> owner = function->GetFunction();
+					bool atEntry = owner && (addr == owner->GetStart()) && (arch == owner->GetArchitecture());
+					if (!atEntry && BranchTargetIsReturn(data, arch, target))
+					{
+						size_t addressSize = arch->GetAddressSize();
+						lastInstr.Replace(
+							function->Return(function->Pop(addressSize, 0, lastInstr), lastInstr));
 					}
 				}
 			}

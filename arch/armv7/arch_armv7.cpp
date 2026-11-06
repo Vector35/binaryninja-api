@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
 
+#include <algorithm>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -3494,6 +3495,158 @@ uint32_t ArmCommonArchitecture::GetLinkRegister()
 	return REG_LR;
 }
 
+// LLVM treats constant branch targets as PC-relative offsets and doesn't know the address being
+// assembled at, so absolute targets are rewritten relative to a label at the start of the code
+static string TrimSpace(const string& s)
+{
+	size_t start = s.find_first_not_of(" \t\r");
+	if (start == string::npos)
+		return "";
+	return s.substr(start, s.find_last_not_of(" \t\r") - start + 1);
+}
+
+static bool IsConstantExpression(const string& s)
+{
+	bool hasNumber = false;
+	for (size_t i = 0; i < s.size();)
+	{
+		if (isdigit((unsigned char)s[i]))
+		{
+			while (i < s.size() && isalnum((unsigned char)s[i]))
+				i++;
+			hasNumber = true;
+		}
+		else if (strchr(" \t+-*/%()~&|^<>", s[i]))
+			i++;
+		else
+			return false;
+	}
+	return hasNumber;
+}
+
+static vector<string> SplitOperands(const string& s)
+{
+	vector<string> result;
+	int depth = 0;
+	size_t start = 0;
+	for (size_t i = 0; i < s.size(); i++)
+	{
+		if (s[i] == '(' || s[i] == '[' || s[i] == '{')
+			depth++;
+		else if (s[i] == ')' || s[i] == ']' || s[i] == '}')
+			depth--;
+		else if (s[i] == ',' && depth == 0)
+		{
+			result.push_back(TrimSpace(s.substr(start, i - start)));
+			start = i + 1;
+		}
+	}
+	result.push_back(TrimSpace(s.substr(start)));
+	return result;
+}
+
+static bool IsBranchMnemonic(const string& mnemonic)
+{
+	static const char* conds[] = {"", "eq", "ne", "cs", "hs", "cc", "lo", "mi", "pl", "vs", "vc", "hi", "ls", "ge",
+		"lt", "gt", "le", "al"};
+	for (const char* base : {"b", "bl", "blx"})
+		for (const char* cond : conds)
+			if (mnemonic == string(base) + cond)
+				return true;
+	return false;
+}
+
+static string RewriteInstruction(const string& mnemonic, vector<string>& operands, uint64_t addr, size_t& count)
+{
+	string base = mnemonic;
+	if (base.size() > 2 && (base.substr(base.size() - 2) == ".w" || base.substr(base.size() - 2) == ".n"))
+		base = base.substr(0, base.size() - 2);
+
+	size_t expected;
+	if (IsBranchMnemonic(base))
+		expected = 1;
+	else if (base == "cbz" || base == "cbnz" || base == "adr" || base == "ldr")
+		expected = 2;
+	else
+		return "";
+
+	if (operands.size() != expected)
+		return "";
+	// '#' immediates are left as raw PC-relative offsets
+	string target = operands.back();
+	if (!IsConstantExpression(target))
+		return "";
+
+	string name = fmt::format("__bn_t{}", count++);
+	string result = fmt::format(".set {}, __bn_base + (({}) - {:#x}); {}", name, target, addr, mnemonic);
+	operands.back() = name;
+	for (size_t i = 0; i < operands.size(); i++)
+		result += (i == 0 ? " " : ", ") + operands[i];
+	return result;
+}
+
+static string RewriteAbsoluteTargets(const string& code, uint64_t addr)
+{
+	string result;
+	size_t count = 0;
+	size_t padding = addr & 2;
+	size_t lineStart = 0;
+	while (true)
+	{
+		size_t lineEnd = code.find('\n', lineStart);
+		string line = code.substr(lineStart, lineEnd == string::npos ? string::npos : lineEnd - lineStart);
+		size_t commentStart = line.find('@');
+		string comment = commentStart == string::npos ? "" : line.substr(commentStart);
+		line = line.substr(0, commentStart);
+
+		size_t stmtStart = 0;
+		while (true)
+		{
+			size_t stmtEnd = line.find(';', stmtStart);
+			string stmt = line.substr(stmtStart, stmtEnd == string::npos ? string::npos : stmtEnd - stmtStart);
+
+			// Skip any labels before the mnemonic
+			size_t mnemonicStart = 0, mnemonicEnd = 0;
+			while (true)
+			{
+				mnemonicStart = stmt.find_first_not_of(" \t", mnemonicEnd);
+				if (mnemonicStart == string::npos)
+					break;
+				mnemonicEnd = stmt.find_first_of(" \t:", mnemonicStart);
+				if (mnemonicEnd == string::npos || stmt[mnemonicEnd] != ':')
+					break;
+				mnemonicEnd++;
+			}
+
+			string rewritten;
+			if (mnemonicStart != string::npos && mnemonicEnd != string::npos)
+			{
+				string mnemonic = stmt.substr(mnemonicStart, mnemonicEnd - mnemonicStart);
+				transform(mnemonic.begin(), mnemonic.end(), mnemonic.begin(), ::tolower);
+				vector<string> operands = SplitOperands(stmt.substr(mnemonicEnd));
+				rewritten = RewriteInstruction(mnemonic, operands, addr - padding, count);
+			}
+			result += rewritten.empty() ? stmt : stmt.substr(0, mnemonicStart) + rewritten;
+
+			if (stmtEnd == string::npos)
+				break;
+			result += ';';
+			stmtStart = stmtEnd + 1;
+		}
+		result += comment;
+
+		if (lineEnd == string::npos)
+			break;
+		result += '\n';
+		lineStart = lineEnd + 1;
+	}
+
+	if (count == 0 && padding == 0)
+		return code;
+	// Thumb PC-relative offsets are computed from an aligned PC, so pad to the real alignment
+	return fmt::format("__bn_base: .space {}; ", padding) + result;
+}
+
 bool ArmCommonArchitecture::CanAssemble()
 {
 	return true;
@@ -3501,8 +3654,6 @@ bool ArmCommonArchitecture::CanAssemble()
 
 bool ArmCommonArchitecture::Assemble(const string& code, uint64_t addr, DataBuffer& result, string& errors)
 {
-	(void)addr;
-
 	char *instrBytes=NULL, *err=NULL;
 	int instrBytesLen=0, errLen=0;
 
@@ -3514,7 +3665,7 @@ bool ArmCommonArchitecture::Assemble(const string& code, uint64_t addr, DataBuff
 	BNLlvmServicesInit();
 
 	errors.clear();
-	assembleResult = BNLlvmServicesAssemble(code.c_str(), LLVM_SVCS_DIALECT_UNSPEC,
+	assembleResult = BNLlvmServicesAssemble(RewriteAbsoluteTargets(code, addr).c_str(), LLVM_SVCS_DIALECT_UNSPEC,
 	  triple.c_str(), LLVM_SVCS_CM_DEFAULT, LLVM_SVCS_RM_STATIC,
 	  &instrBytes, &instrBytesLen, &err, &errLen);
 
@@ -3524,8 +3675,10 @@ bool ArmCommonArchitecture::Assemble(const string& code, uint64_t addr, DataBuff
 		return false;
 	}
 
+	int padding = addr & 2;
 	result.Clear();
-	result.Append(instrBytes, instrBytesLen);
+	if (instrBytesLen > padding)
+		result.Append(instrBytes + padding, instrBytesLen - padding);
 	BNLlvmServicesAssembleFree(instrBytes, err);
 	return true;
 }

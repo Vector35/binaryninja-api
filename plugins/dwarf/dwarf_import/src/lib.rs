@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod concrete_parameters;
 mod die_handlers;
 mod dwarfdebuginfo;
 mod functions;
@@ -597,6 +598,8 @@ fn parse_dwarf(
 
     if let Some(mut debug_info_builder_context) = DebugInfoBuilderContext::new(address_size, &dwarf)
     {
+        debug_info_builder_context
+            .set_argument_registers(concrete_parameters::ArgumentRegisters::for_view(bv));
         calculate_total_unit_bytes(&dwarf, &mut debug_info_builder_context);
 
         let progress_weights = [0.5, 0.5];

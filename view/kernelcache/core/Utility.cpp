@@ -65,7 +65,10 @@ void ApplySymbol(Ref<BinaryView> view, Ref<TypeLibrary> typeLib, Ref<Symbol> sym
 	// The type library type will take precedence over the passed in type.
 	Ref<Type> selectedType = type;
 	if (typeLib)
-		selectedType = view->ImportTypeLibraryObject(typeLib, {symbolName});
+	{
+		if (Ref<Type> imported = view->ImportTypeLibraryObject(typeLib, {symbolName}))
+			selectedType = imported;
+	}
 
 	Ref<Function> func = nullptr;
 	if (symbol->GetType() == FunctionSymbol)

@@ -14,6 +14,7 @@
 
 use std::sync::OnceLock;
 
+use crate::concrete_parameters::reconstruct_concrete_parameters;
 use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
 use crate::types::get_type;
 use crate::{helpers::*, ReaderType};
@@ -106,6 +107,16 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
         debug_info_builder,
     );
     let address = get_start_address(dwarf, unit, entry);
+    let concrete_parameters = address.and_then(|entry_pc| {
+        reconstruct_concrete_parameters(
+            dwarf,
+            unit,
+            entry,
+            entry_pc,
+            debug_info_builder_context,
+            debug_info_builder,
+        )
+    });
     let (parameters, variable_arguments) = get_parameters(
         dwarf,
         unit,
@@ -171,6 +182,7 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
         return_type,
         address,
         &parameters,
+        concrete_parameters,
         variable_arguments,
         frame_base,
     )

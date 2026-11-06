@@ -946,8 +946,11 @@ public:
 
 				value = decomp.fields[operand.field0];
 
-				/* this will be '#' for lone numerals, 'p' for coprocessor, etc. */
-				if (operand.prefix[0] != 0)
+				/* this will be '#' for lone numerals, 'p' for coprocessor, etc.
+					branch targets are absolute addresses, so print them bare like arm mode */
+				if (operand.prefix[0] != 0 && decomp.mnem != armv7::ARMV7_B && decomp.mnem != armv7::ARMV7_BL
+					&& decomp.mnem != armv7::ARMV7_BX && decomp.mnem != armv7::ARMV7_BLX
+					&& decomp.mnem != armv7::ARMV7_CBZ && decomp.mnem != armv7::ARMV7_CBNZ)
 					result.emplace_back(TextToken, operand.prefix);
 
 				if (decomp.mnem == armv7::ARMV7_B || decomp.mnem == armv7::ARMV7_BL) {

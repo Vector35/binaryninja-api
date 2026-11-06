@@ -704,6 +704,100 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
     }
 }
 
+// LLVM treats constant branch targets as PC-relative offsets and doesn't know the address being
+// assembled at, so absolute targets are rewritten relative to a label at the start of the code
+fn is_constant_expression(s: &str) -> bool {
+    let mut has_number = false;
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c.is_ascii_digit() {
+            while chars.next_if(|c| c.is_ascii_alphanumeric()).is_some() {}
+            has_number = true;
+        } else if !" \t+-*/%()~&|^<>".contains(c) {
+            return false;
+        }
+    }
+    has_number
+}
+
+fn rewrite_statement(stmt: &str, addr: u64, count: &mut usize) -> Option<String> {
+    // Skip any labels before the mnemonic
+    let mut start = 0;
+    let (mnemonic_start, mnemonic_end) = loop {
+        let mnemonic_start = start + stmt[start..].find(|c: char| c != ' ' && c != '\t')?;
+        let mnemonic_end = mnemonic_start + stmt[mnemonic_start..].find([' ', '\t', ':'])?;
+        if !stmt[mnemonic_end..].starts_with(':') {
+            break (mnemonic_start, mnemonic_end);
+        }
+        start = mnemonic_end + 1;
+    };
+
+    let mnemonic = stmt[mnemonic_start..mnemonic_end].to_ascii_lowercase();
+    if !matches!(
+        mnemonic.as_str(),
+        "j" | "jal"
+            | "beq"
+            | "bne"
+            | "blt"
+            | "bge"
+            | "bltu"
+            | "bgeu"
+            | "beqz"
+            | "bnez"
+            | "blez"
+            | "bgez"
+            | "bltz"
+            | "bgtz"
+            | "bgt"
+            | "ble"
+            | "bgtu"
+            | "bleu"
+    ) {
+        return None;
+    }
+
+    let operands: Vec<&str> = stmt[mnemonic_end..].split(',').map(str::trim).collect();
+    let (target, others) = operands.split_last()?;
+    if !is_constant_expression(target) {
+        return None;
+    }
+
+    let name = format!("__bn_t{}", *count);
+    *count += 1;
+    let mut operands_text = others.join(", ");
+    if !others.is_empty() {
+        operands_text.push_str(", ");
+    }
+    operands_text.push_str(&name);
+    Some(format!(
+        "{}.set {name}, __bn_base + (({target}) - {addr:#x}); {mnemonic} {operands_text}",
+        &stmt[..mnemonic_start]
+    ))
+}
+
+fn rewrite_absolute_targets(code: &str, addr: u64) -> String {
+    let mut count = 0;
+    let lines: Vec<String> = code
+        .split('\n')
+        .map(|line| {
+            let (code, comment) = line.split_at(line.find('#').unwrap_or(line.len()));
+            let stmts: Vec<String> = code
+                .split(';')
+                .map(|stmt| {
+                    rewrite_statement(stmt, addr, &mut count).unwrap_or_else(|| stmt.to_string())
+                })
+                .collect();
+            stmts.join(";") + comment
+        })
+        .collect();
+
+    if count == 0 {
+        return code.to_string();
+    }
+    // Relaxation would turn these branches into relocations
+    format!(".option norelax; __bn_base: {}", lines.join("\n"))
+}
+
 #[derive(Debug)]
 struct RiscVArch<D: RiscVDisassembler> {
     handle: CoreArchitecture,
@@ -2367,7 +2461,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
         true
     }
 
-    fn assemble(&self, code: &str, _addr: u64) -> Result<Vec<u8>, String> {
+    fn assemble(&self, code: &str, addr: u64) -> Result<Vec<u8>, String> {
         // FIXME: This does not support any instructions outside the very basic RV32I/RV64I instruction set.
         // It is completely undocumented how to tell LLVM to accept the additional extensions, and may
         // require core changes to enable.
@@ -2378,7 +2472,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
         };
 
         llvm_assemble(
-            code,
+            &rewrite_absolute_targets(code, addr),
             LlvmServicesDialect::Unspecified,
             arch_triple,
             LlvmServicesCodeModel::Default,

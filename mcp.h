@@ -48,6 +48,30 @@ enum class Scope : uint8_t
 	BinaryView = BinaryViewScope,
 };
 
+struct GroupDefinition
+{
+	std::string name;
+	std::string title;
+	std::string description;
+	bool enabledByDefault = true;
+};
+
+class ToolGroup: public CoreRefCountObject<BNMcpToolGroup, BNNewMcpToolGroupReference, BNFreeMcpToolGroup>
+{
+public:
+	explicit ToolGroup(BNMcpToolGroup* group);
+
+	static Ref<ToolGroup> Register(const GroupDefinition& definition);
+	static std::vector<Ref<ToolGroup>> GetList();
+	static Ref<ToolGroup> GetByName(const std::string& name);
+
+	std::string GetName() const;
+	std::string GetTitle() const;
+	std::string GetDescription() const;
+	bool IsEnabledByDefault() const;
+	bool IsEnabled() const;
+};
+
 struct ToolDefinition
 {
 	std::string name;
@@ -58,6 +82,7 @@ struct ToolDefinition
 	uint32_t annotations = 0;
 	/*! Empty for no output schema. */
 	std::string outputSchema;
+	Ref<ToolGroup> group;
 };
 
 /*! A converted argument, or the message explaining why the argument is invalid. */
@@ -130,6 +155,7 @@ public:
 	std::string GetName() const;
 	std::string GetTitle() const;
 	std::string GetDescription() const;
+	Ref<ToolGroup> GetGroup() const;
 	std::string GetInputSchema() const;
 	/*! Empty when the tool has no output schema. */
 	std::string GetOutputSchema() const;
@@ -949,6 +975,14 @@ public:
 	auto With(Transform&& transform) &&
 	{
 		return std::forward<Transform>(transform)(std::move(*this));
+	}
+
+	ToolBuilder InGroup(Ref<ToolGroup> group) &&
+	{
+		if (!group)
+			throw std::invalid_argument("MCP tool group must not be null");
+		m_definition.group = std::move(group);
+		return std::move(*this);
 	}
 
 	ToolBuilder OutputSchema(std::string schema) &&

@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 192
+#define BN_CURRENT_CORE_ABI_VERSION 193
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 192
+#define BN_MINIMUM_CORE_ABI_VERSION 193
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -348,6 +348,7 @@ extern "C"
 	typedef struct BNUndoEntry BNUndoEntry;
 	typedef struct BNDemangler BNDemangler;
 	typedef struct BNMcpTool BNMcpTool;
+	typedef struct BNMcpToolGroup BNMcpToolGroup;
 	typedef struct BNMcpToolCall BNMcpToolCall;
 	typedef struct BNMcpToolResult BNMcpToolResult;
 	typedef struct BNFirmwareNinja BNFirmwareNinja;
@@ -4109,7 +4110,16 @@ extern "C"
 		const char* outputSchema;
 		BNMcpToolScope scope;
 		uint32_t annotations;
+		BNMcpToolGroup* group;
 	} BNMcpToolDefinition;
+
+	typedef struct BNMcpToolGroupDefinition
+	{
+		const char* name;
+		const char* title;
+		const char* description;
+		bool enabledByDefault;
+	} BNMcpToolGroupDefinition;
 
 	typedef struct BNMcpToolCallbacks
 	{
@@ -8954,6 +8964,18 @@ extern "C"
 	// MCP tools
 	BINARYNINJACOREAPI BNMcpTool* BNRegisterMcpTool(
 		const BNMcpToolDefinition* definition, const BNMcpToolCallbacks* callbacks);
+	BINARYNINJACOREAPI BNMcpToolGroup* BNRegisterMcpToolGroup(const BNMcpToolGroupDefinition* definition);
+	BINARYNINJACOREAPI BNMcpToolGroup* BNNewMcpToolGroupReference(BNMcpToolGroup* group);
+	BINARYNINJACOREAPI void BNFreeMcpToolGroup(BNMcpToolGroup* group);
+	BINARYNINJACOREAPI BNMcpToolGroup** BNGetMcpToolGroupList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeMcpToolGroupList(BNMcpToolGroup** groups, size_t count);
+	BINARYNINJACOREAPI BNMcpToolGroup* BNGetMcpToolGroupByName(const char* name);
+	BINARYNINJACOREAPI char* BNGetMcpToolGroupName(BNMcpToolGroup* group);
+	BINARYNINJACOREAPI char* BNGetMcpToolGroupTitle(BNMcpToolGroup* group);
+	BINARYNINJACOREAPI char* BNGetMcpToolGroupDescription(BNMcpToolGroup* group);
+	BINARYNINJACOREAPI bool BNIsMcpToolGroupEnabledByDefault(BNMcpToolGroup* group);
+	BINARYNINJACOREAPI bool BNIsMcpToolGroupEnabled(BNMcpToolGroup* group);
+	BINARYNINJACOREAPI BNMcpToolGroup* BNGetMcpToolGroup(BNMcpTool* tool);
 	BINARYNINJACOREAPI BNMcpTool* BNNewMcpToolReference(BNMcpTool* tool);
 	BINARYNINJACOREAPI void BNFreeMcpTool(BNMcpTool* tool);
 	BINARYNINJACOREAPI BNMcpTool** BNGetMcpToolList(size_t* count);

@@ -235,6 +235,19 @@ Ref<Section> SharedCacheObjCProcessor::GetSectionWithName(const char *sectionNam
 	return nullptr;
 }
 
+QualifiedName SharedCacheObjCProcessor::DefineSingleClassStructType(Class cls, Ref<Structure> classTypeStruct)
+{
+	// If present, remove the existing low-fidelity class type derived from imported type libraries.
+	auto autoTypes = m_data->GetAutoTypeContainer();
+	if (const auto existing = autoTypes.GetTypeId(cls.name))
+	{
+		if (!autoTypes.DeleteType(*existing))
+			m_logger->LogError("Couldn't replace existing type '%s' with the reconstructed version.", cls.name.data());
+	}
+
+	return ObjCProcessor::DefineSingleClassStructType(cls, classTypeStruct);
+}
+
 SharedCacheObjCProcessor::SharedCacheObjCProcessor(BinaryView *data, uint64_t imageAddress)
 	: ObjCProcessor(data, "SharedCache.ObjC", true)
 {

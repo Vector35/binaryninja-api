@@ -20,6 +20,9 @@ fn test_list() {
         let plugin_path = plugin.path();
         let plugin_by_path = repository.plugin_by_path(&plugin_path).unwrap();
         let _license_text = plugin.license_text();
-        assert_eq!(plugin.versions().to_vec(), plugin_by_path.versions().to_vec());
+        assert_eq!(
+            plugin.versions().to_vec(),
+            plugin_by_path.versions().to_vec()
+        );
     }
 }

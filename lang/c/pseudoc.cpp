@@ -1165,42 +1165,34 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 		break;
 
 	case HLIL_ZX:
-		[&]() {
-			const auto srcExpr = instr.GetSourceExpr<HLIL_ZX>();
-			if (settings && !settings->IsOptionSet(ShowTypeCasts))
-			{
-				GetExprTextInternal(srcExpr, tokens, settings, precedence);
-				return;
-			}
-			bool parens = precedence > UnaryOperatorPrecedence;
-			if (parens)
-				tokens.AppendOpenParen();
-			tokens.AppendOpenParen();
-			AppendSizeToken(instr.size, false, tokens);
-			tokens.AppendCloseParen();
-			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence, false, false);
-			if (parens)
-				tokens.AppendCloseParen();
-			if (statement)
-				tokens.AppendSemicolon();
-		}();
-		break;
-
 	case HLIL_SX:
 		[&]() {
-			const auto srcExpr = instr.GetSourceExpr<HLIL_SX>();
+			const auto srcExpr = instr.GetSourceExpr();
 			if (settings && !settings->IsOptionSet(ShowTypeCasts))
 			{
 				GetExprTextInternal(srcExpr, tokens, settings, precedence);
 				return;
 			}
+			const bool isSigned = instr.operation == HLIL_SX;
 			bool parens = precedence > UnaryOperatorPrecedence;
 			if (parens)
 				tokens.AppendOpenParen();
 			tokens.AppendOpenParen();
-			AppendSizeToken(instr.size, true, tokens);
+			AppendSizeToken(instr.size, isSigned, tokens);
 			tokens.AppendCloseParen();
-			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence, false, true);
+
+			if ((srcExpr.operation == HLIL_MULS_DP || srcExpr.operation == HLIL_MULU_DP)
+				&& (srcExpr.size == 1 || srcExpr.size == 2 || srcExpr.size == 4) && instr.size == srcExpr.size * 2)
+			{
+				// The extension consumes the low half when its result is already the full product width.
+				tokens.AppendOpenParen();
+				if (srcExpr.size == 1 && isSigned)
+					tokens.Append(TypeNameToken, "int8_t");
+				else
+					AppendSizeToken(srcExpr.size, isSigned, tokens);
+				tokens.AppendCloseParen();
+			}
+			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence, false, isSigned);
 			if (parens)
 				tokens.AppendCloseParen();
 			if (statement)
@@ -2225,7 +2217,60 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				mulSigned = false;
 			else if (instr.operation == HLIL_MULS_DP)
 				mulSigned = true;
-			AppendTwoOperand(" * ", instr, tokens, settings, MultiplyOperatorPrecedence, mulSigned);
+			if (mulSigned.has_value() && (instr.size == 1 || instr.size == 2 || instr.size == 4)
+				&& (!settings || settings->IsOptionSet(ShowTypeCasts)))
+			{
+				const bool isSigned = *mulSigned;
+				const size_t width = instr.size;
+				auto appendCast = [&](size_t size) {
+					tokens.AppendOpenParen();
+					if (size == 1 && isSigned)
+						tokens.Append(TypeNameToken, "int8_t");
+					else
+						AppendSizeToken(size, isSigned, tokens);
+					tokens.AppendCloseParen();
+				};
+				auto appendOperand = [&](const HighLevelILInstruction& operand, BNOperatorPrecedence operandPrecedence) {
+					bool needsCast = true;
+					if (operand.operation == HLIL_CONST)
+						needsCast = operand.GetConstant<HLIL_CONST>() >= (uint64_t(1) << (width * 8 - 1));
+					else if (width != 1 || !isSigned)
+					{
+						if (operand.operation == HLIL_LOW_PART)
+							needsCast = operand.size != width;
+						else if (operand.operation == HLIL_VAR)
+						{
+							const auto type = GetFunction()->GetVariableType(operand.GetVariable<HLIL_VAR>());
+							needsCast = !type.GetValue() || type->GetClass() != IntegerTypeClass
+								|| type->GetWidth() != width || type->IsSigned().GetValue() != isSigned;
+						}
+						else if (operand.operation == HLIL_STRUCT_FIELD && operand.size == width
+							&& operand.GetOffset<HLIL_STRUCT_FIELD>() == 0)
+						{
+							const auto source = operand.GetSourceExpr<HLIL_STRUCT_FIELD>();
+							if (source.operation == HLIL_VAR && source.size > width)
+							{
+								const auto type = GetFunction()->GetVariableType(source.GetVariable<HLIL_VAR>());
+								needsCast = !type.GetValue() || type->GetClass() != IntegerTypeClass;
+							}
+						}
+					}
+					if (needsCast)
+					{
+						appendCast(width);
+						operandPrecedence = UnaryOperatorPrecedence;
+					}
+					GetExprTextInternal(operand, tokens, settings, operandPrecedence, false, isSigned);
+				};
+
+				// Interpret both operands at their IL width, then widen the left operand before multiplying.
+				appendCast(width * 2);
+				appendOperand(instr.GetLeftExpr(), UnaryOperatorPrecedence);
+				tokens.Append(OperationToken, " * ");
+				appendOperand(instr.GetRightExpr(), MultiplyOperatorPrecedence);
+			}
+			else
+				AppendTwoOperand(" * ", instr, tokens, settings, MultiplyOperatorPrecedence, mulSigned);
 			if (parens)
 				tokens.AppendCloseParen();
 			if (statement)

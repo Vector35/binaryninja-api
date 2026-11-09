@@ -235,18 +235,31 @@ void PseudoCFunction::AppendComparison(const string& comparison, const HighLevel
 	HighLevelILTokenEmitter& emitter, DisassemblySettings* settings, BNOperatorPrecedence precedence,
 	std::optional<bool> signedHint)
 {
-	const auto leftExpr = instr.GetLeftExpr();
-	const auto rightExpr = instr.GetRightExpr();
+	auto appendOperand = [&](const HighLevelILInstruction& operand) {
+		if (operand.operation == HLIL_SPLIT)
+		{
+			AppendDefaultSplitExpr(operand, emitter, settings, precedence);
+			return;
+		}
 
-	if (leftExpr.operation == HLIL_SPLIT)
-		AppendDefaultSplitExpr(leftExpr, emitter, settings, precedence);
-	else
-		GetExprTextInternal(leftExpr, emitter, settings, precedence, false, signedHint);
+		if (signedHint == false && operand.operation == HLIL_VAR && (!settings || settings->IsOptionSet(ShowTypeCasts)))
+		{
+			// A variable's declaration can disagree with the HLIL comparison.
+			const auto type = GetFunction()->GetVariableType(operand.GetVariable<HLIL_VAR>());
+			if (type.GetValue() && type->GetClass() == IntegerTypeClass && type->GetWidth() == operand.size
+				&& type->IsSigned())
+			{
+				emitter.AppendOpenParen();
+				AppendSizeToken(operand.size, false, emitter);
+				emitter.AppendCloseParen();
+			}
+		}
+		GetExprTextInternal(operand, emitter, settings, precedence, false, signedHint);
+	};
+
+	appendOperand(instr.GetLeftExpr());
 	emitter.Append(OperationToken, comparison);
-	if (rightExpr.operation == HLIL_SPLIT)
-		AppendDefaultSplitExpr(rightExpr, emitter, settings, precedence);
-	else
-		GetExprTextInternal(rightExpr, emitter, settings, precedence, false, signedHint);
+	appendOperand(instr.GetRightExpr());
 }
 
 

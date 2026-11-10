@@ -453,6 +453,7 @@ public:
 	void selectTypeByName(const std::string& name, bool newSelection);
 
 	bool navigateToType(const std::string& typeName, uint64_t offset);
+	bool navigateToTypeMember(const std::string& typeName, const std::string& memberName, uint64_t offset = 0);
 	void scrollToIndexWithContext(const QModelIndex& index, int context = 1);
 
 	void setPrimaryOrientation(Qt::Orientation orientation);

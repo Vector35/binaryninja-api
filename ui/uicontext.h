@@ -457,6 +457,14 @@ public:
 	    \return True if navigation succeeded
 	 */
 	virtual bool navigateToType(const std::string& name, uint64_t offset = 0) = 0;
+	/*!
+	    Navigate to a particular structure or enumeration member.
+	    \param name Name of the containing type
+	    \param memberName Name of the member to select
+	    \param offset Structure member offset or enumeration member value, also used as a fallback
+	    \return True if navigation succeeded
+	 */
+	bool navigateToTypeMember(const std::string& name, const std::string& memberName, uint64_t offset = 0);
 
 	/*!
 	    Get a list of all opened binary views, and their names

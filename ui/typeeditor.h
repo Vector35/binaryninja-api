@@ -88,6 +88,7 @@ public:
 	std::optional<TokenizedTextWidgetCursorPosition> firstPositionForOffset(const BinaryNinja::QualifiedName& name, uint64_t offset) const;
 	std::optional<TokenizedTextWidgetCursorPosition> lastPositionForOffset(const BinaryNinja::QualifiedName& name, uint64_t offset) const;
 	void selectOffsetRange(const BinaryNinja::QualifiedName& name, uint64_t start, uint64_t end);
+	bool selectMember(const BinaryNinja::QualifiedName& name, const std::string& memberName, uint64_t offset);
 
 	SavedCursorPosition saveCursorPosition() const;
 	void restoreCursorPosition(const SavedCursorPosition& position);

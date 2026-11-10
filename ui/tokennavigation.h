@@ -56,6 +56,8 @@ struct BINARYNINJAUIAPI TokenActivationAction
 	std::string typeName;
 	/*! Offset of the member to show for NavigateToTypeActivation */
 	uint64_t typeOffset = 0;
+	/*! Name of the member to select, when navigating to a particular member */
+	std::string typeMemberName;
 
 	bool isValid() const { return type != NoTokenActivation; }
 	/*! True for the actions that move the view somewhere, as opposed to those that edit the

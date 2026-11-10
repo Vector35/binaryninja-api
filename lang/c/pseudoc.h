@@ -61,7 +61,7 @@ class PseudoCFunction: public BinaryNinja::LanguageRepresentationFunction
 	void GetExprTextInternal(const BinaryNinja::HighLevelILInstruction& instr,
 		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
 		BNOperatorPrecedence precedence = TopLevelOperatorPrecedence, bool statement = false,
-		std::optional<bool> signedHint = std::nullopt);
+		std::optional<bool> signedHint = std::nullopt, bool arrayContext = false);
 
 protected:
 	void InitTokenEmitter(BinaryNinja::HighLevelILTokenEmitter& tokens) override;

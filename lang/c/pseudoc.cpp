@@ -278,18 +278,23 @@ void PseudoCFunction::AppendTwoOperand(const string& operand, const HighLevelILI
 
 	if (!settings || settings->IsOptionSet(ShowTypeCasts))
 	{
-		if (leftExpr.operation == HLIL_VAR && (operand == " + " || operand == " - "))
+		if ((leftExpr.operation == HLIL_VAR || leftExpr.operation == HLIL_ADDRESS_OF)
+			&& (operand == " + " || operand == " - "))
 		{
-			const auto variableType = GetFunction()->GetVariableType(leftExpr.GetVariable());
-			if (variableType.GetValue())
+			const auto leftType = leftExpr.operation == HLIL_VAR ?
+				GetFunction()->GetVariableType(leftExpr.GetVariable()) : leftExpr.GetType();
+			if (leftType.GetValue())
 			{
-				const auto childType = variableType->GetChildType();
-				if (variableType->IsPointer() && childType.GetValue() && childType->GetWidth() != 1)
+				const auto childType = leftType->GetChildType();
+				if (leftType->IsPointer() && childType.GetValue() && childType->GetWidth() != 1)
 				{
+					// Extra array offsets are likely byte arithmetic on an element's address.
+					// We should not infer rendered pointer types for arbitrary arithmetic expressions.
 					emitter.AppendOpenParen();
 					emitter.Append(TypeNameToken, "char");
 					emitter.Append(TextToken, "*");
 					emitter.AppendCloseParen();
+					leftPrecedence = UnaryOperatorPrecedence;
 				}
 			}
 		}
@@ -766,7 +771,8 @@ void PseudoCFunction::GetExprText(const HighLevelILInstruction& instr, HighLevel
 
 
 void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, HighLevelILTokenEmitter& tokens,
-	DisassemblySettings* settings, BNOperatorPrecedence precedence, bool statement, optional<bool> signedHint)
+	DisassemblySettings* settings, BNOperatorPrecedence precedence, bool statement, optional<bool> signedHint,
+	bool arrayContext)
 {
 	// The lambdas in this function are here to reduce stack frame size of this function. Without them,
 	// complex expression can cause the process to crash from a stack overflow.
@@ -1221,7 +1227,8 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			const auto srcExpr = instr.GetSourceExpr<HLIL_ARRAY_INDEX>();
 			const auto indexExpr = instr.GetIndexExpr<HLIL_ARRAY_INDEX>();
 
-			GetExprTextInternal(srcExpr, tokens, settings, MemberAndFunctionOperatorPrecedence);
+			GetExprTextInternal(srcExpr, tokens, settings, MemberAndFunctionOperatorPrecedence,
+				false, std::nullopt, true);
 			tokens.AppendOpenBracket();
 			GetExprTextInternal(indexExpr, tokens, settings);
 			tokens.AppendCloseBracket();
@@ -1728,6 +1735,12 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 	case HLIL_DEREF:
 		[&]() {
 			auto srcExpr = instr.GetSourceExpr<HLIL_DEREF>();
+			const auto srcType = srcExpr.GetType();
+			const auto childType = srcType.GetValue() && srcType->IsPointer() ? srcType->GetChildType() : nullptr;
+			// Only sources with an array index keep their array type. A scalar load with
+			// the same width as an array still needs an integer pointer cast.
+			const bool derefArray = arrayContext && childType.GetValue() && childType->IsArray()
+				&& childType->GetWidth() == instr.size;
 
 			auto appendMaybeBrace = [&](const InstructionTextToken& token)
 			{
@@ -1826,7 +1839,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 					tokens.AppendOpenParen();
 				for (size_t index{}; index <= derefCount; index++)
 					tokens.Append(OperationToken, "*");
-				if (!settings || settings->IsOptionSet(ShowTypeCasts))
+				if ((!settings || settings->IsOptionSet(ShowTypeCasts)) && !derefArray)
 				{
 					tokens.AppendOpenParen();
 

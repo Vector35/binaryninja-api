@@ -1,0 +1,32 @@
+# Build output
+/build
+/artifacts
+cmake-build-*/
+out/
+
+# Compiled objects / libraries
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.pdb
+*.ilk
+
+# The known-answer-test kernels are checked in deliberately, so the suite does not
+# need a cross-compiler. Rebuild them with test/kat/build.sh.
+!/test/kat/prebuilt/*.o
+
+# Generated Python bindings
+/api/python/_emulatorcore.py
+/api/python/emulator_enums.py
+*/__pycache__/
+*.pyc
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+/.claude/

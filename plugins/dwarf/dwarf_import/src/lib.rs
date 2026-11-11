@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod concrete_parameters;
 mod die_handlers;
 mod dwarfdebuginfo;
 mod functions;
@@ -595,7 +596,8 @@ fn parse_dwarf(
     let mut debug_info_builder = DebugInfoBuilder::new();
     debug_info_builder.set_range_data_offsets(range_data_offsets);
 
-    if let Some(mut debug_info_builder_context) = DebugInfoBuilderContext::new(address_size, &dwarf)
+    if let Some(mut debug_info_builder_context) =
+        DebugInfoBuilderContext::new(bv, address_size, &dwarf)
     {
         calculate_total_unit_bytes(&dwarf, &mut debug_info_builder_context);
 

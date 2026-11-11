@@ -314,6 +314,7 @@ The following settings are specific to Binary Views. To access these settings, y
 |corePlugins|IDB Import Plugin|Enable the IDB import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.idbImport'>corePlugins.idbImport</a>|
 |corePlugins|JNI Plugin|Enable the built-in JNI plugin, which applies JNI types to functions matching JNI naming conventions (Java_*, JNI_*).|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.jni'>corePlugins.jni</a>|
 |corePlugins|Metric Similarity Plugin|Enable the built-in metric similarity plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.metricSimilarity'>corePlugins.metricSimilarity</a>|
+|corePlugins|More Container Transforms Plugin|Enable the built-in More Container Transforms plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.moreContainerTransforms'>corePlugins.moreContainerTransforms</a>|
 |corePlugins|PDB Import Plugin|Enable the built-in PDB import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.pdbImport'>corePlugins.pdbImport</a>|
 |corePlugins|Snippets UI|Enables the built-in Snippets UI Plugin. |`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.snippets'>corePlugins.snippets</a>|
 |corePlugins|Stack Render Layer Plugin|Enable the built-in Stack Render Layer plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.stackRenderLayer'>corePlugins.stackRenderLayer</a>|

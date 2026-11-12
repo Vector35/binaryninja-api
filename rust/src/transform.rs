@@ -3,11 +3,11 @@ use crate::data_buffer::DataBuffer;
 use crate::metadata::Metadata;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::settings::Settings;
-use crate::string::{raw_to_string, strings_to_string_list, BnString, IntoCStr};
+use crate::string::{raw_to_string, strings_to_string_list, BnString, IntoCStr, IntoJson};
 use binaryninjacore_sys::*;
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::ffi::{c_char, c_void, CStr};
+use std::ffi::{c_char, c_void, CStr, CString};
 use std::fmt::{Debug, Formatter};
 use std::mem::ManuallyDrop;
 use std::path::Path;
@@ -605,6 +605,15 @@ unsafe impl CoreArrayProviderInner for TransformContext {
     }
 }
 
+/// Converts the options passed to a [`TransformSession`] constructor to the JSON string the core
+/// expects, using an empty object when there are none.
+fn session_options<O: IntoJson>(options: Option<O>) -> Option<CString> {
+    match options {
+        Some(options) => Some(options.get_json_string().ok()?.to_cstr().to_owned()),
+        None => Some(c"{}".to_owned()),
+    }
+}
+
 /// A [`TransformSession`] manages the lifetime of a set of [`TransformContext`]s, performing transformations
 /// on said contexts, and extracting the results.
 ///
@@ -635,86 +644,102 @@ impl TransformSession {
 
     /// Creates the new transform session for the given `file_path` on disk.
     ///
+    /// `options` are per-session setting overrides as a JSON object of setting keys and values, for
+    /// example `{"files.container.excludedTransforms": ["Zip"]}`. Pass `None` to use the settings as they are.
+    ///
+    /// Returns `None` if `options` cannot be converted to JSON.
+    ///
     /// NOTE: The [`TransformSessionMode`] will be set to the default specified by the `files.container.mode`
-    /// setting in the Binary Ninja global settings (_not_ the settings passed into this function). To
+    /// setting in the Binary Ninja global settings (_not_ the options passed into this function). To
     /// specify the mode, use [`TransformSession::new_with_mode`] instead.
-    pub fn new(file_path: &Path, settings: &Settings) -> Ref<TransformSession> {
+    ///
+    /// ```no_run
+    /// use binaryninja::transform::TransformSession;
+    /// use std::path::Path;
+    ///
+    /// let _headless_session = binaryninja::headless::Session::new().unwrap();
+    ///
+    /// // Don't extract ZIP files in this session.
+    /// let options = r#"{"files.container.excludedTransforms": ["Zip"]}"#;
+    /// let session = TransformSession::new(Path::new("/tmp/two.zip"), Some(options))
+    ///     .expect("Couldn't create the transform session");
+    /// session.process();
+    /// ```
+    pub fn new<O: IntoJson>(file_path: &Path, options: Option<O>) -> Option<Ref<TransformSession>> {
         let file_path = file_path.to_cstr();
-        let settings = settings.serialize_schema().to_cstr();
-        let session = unsafe { BNCreateTransformSession(file_path.as_ptr(), settings.as_ptr()) };
-        assert!(
-            !session.is_null(),
-            "Transform session should always be valid"
-        );
-        unsafe { Self::ref_from_raw(session) }
+        let options = session_options(options)?;
+        let session = unsafe { BNCreateTransformSession(file_path.as_ptr(), options.as_ptr()) };
+        unsafe { Self::ref_from_raw_checked(session) }
     }
 
     /// Creates the new transform session for the given `file_path` on disk, with the specified `mode`.
-    pub fn new_with_mode(
+    ///
+    /// See [`TransformSession::new`] for the format of `options`.
+    pub fn new_with_mode<O: IntoJson>(
         file_path: &Path,
-        settings: &Settings,
+        options: Option<O>,
         mode: TransformSessionMode,
-    ) -> Ref<TransformSession> {
+    ) -> Option<Ref<TransformSession>> {
         let file_path = file_path.to_cstr();
-        let settings = settings.serialize_schema().to_cstr();
-        let session = unsafe {
-            BNCreateTransformSessionWithMode(file_path.as_ptr(), mode, settings.as_ptr())
-        };
-        assert!(
-            !session.is_null(),
-            "Transform session should always be valid"
-        );
-        unsafe { Self::ref_from_raw(session) }
-    }
-
-    /// Creates the new transform session for the given `view`.
-    pub fn from_view(view: &BinaryView, settings: &Settings) -> Ref<TransformSession> {
-        let settings = settings.serialize_schema().to_cstr();
+        let options = session_options(options)?;
         let session =
-            unsafe { BNCreateTransformSessionFromBinaryView(view.handle, settings.as_ptr()) };
-        assert!(
-            !session.is_null(),
-            "Transform session should always be valid"
-        );
-        unsafe { Self::ref_from_raw(session) }
+            unsafe { BNCreateTransformSessionWithMode(file_path.as_ptr(), mode, options.as_ptr()) };
+        unsafe { Self::ref_from_raw_checked(session) }
     }
 
     /// Creates the new transform session for the given `view`.
-    pub fn from_view_with_mode(
+    ///
+    /// See [`TransformSession::new`] for the format of `options`.
+    pub fn from_view<O: IntoJson>(
         view: &BinaryView,
-        settings: &Settings,
-        mode: TransformSessionMode,
-    ) -> Ref<TransformSession> {
-        let settings = settings.serialize_schema().to_cstr();
-        let session = unsafe {
-            BNCreateTransformSessionFromBinaryViewWithMode(view.handle, mode, settings.as_ptr())
-        };
-        assert!(
-            !session.is_null(),
-            "Transform session should always be valid"
-        );
-        unsafe { Self::ref_from_raw(session) }
+        options: Option<O>,
+    ) -> Option<Ref<TransformSession>> {
+        let options = session_options(options)?;
+        let session =
+            unsafe { BNCreateTransformSessionFromBinaryView(view.handle, options.as_ptr()) };
+        unsafe { Self::ref_from_raw_checked(session) }
     }
 
-    /// Creates the new transform session for the given `context`.
-    pub fn from_context(
-        context: &TransformContext,
-        settings: &Settings,
+    /// Creates the new transform session for the given `view`, with the specified `mode`.
+    ///
+    /// See [`TransformSession::new`] for the format of `options`.
+    pub fn from_view_with_mode<O: IntoJson>(
+        view: &BinaryView,
+        options: Option<O>,
         mode: TransformSessionMode,
-    ) -> Ref<TransformSession> {
-        let settings = settings.serialize_schema().to_cstr();
+    ) -> Option<Ref<TransformSession>> {
+        let options = session_options(options)?;
+        let session = unsafe {
+            BNCreateTransformSessionFromBinaryViewWithMode(view.handle, mode, options.as_ptr())
+        };
+        unsafe { Self::ref_from_raw_checked(session) }
+    }
+
+    /// Creates the new transform session for the given `context`, with the specified `mode`.
+    ///
+    /// See [`TransformSession::new`] for the format of `options`.
+    pub fn from_context<O: IntoJson>(
+        context: &TransformContext,
+        options: Option<O>,
+        mode: TransformSessionMode,
+    ) -> Option<Ref<TransformSession>> {
+        let options = session_options(options)?;
         let session = unsafe {
             BNCreateTransformSessionFromTransformContextWithMode(
                 context.handle,
                 mode,
-                settings.as_ptr(),
+                options.as_ptr(),
             )
         };
-        assert!(
-            !session.is_null(),
-            "Transform session should always be valid"
-        );
-        unsafe { Self::ref_from_raw(session) }
+        unsafe { Self::ref_from_raw_checked(session) }
+    }
+
+    unsafe fn ref_from_raw_checked(handle: *mut BNTransformSession) -> Option<Ref<Self>> {
+        if handle.is_null() {
+            None
+        } else {
+            Some(unsafe { Self::ref_from_raw(handle) })
+        }
     }
 
     pub fn root_context(&self) -> Option<Ref<TransformContext>> {

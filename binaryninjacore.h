@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 192
+#define BN_CURRENT_CORE_ABI_VERSION 193
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 192
+#define BN_MINIMUM_CORE_ABI_VERSION 193
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -409,6 +409,8 @@ extern "C"
 		char* versionString;
 		char* longDescription;
 		char* changelog;
+		char* subdir;
+		char* dependencies;
 
 		uint64_t minimumClientVersion;
 		BNPluginVersionPlatform* platforms;
@@ -9001,21 +9003,18 @@ extern "C"
 	BINARYNINJACOREAPI const char* BNPluginGetDescription(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetLicenseText(BNPlugin* p);
 	BINARYNINJACOREAPI BNVersionInfo BNPluginGetMinimumVersionInfo(BNPlugin* p);
-	BINARYNINJACOREAPI BNVersionInfo BNPluginGetMaximumVersionInfo(BNPlugin* p);
 	BINARYNINJACOREAPI BNVersionInfo BNParseVersionString(const char* v);
 	BINARYNINJACOREAPI bool BNVersionLessThan(const BNVersionInfo smaller, const BNVersionInfo larger);
 	BINARYNINJACOREAPI bool BNPluginVersionIDLessThan(BNPlugin* p, const char* smaller, const char* larger);
 	BINARYNINJACOREAPI const char* BNPluginGetName(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetProjectUrl(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetPackageUrl(BNPlugin* p);
-	BINARYNINJACOREAPI const char* BNPluginGetAuthorUrl(BNPlugin* p);
 	BINARYNINJACOREAPI BNPluginVersion* BNPluginGetVersions(BNPlugin* p, size_t* count);
 	BINARYNINJACOREAPI void BNFreePluginVersions(BNPluginVersion* r, size_t count);
 	BINARYNINJACOREAPI const char* BNPluginGetCurrentVersionID(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetLatestVersionID(BNPlugin* p);
 	BINARYNINJACOREAPI BNPluginVersion BNPluginGetCurrentVersion(BNPlugin* p);
 	BINARYNINJACOREAPI void BNPluginFreeVersion(BNPluginVersion v);
-	BINARYNINJACOREAPI const char* BNPluginGetCommit(BNPlugin* p);
 	BINARYNINJACOREAPI const bool BNPluginGetViewOnly(BNPlugin* p);
 	BINARYNINJACOREAPI const bool BNPluginGetIsPaid(BNPlugin* p);
 	BINARYNINJACOREAPI void BNFreePluginTypes(BNPluginType* r);
@@ -9061,7 +9060,6 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPluginIsUpdateAvailable(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginAreDependenciesBeingInstalled(BNPlugin* p);
 
-	BINARYNINJACOREAPI char* BNPluginGetProjectData(BNPlugin* p);
 	BINARYNINJACOREAPI char* BNPluginGetCurrentVersionCreationDate(BNPlugin* p);
 
 	BINARYNINJACOREAPI BNRepository* BNNewRepositoryReference(BNRepository* r);

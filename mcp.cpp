@@ -104,6 +104,7 @@ Ref<Tool> CreateToolUsing(const ToolDefinition& definition, const std::string& i
 	apiDefinition.outputSchema = definition.outputSchema.empty() ? nullptr : definition.outputSchema.c_str();
 	apiDefinition.scope = static_cast<BNMcpToolScope>(definition.scope);
 	apiDefinition.annotations = definition.annotations;
+	apiDefinition.group = definition.group ? definition.group->GetObject() : nullptr;
 
 	auto* context = new ToolHandler(std::move(handler));
 	BNMcpToolCallbacks callbacks = {};
@@ -252,6 +253,9 @@ std::vector<Ref<Tool>> Tool::GetList()
 
 Ref<Tool> Tool::GetByName(const std::string& name)
 {
+	if (name.find('\0') != std::string::npos)
+		return nullptr;
+
 	BNMcpTool* tool = BNGetMcpToolByName(name.c_str());
 	return tool ? new Tool(tool) : nullptr;
 }
@@ -855,4 +859,75 @@ ArgumentResult<const rapidjson::Value*> JsonValue::Convert(
 	ToolCall&, const rapidjson::Value& value, const ConvertedArguments&) const
 {
 	return &value;
+}
+
+
+Ref<ToolGroup> Tool::GetGroup() const
+{
+	return new ToolGroup(BNGetMcpToolGroup(m_object));
+}
+
+
+ToolGroup::ToolGroup(BNMcpToolGroup* group)
+{
+	m_object = group;
+}
+
+
+Ref<ToolGroup> ToolGroup::Register(const GroupDefinition& definition)
+{
+	BNMcpToolGroupDefinition group = {
+		definition.name.c_str(), definition.title.c_str(), definition.description.c_str(), definition.enabledByDefault};
+	BNMcpToolGroup* handle = BNRegisterMcpToolGroup(&group);
+	return handle ? new ToolGroup(handle) : nullptr;
+}
+
+
+std::vector<Ref<ToolGroup>> ToolGroup::GetList()
+{
+	size_t count = 0;
+	BNMcpToolGroup** groups = BNGetMcpToolGroupList(&count);
+	std::vector<Ref<ToolGroup>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new ToolGroup(BNNewMcpToolGroupReference(groups[i])));
+	BNFreeMcpToolGroupList(groups, count);
+	return result;
+}
+
+
+Ref<ToolGroup> ToolGroup::GetByName(const std::string& name)
+{
+	BNMcpToolGroup* group = BNGetMcpToolGroupByName(name.c_str());
+	return group ? new ToolGroup(group) : nullptr;
+}
+
+
+std::string ToolGroup::GetName() const
+{
+	return TakeString(BNGetMcpToolGroupName(m_object));
+}
+
+
+std::string ToolGroup::GetTitle() const
+{
+	return TakeString(BNGetMcpToolGroupTitle(m_object));
+}
+
+
+std::string ToolGroup::GetDescription() const
+{
+	return TakeString(BNGetMcpToolGroupDescription(m_object));
+}
+
+
+bool ToolGroup::IsEnabledByDefault() const
+{
+	return BNIsMcpToolGroupEnabledByDefault(m_object);
+}
+
+
+bool ToolGroup::IsEnabled() const
+{
+	return BNIsMcpToolGroupEnabled(m_object);
 }

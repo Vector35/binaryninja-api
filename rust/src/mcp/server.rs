@@ -27,7 +27,7 @@ use crate::rc::*;
 use crate::string::{BnString, IntoCStr};
 
 /// Creates a tool without registering it. This can be used to expose a tool that is specific to one
-/// MCP server, such as one that manages that server's active binary view. Otherwise the same as
+/// MCP server, such as one that opens and lists binaries. Otherwise the same as
 /// [`register_mcp_tool`](super::tool::register_mcp_tool).
 pub fn create_mcp_tool<T: McpTool>(tool: T) -> Option<Ref<CoreMcpTool>> {
     create_with(tool, BNCreateMcpTool)

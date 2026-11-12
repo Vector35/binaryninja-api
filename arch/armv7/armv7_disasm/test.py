@@ -1426,6 +1426,12 @@ test_cases = (
 	(b'\xc0\x0a\xb5\xee', 'vcmpe.f32 s0, #0', {}),
 	(b'\xe0\x0b\xf0\xee', 'vabs.f64 d16, d16', {}),
 	(b'\xc0\x0a\xb0\xee', 'vabs.f32 s0, s0', {}),
+	# vmov (register) shares the opc1/opc2 space with vabs and must not decode as vmov (immediate)
+	(b'\x41\x0a\xf0\xee', 'vmov.f32 s1, s2', {}),
+	(b'\x60\x0a\xb0\xee', 'vmov.f32 s0, s1', {}),
+	(b'\x41\x0b\xb0\xee', 'vmov.f64 d0, d1', {}),
+	(b'\x60\x0b\xf0\xee', 'vmov.f64 d16, d16', {}),
+	(b'\x41\x0a\xb0\x0e', 'vmoveq.f32 s0, s2', {}),
 	(b'\xe0\x0b\xb7\xee', 'vcvt.f32.f64 s0, d16', {}),
 	(b'\xc0\x0a\xf7\xee', 'vcvt.f64.f32 d16, s0', {}),
 	(b'\x60\x0b\xf1\xee', 'vneg.f64 d16, d16', {}),

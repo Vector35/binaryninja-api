@@ -79,6 +79,196 @@ static bool IsReturnAddressRegisterJumpOrReturn(LowLevelILInstruction instr, con
 }
 
 
+// A call pushes the return address and jumps. If the first instruction at the call target throws that
+// return address away (`add rsp, 8`), the call never returns to its fallthrough. It is a push and a jump,
+// used only for its side effect on the CPU's return stack buffer. RSB-stuffing sequences are the real
+// world case: ntoskrnl's KiFlushCurrentRsb (`add rsp, 8; call <prev>` chains) and Linux's
+// `call 1f; int3; 1: add rsp, 8; lfence`.
+//
+// Returns true if the instruction at `target` is `sp = sp + k`, where k is a positive multiple of the
+// address size. Only applies to architectures that keep the return address on the stack.
+static bool CallTargetDiscardsReturnAddress(BinaryView* data, Architecture* arch, uint64_t target)
+{
+	if (arch->GetLinkRegister() != BN_INVALID_REGISTER)
+		return false;
+
+	DataBuffer buffer = data->ReadBuffer(target, arch->GetMaxInstructionLength());
+	size_t len = buffer.GetLength();
+	if (len == 0)
+		return false;
+
+	Ref<LowLevelILFunction> il = new LowLevelILFunction(arch, nullptr);
+	il->SetCurrentAddress(arch, target);
+	if (!arch->GetInstructionLowLevelIL((const uint8_t*)buffer.GetData(), target, len, *il))
+		return false;
+	if (il->GetInstructionCount() != 1)
+		return false;
+
+	uint32_t sp = arch->GetStackPointerRegister();
+	LowLevelILInstruction instr = (*il)[0];
+	if ((instr.operation != LLIL_SET_REG) || (instr.GetDestRegister<LLIL_SET_REG>() != sp))
+		return false;
+
+	LowLevelILInstruction src = instr.GetSourceExpr<LLIL_SET_REG>();
+	if (src.operation != LLIL_ADD)
+		return false;
+	LowLevelILInstruction left = src.GetLeftExpr<LLIL_ADD>();
+	LowLevelILInstruction right = src.GetRightExpr<LLIL_ADD>();
+	if ((left.operation != LLIL_REG) || (left.GetSourceRegister<LLIL_REG>() != sp) || (right.operation != LLIL_CONST))
+		return false;
+
+	int64_t amount = right.GetConstant();
+	int64_t addressSize = (int64_t)arch->GetAddressSize();
+	return (amount >= addressSize) && ((amount % addressSize) == 0);
+}
+
+
+// A retpoline replaces `jmp reg` with a call to a "setup" whose speculation is steered into a trap:
+//
+//     thunk:  call setup        ; pushes the address of the trap
+//             <trap>            ; `pause; lfence; jmp $`, `int3`, ... (only reached speculatively)
+//     setup:  mov [sp], reg     ; overwrite that return address with the target
+//             ret               ; return into the target
+//
+// When the setup returns, the stack is exactly as it was before the call, with the target in place of
+// the trap. So the call is `jmp reg`: it never returns to its fallthrough.
+//
+// Returns true, and the register holding the target, if the code at `target` is exactly
+// `[sp] = reg; ret`, where reg is not the stack pointer. At a function's entry the register can only hold
+// the caller's value, so this is the same shape that core's retpoline setup recognition rewrites inside a
+// setup function.
+static bool CallTargetIsRetpolineSetup(BinaryView* data, Architecture* arch, uint64_t target, uint32_t& targetReg)
+{
+	if (arch->GetLinkRegister() != BN_INVALID_REGISTER)
+		return false;
+
+	size_t maxLen = arch->GetMaxInstructionLength();
+	DataBuffer buffer = data->ReadBuffer(target, maxLen * 2);
+	size_t available = buffer.GetLength();
+	if (available == 0)
+		return false;
+	const uint8_t* bytes = (const uint8_t*)buffer.GetData();
+
+	Ref<LowLevelILFunction> il = new LowLevelILFunction(arch, nullptr);
+	il->SetCurrentAddress(arch, target);
+	size_t storeLen = available;
+	if (!arch->GetInstructionLowLevelIL(bytes, target, storeLen, *il) || (il->GetInstructionCount() != 1)
+		|| (storeLen == 0) || (storeLen >= available))
+		return false;
+
+	size_t addressSize = arch->GetAddressSize();
+	uint32_t sp = arch->GetStackPointerRegister();
+	LowLevelILInstruction store = (*il)[0];
+	if ((store.operation != LLIL_STORE) || (store.size != addressSize))
+		return false;
+	LowLevelILInstruction slot = store.GetDestExpr<LLIL_STORE>();
+	LowLevelILInstruction value = store.GetSourceExpr<LLIL_STORE>();
+	if ((slot.operation != LLIL_REG) || (slot.GetSourceRegister<LLIL_REG>() != sp))
+		return false;
+	if ((value.operation != LLIL_REG) || (value.size != addressSize))
+		return false;
+	// `mov [sp], sp` stores the stack pointer as decremented by the call, which `jmp sp` would not
+	// reproduce, so only other registers are a target.
+	if (arch->GetRegisterInfo(value.GetSourceRegister<LLIL_REG>()).fullWidthRegister == sp)
+		return false;
+
+	uint64_t retAddr = target + storeLen;
+	il->SetCurrentAddress(arch, retAddr);
+	size_t retLen = available - storeLen;
+	if (!arch->GetInstructionLowLevelIL(bytes + storeLen, retAddr, retLen, *il) || (il->GetInstructionCount() != 2))
+		return false;
+	if ((*il)[1].operation != LLIL_RET)
+		return false;
+
+	targetReg = value.GetSourceRegister<LLIL_REG>();
+	return true;
+}
+
+
+// A whole retpoline thunk (see above), such as `__x86_indirect_thunk_rax` or `__llvm_retpoline_r11`:
+//
+//     thunk:  call setup        ; the call into the thunk pushed the caller's return address; this
+//             <trap>            ; pushes a second one, which setup replaces with the target
+//     setup:  mov [sp], reg
+//             ret
+//
+// Entering the thunk with `call thunk` therefore transfers to `reg` with only the caller's return
+// address on the stack and no register or flag changed: it is `call reg`. Entering it with `jmp thunk` is
+// `jmp reg`. The setup's store leaves the target in the dead slot below the stack pointer, which is
+// not modeled (the same as the return address of a call).
+//
+// Returns true, and the register, if the code at `target` is a direct call to a setup a short distance
+// ahead (past the trap) that CallTargetIsRetpolineSetup verifies. The thunk is matched by its code, not
+// its name, and any register can be the target, so this covers every register's thunk.
+static bool TargetIsRetpolineThunk(BinaryView* data, Architecture* arch, uint64_t target, uint32_t& targetReg)
+{
+	if (arch->GetLinkRegister() != BN_INVALID_REGISTER)
+		return false;
+
+	DataBuffer buffer = data->ReadBuffer(target, arch->GetMaxInstructionLength());
+	size_t len = buffer.GetLength();
+	if (len == 0)
+		return false;
+
+	Ref<LowLevelILFunction> il = new LowLevelILFunction(arch, nullptr);
+	il->SetCurrentAddress(arch, target);
+	if (!arch->GetInstructionLowLevelIL((const uint8_t*)buffer.GetData(), target, len, *il)
+		|| (il->GetInstructionCount() != 1) || (len == 0))
+		return false;
+
+	LowLevelILInstruction call = (*il)[0];
+	if (call.operation != LLIL_CALL)
+		return false;
+	LowLevelILInstruction dest = call.GetDestExpr<LLIL_CALL>();
+	if ((dest.operation != LLIL_CONST_PTR) && (dest.operation != LLIL_CONST))
+		return false;
+
+	// The setup follows the trap, which follows the call. Known traps are a few bytes long.
+	const uint64_t maxTrapLength = 64;
+	uint64_t setup = dest.GetConstant();
+	if ((setup < target + len) || (setup > target + len + maxTrapLength))
+		return false;
+
+	return CallTargetIsRetpolineSetup(data, arch, setup, targetReg);
+}
+
+
+// A return thunk replaces a function's `ret` with `jmp thunk`, where the thunk performs the return. With
+// the return-thunk mitigation in Linux and Xen (`-mfunction-return=thunk-extern`), the static body of
+// `__x86_return_thunk` is a plain `ret` (followed by an `int3` speculation trap that is never reached).
+// Jumping to a plain `ret` leaves the stack untouched, so the `ret` pops the jumping function's own
+// return address: the jump is that function's return, not a tail call.
+//
+// Returns true if the instruction at `target` lifts to exactly `ret` through a popped return address
+// (`<return> jump(pop)`). `ret imm` and anything else that adjusts the stack does not match. Only applies
+// to architectures that keep the return address on the stack. The thunk is matched by its code, not its
+// name, so a jump to any function whose body is a plain `ret` (an empty function) matches too. The
+// lifter does not apply this to a jump at the jumping function's entry; see the scope note there.
+static bool BranchTargetIsReturn(BinaryView* data, Architecture* arch, uint64_t target)
+{
+	if (arch->GetLinkRegister() != BN_INVALID_REGISTER)
+		return false;
+
+	DataBuffer buffer = data->ReadBuffer(target, arch->GetMaxInstructionLength());
+	size_t len = buffer.GetLength();
+	if (len == 0)
+		return false;
+
+	Ref<LowLevelILFunction> il = new LowLevelILFunction(arch, nullptr);
+	il->SetCurrentAddress(arch, target);
+	if (!arch->GetInstructionLowLevelIL((const uint8_t*)buffer.GetData(), target, len, *il))
+		return false;
+	if (il->GetInstructionCount() != 1)
+		return false;
+
+	LowLevelILInstruction ret = (*il)[0];
+	if (ret.operation != LLIL_RET)
+		return false;
+	LowLevelILInstruction dest = ret.GetDestExpr<LLIL_RET>();
+	return (dest.operation == LLIL_POP) && (dest.size == arch->GetAddressSize());
+}
+
+
 void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context)
 {
 	auto data = function->GetView();
@@ -540,6 +730,38 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							if (data->ShouldSkipTargetAnalysis(location, function, instrEnd, target))
 								break;
 
+							// A call whose target immediately discards the return address never returns
+							// here, so it is a push and a jump. Follow it as a branch within this function
+							// (no fallthrough, no function at the target). The lifter recognizes this edge
+							// and emits the stack adjustment and the jump in place of the call.
+							if (CallTargetDiscardsReturnAddress(data, target.arch, target.address))
+							{
+								if (isGuidedSourceBlock)
+									guidedSourceBlockTargets.insert(target);
+
+								directRefs[target.address].insert(location);
+								endsBlock = true;
+								block->AddPendingOutgoingEdge(UnconditionalBranch, target.address, target.arch);
+								if (seenBlocks.count(target) == 0)
+								{
+									blocksToProcess.push(target);
+									seenBlocks.insert(target);
+								}
+								break;
+							}
+
+							// A call to a retpoline setup is `jmp reg` (see CallTargetIsRetpolineSetup). End the
+							// block here like an unresolved indirect jump: no fallthrough (the trap after the
+							// call is only reached speculatively) and no function at the setup. The lifter
+							// emits the jump in place of the call.
+							if (uint32_t targetReg; CallTargetIsRetpolineSetup(data, target.arch, target.address, targetReg))
+							{
+								directRefs[target.address].insert(location);
+								endsBlock = true;
+								block->SetUndeterminedOutgoingEdges(true);
+								break;
+							}
+
 							Ref<Function> func = data->AddFunctionForAnalysis(platform, target.address, true);
 							if (!func)
 							{
@@ -916,10 +1138,124 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 				}
 			}
 
+			// A direct call to a retpoline thunk is an indirect call through the thunk's register (see
+			// TargetIsRetpolineThunk). Lift it as `call(reg)` here, at the call site, so call-site analysis
+			// sees the real target and its arguments. The thunk remains a function and a reference.
+			for (size_t instrIndex = instrCountBefore; instrIndex < instrCountAfter; instrIndex++)
+			{
+				LowLevelILInstruction instr = function->GetInstruction(instrIndex);
+				if (instr.operation != LLIL_CALL)
+					continue;
+				LowLevelILInstruction dest = instr.GetDestExpr<LLIL_CALL>();
+				if ((dest.operation != LLIL_CONST_PTR) && (dest.operation != LLIL_CONST))
+					continue;
+				Ref<Architecture> arch = i->GetArchitecture();
+				uint32_t thunkReg;
+				if (TargetIsRetpolineThunk(data, arch, dest.GetConstant(), thunkReg))
+				{
+					size_t addressSize = arch->GetAddressSize();
+					instr.Replace(function->Call(function->Register(addressSize, thunkReg, instr), instr));
+				}
+			}
+
+			// Control transfers that are really something else, recognized from the block's shape after basic
+			// block analysis. Lift them as what they do:
+			//   * a call to a retpoline setup is `jmp reg` (see CallTargetIsRetpolineSetup);
+			//   * a call whose target discards the return address adjusts the stack pointer and jumps to
+			//     the target block (see CallTargetDiscardsReturnAddress);
+			//   * a tail jump to a plain `ret` (a return thunk) is a return (see BranchTargetIsReturn).
+			// Each requires both the block's shape from basic block analysis and a specific target code
+			// shape. This restricts the rewrite to those patterns; it does not establish general semantic
+			// equivalence with the call.
+			bool callLiftedAsJump = false;
+			if ((instrCountAfter > instrCountBefore) && ((addr + len) == i->GetEnd()))
+			{
+				LowLevelILInstruction lastInstr = function->GetInstruction(instrCountAfter - 1);
+				if ((lastInstr.operation == LLIL_CALL)
+					&& ((lastInstr.GetDestExpr<LLIL_CALL>().operation == LLIL_CONST)
+						|| (lastInstr.GetDestExpr<LLIL_CALL>().operation == LLIL_CONST_PTR)))
+				{
+					Ref<Architecture> arch = i->GetArchitecture();
+					uint64_t target = lastInstr.GetDestExpr<LLIL_CALL>().GetConstant();
+					bool hasBranchEdge = false;
+					for (const auto& edge : i->GetOutgoingEdges())
+					{
+						if ((edge.type == UnconditionalBranch) && edge.target && (edge.target->GetStart() == target)
+							&& (edge.target->GetArchitecture() == arch))
+						{
+							hasBranchEdge = true;
+							break;
+						}
+					}
+
+					uint32_t retpolineReg;
+					if (i->GetOutgoingEdges().empty() && CallTargetIsRetpolineSetup(data, arch, target, retpolineReg))
+					{
+						// A call to a retpoline setup ended its block with no fallthrough during basic block
+						// analysis (see CallTargetIsRetpolineSetup). It is `jmp reg`.
+						size_t addressSize = arch->GetAddressSize();
+						lastInstr.Replace(
+							function->Jump(function->Register(addressSize, retpolineReg, lastInstr), lastInstr));
+						callLiftedAsJump = true;
+					}
+					else if (hasBranchEdge && CallTargetDiscardsReturnAddress(data, arch, target))
+					{
+						// Lift the call as `push(return address); goto target`: everything the call does
+						// except return to its fallthrough. The return address is still written, so code
+						// that reads the discarded slot below the stack pointer sees it. The call's effect on
+						// the CPU's return stack buffer, which is the point of the idiom, is
+						// microarchitectural and not represented in IL.
+						size_t addressSize = arch->GetAddressSize();
+						lastInstr.Replace(function->Push(addressSize,
+							function->ConstPointer(addressSize, addr + len, lastInstr), 0, lastInstr));
+						if (BNLowLevelILLabel* targetLabel = function->GetLabelForAddress(arch, target))
+							function->AddInstruction(function->Goto(*targetLabel, lastInstr));
+						else
+							function->AddInstruction(
+								function->Jump(function->ConstPointer(addressSize, target, lastInstr), lastInstr));
+						instrCountAfter = function->GetInstructionCount();
+						callLiftedAsJump = true;
+					}
+				}
+				else if ((lastInstr.operation == LLIL_JUMP) && i->GetOutgoingEdges().empty()
+					&& ((lastInstr.GetDestExpr<LLIL_JUMP>().operation == LLIL_CONST)
+						|| (lastInstr.GetDestExpr<LLIL_JUMP>().operation == LLIL_CONST_PTR)))
+				{
+					// A direct jump that basic block analysis left with no edge (a tail call) to a plain `ret`
+					// is this function's return (see BranchTargetIsReturn). Lift it as that `ret`.
+					//
+					// Scope boundary: a jump at the function's entry (a jump-only wrapper such as MSVC's
+					// `j__guard_check_icall_nop`) is left as a tail call. Lifting it as `ret` is equally
+					// correct, but the wrapper is then inferred `__pure` and its call sites disappear from
+					// callers' HLIL, hiding instrumentation such as CFG checks. That is a separate
+					// behavior change from restoring returns in function bodies. This is a conservative
+					// compatibility boundary, not a semantic distinction: it also skips empty functions.
+					Ref<Architecture> arch = i->GetArchitecture();
+					uint64_t target = lastInstr.GetDestExpr<LLIL_JUMP>().GetConstant();
+					Ref<Function> owner = function->GetFunction();
+					bool atEntry = owner && (addr == owner->GetStart()) && (arch == owner->GetArchitecture());
+					uint32_t thunkReg;
+					if (!atEntry && BranchTargetIsReturn(data, arch, target))
+					{
+						size_t addressSize = arch->GetAddressSize();
+						lastInstr.Replace(
+							function->Return(function->Pop(addressSize, 0, lastInstr), lastInstr));
+					}
+					else if (TargetIsRetpolineThunk(data, arch, target, thunkReg))
+					{
+						// A tail jump to a retpoline thunk is a tail call through the thunk's register.
+						size_t addressSize = arch->GetAddressSize();
+						lastInstr.Replace(
+							function->TailCall(function->Register(addressSize, thunkReg, lastInstr), lastInstr));
+					}
+				}
+			}
+
 			uint64_t prevAddr = addr;
 			addr += len;
 
-			context.CheckForInlinedCall(i, instrCountBefore, instrCountAfter, prevAddr, addr, opcode, len, indirectSource);
+			if (!callLiftedAsJump)
+				context.CheckForInlinedCall(i, instrCountBefore, instrCountAfter, prevAddr, addr, opcode, len, indirectSource);
 
 			// Indirect branch information informs when to translate non-standard returns into jumps
 			if (auto lastInstr = function->GetInstruction(instrCountAfter - 1); (lastInstr.operation == LLIL_RET)

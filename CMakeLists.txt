@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
+# Make sure we use the same sdk for all parts of the build on mac.
+# Only do this when this is the root project, since it has to happen before the first project() call.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/OSXSysroot.cmake)
+endif()
+
 project(binaryninjaapi CXX C)
 # C++20 is used without modules, so don't require a module dependency scanner.
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)

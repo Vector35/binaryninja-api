@@ -338,6 +338,10 @@ function(_bn_create_build_command)
 
         if(APPLE)
             set(ENV_PREFIX ${CMAKE_COMMAND} -E env MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET} ${CARGO_ENV_VARS})
+            # Make sure to use the same sdk as the rest of the build
+            if(CMAKE_OSX_SYSROOT)
+                list(APPEND ENV_PREFIX SDKROOT=${CMAKE_OSX_SYSROOT})
+            endif()
             if(UNIVERSAL)
                 list(APPEND ALL_COMMANDS
                     COMMAND ${ENV_PREFIX} ${BN_CARGO_COMMAND} build --target=aarch64-apple-darwin ${ARG_CARGO_OPTS} ${FULL_PACKAGE_ARGS}
@@ -441,6 +445,7 @@ function(_bn_create_build_command)
         DEPENDS ${CMD_DEPENDS}
         ${BYPRODUCTS_ARG}
         COMMENT "${CMD_COMMENT}"
+        VERBATIM
     )
 endfunction()
 

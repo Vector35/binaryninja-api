@@ -1852,10 +1852,7 @@ Confidence<bool> TypeBuilder::IsVolatile() const
 
 BNIntegerDisplayType TypeBuilder::GetIntegerTypeDisplayType() const
 {
-	BNType* type = BNFinalizeTypeBuilder(m_object);
-	BNIntegerDisplayType result = BNGetIntegerTypeDisplayType(type);
-	BNFreeType(type);
-	return result;
+	return BNGetTypeBuilderIntegerTypeDisplayType(m_object);
 }
 
 

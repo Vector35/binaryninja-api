@@ -196,7 +196,7 @@ impl TypeBuilder {
     }
 
     pub fn integer_display_type(&self) -> IntegerDisplayType {
-        self.finalize().integer_display_type()
+        unsafe { BNGetTypeBuilderIntegerTypeDisplayType(self.handle) }
     }
 
     pub fn is_const(&self) -> Conf<bool> {

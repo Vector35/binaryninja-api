@@ -54,7 +54,7 @@ Ref<TypeParser> TypeParser::GetDefault()
 
 void TypeParser::Register(TypeParser* parser)
 {
-	BNTypeParserCallbacks cb;
+	BNTypeParserCallbacks cb {};
 	cb.context = parser;
 	cb.getOptionText = GetOptionTextCallback;
 	cb.preprocessSource = PreprocessSourceCallback;
@@ -62,6 +62,7 @@ void TypeParser::Register(TypeParser* parser)
 	cb.parseTypeString = ParseTypeStringCallback;
 	cb.freeString = FreeStringCallback;
 	cb.freeResult = FreeResultCallback;
+	cb.freeQualifiedNameAndType = FreeQualifiedNameAndTypeCallback;
 	cb.freeErrorList = FreeErrorListCallback;
 	parser->m_object = BNRegisterTypeParser(parser->m_nameForRegister.c_str(), &cb);
 }
@@ -360,6 +361,13 @@ void TypeParser::FreeResultCallback(void* ctxt, BNTypeParserResult* result)
 	delete[] result->types;
 	delete[] result->variables;
 	delete[] result->functions;
+}
+
+
+void TypeParser::FreeQualifiedNameAndTypeCallback(void* ctxt, BNQualifiedNameAndType* result)
+{
+	QualifiedName::FreeAPIStruct(&result->name);
+	BNFreeType(result->type);
 }
 
 

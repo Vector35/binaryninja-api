@@ -272,6 +272,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 		self._free_string_cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_void_p)(self._free_string)
 		self._cb.freeString = ctypes.cast(self._free_string_cb, self._cb.freeString.__class__)
 		self._cb.freeResult = self._cb.freeResult.__class__(self._free_result)
+		self._cb.freeQualifiedNameAndType = self._cb.freeQualifiedNameAndType.__class__(self._free_qualified_name_and_type)
 		self._cb.freeErrorList = self._cb.freeErrorList.__class__(self._free_error_list)
 		self.handle = core.BNRegisterTypeParser(self.__class__.name, self._cb)
 		self.__class__._registered_parsers.append(self)
@@ -412,9 +413,13 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 			if errorCount is not None:
 				errorCount[0] = len(errors_py)
 
+			# Core frees the result only on success, so return it after everything that can raise.
 			if result_py is not None and result is not None:
-				result[0].name = types.QualifiedName(result_py[0])._to_core_struct()
-				result[0].type = core.BNNewTypeReference(result_py[1].handle)
+				result_struct = core.BNQualifiedNameAndType()
+				result_struct.name = types.QualifiedName(result_py[0])._to_core_struct()
+				result_struct.type = core.BNNewTypeReference(result_py[1].handle)
+				self._pending_results[ctypes.addressof(result.contents)] = result_struct
+				result[0] = result_struct
 
 			return result_py is not None
 		except Exception:
@@ -437,6 +442,14 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 			TypeParserResult._free_core_struct(self._pending_results.pop(ctypes.addressof(result.contents)))
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypeParser._free_result")
+
+	def _free_qualified_name_and_type(
+			self, ctxt, result
+	) -> None:
+		try:
+			core.BNFreeType(self._pending_results.pop(ctypes.addressof(result.contents)).type)
+		except Exception:
+			log_error_for_exception("Unhandled Python exception in TypeParser._free_qualified_name_and_type")
 
 	def _free_error_list(
 			self, ctxt, errors, errorCount

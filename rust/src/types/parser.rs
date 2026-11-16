@@ -30,6 +30,7 @@ pub fn register_type_parser<T: TypeParser + Sync + 'static>(
         parseTypeString: Some(cb_parse_type_string::<T>),
         freeString: Some(cb_free_string),
         freeResult: Some(cb_free_result),
+        freeQualifiedNameAndType: Some(cb_free_qualified_name_and_type),
         freeErrorList: Some(cb_free_error_list),
     };
     let name = name.to_cstr();
@@ -696,6 +697,13 @@ unsafe extern "C" fn cb_free_string(_ctxt: *mut c_void, string: *mut c_char) {
 
 unsafe extern "C" fn cb_free_result(_ctxt: *mut c_void, result: *mut BNTypeParserResult) {
     TypeParserResult::free_owned_raw(*result);
+}
+
+unsafe extern "C" fn cb_free_qualified_name_and_type(
+    _ctxt: *mut c_void,
+    result: *mut BNQualifiedNameAndType,
+) {
+    QualifiedNameAndType::free_raw(*result);
 }
 
 unsafe extern "C" fn cb_free_error_list(

@@ -1115,7 +1115,7 @@ class TypeBuilder:
 	@property
 	def display_type(self) -> IntegerDisplayType:
 		"""Integer display type for this type."""
-		return core.BNGetIntegerTypeDisplayType(self.immutable_copy().handle)
+		return core.BNGetTypeBuilderIntegerTypeDisplayType(self._handle)
 
 	@display_type.setter
 	def display_type(self, value: IntegerDisplayType) -> None:

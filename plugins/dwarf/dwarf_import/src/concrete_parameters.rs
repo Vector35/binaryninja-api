@@ -19,6 +19,12 @@
 //! `.constprop`, `.part`) remove parameters, reorder them, or replace one with a piece of it that has
 //! no DIE of its own. The declaration's parameter list then misdescribes the code at that address.
 //!
+//! Reconstruction only runs when GCC marks at least one parameter as removed
+//! (`DW_OP_GNU_parameter_ref`), the evidence that the signature changed. Any other concrete instance,
+//! such as clang's out-of-line copy of a function it also inlined, takes the declared arguments, and
+//! its entry locations are not trusted over the declaration: clang can describe a parameter at the
+//! entry PC by the register it is copied to a few instructions later.
+//!
 //! This module rebuilds the signature from evidence instead of from the declaration: each parameter's
 //! location at the function's entry PC is mapped through the architecture's DWARF register numbering
 //! and the platform's calling convention to an argument slot. A register-sized scalar on the stack
@@ -567,7 +573,9 @@ pub(crate) fn reconstruct_concrete_parameters<R: ReaderType>(
             _ => (),
         }
     }
-    if parameter_count == 0 {
+    // Without a removed parameter there is no evidence the instance's signature differs from the
+    // declaration, so keep the declaration (see the module docs).
+    if parameter_count == 0 || removed_count == 0 {
         return None;
     }
 
@@ -580,10 +588,8 @@ pub(crate) fn reconstruct_concrete_parameters<R: ReaderType>(
         })
         .collect();
     // With a removed parameter, the located slots are only a lower bound (see Placeholder).
-    if removed_count > 0 {
-        while result.len() < parameter_count {
-            result.push(ConcreteParameter::Placeholder { size });
-        }
+    while result.len() < parameter_count {
+        result.push(ConcreteParameter::Placeholder { size });
     }
     Some(result)
 }

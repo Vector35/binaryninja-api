@@ -43,6 +43,136 @@ bitflags::bitflags! {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct McpToolGroupDefinition {
+    pub name: String,
+    pub title: String,
+    pub description: String,
+    pub enabled_by_default: bool,
+}
+
+impl McpToolGroupDefinition {
+    pub fn new(
+        name: impl Into<String>,
+        title: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            title: title.into(),
+            description: description.into(),
+            enabled_by_default: true,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Hash)]
+pub struct McpToolGroup {
+    handle: *mut BNMcpToolGroup,
+}
+
+impl McpToolGroup {
+    unsafe fn from_raw(handle: *mut BNMcpToolGroup) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle }
+    }
+
+    unsafe fn ref_from_raw(handle: *mut BNMcpToolGroup) -> Ref<Self> {
+        Ref::new(Self::from_raw(handle))
+    }
+
+    pub fn register(definition: &McpToolGroupDefinition) -> Option<Ref<Self>> {
+        let name = CString::new(definition.name.as_str()).ok()?;
+        let title = CString::new(definition.title.as_str()).ok()?;
+        let description = CString::new(definition.description.as_str()).ok()?;
+        let definition = BNMcpToolGroupDefinition {
+            name: name.as_ptr(),
+            title: title.as_ptr(),
+            description: description.as_ptr(),
+            enabledByDefault: definition.enabled_by_default,
+        };
+        let handle = unsafe { BNRegisterMcpToolGroup(&definition) };
+        (!handle.is_null()).then(|| unsafe { Self::ref_from_raw(handle) })
+    }
+
+    pub fn list() -> Array<Self> {
+        let mut count = 0;
+        let groups = unsafe { BNGetMcpToolGroupList(&mut count) };
+        unsafe { Array::new(groups, count, ()) }
+    }
+
+    pub fn from_name(name: &str) -> Option<Ref<Self>> {
+        let name = name.to_cstr();
+        let handle = unsafe { BNGetMcpToolGroupByName(name.as_ptr()) };
+        (!handle.is_null()).then(|| unsafe { Self::ref_from_raw(handle) })
+    }
+
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetMcpToolGroupName(self.handle)) }
+    }
+
+    pub fn title(&self) -> String {
+        unsafe { BnString::into_string(BNGetMcpToolGroupTitle(self.handle)) }
+    }
+
+    pub fn description(&self) -> String {
+        unsafe { BnString::into_string(BNGetMcpToolGroupDescription(self.handle)) }
+    }
+
+    pub fn enabled_by_default(&self) -> bool {
+        unsafe { BNIsMcpToolGroupEnabledByDefault(self.handle) }
+    }
+
+    pub fn enabled(&self) -> bool {
+        unsafe { BNIsMcpToolGroupEnabled(self.handle) }
+    }
+}
+
+impl fmt::Debug for McpToolGroup {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("McpToolGroup")
+            .field("name", &self.name())
+            .finish()
+    }
+}
+
+unsafe impl Send for McpToolGroup {}
+unsafe impl Sync for McpToolGroup {}
+
+impl ToOwned for McpToolGroup {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for McpToolGroup {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Self::ref_from_raw(BNNewMcpToolGroupReference(handle.handle))
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeMcpToolGroup(handle.handle);
+    }
+}
+
+impl CoreArrayProvider for McpToolGroup {
+    type Raw = *mut BNMcpToolGroup;
+    type Context = ();
+    type Wrapped<'a> = Guard<'a, McpToolGroup>;
+}
+
+unsafe impl CoreArrayProviderInner for McpToolGroup {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeMcpToolGroupList(raw, count);
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Guard::new(McpToolGroup::from_raw(*raw), context)
+    }
+}
+
 /// Everything about a tool except its input schema.
 #[derive(Clone, Debug)]
 pub struct McpToolInfo {
@@ -52,6 +182,7 @@ pub struct McpToolInfo {
     pub scope: McpToolScope,
     pub annotations: McpToolAnnotations,
     pub output_schema: Option<Value>,
+    pub group: Option<Ref<McpToolGroup>>,
 }
 
 impl McpToolInfo {
@@ -64,6 +195,7 @@ impl McpToolInfo {
             scope: McpToolScope::BinaryViewScope,
             annotations: McpToolAnnotations::empty(),
             output_schema: None,
+            group: None,
         }
     }
 
@@ -79,6 +211,11 @@ impl McpToolInfo {
 
     pub fn with_annotations(mut self, annotations: McpToolAnnotations) -> Self {
         self.annotations = annotations;
+        self
+    }
+
+    pub fn with_group(mut self, group: Ref<McpToolGroup>) -> Self {
+        self.group = Some(group);
         self
     }
 
@@ -252,19 +389,16 @@ impl McpToolCall {
         Ref::new(Self { handle })
     }
 
-    /// The binary view the MCP session targets. Never `None` while a BinaryView-scoped tool runs.
+    /// The binary view for this tool call. Never `None` while a BinaryView-scoped tool runs.
     pub fn binary_view(&self) -> Option<Ref<BinaryView>> {
         let view = unsafe { BNGetMcpToolCallBinaryView(self.handle) };
         (!view.is_null()).then(|| unsafe { BinaryView::ref_from_raw(view) })
     }
 
-    /// The binary view, or the `no_active_binary_view` error to return with `?` when there is none.
+    /// The binary view, or the `binary_not_found` error to return with `?` when there is none.
     pub fn require_binary_view(&self) -> Result<Ref<BinaryView>, McpToolError> {
         self.binary_view().ok_or_else(|| {
-            McpToolError::new(
-                "no_active_binary_view",
-                "No active Binary Ninja binary view is selected",
-            )
+            McpToolError::new("binary_not_found", "The call has no binary to run against")
         })
     }
 
@@ -413,6 +547,11 @@ pub(super) fn create_with<T: McpTool>(
             .map_or(ptr::null(), |schema| schema.as_ptr()),
         scope: definition.info.scope,
         annotations: definition.info.annotations.bits(),
+        group: definition
+            .info
+            .group
+            .as_ref()
+            .map_or(ptr::null_mut(), |group| group.handle),
     };
 
     extern "C" fn cb_free_object<T: McpTool>(ctxt: *mut c_void) {
@@ -467,6 +606,10 @@ impl CoreMcpTool {
 
     pub fn name(&self) -> String {
         unsafe { BnString::into_string(BNGetMcpToolName(self.handle)) }
+    }
+
+    pub fn group(&self) -> Ref<McpToolGroup> {
+        unsafe { McpToolGroup::ref_from_raw(BNGetMcpToolGroup(self.handle)) }
     }
 
     pub fn title(&self) -> String {

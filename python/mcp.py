@@ -28,7 +28,7 @@ Schema from the function's signature and docstring::
 
 	@mcp.tool(read_only=True)
 	def myplugin_function_count(call: mcp.ToolCall, min_size: int = 0) -> dict:
-		\"\"\"Count the functions in the active binary view.
+		\"\"\"Count the functions in the selected binary view.
 
 		:param min_size: Only count functions with at least this many bytes.
 		\"\"\"
@@ -63,7 +63,9 @@ __all__ = [
 	"Tool",
 	"ToolCall",
 	"ToolError",
+	"ToolGroup",
 	"ToolResult",
+	"register_group",
 	"register_tool",
 	"tool",
 ]
@@ -239,7 +241,7 @@ class ToolCall:
 
 	@property
 	def binary_view(self) -> Optional["binaryview.BinaryView"]:
-		"""The binary view the MCP session targets. Never ``None`` while a BinaryView-scoped tool runs."""
+		"""The binary view for this tool call. Never ``None`` while a BinaryView-scoped tool runs."""
 		handle = core.BNGetMcpToolCallBinaryView(self.handle)
 		if not handle:
 			return None
@@ -274,6 +276,65 @@ class ToolCall:
 			core.free_string(error)
 			raise ValueError(message)
 		return result.value
+
+
+class _ToolGroupMetaclass(type):
+	def __iter__(cls):
+		binaryninja._init_plugins()
+		count = ctypes.c_ulonglong()
+		groups = core.BNGetMcpToolGroupList(count)
+		try:
+			for i in range(count.value):
+				yield ToolGroup(core.BNNewMcpToolGroupReference(groups[i]))
+		finally:
+			core.BNFreeMcpToolGroupList(groups, count.value)
+
+
+class ToolGroup(metaclass=_ToolGroupMetaclass):
+	def __init__(self, handle):
+		self.handle = handle
+
+	def __del__(self):
+		if core is not None:
+			core.BNFreeMcpToolGroup(self.handle)
+
+	def __eq__(self, other):
+		if not isinstance(other, ToolGroup):
+			return NotImplemented
+		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
+
+	@staticmethod
+	def list() -> List["ToolGroup"]:
+		return list(ToolGroup)
+
+	@staticmethod
+	def by_name(name: str) -> Optional["ToolGroup"]:
+		binaryninja._init_plugins()
+		handle = core.BNGetMcpToolGroupByName(name)
+		return ToolGroup(handle) if handle else None
+
+	@property
+	def name(self) -> str:
+		return core.BNGetMcpToolGroupName(self.handle)
+
+	@property
+	def title(self) -> str:
+		return core.BNGetMcpToolGroupTitle(self.handle)
+
+	@property
+	def description(self) -> str:
+		return core.BNGetMcpToolGroupDescription(self.handle)
+
+	@property
+	def enabled_by_default(self) -> bool:
+		return core.BNIsMcpToolGroupEnabledByDefault(self.handle)
+
+	@property
+	def enabled(self) -> bool:
+		return core.BNIsMcpToolGroupEnabled(self.handle)
 
 
 class _ToolMetaclass(type):
@@ -313,6 +374,10 @@ class Tool(metaclass=_ToolMetaclass):
 	@property
 	def name(self) -> str:
 		return core.BNGetMcpToolName(self.handle)
+
+	@property
+	def group(self) -> ToolGroup:
+		return ToolGroup(core.BNGetMcpToolGroup(self.handle))
 
 	@property
 	def title(self) -> str:
@@ -409,6 +474,19 @@ class _RegisteredTool:
 				log_error_for_exception("Unhandled Python exception applying an MCP tool result")
 
 
+def register_group(name: str, title: str, description: str, *, enabled_by_default: bool = True) -> ToolGroup:
+	"""Register an MCP tool group and its call permissions."""
+	definition = core.BNMcpToolGroupDefinition()
+	definition.name = name
+	definition.title = title
+	definition.description = description
+	definition.enabledByDefault = enabled_by_default
+	handle = core.BNRegisterMcpToolGroup(definition)
+	if not handle:
+		raise ValueError(f"Binary Ninja rejected the MCP group '{name}'")
+	return ToolGroup(handle)
+
+
 def register_tool(
 	name: str,
 	description: str,
@@ -419,6 +497,7 @@ def register_tool(
 	scope: McpToolScope = McpToolScope.BinaryViewScope,
 	annotations: McpToolAnnotation = McpToolAnnotation(0),
 	output_schema: Optional[dict] = None,
+	group: Optional[ToolGroup] = None,
 ) -> Tool:
 	"""
 	Registers a tool for the life of the process.
@@ -427,6 +506,8 @@ def register_tool(
 		``str``, ``dict``, :py:class:`ToolResult` or ``None``, or raises :py:class:`ToolError`.
 	:raises ValueError: The definition is invalid or its name is already registered.
 	"""
+	if group is not None and not isinstance(group, ToolGroup):
+		raise TypeError("group must be a ToolGroup")
 	registered = _RegisteredTool(handler)
 	definition = core.BNMcpToolDefinition()
 	definition.name = name
@@ -436,6 +517,7 @@ def register_tool(
 	definition.outputSchema = json.dumps(output_schema) if output_schema is not None else None
 	definition.scope = scope
 	definition.annotations = annotations
+	definition.group = group.handle if group is not None else None
 	handle = core.BNRegisterMcpTool(definition, registered.callbacks)
 	if not handle:
 		raise ValueError(f"Binary Ninja rejected the MCP tool '{name}'; see the log for why")
@@ -713,6 +795,7 @@ def tool(
 	idempotent: bool = False,
 	open_world: bool = False,
 	output_schema: Optional[dict] = None,
+	group: Optional[ToolGroup] = None,
 ):
 	"""
 	Registers the decorated function as a tool. The function's first parameter receives the
@@ -792,6 +875,7 @@ def tool(
 			scope=scope,
 			annotations=annotations,
 			output_schema=output_schema,
+			group=group,
 		)
 		return function
 

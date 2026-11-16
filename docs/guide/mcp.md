@@ -1,6 +1,6 @@
 # MCP Server
 
-Binary Ninja can expose analysis data to MCP clients through the Model Context Protocol (MCP). This allows an AI assistant or other MCP client to inspect open files, open binaries, run analysis updates, and query read-only BinaryView information such as functions, symbols, strings, sections, disassembly, IL, and decompiled text.
+Binary Ninja can expose analysis data to MCP clients through the Model Context Protocol (MCP). This allows an AI assistant or other MCP client to open binaries, run analysis updates, inspect functions, symbols, strings, sections, disassembly, IL, and decompiled text, and edit analysis data such as comments, names, and types.
 
 Binary Ninja provides two MCP server variants:
 
@@ -13,16 +13,19 @@ Binary Ninja provides two MCP server variants:
 
 The exact tool list may change as the MCP server develops, but both server variants expose tools in the following broad categories:
 
-- **File and view management**: list open files and databases, open a file or database, close or save an open item, list BinaryViews, and select the active BinaryView.
+- **Binary and project management**: list, open, save, and close binaries and databases, list and open projects, and open files within projects.
 - **Analysis control**: inspect analysis status, start an analysis update, run analysis and wait for completion, or abort active analysis work.
-- **Binary overview**: request a compact triage summary of the active BinaryView, including entry point, segment, section, symbol, function, string, and data variable counts.
+- **Binary overview**: request a compact triage summary of a BinaryView, including entry point, segment, section, symbol, function, string, and data variable counts.
 - **Program structure**: list entry points, segments, sections, symbols, imports, exports, relocations, data variables, and strings.
-- **Memory inspection**: read bytes from the active BinaryView and receive the result as hex and base64.
+- **Memory inspection**: read bytes from a BinaryView and receive the result as hex and base64.
 - **Function inspection**: list and search functions, request function metadata, render disassembly, render decompiled Pseudo C, render IL, inspect basic blocks, callers, callees, cross-references, stack layout, and complexity metrics.
+- **Analysis editing**: manage comments, symbols, variables, function prototypes, types, data variables, and sections.
 
 Use your MCP client's tool listing UI or command to see the complete set of tools available in your installed Binary Ninja version.
 
 Plugins can add their own tools, which both server variants offer alongside the built-in ones. See [Writing MCP Tools](../dev/mcp-tools.md).
+
+Tool groups are controlled by boolean settings under `mcp.groups`. Built-in groups are enabled by default. Disabling a group hides its tools and rejects calls to them. Reconnect your MCP client after changing these settings so it loads the updated tool list.
 
 ## Tool Calling Conventions
 
@@ -32,37 +35,37 @@ The MCP server exposes Binary Ninja state through a small set of identifiers and
 
 Open files, projects, databases, and BinaryViews are identified by opaque handles returned from MCP tools:
 
-- `openItem` handles identify files, databases, or projects. Tools such as `bn_open_item_save` and `bn_open_item_close` use these handles.
-- `binaryView` handles identify BinaryViews for an open item. Use `bn_binary_view_list` to discover them and `bn_binary_view_set_active` to select one.
+- `binary` handles identify BinaryViews for open files and databases. Get them from `bn_binary_open` or `bn_binary_list`.
+- `project` handles identify open projects. Get them from `bn_project_open` or `bn_project_list`.
 
-Do not construct handles yourself. Treat them as session-scoped values returned by the server.
+Do not construct handles yourself. They remain valid while the corresponding binary or project is open in the server process.
 
-Some BinaryViews may be listed as available but not yet created. Selecting one with `bn_binary_view_set_active` may create that view. When multiple BinaryViews are available for a file, use the `recommended` field from `bn_binary_view_list` or choose the view type you need before running read-only analysis tools.
+The `viewTypes` metadata lists available view types for a file. Pass `viewType` to `bn_binary_open` to request a particular view type.
 
-### Active BinaryView
+### Target BinaryView
 
-Most read-only tools operate on the active BinaryView rather than taking a `binaryView` parameter every time. If a tool returns `no_active_binary_view`, first call `bn_binary_view_list`, choose a view, and call `bn_binary_view_set_active`.
+Every BinaryView-scoped tool requires a `binary` handle on each call. If a tool returns `binary_not_found`, call `bn_binary_list` and supply a valid handle.
 
-In the GUI server, the active BinaryView follows the Binary Ninja UI unless an MCP client explicitly changes it. In the headless server, the active BinaryView is managed entirely through MCP tools.
+Both server variants use this per-call target. In the GUI, the target can be any open binary, regardless of which tab has focus.
 
 ### Address Expressions
 
-Address parameters are strings, not JSON numbers. They are parsed as Binary Ninja expressions in the active BinaryView, so clients can use plain addresses, symbols, and expressions supported by Binary Ninja.
+Address parameters are strings, not JSON numbers. They are parsed as Binary Ninja expressions in the selected BinaryView, so clients can use plain addresses, symbols, and expressions supported by Binary Ninja.
 
-Binary-view-domain numeric parameters, such as byte counts for memory reads and ranges, accept either JSON integers or strings when the tool input schema advertises them. JSON integers are consumed directly. String values are parsed as Binary Ninja expressions in the active BinaryView. Binary Ninja expression syntax applies to string values; use `0n` for decimal strings when needed, for example `0n64`.
+Binary-view-domain numeric parameters, such as byte counts for memory reads and ranges, accept either JSON integers or strings when the tool input schema advertises them. JSON integers are consumed directly. String values are parsed as Binary Ninja expressions in the selected BinaryView. Binary Ninja expression syntax applies to string values; use `0n` for decimal strings when needed, for example `0n64`.
 
 Examples:
 
 ```json
-{"address": "0x401000", "length": 64}
+{"binary": "<binary handle>", "address": "0x401000", "length": 64}
 ```
 
 ```json
-{"function": "main"}
+{"binary": "<binary handle>", "function": "main"}
 ```
 
 ```json
-{"start": ".text", "length": "0n256"}
+{"binary": "<binary handle>", "start": ".text", "length": "0n256"}
 ```
 
 Use address expressions for fields named `address`, `start`, `end`, `function`, `symbol`, `comment`, and `datavar`. Use JSON integers or expression strings for byte-span input parameters such as `length` when the tool input schema advertises them. A `length` output column is returned metadata and does not imply that the tool accepts a `length` input. Metadata parameters such as pagination `offset` and `limit`, symbol `ordinal`, and collection caps such as `maxItems` are JSON integers only.
@@ -70,13 +73,13 @@ Use address expressions for fields named `address`, `start`, `end`, `function`, 
 Function tools identify a function by its start address expression:
 
 ```json
-{"function": "0x401000"}
+{"binary": "<binary handle>", "function": "0x401000"}
 ```
 
 If more than one function has the same start address, pass `arch` with the architecture name returned by function-listing tools:
 
 ```json
-{"function": "0x401000", "arch": "x86_64"}
+{"binary": "<binary handle>", "function": "0x401000", "arch": "x86_64"}
 ```
 
 ### Ranges, Queries, and Pagination
@@ -99,21 +102,21 @@ Addresses in tool output are formatted as hexadecimal strings so clients do not 
 
 ## GUI Server
 
-The GUI MCP server is hosted inside the Binary Ninja application. It uses HTTP only and must be both enabled and started before a client can connect. Some MCP clients refer to this as an HTTP or streamable HTTP server.
+The GUI MCP server is hosted inside the Binary Ninja application. It uses HTTP only and must be started before a client can connect. Some MCP clients refer to this as an HTTP or streamable HTTP server.
 
 On Windows, use this built-in HTTP server for native MCP clients. Binary Ninja does not yet ship a standalone `binaryninja_mcp.exe` in Windows packages.
 
-### Enable and Start
+### Start the Server
 
 1. Open Settings with `[CMD/CTRL] ,`.
-2. Enable `ui.mcp.enabled`. This setting requires a restart.
-3. Optionally configure the HTTP settings:
+2. Optionally configure the HTTP settings:
     - `ui.mcp.port`: HTTP port. Default: `24642`; use `0` for an OS-assigned port
     - `ui.mcp.endpoint`: HTTP endpoint path. Default: `/mcp`
     - `ui.mcp.token`: Optional bearer token. Leave blank to disable HTTP authorization
-4. Restart Binary Ninja.
-5. Start the server with `Plugins > MCP > Start Server`.
-6. Use `Plugins > MCP > Copy Connection Info` to copy the exact URL and authorization header for your current session.
+3. Start the server with `Plugins > MCP > Start Server`.
+4. Use `Plugins > MCP > Copy Connection Info` to copy the exact URL and authorization header for your current session.
+
+Enable `ui.mcp.enabled` to start the server automatically the next time Binary Ninja launches.
 
 Use `Plugins > MCP > Stop Server` to stop the server.
 
@@ -143,7 +146,7 @@ If `ui.mcp.port` is `0`, the operating system chooses a port when the server sta
 
 The standalone `binaryninja_mcp` server is for headless operation and uses stdio only. Configure your MCP client to launch `binaryninja_mcp` as a local command-line MCP server.
 
-The headless server opens and analyzes files without the GUI and exposes the same file manager and read-only BinaryView inspection tools as the GUI server.
+The headless server opens and analyzes files without the GUI and exposes the same built-in tools as the GUI server.
 
 Native Windows packages do not yet include `binaryninja_mcp.exe`. On Windows, connect to the built-in GUI MCP HTTP server instead. If you require the headless stdio server, install and run the Linux build of Binary Ninja under WSL and use the Linux `binaryninja_mcp` executable from that environment.
 
@@ -267,7 +270,6 @@ Set `BN_MCP_TOKEN` to the value of `ui.mcp.token`. Omit `bearer_token_env_var` i
 
 If an MCP client cannot connect to the GUI server:
 
-- Confirm `ui.mcp.enabled` is enabled.
 - Confirm the server has been started with `Plugins > MCP > Start Server`.
 - Use `Plugins > MCP > Copy Connection Info` and copy the exact URL and token header into the client configuration.
 - If you changed `ui.mcp.port` or `ui.mcp.endpoint`, restart the GUI MCP server.

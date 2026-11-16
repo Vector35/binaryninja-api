@@ -7,7 +7,7 @@ Plugins can add tools to Binary Ninja's [MCP server](../guide/mcp.md). Both the 
 A tool has a name, a description, a JSON Schema describing its input, and a handler that receives the arguments and returns a result.
 
 - **Names** must be 1 to 64 letters, digits, `_` or `-`, and unique in the process. Prefix yours with your plugin's name, such as `myplugin_find_crypto`. The `bn_` prefix is used by Binary Ninja's built-in tools.
-- **Scope.** A BinaryView-scoped tool, the default, runs against the MCP session's active BinaryView. The server resolves that view before the handler runs and reports `no_active_binary_view` itself when there is none, so the handler can rely on having one. A global tool runs without a view, and can still ask for one if the session has it.
+- **Scope.** A BinaryView-scoped tool, the default, requires a `binary` handle on each call. The server resolves that view before the handler runs and reports `binary_not_found` when it cannot, so the handler can rely on having one. A global tool runs without a view.
 - **Annotations** mark a tool as read-only, destructive, idempotent or open-world. Clients use them to decide how to present a tool and whether to ask the user before running it. Every hint is sent, so a tool without a flag is advertised as one that may modify its environment, is not destructive, is not idempotent, and does not reach outside Binary Ninja.
 - **Results** are text, structured content (a JSON object), or both. When a tool returns structured content and no text, clients that ignore structured content see the JSON as text. An error result carries a machine-readable `errorCode` and an `errorMessage` as structured content. A tool with an output schema returns them as text instead, since the error does not match the schema.
 - **Return one representation.** Some MCP clients show the model only the structured content, and others only the text. A tool that returns both must put everything the model needs in each, so prefer returning one or the other.
@@ -33,7 +33,7 @@ def myplugin_find_strings(
 	min_length: int = 4,
 	section: Optional[str] = None,
 ) -> dict:
-	"""Find strings in the active binary view.
+	"""Find strings in the selected binary view.
 
 	:param min_length: Minimum string length in bytes.
 	:param section: Only search this section.
@@ -86,7 +86,7 @@ using namespace BinaryNinja::MCP;
 
 extern "C" BINARYNINJAPLUGIN bool CorePluginInit()
 {
-	MakeTool({"myplugin_set_comment", "Set Comment", "Set the comment at an address in the active binary view.",
+	MakeTool({"myplugin_set_comment", "Set Comment", "Set the comment at an address in the selected binary view.",
 				 Scope::BinaryView, IdempotentHint})
 		.Param(Address("address", "Address expression of the comment."))
 		.Param(String("text", "Comment text."))
@@ -136,7 +136,7 @@ struct FunctionCount;
 
 impl McpTool for FunctionCount {
     fn definition(&self) -> McpToolDefinition {
-        McpToolInfo::new("myplugin_function_count", "Count the functions in the active binary view.")
+        McpToolInfo::new("myplugin_function_count", "Count the functions in the selected binary view.")
             .with_annotations(McpToolAnnotations::READ_ONLY)
             .with_input_schema(empty_input_schema())
     }
@@ -171,7 +171,7 @@ impl TypedMcpTool for SetComment {
     type Args = CommentArgs;
 
     fn info(&self) -> McpToolInfo {
-        McpToolInfo::new("myplugin_set_comment", "Set the comment at an address in the active binary view.")
+        McpToolInfo::new("myplugin_set_comment", "Set the comment at an address in the selected binary view.")
     }
 
     fn invoke(&self, call: &McpToolCall, args: CommentArgs) -> Result<McpToolResult, McpToolError> {

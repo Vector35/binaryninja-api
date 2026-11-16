@@ -1367,9 +1367,9 @@ bool ElfView::Init()
 							item->second = 0; // Conflicting aliases do not prove the ABI input.
 					}
 					auto symbolType = FunctionSymbol;
-					if (m_plat && m_plat->GetName() == "tms320c6x" &&
-						(entry->name.find('$') != std::string::npos || entry->name == "LOOP")) {
-						// TMS320C6x ELFs use ELF_STT_FUNC *$* and LOOP symbols for labeling blocks
+					if (m_commonHeader.arch == EM_TI_C6000 &&
+						(entry->name.find('$') != std::string::npos || entry->name == "LOOP"))
+					{
 						symbolType = LocalLabelSymbol;
 					}
 					DefineElfSymbol(symbolType, entry->name, entry->value, false, entry->binding);

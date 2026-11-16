@@ -254,6 +254,7 @@
 #define EM_ARC_A5   93      // ARC Cores Tangent-A5
 #define EM_XTENSA   94      // Tensilica Xtensa Architecture
 #define EM_ALTERA_NIOS2 113 // Altera Nios II
+#define EM_TI_C6000 140     // Texas Instruments TMS320C6000 DSP
 #define EM_AARCH64  183     // ARM AARCH64
 #define EM_TILEPRO  188     // Tilera TILEPro
 #define EM_MICROBLAZE   189 // Xilinx MicroBlaze

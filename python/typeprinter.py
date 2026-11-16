@@ -250,7 +250,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		try:
 			result_py = self.get_type_lines(
 				types.Type.create(handle=core.BNNewTypeReference(type)),
-				typecontainer.TypeContainer(handle=container),
+				typecontainer.TypeContainer(handle=core.BNDuplicateTypeContainer(container)),
 				types.QualifiedName._from_core_struct(name.contents),
 				padding_cols, collapsed, escaping)
 

@@ -889,8 +889,7 @@ unsafe extern "C" fn cb_get_type_lines<T: TypePrinter>(
     let ctxt: &T = &*(ctxt as *const T);
     // NOTE: The caller is responsible for freeing name.
     let qualified_name = QualifiedName::from_raw(&*name);
-    let types_ptr = NonNull::new(types).unwrap();
-    let types = TypeContainer::from_raw(types_ptr);
+    let types = TypeContainer::from_lent_raw(NonNull::new(types).unwrap());
     let inner_result = ctxt.get_type_lines(
         Type::from_raw(type_).to_owned(),
         &types,

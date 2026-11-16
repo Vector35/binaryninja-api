@@ -107,7 +107,7 @@ bool TypePrinter::GetTypeLinesCallback(void* ctxt, BNType* type, BNTypeContainer
 {
 	TypePrinter* printer = (TypePrinter*)ctxt;
 	vector<TypeDefinitionLine> lines = printer->GetTypeLines(
-		new Type(BNNewTypeReference(type)), TypeContainer(types),
+		new Type(BNNewTypeReference(type)), TypeContainer(BNDuplicateTypeContainer(types)),
 		QualifiedName::FromAPIStruct(name), paddingCols, collapsed, escaping);
 
 	*resultCount = lines.size();

@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 194
+#define BN_CURRENT_CORE_ABI_VERSION 195
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -6075,6 +6075,21 @@ extern "C"
 	    BNBinaryView* view, uint64_t addr, size_t* count);
 
 	BINARYNINJACOREAPI uint64_t BNGetFunctionHighestAddress(BNFunction* func);
+
+	// Function metrics. Counts that are not known (the IL was never generated for the function) are
+	// reported as BN_FUNCTION_METRIC_UNKNOWN. None of these trigger analysis.
+#define BN_FUNCTION_METRIC_UNKNOWN UINT64_MAX
+	BINARYNINJACOREAPI uint64_t BNGetFunctionTotalBytes(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNGetFunctionBasicBlockCount(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNGetFunctionInstructionCount(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNGetFunctionLowLevelILInstructionCount(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNGetFunctionMediumLevelILInstructionCount(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNGetFunctionHighLevelILInstructionCount(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNGetFunctionCallerCount(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNGetFunctionCalleeCount(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNGetFunctionCodeReferenceCount(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNGetFunctionDataReferenceCount(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNGetFunctionRecursiveReferenceCount(BNFunction* func);
 	BINARYNINJACOREAPI uint64_t BNGetFunctionLowestAddress(BNFunction* func);
 	BINARYNINJACOREAPI BNAddressRange* BNGetFunctionAddressRanges(BNFunction* func, size_t* count);
 

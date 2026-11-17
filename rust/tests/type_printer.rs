@@ -162,6 +162,113 @@ impl TypePrinter for MyTypePrinter {
     }
 }
 
+struct NoOutputTypePrinter;
+
+impl TypePrinter for NoOutputTypePrinter {
+    fn get_type_tokens<T: Into<QualifiedName>>(
+        &self,
+        _type_: Ref<Type>,
+        _platform: Option<Ref<Platform>>,
+        _name: T,
+        _base_confidence: u8,
+        _escaping: TokenEscapingType,
+    ) -> Option<Vec<InstructionTextToken>> {
+        None
+    }
+
+    fn get_type_tokens_before_name(
+        &self,
+        _type_: Ref<Type>,
+        _platform: Option<Ref<Platform>>,
+        _base_confidence: u8,
+        _parent_type: Option<Ref<Type>>,
+        _escaping: TokenEscapingType,
+    ) -> Option<Vec<InstructionTextToken>> {
+        None
+    }
+
+    fn get_type_tokens_after_name(
+        &self,
+        _type_: Ref<Type>,
+        _platform: Option<Ref<Platform>>,
+        _base_confidence: u8,
+        _parent_type: Option<Ref<Type>>,
+        _escaping: TokenEscapingType,
+    ) -> Option<Vec<InstructionTextToken>> {
+        None
+    }
+
+    fn get_type_string<T: Into<QualifiedName>>(
+        &self,
+        _type_: Ref<Type>,
+        _platform: Option<Ref<Platform>>,
+        _name: T,
+        _escaping: TokenEscapingType,
+    ) -> Option<String> {
+        None
+    }
+
+    fn get_type_string_before_name(
+        &self,
+        _type_: Ref<Type>,
+        _platform: Option<Ref<Platform>>,
+        _escaping: TokenEscapingType,
+    ) -> Option<String> {
+        None
+    }
+
+    fn get_type_string_after_name(
+        &self,
+        _type_: Ref<Type>,
+        _platform: Option<Ref<Platform>>,
+        _escaping: TokenEscapingType,
+    ) -> Option<String> {
+        None
+    }
+
+    fn get_type_lines<T: Into<QualifiedName>>(
+        &self,
+        _type_: Ref<Type>,
+        _types: &TypeContainer,
+        _name: T,
+        _padding_cols: isize,
+        _collapsed: bool,
+        _escaping: TokenEscapingType,
+    ) -> Option<Vec<TypeDefinitionLine>> {
+        None
+    }
+
+    fn print_all_types(
+        &self,
+        _names: Vec<QualifiedName>,
+        _types: Vec<Ref<Type>>,
+        _data: Ref<BinaryView>,
+        _padding_cols: isize,
+        _escaping: TokenEscapingType,
+    ) -> Option<String> {
+        None
+    }
+}
+
+#[test]
+fn test_custom_type_printer_print_all_types_failure() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+    let (_, core_type_printer) =
+        register_type_printer("no_output_type_printer", NoOutputTypePrinter);
+
+    let printed_types = core_type_printer
+        .print_all_types(
+            vec![("test", Type::int(4, false))],
+            &view,
+            0,
+            TokenEscapingType::NoTokenEscapingType,
+        )
+        .expect("Failed to print types");
+    assert_eq!(printed_types.to_string_lossy(), "");
+}
+
 #[test]
 fn test_custom_type_printer() {
     let _session = Session::new().expect("Failed to initialize session");

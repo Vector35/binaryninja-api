@@ -1,6 +1,6 @@
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
-use binaryninja::types::parser::{register_type_parser, TypeParserOption};
+use binaryninja::types::parser::{register_type_parser, ParsedType, TypeParserOption};
 use binaryninja::types::{
     CoreTypeParser, QualifiedNameAndType, Type, TypeContainer, TypeParser, TypeParserError,
     TypeParserResult,
@@ -141,4 +141,116 @@ fn test_parse_error() {
             column: 1
         }]
     );
+}
+
+struct CannedTypeParser;
+
+impl TypeParser for CannedTypeParser {
+    fn get_option_text(&self, _option: TypeParserOption, _value: &str) -> Option<String> {
+        None
+    }
+
+    fn preprocess_source(
+        &self,
+        source: &str,
+        _file_name: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+        options: &[String],
+        include_dirs: &[PathBuf],
+    ) -> Result<String, Vec<TypeParserError>> {
+        Ok(format!(
+            "{source}: {} options, {} include dirs",
+            options.len(),
+            include_dirs.len()
+        ))
+    }
+
+    fn parse_types_from_source(
+        &self,
+        _source: &str,
+        file_name: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+        options: &[String],
+        include_dirs: &[PathBuf],
+        _auto_type_source: &str,
+    ) -> Result<TypeParserResult, Vec<TypeParserError>> {
+        let name = format!(
+            "{file_name}: {} options, {} include dirs",
+            options.len(),
+            include_dirs.len()
+        );
+        Ok(TypeParserResult {
+            types: vec![ParsedType {
+                name: name.into(),
+                ty: Type::int(4, true),
+                user: true,
+            }],
+            variables: vec![],
+            functions: vec![],
+        })
+    }
+
+    fn parse_type_string(
+        &self,
+        source: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+    ) -> Result<QualifiedNameAndType, Vec<TypeParserError>> {
+        Ok(QualifiedNameAndType {
+            name: source.into(),
+            ty: Type::int(4, true),
+        })
+    }
+}
+
+#[test]
+fn test_custom_parser_success() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
+    let plat_type_container = platform.type_container();
+    let (_, parser) = register_type_parser("canned_type_parser", CannedTypeParser);
+
+    let preprocessed = parser
+        .preprocess_source(
+            "int value;",
+            "test_file.h",
+            &platform,
+            Some(&plat_type_container),
+            &[],
+            &[],
+        )
+        .expect("Preprocessed source");
+    assert_eq!(preprocessed, "int value;: 0 options, 0 include dirs");
+
+    let parsed_types = parser
+        .parse_types_from_source(
+            "int value;",
+            "test_file.h",
+            &platform,
+            Some(&plat_type_container),
+            &[],
+            &[],
+            "",
+        )
+        .expect("Parsed types");
+    assert_eq!(
+        parsed_types,
+        TypeParserResult {
+            types: vec![ParsedType {
+                name: "test_file.h: 0 options, 0 include dirs".into(),
+                ty: Type::int(4, true),
+                user: true,
+            }],
+            variables: vec![],
+            functions: vec![],
+        }
+    );
+
+    let parsed_type = parser
+        .parse_type_string("value_t", &platform, None)
+        .expect("Parsed value_t");
+    assert_eq!(parsed_type.name, "value_t".into());
+    assert_eq!(Type::int(4, true), parsed_type.ty);
 }

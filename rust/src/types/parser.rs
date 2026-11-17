@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use std::path::PathBuf;
 use std::ptr::NonNull;
 
+use crate::ffi::slice_from_raw_parts;
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{raw_to_string, BnString, IntoCStr};
@@ -546,12 +547,12 @@ unsafe extern "C" fn cb_preprocess_source<T: TypeParser>(
     let platform = Platform { handle: platform };
     let existing_types =
         NonNull::new(existing_types).map(|handle| TypeContainer::from_lent_raw(handle));
-    let options_raw = unsafe { std::slice::from_raw_parts(options, option_count) };
+    let options_raw = unsafe { slice_from_raw_parts(options, option_count) };
     let options: Vec<_> = options_raw
         .iter()
         .filter_map(|&r| raw_to_string(r))
         .collect();
-    let includes_raw = unsafe { std::slice::from_raw_parts(include_dirs, include_dir_count) };
+    let includes_raw = unsafe { slice_from_raw_parts(include_dirs, include_dir_count) };
     let includes: Vec<_> = includes_raw
         .iter()
         .filter_map(|&r| Some(PathBuf::from(raw_to_string(r)?)))
@@ -606,12 +607,12 @@ unsafe extern "C" fn cb_parse_types_from_source<T: TypeParser>(
     let platform = Platform { handle: platform };
     let existing_types =
         NonNull::new(existing_types).map(|handle| TypeContainer::from_lent_raw(handle));
-    let options_raw = unsafe { std::slice::from_raw_parts(options, option_count) };
+    let options_raw = unsafe { slice_from_raw_parts(options, option_count) };
     let options: Vec<_> = options_raw
         .iter()
         .filter_map(|&r| raw_to_string(r))
         .collect();
-    let includes_raw = unsafe { std::slice::from_raw_parts(include_dirs, include_dir_count) };
+    let includes_raw = unsafe { slice_from_raw_parts(include_dirs, include_dir_count) };
     let includes: Vec<_> = includes_raw
         .iter()
         .filter_map(|&r| Some(PathBuf::from(raw_to_string(r)?)))
@@ -697,6 +698,11 @@ unsafe extern "C" fn cb_free_error_list(
     errors: *mut BNTypeParserError,
     error_count: usize,
 ) {
+    if errors.is_null() {
+        // The callbacks return a null error list on success.
+        return;
+    }
+
     let errors = std::ptr::slice_from_raw_parts_mut(errors, error_count);
     let boxed_errors = Box::from_raw(errors);
     for error in boxed_errors {

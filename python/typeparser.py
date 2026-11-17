@@ -173,6 +173,18 @@ class TypeParserResult:
 
 		return result
 
+	@staticmethod
+	def _free_core_struct(struct: core.BNTypeParserResult) -> None:
+		"""
+		Release the type references that `_to_core_struct` took
+		"""
+		for i in range(struct.typeCount):
+			core.BNFreeType(struct.types[i].type)
+		for i in range(struct.variableCount):
+			core.BNFreeType(struct.variables[i].type)
+		for i in range(struct.functionCount):
+			core.BNFreeType(struct.functions[i].type)
+
 
 def to_bytes(field):
 	if type(field) == bytes:
@@ -229,9 +241,6 @@ class _TypeParserMetaclass(type):
 class TypeParser(metaclass=_TypeParserMetaclass):
 	name = None
 	_registered_parsers = []
-	_cached_string = None
-	_cached_result = None
-	_cached_error = None
 
 	def __init__(self, handle=None):
 		if handle is not None:
@@ -244,13 +253,20 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 		"""
 		assert self.__class__.name is not None
 
+		# Holds each result returned to core until core frees it, keyed by the address core passes to the
+		# free callback.
+		self._pending_results = {}
+
 		self._cb = core.BNTypeParserCallbacks()
 		self._cb.context = 0
 		self._cb.getOptionText = self._cb.getOptionText.__class__(self._get_option_text)
 		self._cb.preprocessSource = self._cb.preprocessSource.__class__(self._preprocess_source)
 		self._cb.parseTypesFromSource = self._cb.parseTypesFromSource.__class__(self._parse_types_from_source)
 		self._cb.parseTypeString = self._cb.parseTypeString.__class__(self._parse_type_string)
-		self._cb.freeString = self._cb.freeString.__class__(self._free_string)
+		# The generated `freeString` type converts the string to `bytes`, which loses the address
+		# that identifies it.
+		self._free_string_cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_void_p)(self._free_string)
+		self._cb.freeString = ctypes.cast(self._free_string_cb, self._cb.freeString.__class__)
 		self._cb.freeResult = self._cb.freeResult.__class__(self._free_result)
 		self._cb.freeErrorList = self._cb.freeErrorList.__class__(self._free_error_list)
 		self.handle = core.BNRegisterTypeParser(self.__class__.name, self._cb)
@@ -262,14 +278,25 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 	def __repr__(self):
 		return f'<TypeParser: {self.name}>'
 
+	def _return_string(self, value: str) -> ctypes.c_char_p:
+		buffer = ctypes.create_string_buffer(core.cstr(value))
+		self._pending_results[ctypes.addressof(buffer)] = buffer
+		return ctypes.cast(buffer, ctypes.c_char_p)
+
+	def _return_errors(self, errors_py: List['TypeParserError']) -> 'ctypes.Array[core.BNTypeParserError]':
+		errors_out = (core.BNTypeParserError * len(errors_py))()
+		for i in range(len(errors_py)):
+			errors_out[i] = errors_py[i]._to_core_struct()
+		self._pending_results[ctypes.addressof(errors_out)] = errors_out
+		return errors_out
+
 	def _get_option_text(self, ctxt, option, value, result) -> bool:
 		try:
 			value_py = core.pyNativeStr(value)
 			result_py = self.get_option_text(TypeParserOption(option), value_py)
 			if result_py is None:
 				return False
-			TypeParser._cached_string = core.cstr(result_py)
-			result[0] = TypeParser._cached_string
+			result[0] = self._return_string(result_py)
 			return True
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypeParser._get_option_text")
@@ -302,18 +329,13 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 				include_dirs_py)
 
 			if errors is not None:
-				errors_out = (core.BNTypeParserError * len(errors_py))()
-				for i in range(len(errors_py)):
-					errors_out[i] = errors_py[i]._to_core_struct()
-				TypeParser._cached_error = errors_out
-				errors[0] = errors_out
+				errors[0] = self._return_errors(errors_py)
 			if errorCount is not None:
 				errorCount[0] = len(errors_py)
 
 			# Core frees the output only on success, so return it after everything that can raise.
 			if output_py is not None and output is not None:
-				TypeParser._cached_string = core.cstr(output_py)
-				output[0] = TypeParser._cached_string
+				output[0] = self._return_string(output_py)
 
 			return output_py is not None
 		except Exception:
@@ -350,18 +372,14 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 				include_dirs_py, auto_type_source)
 
 			if errors is not None:
-				errors_out = (core.BNTypeParserError * len(errors_py))()
-				for i in range(len(errors_py)):
-					errors_out[i] = errors_py[i]._to_core_struct()
-				TypeParser._cached_error = errors_out
-				errors[0] = errors_out
+				errors[0] = self._return_errors(errors_py)
 			if errorCount is not None:
 				errorCount[0] = len(errors_py)
 
 			# Core frees the result only on success, so return it after everything that can raise.
 			if result_py is not None and result is not None:
 				result_struct = result_py._to_core_struct()
-				TypeParser._cached_result = result_struct
+				self._pending_results[ctypes.addressof(result.contents)] = result_struct
 				result[0] = result_struct
 
 			return result_py is not None
@@ -386,11 +404,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 				source_py, platform_py, existing_types_py)
 
 			if errors is not None:
-				errors_out = (core.BNTypeParserError * len(errors_py))()
-				for i in range(len(errors_py)):
-					errors_out[i] = errors_py[i]._to_core_struct()
-				TypeParser._cached_error = errors_out
-				errors[0] = errors_out
+				errors[0] = self._return_errors(errors_py)
 			if errorCount is not None:
 				errorCount[0] = len(errors_py)
 
@@ -406,40 +420,31 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 
 	def _free_string(
 			self, ctxt, string
-	) -> bool:
+	) -> None:
 		try:
-			TypeParser._cached_string = None
-			return True
+			self._pending_results.pop(string)
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypeParser._free_string")
-			return False
 
 	def _free_result(
 			self, ctxt, result
-	) -> bool:
+	) -> None:
 		try:
-			if TypeParser._cached_result is not None:
-				for i in range(TypeParser._cached_result.typeCount):
-					core.BNFreeType(TypeParser._cached_result.types[i].type)
-				for i in range(TypeParser._cached_result.variableCount):
-					core.BNFreeType(TypeParser._cached_result.variables[i].type)
-				for i in range(TypeParser._cached_result.functionCount):
-					core.BNFreeType(TypeParser._cached_result.functions[i].type)
-			TypeParser._cached_result = None
-			return True
+			TypeParserResult._free_core_struct(self._pending_results.pop(ctypes.addressof(result.contents)))
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypeParser._free_result")
-			return False
 
 	def _free_error_list(
 			self, ctxt, errors, errorCount
-	) -> bool:
+	) -> None:
 		try:
-			TypeParser._cached_error = None
-			return True
+			if not errors:
+				# The error list is null when the callback raised before returning one.
+				return
+
+			self._pending_results.pop(ctypes.cast(errors, ctypes.c_void_p).value)
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypeParser._free_error_list")
-			return False
 
 	def get_option_text(self, option: TypeParserOption, value: str) -> Optional[str]:
 		"""

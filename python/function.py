@@ -38,6 +38,7 @@ from . import architecture
 from . import lowlevelil
 from . import mediumlevelil
 from . import highlevelil
+from . import complexity
 from . import binaryview
 from . import basicblock
 from . import databuffer
@@ -1181,6 +1182,36 @@ class Function:
 		if not result:
 			return None
 		return highlevelil.HighLevelILFunction(self.arch, result, self)
+
+	def get_complexity(self, metric: str = 'composite') -> float:
+		"""
+		Compute a code complexity score for this function.
+
+		Several independent metrics are available, each isolating a different factor (code
+		length, number/density of branches, diversity of instruction types, nesting depth of
+		control flow, or a weighted blend of all of the above). See
+		:py:mod:`binaryninja.complexity` for a description of each one.
+
+		:param metric: Name of the metric to compute. See :py:meth:`complexity_metrics` for the
+		               list of valid names. Defaults to ``"composite"``.
+		:return: The computed complexity score. Higher means more complex; scales differ between
+		         metrics, so only compare scores computed with the same metric.
+		:raises ValueError: If `metric` is not a recognized metric name.
+
+			:Example:
+				>>> current_function.get_complexity("cyclomatic")
+				3.0
+				>>> current_function.get_complexity("composite")
+				7.25
+		"""
+		return complexity.get_code_complexity(self, metric)
+
+	@staticmethod
+	def complexity_metrics() -> List[str]:
+		"""
+		Names accepted by :py:meth:`get_complexity`.
+		"""
+		return complexity.list_complexity_metrics()
 
 	@property
 	def pseudo_c(self) -> Optional['languagerepresentation.LanguageRepresentationFunction']:

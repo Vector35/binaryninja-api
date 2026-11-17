@@ -262,10 +262,10 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 	def __repr__(self):
 		return f'<TypeParser: {self.name}>'
 
-	def _get_option_text(self, option, value, result) -> bool:
+	def _get_option_text(self, ctxt, option, value, result) -> bool:
 		try:
 			value_py = core.pyNativeStr(value)
-			result_py = self.get_option_text(option, value_py)
+			result_py = self.get_option_text(TypeParserOption(option), value_py)
 			if result_py is None:
 				return False
 			TypeParser._cached_string = core.cstr(result_py)

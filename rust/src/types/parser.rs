@@ -66,14 +66,14 @@ impl CoreTypeParser {
 
 impl TypeParser for CoreTypeParser {
     fn get_option_text(&self, option: TypeParserOption, value: &str) -> Option<String> {
+        let value = value.to_cstr();
         let mut output = std::ptr::null_mut();
-        let value_ptr = std::ptr::null_mut();
         let result = unsafe {
-            BNGetTypeParserOptionText(self.handle.as_ptr(), option, value_ptr, &mut output)
+            BNGetTypeParserOptionText(self.handle.as_ptr(), option, value.as_ptr(), &mut output)
         };
         result.then(|| {
             assert!(!output.is_null());
-            unsafe { BnString::into_string(value_ptr) }
+            unsafe { BnString::into_string(output) }
         })
     }
 

@@ -1,7 +1,12 @@
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
-use binaryninja::types::{CoreTypeParser, Type, TypeParser, TypeParserError};
+use binaryninja::types::parser::{register_type_parser, TypeParserOption};
+use binaryninja::types::{
+    CoreTypeParser, QualifiedNameAndType, Type, TypeContainer, TypeParser, TypeParserError,
+    TypeParserResult,
+};
 use binaryninjacore_sys::BNTypeParserErrorSeverity::ErrorSeverity;
+use std::path::PathBuf;
 
 const TEST_TYPES: &str = r#"
 typedef int int32_t;
@@ -36,6 +41,65 @@ fn test_string_to_type() {
         .expect("Parsed int32_t");
     let test_type = Type::int(4, true);
     assert_eq!(test_type, parsed_type.ty);
+}
+
+struct OptionTextTypeParser;
+
+impl TypeParser for OptionTextTypeParser {
+    fn get_option_text(&self, option: TypeParserOption, value: &str) -> Option<String> {
+        match (option, value) {
+            (TypeParserOption::IncludeSystemTypes, "true") => Some("--option-text".to_string()),
+            _ => None,
+        }
+    }
+
+    fn preprocess_source(
+        &self,
+        _source: &str,
+        _file_name: &str,
+        _platform: &Platform,
+        _existing_types: &TypeContainer,
+        _options: &[String],
+        _include_dirs: &[PathBuf],
+    ) -> Result<String, Vec<TypeParserError>> {
+        Err(vec![])
+    }
+
+    fn parse_types_from_source(
+        &self,
+        _source: &str,
+        _file_name: &str,
+        _platform: &Platform,
+        _existing_types: &TypeContainer,
+        _options: &[String],
+        _include_dirs: &[PathBuf],
+        _auto_type_source: &str,
+    ) -> Result<TypeParserResult, Vec<TypeParserError>> {
+        Err(vec![])
+    }
+
+    fn parse_type_string(
+        &self,
+        _source: &str,
+        _platform: &Platform,
+        _existing_types: &TypeContainer,
+    ) -> Result<QualifiedNameAndType, Vec<TypeParserError>> {
+        Err(vec![])
+    }
+}
+
+#[test]
+fn test_option_text() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let (_, parser) = register_type_parser("option_text_type_parser", OptionTextTypeParser);
+    assert_eq!(
+        parser.get_option_text(TypeParserOption::IncludeSystemTypes, "true"),
+        Some("--option-text".to_string())
+    );
+    assert_eq!(
+        parser.get_option_text(TypeParserOption::IncludeSystemTypes, "maybe"),
+        None
+    );
 }
 
 #[test]

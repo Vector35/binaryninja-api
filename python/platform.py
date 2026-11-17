@@ -712,25 +712,27 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = core.BNParseTypesFromSource(
 		    self.handle, source, filename, parse, errors, dir_buf, len(include_dirs), auto_type_source
 		)
-		assert errors.value is not None, "core.BNParseTypesFromSource returned errors set to None"
-		error_str = errors.value.decode("utf-8")
-		core.free_string(errors)
-		if not result:
-			raise SyntaxError(error_str)
-		type_dict: Dict[types.QualifiedName, types.Type] = {}
-		variables: Dict[types.QualifiedName, types.Type] = {}
-		functions: Dict[types.QualifiedName, types.Type] = {}
-		for i in range(0, parse.typeCount):
-			name = types.QualifiedName._from_core_struct(parse.types[i].name)
-			type_dict[name] = types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform=self)
-		for i in range(0, parse.variableCount):
-			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
-			variables[name] = types.Type.create(core.BNNewTypeReference(parse.variables[i].type), platform=self)
-		for i in range(0, parse.functionCount):
-			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
-			functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform=self)
-		core.BNFreeTypeParserResult(parse)
-		return typeparser.BasicTypeParserResult(type_dict, variables, functions)
+		try:
+			assert errors.value is not None, "core.BNParseTypesFromSource returned errors set to None"
+			error_str = errors.value.decode("utf-8")
+			if not result:
+				raise SyntaxError(error_str)
+			type_dict: Dict[types.QualifiedName, types.Type] = {}
+			variables: Dict[types.QualifiedName, types.Type] = {}
+			functions: Dict[types.QualifiedName, types.Type] = {}
+			for i in range(0, parse.typeCount):
+				name = types.QualifiedName._from_core_struct(parse.types[i].name)
+				type_dict[name] = types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform=self)
+			for i in range(0, parse.variableCount):
+				name = types.QualifiedName._from_core_struct(parse.variables[i].name)
+				variables[name] = types.Type.create(core.BNNewTypeReference(parse.variables[i].type), platform=self)
+			for i in range(0, parse.functionCount):
+				name = types.QualifiedName._from_core_struct(parse.functions[i].name)
+				functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform=self)
+			return typeparser.BasicTypeParserResult(type_dict, variables, functions)
+		finally:
+			core.free_string(errors)
+			core.BNFreeTypeParserResult(parse)
 
 	def parse_types_from_source_file(self, filename, include_dirs: Optional[List[str]] = None, auto_type_source=None):
 		"""
@@ -766,25 +768,27 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = core.BNParseTypesFromSourceFile(
 		    self.handle, filename, parse, errors, dir_buf, len(include_dirs), auto_type_source
 		)
-		assert errors.value is not None, "core.BNParseTypesFromSourceFile returned errors set to None"
-		error_str = errors.value.decode("utf-8")
-		core.free_string(errors)
-		if not result:
-			raise SyntaxError(error_str)
-		type_dict = {}
-		variables = {}
-		functions = {}
-		for i in range(0, parse.typeCount):
-			name = types.QualifiedName._from_core_struct(parse.types[i].name)
-			type_dict[name] = types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform=self)
-		for i in range(0, parse.variableCount):
-			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
-			variables[name] = types.Type.create(core.BNNewTypeReference(parse.variables[i].type), platform=self)
-		for i in range(0, parse.functionCount):
-			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
-			functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform=self)
-		core.BNFreeTypeParserResult(parse)
-		return typeparser.BasicTypeParserResult(type_dict, variables, functions)
+		try:
+			assert errors.value is not None, "core.BNParseTypesFromSourceFile returned errors set to None"
+			error_str = errors.value.decode("utf-8")
+			if not result:
+				raise SyntaxError(error_str)
+			type_dict = {}
+			variables = {}
+			functions = {}
+			for i in range(0, parse.typeCount):
+				name = types.QualifiedName._from_core_struct(parse.types[i].name)
+				type_dict[name] = types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform=self)
+			for i in range(0, parse.variableCount):
+				name = types.QualifiedName._from_core_struct(parse.variables[i].name)
+				variables[name] = types.Type.create(core.BNNewTypeReference(parse.variables[i].type), platform=self)
+			for i in range(0, parse.functionCount):
+				name = types.QualifiedName._from_core_struct(parse.functions[i].name)
+				functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform=self)
+			return typeparser.BasicTypeParserResult(type_dict, variables, functions)
+		finally:
+			core.free_string(errors)
+			core.BNFreeTypeParserResult(parse)
 
 	@property
 	def arch(self):

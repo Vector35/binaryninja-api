@@ -520,6 +520,7 @@ bool CoreTypeParser::ParseTypesFromSource(const std::string& source, const std::
 
 	if (!success)
 	{
+		BNFreeTypeParserResult(&apiResult);
 		return false;
 	}
 

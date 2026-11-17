@@ -115,12 +115,12 @@ impl TypeParser for CoreTypeParser {
                 &mut error_count,
             )
         };
+        let errors: Array<TypeParserError> = unsafe { Array::new(errors, error_count, ()) };
         if success {
             assert!(!result.is_null());
             let bn_result = unsafe { BnString::into_string(result) };
             Ok(bn_result)
         } else {
-            let errors: Array<TypeParserError> = unsafe { Array::new(errors, error_count, ()) };
             Err(errors.to_vec())
         }
     }
@@ -166,15 +166,11 @@ impl TypeParser for CoreTypeParser {
                 &mut error_count,
             )
         };
-        if success {
-            let result = TypeParserResult::from_raw(&raw_result);
-            // NOTE: This is safe because the core allocated the TypeParserResult
-            TypeParserResult::free_raw(raw_result);
-            Ok(result)
-        } else {
-            let errors: Array<TypeParserError> = unsafe { Array::new(errors, error_count, ()) };
-            Err(errors.to_vec())
-        }
+        let errors: Array<TypeParserError> = unsafe { Array::new(errors, error_count, ()) };
+        let result = success.then(|| TypeParserResult::from_raw(&raw_result));
+        // Core allocates the result whether or not parsing succeeds.
+        TypeParserResult::free_raw(raw_result);
+        result.ok_or_else(|| errors.to_vec())
     }
 
     fn parse_type_string(
@@ -198,11 +194,11 @@ impl TypeParser for CoreTypeParser {
                 &mut error_count,
             )
         };
+        let errors: Array<TypeParserError> = unsafe { Array::new(errors, error_count, ()) };
         if result {
             Ok(QualifiedNameAndType::from_owned_raw(output))
         } else {
             unsafe { BNFreeQualifiedNameAndType(&mut output) };
-            let errors: Array<TypeParserError> = unsafe { Array::new(errors, error_count, ()) };
             Err(errors.to_vec())
         }
     }

@@ -307,12 +307,13 @@ impl TypeContainer {
                 &mut error_count,
             )
         };
+        assert!(!errors.is_null());
+        let errors = unsafe { Array::new(errors, error_count, ()) };
         if success {
             Ok(QualifiedNameAndType::from_owned_raw(result))
         } else {
             unsafe { BNFreeQualifiedNameAndType(&mut result) };
-            assert!(!errors.is_null());
-            Err(unsafe { Array::new(errors, error_count, ()) })
+            Err(errors)
         }
     }
 
@@ -368,15 +369,12 @@ impl TypeContainer {
                 &mut error_count,
             )
         };
-        if success {
-            let result = TypeParserResult::from_raw(&raw_result);
-            // NOTE: This is safe because the core allocated the TypeParserResult
-            TypeParserResult::free_raw(raw_result);
-            Ok(result)
-        } else {
-            assert!(!errors.is_null());
-            Err(unsafe { Array::new(errors, error_count, ()) })
-        }
+        assert!(!errors.is_null());
+        let errors = unsafe { Array::new(errors, error_count, ()) };
+        let result = success.then(|| TypeParserResult::from_raw(&raw_result));
+        // Core allocates the result whether or not parsing succeeds.
+        TypeParserResult::free_raw(raw_result);
+        result.ok_or(errors)
     }
 }
 

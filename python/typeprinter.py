@@ -297,8 +297,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 	def _free_lines(self, ctxt, lines, count):
 		try:
 			for line in TypePrinter._cached_lines:
-				core.BNFreeType(line.type)
-				core.BNFreeType(line.rootType)
+				types.TypeDefinitionLine._free_core_struct(line)
 			TypePrinter._cached_lines = None
 			return True
 		except Exception:

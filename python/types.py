@@ -300,6 +300,16 @@ class TypeDefinitionLine:
 		struct.fieldIndex = self.field_index
 		return struct
 
+	@staticmethod
+	def _free_core_struct(struct: core.BNTypeDefinitionLine) -> None:
+		"""
+		Release the references that `_to_core_struct` took
+		"""
+		core.BNFreeType(struct.type)
+		core.BNFreeType(struct.parentType)
+		core.BNFreeType(struct.rootType)
+		core.BNFreeNamedTypeReference(struct.baseType)
+
 
 class CoreSymbol:
 	def __init__(self, handle: core.BNSymbolHandle):

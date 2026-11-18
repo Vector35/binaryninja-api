@@ -31,6 +31,8 @@ use binaryninja::{
 
 use gimli::{DebuggingInformationEntry, Dwarf, Unit};
 
+use crate::concrete_parameters::{ArgumentRegisters, ConcreteParameter};
+
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::variable::{Variable, VariableSourceType};
 use indexmap::{map::Values, IndexMap};
@@ -48,6 +50,10 @@ pub(crate) struct FunctionInfoBuilder {
     pub(crate) return_type: Option<TypeUID>,
     pub(crate) address: Option<u64>,
     pub(crate) parameters: Vec<Option<(String, TypeUID)>>,
+    // The argument slots of a concrete instance at this address, reconstructed from where its
+    // parameters arrive (see concrete_parameters). When present, these describe the signature in place
+    // of the source-level `parameters`, which may belong to a declaration the instance differs from.
+    pub(crate) concrete_parameters: Option<Vec<ConcreteParameter>>,
     pub(crate) platform: Option<Ref<Platform>>,
     pub(crate) variable_arguments: bool,
     pub(crate) stack_variables: Vec<NamedVariableWithType>,
@@ -55,6 +61,7 @@ pub(crate) struct FunctionInfoBuilder {
 }
 
 impl FunctionInfoBuilder {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn update(
         &mut self,
         full_name: Option<String>,
@@ -62,6 +69,7 @@ impl FunctionInfoBuilder {
         return_type: Option<TypeUID>,
         address: Option<u64>,
         parameters: &Vec<Option<(String, TypeUID)>>,
+        concrete_parameters: Option<Vec<ConcreteParameter>>,
         frame_base: Option<FrameBase>,
     ) {
         if full_name.is_some() {
@@ -90,6 +98,10 @@ impl FunctionInfoBuilder {
                 // Some(Some((_, uid))) if *uid == 0 => self.parameters[i] = new_parameter, // TODO : This is a placebo....void types aren't actually UID 0
                 _ => self.parameters.push(new_parameter.clone()),
             }
+        }
+
+        if concrete_parameters.is_some() {
+            self.concrete_parameters = concrete_parameters;
         }
 
         if frame_base.is_some() {
@@ -125,12 +137,13 @@ pub(crate) struct DebugInfoBuilderContext<R: ReaderType> {
     sup_units: Vec<Unit<R>>,
     names: HashMap<TypeUID, String>,
     default_address_size: usize,
+    argument_registers: Option<ArgumentRegisters>,
     pub(crate) total_die_count: usize,
     pub(crate) total_unit_size_bytes: usize,
 }
 
 impl<R: ReaderType> DebugInfoBuilderContext<R> {
-    pub(crate) fn new(default_address_size: usize, dwarf: &Dwarf<R>) -> Option<Self> {
+    pub(crate) fn new(bv: &BinaryView, default_address_size: usize, dwarf: &Dwarf<R>) -> Option<Self> {
         let mut units = vec![];
         let mut iter = dwarf.units();
         while let Ok(Some(header)) = iter.next() {
@@ -160,6 +173,7 @@ impl<R: ReaderType> DebugInfoBuilderContext<R> {
             sup_units,
             names: HashMap::new(),
             default_address_size,
+            argument_registers: ArgumentRegisters::for_view(bv),
             total_die_count: 0,
             total_unit_size_bytes: 0,
         })
@@ -175,6 +189,10 @@ impl<R: ReaderType> DebugInfoBuilderContext<R> {
 
     pub(crate) fn default_address_size(&self) -> usize {
         self.default_address_size
+    }
+
+    pub(crate) fn argument_registers(&self) -> Option<&ArgumentRegisters> {
+        self.argument_registers.as_ref()
     }
 
     pub(crate) fn set_name(&mut self, die_uid: TypeUID, name: String) {
@@ -318,6 +336,7 @@ impl DebugInfoBuilder {
         return_type: Option<TypeUID>,
         address: Option<u64>,
         parameters: &Vec<Option<(String, TypeUID)>>,
+        concrete_parameters: Option<Vec<ConcreteParameter>>,
         variable_arguments: bool,
         frame_base: Option<FrameBase>,
     ) -> Option<usize> {
@@ -370,6 +389,7 @@ impl DebugInfoBuilder {
                 return_type,
                 address,
                 parameters,
+                concrete_parameters,
                 frame_base,
             );
             self.index_function_names(idx);
@@ -383,6 +403,7 @@ impl DebugInfoBuilder {
             return_type,
             address,
             parameters: parameters.clone(),
+            concrete_parameters,
             platform: None,
             variable_arguments,
             stack_variables: vec![],
@@ -791,6 +812,30 @@ impl DebugInfoBuilder {
             // Have to bump to max confidence or (wrong) auto analysis will take precedence
             .map(|t| Conf::new(t.get_type(), MAX_CONFIDENCE))
             .unwrap_or_else(|| Conf::new(Type::void(), 0));
+
+        if let Some(concrete_parameters) = &function.concrete_parameters {
+            let parameters: Vec<FunctionParameter> = concrete_parameters
+                .iter()
+                .map(|parameter| match parameter {
+                    ConcreteParameter::Named { name, type_uid } => {
+                        let ty = match type_uid {
+                            0 => Type::void(),
+                            uid => self
+                                .get_type(*uid)
+                                .map(|t| t.get_type())
+                                .unwrap_or_else(Type::void),
+                        };
+                        FunctionParameter::new(ty, name.clone(), None)
+                    }
+                    // A slot with no DIE: its size is known from the register, its type is not, so leave
+                    // the type to analysis. A placeholder may not be passed at all (see Placeholder).
+                    ConcreteParameter::Gap { size } | ConcreteParameter::Placeholder { size } => {
+                        FunctionParameter::new(Conf::new(Type::int(*size, false), 0), String::new(), None)
+                    }
+                })
+                .collect();
+            return Type::function(&return_type, parameters, function.variable_arguments);
+        }
 
         let parameters: Vec<FunctionParameter> = function
             .parameters

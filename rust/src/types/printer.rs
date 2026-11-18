@@ -13,14 +13,16 @@ use std::ptr::NonNull;
 pub type TokenEscapingType = BNTokenEscapingType;
 pub type TypeDefinitionLineType = BNTypeDefinitionLineType;
 
-/// Register a custom parser with the API
-pub fn register_type_printer<T: TypePrinter>(
+/// Register a custom printer with the API
+///
+/// Core calls the printer from any thread, so it must be [`Sync`].
+pub fn register_type_printer<T: TypePrinter + Sync + 'static>(
     name: &str,
-    parser: T,
-) -> (&'static mut T, CoreTypePrinter) {
-    let parser = Box::leak(Box::new(parser));
+    printer: T,
+) -> (&'static T, CoreTypePrinter) {
+    let printer: &'static T = Box::leak(Box::new(printer));
     let mut callback = BNTypePrinterCallbacks {
-        context: parser as *mut _ as *mut c_void,
+        context: printer as *const T as *mut c_void,
         getTypeTokens: Some(cb_get_type_tokens::<T>),
         getTypeTokensBeforeName: Some(cb_get_type_tokens_before_name::<T>),
         getTypeTokensAfterName: Some(cb_get_type_tokens_after_name::<T>),
@@ -36,13 +38,16 @@ pub fn register_type_printer<T: TypePrinter>(
     let raw_name = name.to_cstr();
     let result = unsafe { BNRegisterTypePrinter(raw_name.as_ptr(), &mut callback) };
     let core = unsafe { CoreTypePrinter::from_raw(NonNull::new(result).unwrap()) };
-    (parser, core)
+    (printer, core)
 }
 
 #[repr(transparent)]
 pub struct CoreTypePrinter {
     pub(crate) handle: NonNull<BNTypePrinter>,
 }
+
+unsafe impl Send for CoreTypePrinter {}
+unsafe impl Sync for CoreTypePrinter {}
 
 impl CoreTypePrinter {
     pub(crate) unsafe fn from_raw(handle: NonNull<BNTypePrinter>) -> CoreTypePrinter {
@@ -676,7 +681,7 @@ unsafe extern "C" fn cb_get_type_tokens<T: TypePrinter>(
     result: *mut *mut BNInstructionTextToken,
     result_count: *mut usize,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     // NOTE: The caller is responsible for freeing name.
     let qualified_name = QualifiedName::from_raw(&*name);
     let inner_result = ctxt.get_type_tokens(
@@ -715,7 +720,7 @@ unsafe extern "C" fn cb_get_type_tokens_before_name<T: TypePrinter>(
     result: *mut *mut BNInstructionTextToken,
     result_count: *mut usize,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     let inner_result = ctxt.get_type_tokens_before_name(
         Type::ref_from_raw(type_),
         match platform.is_null() {
@@ -755,7 +760,7 @@ unsafe extern "C" fn cb_get_type_tokens_after_name<T: TypePrinter>(
     result: *mut *mut BNInstructionTextToken,
     result_count: *mut usize,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     let inner_result = ctxt.get_type_tokens_after_name(
         Type::ref_from_raw(type_),
         match platform.is_null() {
@@ -793,7 +798,7 @@ unsafe extern "C" fn cb_get_type_string<T: TypePrinter>(
     escaping: BNTokenEscapingType,
     result: *mut *mut ::std::os::raw::c_char,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     // NOTE: The caller is responsible for freeing name.
     let qualified_name = QualifiedName::from_raw(&*name);
     let inner_result = ctxt.get_type_string(
@@ -823,7 +828,7 @@ unsafe extern "C" fn cb_get_type_string_before_name<T: TypePrinter>(
     escaping: BNTokenEscapingType,
     result: *mut *mut ::std::os::raw::c_char,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     let inner_result = ctxt.get_type_string_before_name(
         Type::ref_from_raw(type_),
         match platform.is_null() {
@@ -850,7 +855,7 @@ unsafe extern "C" fn cb_get_type_string_after_name<T: TypePrinter>(
     escaping: BNTokenEscapingType,
     result: *mut *mut ::std::os::raw::c_char,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     let inner_result = ctxt.get_type_string_after_name(
         Type::ref_from_raw(type_),
         match platform.is_null() {
@@ -881,7 +886,7 @@ unsafe extern "C" fn cb_get_type_lines<T: TypePrinter>(
     result: *mut *mut BNTypeDefinitionLine,
     result_count: *mut usize,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     // NOTE: The caller is responsible for freeing name.
     let qualified_name = QualifiedName::from_raw(&*name);
     let types_ptr = NonNull::new(types).unwrap();
@@ -920,7 +925,7 @@ unsafe extern "C" fn cb_print_all_types<T: TypePrinter>(
     escaping: BNTokenEscapingType,
     result: *mut *mut ::std::os::raw::c_char,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     let raw_names = std::slice::from_raw_parts(names, type_count);
     // NOTE: The caller is responsible for freeing raw_names.
     let names: Vec<_> = raw_names.iter().map(QualifiedName::from_raw).collect();

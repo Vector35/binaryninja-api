@@ -15,13 +15,15 @@ pub type TypeParserErrorSeverity = BNTypeParserErrorSeverity;
 pub type TypeParserOption = BNTypeParserOption;
 
 /// Register a custom parser with the API
-pub fn register_type_parser<T: TypeParser>(
+///
+/// Core calls the parser from any thread, so it must be [`Sync`].
+pub fn register_type_parser<T: TypeParser + Sync + 'static>(
     name: &str,
     parser: T,
-) -> (&'static mut T, CoreTypeParser) {
-    let parser = Box::leak(Box::new(parser));
+) -> (&'static T, CoreTypeParser) {
+    let parser: &'static T = Box::leak(Box::new(parser));
     let mut callback = BNTypeParserCallbacks {
-        context: parser as *mut _ as *mut c_void,
+        context: parser as *const T as *mut c_void,
         getOptionText: Some(cb_get_option_text::<T>),
         preprocessSource: Some(cb_preprocess_source::<T>),
         parseTypesFromSource: Some(cb_parse_types_from_source::<T>),
@@ -40,6 +42,9 @@ pub fn register_type_parser<T: TypeParser>(
 pub struct CoreTypeParser {
     pub(crate) handle: NonNull<BNTypeParser>,
 }
+
+unsafe impl Send for CoreTypeParser {}
+unsafe impl Sync for CoreTypeParser {}
 
 impl CoreTypeParser {
     pub(crate) unsafe fn from_raw(handle: NonNull<BNTypeParser>) -> Self {
@@ -517,7 +522,7 @@ unsafe extern "C" fn cb_get_option_text<T: TypeParser>(
     value: *const c_char,
     result: *mut *mut c_char,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     if let Some(inner_result) = ctxt.get_option_text(option, &raw_to_string(value).unwrap()) {
         let bn_inner_result = BnString::new(inner_result);
         // NOTE: Dropped by `cb_free_string`
@@ -543,7 +548,7 @@ unsafe extern "C" fn cb_preprocess_source<T: TypeParser>(
     errors: *mut *mut BNTypeParserError,
     error_count: *mut usize,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     let platform = Platform { handle: platform };
     let existing_types =
         NonNull::new(existing_types).map(|handle| TypeContainer::from_lent_raw(handle));
@@ -603,7 +608,7 @@ unsafe extern "C" fn cb_parse_types_from_source<T: TypeParser>(
     errors: *mut *mut BNTypeParserError,
     error_count: *mut usize,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     let platform = Platform { handle: platform };
     let existing_types =
         NonNull::new(existing_types).map(|handle| TypeContainer::from_lent_raw(handle));
@@ -655,7 +660,7 @@ unsafe extern "C" fn cb_parse_type_string<T: TypeParser>(
     errors: *mut *mut BNTypeParserError,
     error_count: *mut usize,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
+    let ctxt: &T = &*(ctxt as *const T);
     let platform = Platform { handle: platform };
     let existing_types =
         NonNull::new(existing_types).map(|handle| TypeContainer::from_lent_raw(handle));

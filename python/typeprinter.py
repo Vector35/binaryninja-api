@@ -317,7 +317,9 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 
 		result = ctypes.c_char_p()
 		core.BNTypePrinterDefaultPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, padding_cols, core.TokenEscapingTypeEnum(escaping), result)
-		return core.pyNativeStr(result.value)
+		result_py = core.pyNativeStr(result.value)
+		core.free_string(result)
+		return result_py
 
 	def get_type_tokens(self, type: types.Type, platform: Optional[_platform.Platform] = None, name: types.QualifiedNameType = "", base_confidence: int = core.max_confidence, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[_function.InstructionTextToken]:
 		"""
@@ -553,4 +555,6 @@ class CoreTypePrinter(TypePrinter):
 
 		result = ctypes.c_char_p()
 		core.BNTypePrinterPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, padding_cols, core.TokenEscapingTypeEnum(escaping), result)
-		return core.pyNativeStr(result.value)
+		result_py = core.pyNativeStr(result.value)
+		core.free_string(result)
+		return result_py

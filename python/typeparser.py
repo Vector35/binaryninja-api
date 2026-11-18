@@ -164,12 +164,16 @@ class TypeParserResult:
 		result.variables = (core.BNParsedType * len(self.variables))()
 		result.functions = (core.BNParsedType * len(self.functions))()
 
-		for (i, type) in enumerate(self.types):
-			result.types[i] = type._to_core_struct()
-		for (i, variable) in enumerate(self.variables):
-			result.variables[i] = variable._to_core_struct()
-		for (i, function) in enumerate(self.functions):
-			result.functions[i] = function._to_core_struct()
+		try:
+			for (i, type) in enumerate(self.types):
+				result.types[i] = type._to_core_struct()
+			for (i, variable) in enumerate(self.variables):
+				result.variables[i] = variable._to_core_struct()
+			for (i, function) in enumerate(self.functions):
+				result.functions[i] = function._to_core_struct()
+		except Exception:
+			TypeParserResult._free_core_struct(result)
+			raise
 
 		return result
 

@@ -255,8 +255,13 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 				padding_cols, collapsed, escaping)
 
 			lines_out = (core.BNTypeDefinitionLine * len(result_py))()
-			for (i, line) in enumerate(result_py):
-				lines_out[i] = line._to_core_struct()
+			try:
+				for (i, line) in enumerate(result_py):
+					lines_out[i] = line._to_core_struct()
+			except Exception:
+				for line in lines_out:
+					types.TypeDefinitionLine._free_core_struct(line)
+				raise
 
 			self._pending_results[ctypes.addressof(lines_out)] = lines_out
 			result[0] = lines_out

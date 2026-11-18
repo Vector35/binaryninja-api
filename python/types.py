@@ -283,21 +283,24 @@ class TypeDefinitionLine:
 								  struct.baseOffset, struct.offset, struct.fieldIndex)
 
 	def _to_core_struct(self):
+		type_handle = self.type.handle
+		parent_type_handle = self.parent_type.handle
+		root_type_handle = self.root_type.handle
+		base_type_handle = None if self.base_type is None else self.base_type.ntr_handle
+
 		struct = core.BNTypeDefinitionLine()
 		struct.lineType = self.line_type
 		struct.tokens = _function.InstructionTextToken._get_core_struct(self.tokens)
 		struct.count = len(self.tokens)
-		struct.type = core.BNNewTypeReference(self.type.handle)
-		struct.parentType = core.BNNewTypeReference(self.parent_type.handle)
-		struct.rootType = core.BNNewTypeReference(self.root_type.handle)
 		struct.rootTypeName = self.root_type_name
-		if self.base_type is None:
-			struct.baseType = None
-		else:
-			struct.baseType = core.BNNewNamedTypeReference(self.base_type.ntr_handle)
 		struct.baseOffset = self.base_offset
 		struct.offset = self.offset
 		struct.fieldIndex = self.field_index
+		# Take the references after everything that can raise, so a line that fails to convert leaks none.
+		struct.type = core.BNNewTypeReference(type_handle)
+		struct.parentType = core.BNNewTypeReference(parent_type_handle)
+		struct.rootType = core.BNNewTypeReference(root_type_handle)
+		struct.baseType = core.BNNewNamedTypeReference(base_type_handle)
 		return struct
 
 	@staticmethod

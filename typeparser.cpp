@@ -383,6 +383,7 @@ bool TypeParser::ParseTypesFromSourceFile(const string& fileName, Ref<Platform> 
 	if(size == -1)
 	{
 		errors.push_back(TypeParserError(FatalSeverity, string("error: unable to open '") + fileName));
+		fclose(fp);
 		return false;
 	}
 	fseek(fp, 0, SEEK_SET);

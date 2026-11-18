@@ -251,8 +251,8 @@ class TypeDefinitionLine:
 	line_type: TypeDefinitionLineType
 	tokens: List['_function.InstructionTextToken']
 	type: 'Type'
-	parent_type: 'Type'
-	root_type: 'Type'
+	parent_type: Optional['Type']
+	root_type: Optional['Type']
 	root_type_name: str
 	base_type: Optional['NamedTypeReferenceType']
 	base_offset: int
@@ -284,8 +284,8 @@ class TypeDefinitionLine:
 
 	def _to_core_struct(self):
 		type_handle = self.type.handle
-		parent_type_handle = self.parent_type.handle
-		root_type_handle = self.root_type.handle
+		parent_type_handle = None if self.parent_type is None else self.parent_type.handle
+		root_type_handle = None if self.root_type is None else self.root_type.handle
 		base_type_handle = None if self.base_type is None else self.base_type.ntr_handle
 
 		struct = core.BNTypeDefinitionLine()

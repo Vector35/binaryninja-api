@@ -3502,6 +3502,12 @@ extern "C"
 		void (*freeErrorList)(void* ctxt, BNTypeParserError* errors, size_t errorCount);
 	} BNTypeParserCallbacks;
 
+	// Core lends every handle it passes to these callbacks. `platform` and `parentType` may
+	// be null. A callback that returns true owns its output until core passes it to
+	// `freeTokens`, `freeString` or `freeLines`. Core ignores the output of a callback that
+	// returns false. A line from `getTypeLines` may leave `parentType` or `rootType` null, and
+	// `rootTypeName` null or empty. Core then uses the type being printed and its name. Core
+	// prints all types itself when `printAllTypes` or `freeString` is null.
 	typedef struct BNTypePrinterCallbacks
 	{
 		void* context;

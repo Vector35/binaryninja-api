@@ -3,7 +3,9 @@ use binaryninja::disassembly::InstructionTextToken;
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
-use binaryninja::types::printer::{register_type_printer, TokenEscapingType, TypeDefinitionLine};
+use binaryninja::types::printer::{
+    register_type_printer, TokenEscapingType, TypeDefinitionLine, TypeDefinitionLineType,
+};
 use binaryninja::types::{
     CoreTypePrinter, MemberAccess, MemberScope, QualifiedName, Structure, StructureMember, Type,
     TypeContainer, TypePrinter,
@@ -139,14 +141,25 @@ impl TypePrinter for MyTypePrinter {
 
     fn get_type_lines<T: Into<QualifiedName>>(
         &self,
-        _type_: Ref<Type>,
+        type_: Ref<Type>,
         _types: &TypeContainer,
         _name: T,
         _padding_cols: isize,
         _collapsed: bool,
         _escaping: TokenEscapingType,
     ) -> Option<Vec<TypeDefinitionLine>> {
-        todo!()
+        Some(vec![TypeDefinitionLine {
+            line_type: TypeDefinitionLineType::TypedefLineType,
+            tokens: vec![],
+            ty: type_,
+            parent_type: None,
+            root_type: None,
+            root_type_name: None,
+            base_type: None,
+            base_offset: 0,
+            offset: 0,
+            field_index: 0,
+        }])
     }
 
     fn print_all_types(
@@ -291,4 +304,27 @@ fn test_custom_type_printer() {
 
     // TODO: Assert this
     println!("{:#?}", printed_types);
+}
+
+#[test]
+fn test_custom_type_printer_lines_without_optional_fields() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("mac-aarch64").expect("Failed to get platform");
+    let (_, core_type_printer) = register_type_printer("my_lines_type_printer", MyTypePrinter);
+
+    let lines = core_type_printer
+        .get_type_lines(
+            &Type::int(4, true),
+            &platform.type_container(),
+            "test",
+            64,
+            false,
+            TokenEscapingType::NoTokenEscapingType,
+        )
+        .expect("Failed to get type lines");
+    assert_eq!(lines.len(), 1);
+    let line = lines.get(0);
+    assert_eq!(line.parent_type, Some(Type::int(4, true)));
+    assert_eq!(line.root_type, Some(Type::int(4, true)));
+    assert_eq!(line.root_type_name.as_deref(), Some("test"));
 }

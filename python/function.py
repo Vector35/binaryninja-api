@@ -618,6 +618,26 @@ class Function:
 		return self._metric_or_none(core.BNGetFunctionHighLevelILInstructionCount(self.handle))
 
 	@property
+	def cognitive_complexity(self) -> Optional[int]:
+		"""
+		Cached cognitive complexity of the function's High Level IL, or None if it has not been computed or is too deeply nested.
+		Does not trigger analysis; use :py:meth:`compute_cognitive_complexity` to compute it.
+
+		Only direct recursion is counted; all HLIL gotos are included. Automatic scoring is controlled by
+		``analysis.metrics.cognitiveComplexity``. Reanalysis with scoring disabled clears the cached value.
+		"""
+		return self._metric_or_none(core.BNGetFunctionCognitiveComplexity(self.handle))
+
+	def compute_cognitive_complexity(self) -> Optional[int]:
+		"""
+		Compute the cognitive complexity of the function and cache it. Builds the High Level IL if it is not available, which
+		can be slow, so prefer :py:attr:`cognitive_complexity` when the value is likely already known.
+
+		:return: The score, or None if High Level IL is unavailable or too deeply nested
+		"""
+		return self._metric_or_none(core.BNComputeFunctionCognitiveComplexity(self.handle))
+
+	@property
 	def caller_count(self) -> int:
 		"""Number of distinct functions that call this one"""
 		return core.BNGetFunctionCallerCount(self.handle)

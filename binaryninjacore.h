@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 195
+#define BN_CURRENT_CORE_ABI_VERSION 196
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -6085,6 +6085,11 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNGetFunctionLowLevelILInstructionCount(BNFunction* func);
 	BINARYNINJACOREAPI uint64_t BNGetFunctionMediumLevelILInstructionCount(BNFunction* func);
 	BINARYNINJACOREAPI uint64_t BNGetFunctionHighLevelILInstructionCount(BNFunction* func);
+	// Cognitive complexity of the function's High Level IL. BNGetFunctionCognitiveComplexity returns the cached value and
+	// never triggers analysis. BNComputeFunctionCognitiveComplexity builds the High Level IL if it is not available, scores it,
+	// and caches the result. Both return BN_FUNCTION_METRIC_UNKNOWN if there is no value.
+	BINARYNINJACOREAPI uint64_t BNGetFunctionCognitiveComplexity(BNFunction* func);
+	BINARYNINJACOREAPI uint64_t BNComputeFunctionCognitiveComplexity(BNFunction* func);
 	BINARYNINJACOREAPI uint64_t BNGetFunctionCallerCount(BNFunction* func);
 	BINARYNINJACOREAPI uint64_t BNGetFunctionCalleeCount(BNFunction* func);
 	BINARYNINJACOREAPI uint64_t BNGetFunctionCodeReferenceCount(BNFunction* func);

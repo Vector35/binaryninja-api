@@ -387,11 +387,39 @@ Additionally, the following columns are hidden by default and can be enabled by 
 - `Code Ref.`: in the case of functions, the number of incoming code references to the function's entry address. Includes calls, other instruction references, user-added references, and self-references. Multiple references from the same function count separately
 - `Data Ref.`: in the case of functions, the number of outgoing instruction references from the function to data, such as strings and globals. Includes automatic and user-added source/target pairs; separate references to the same target count separately. Targets covered by analyzed code in the source architecture are excluded. Hover over either reference column header for details
 - `LLIL Instructions`, `MLIL Instructions`: in the case of functions, the number of instructions in each intermediate language as of the last time it was generated. These show `—` until the IL has been generated for that function
+- `Cognitive Complexity`: in the case of functions, the [cognitive complexity](#cognitive-complexity) of the High Level IL as of the last time it was generated. This shows `—` until it has been computed; right-click the header and choose `Compute Cognitive Complexity for All Functions` to compute it for every function that does not have a value
 
 !!! Warning "Beta"
-    The function metric columns are new and may change in future releases. The same values are available from the API as `Function.instruction_count`, `Function.basic_block_count`, `Function.caller_count`, `Function.callee_count`, `Function.code_reference_count`, `Function.data_reference_count`, `Function.llil_instruction_count`, `Function.mlil_instruction_count` and `Function.hlil_instruction_count`. The IL counts return `None` when the IL has not been generated, and reading any of them never triggers analysis.
+    The function metric columns are new and may change in future releases. The same values are available from the API as `Function.instruction_count`, `Function.basic_block_count`, `Function.caller_count`, `Function.callee_count`, `Function.code_reference_count`, `Function.data_reference_count`, `Function.llil_instruction_count`, `Function.mlil_instruction_count`, `Function.hlil_instruction_count`, and `Function.cognitive_complexity`. The IL counts return `None` when the IL has not been generated, and reading any of them never triggers analysis.
 
 The API also provides `Function.recursive_reference_count`, which counts call sites in a function that target its own entry address. Non-call references and indirect recursion through other functions are excluded. This metric has no Symbol List column.
+
+#### Cognitive Complexity
+
+Cognitive complexity is a measure of how hard a function's control flow is to understand, defined by G. Ann Campbell in [Cognitive Complexity - a new way of measuring understandability](https://www.sonarsource.com/docs/CognitiveComplexity.pdf) (SonarSource, version 1.7). Unlike cyclomatic complexity it grows when structures are nested, and it does not count each `case` of a `switch` separately.
+
+Binary Ninja scores the function's High Level IL with these rules:
+
+| Construct | Adds |
+|---|---|
+| `if` | 1, plus 1 for each level it is nested inside another structure |
+| `else if`, `else` | 1 each, with no nesting increment |
+| `for`, `while`, `do while` | 1, plus 1 for each level of nesting |
+| `switch` | 1 for the whole switch, plus 1 for each level of nesting. Its cases add nothing |
+| each sequence of `&&` or `\|\|` | 1. The operators are read in the order they appear, parentheses are ignored, and a new sequence starts each time the operator changes, so `a && b && c` is one, `a && b \|\| c` is two and `a \|\| b && c \|\| d` is three. A logical group inside a negation or a call argument is counted separately |
+| `goto` | 1 |
+| a function that calls itself | 1 |
+
+`break`, `continue` and early `return` add nothing, and neither does the function itself. The bitwise `&` and `|` are not logical operators and are never counted.
+
+Cognitive complexity is computed when analysis finishes with a function, so it is normally available without asking for it. The `analysis.metrics.cognitiveComplexity` setting turns that off; the value is then only available after calling `Function.compute_cognitive_complexity`, or `Compute Cognitive Complexity for All Functions` in the Symbol List, which builds the High Level IL of each function that needs it and can take a while on a large binary. `Function.cognitive_complexity` returns the cached value without triggering any analysis, or `None` if there is none. Reanalysis with automatic scoring disabled clears the cached score; an explicit computation remains available until the next analysis commit.
+
+!!! Warning "Read the number with these limits in mind"
+    - It scores the **decompiled** High Level IL, not the original source. Compiler optimizations and the way High Level IL structures control flow change the result, so it will not match the same code scored in another language. High Level IL also rewrites deeply nested conditions as guard clauses (`if (x == 0) return`), which the specification treats as simpler, so deep nesting in the original source may not show up in the score.
+    - Every `goto` is counted. High Level IL emits a `goto` whenever it cannot structure the control flow, so those functions score higher than the same logic would in source.
+    - Only direct recursion is counted. A function that is only part of a recursion cycle through other functions gets no increment.
+    - Like the IL counts, the value is the one from the High Level IL most recently generated for the function. High Level IL rebuilt after opening a saved database can differ slightly from the one produced by analysis, and the value updates when it is rebuilt.
+    - It is `None` until computed, when High Level IL is unavailable, or when the structure exceeds the scorer's nesting bound.
 
 These columns can be re-arranged, hidden, and used for sorting.
 

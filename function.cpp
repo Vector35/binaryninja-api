@@ -3339,6 +3339,16 @@ std::optional<uint64_t> Function::GetHighLevelILInstructionCount()
 	return MetricOrNullopt(BNGetFunctionHighLevelILInstructionCount(m_object));
 }
 
+std::optional<uint64_t> Function::GetCognitiveComplexity()
+{
+	return MetricOrNullopt(BNGetFunctionCognitiveComplexity(m_object));
+}
+
+std::optional<uint64_t> Function::ComputeCognitiveComplexity()
+{
+	return MetricOrNullopt(BNComputeFunctionCognitiveComplexity(m_object));
+}
+
 uint64_t Function::GetCallerCount()
 {
 	return BNGetFunctionCallerCount(m_object);

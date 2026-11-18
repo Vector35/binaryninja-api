@@ -446,6 +446,19 @@ impl Function {
         metric_or_none(unsafe { BNGetFunctionHighLevelILInstructionCount(self.handle) })
     }
 
+    /// Cached cognitive complexity of the function's High Level IL. Never triggers analysis.
+    /// Returns `None` if it has not been computed or the structure is too deeply nested.
+    /// Only direct recursion is counted; all HLIL gotos are included.
+    pub fn cognitive_complexity(&self) -> Option<u64> {
+        metric_or_none(unsafe { BNGetFunctionCognitiveComplexity(self.handle) })
+    }
+
+    /// Compute the cognitive complexity of the function and cache it. Builds the High Level IL if it is not available, which
+    /// can be slow. Returns `None` if High Level IL is unavailable or too deeply nested.
+    pub fn compute_cognitive_complexity(&self) -> Option<u64> {
+        metric_or_none(unsafe { BNComputeFunctionCognitiveComplexity(self.handle) })
+    }
+
     /// Number of distinct functions that call this one.
     pub fn caller_count(&self) -> u64 {
         unsafe { BNGetFunctionCallerCount(self.handle) }

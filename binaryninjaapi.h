@@ -14041,6 +14041,21 @@ namespace BinaryNinja {
 		*/
 		std::optional<uint64_t> GetHighLevelILInstructionCount();
 
+		/*! Cached cognitive complexity of the function's High Level IL. Never triggers analysis.
+
+			Only direct recursion is counted; all HLIL gotos are included.
+
+			\return The score, or std::nullopt if it has not been computed or the structure is too deep to score
+		*/
+		std::optional<uint64_t> GetCognitiveComplexity();
+
+		/*! Compute the cognitive complexity of the function. Builds the High Level IL if it is not available, which can be
+			slow, so prefer GetCognitiveComplexity when the value is likely already known.
+
+			\return The score, or std::nullopt if High Level IL is unavailable or too deeply nested
+		*/
+		std::optional<uint64_t> ComputeCognitiveComplexity();
+
 		/*! Number of distinct functions that call this one
 
 			\return The caller count

@@ -1939,8 +1939,15 @@ class Function:
 		_name = types.QualifiedName(name)._to_core_struct()
 		core.BNRemoveUserTypeFieldReference(self.handle, from_arch.handle, from_addr, _name, offset, size)
 
+	def get_exception_model(self, discriminator: int) -> Optional['_platform.ExceptionModel']:
+		"""Resolve an architectural exception using this function's analysis settings."""
+		model = core.BNExceptionModel()
+		if not core.BNGetFunctionExceptionModel(self.handle, discriminator, model):
+			return None
+		return _platform.ExceptionModel._from_core(model)
+
 	def get_exception_model_at(self, address: int) -> Optional['_platform.ExceptionModel']:
-		"""Return the model of the architectural exception originating at this instruction address."""
+		"""Return the effective exception model at this instruction address, including analysis settings."""
 		model = core.BNExceptionModel()
 		if not core.BNGetFunctionExceptionModelAt(self.handle, address, model):
 			return None

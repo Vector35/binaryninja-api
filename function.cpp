@@ -209,6 +209,15 @@ Ref<Platform> Function::GetPlatform() const
 }
 
 
+std::optional<BNExceptionModel> Function::GetExceptionModel(uint64_t discriminator) const
+{
+	BNExceptionModel model;
+	if (!BNGetFunctionExceptionModel(m_object, discriminator, &model))
+		return std::nullopt;
+	return model;
+}
+
+
 std::optional<BNExceptionModel> Function::GetExceptionModelAt(uint64_t address) const
 {
 	BNExceptionModel model;

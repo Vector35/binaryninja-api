@@ -526,7 +526,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 						for (size_t j = 0; j < info.branchCount; j++)
 							if (info.branchType[j] == ModeledExceptionBranch)
 							{
-								auto model = funcPlatform->GetExceptionModel(info.branchTarget[j]);
+								auto model = function->GetExceptionModel(info.branchTarget[j]);
 								continuingException = model && model->continuation == ContinueAfterException;
 							}
 						if (continuingException)
@@ -812,7 +812,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 
 					case ModeledExceptionBranch:
 					{
-						auto model = funcPlatform->GetExceptionModel(info.branchTarget[i]);
+						auto model = function->GetExceptionModel(info.branchTarget[i]);
 						if (!model || model->continuation == TerminateAfterException)
 						{
 							endsBlock = true;

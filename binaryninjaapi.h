@@ -13370,7 +13370,9 @@ namespace BinaryNinja {
 		*/
 		Ref<Platform> GetPlatform() const;
 
-		/*! Resolve the architectural exception emitted at an instruction address, if present. */
+		/*! Resolve an architectural exception using this function's analysis settings. */
+		std::optional<BNExceptionModel> GetExceptionModel(uint64_t discriminator) const;
+		/*! Resolve the effective model emitted at an instruction address, if present. */
 		std::optional<BNExceptionModel> GetExceptionModelAt(uint64_t address) const;
 		// Exception origins include events without a platform model. Calling-convention overrides
 		// are instruction-specific, persisted, undoable, and do not change continuation or namespace.

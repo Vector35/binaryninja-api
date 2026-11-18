@@ -414,7 +414,16 @@ impl Function {
         }
     }
 
-    /// Return the platform model, independently of any instruction-specific ABI override.
+    /// Resolve an exception using this function's analysis settings.
+    pub fn exception_model(&self, discriminator: u64) -> Option<crate::platform::ExceptionModel> {
+        let mut model = std::mem::MaybeUninit::uninit();
+        unsafe {
+            BNGetFunctionExceptionModel(self.handle, discriminator, model.as_mut_ptr())
+                .then(|| model.assume_init())
+        }
+    }
+
+    /// Return the effective model at an instruction, including analysis settings.
     pub fn exception_model_at(&self, address: u64) -> Option<crate::platform::ExceptionModel> {
         let mut model = std::mem::MaybeUninit::uninit();
         unsafe {

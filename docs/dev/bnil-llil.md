@@ -279,8 +279,8 @@ and 4 BKPT. The immediate stays in the low 32 bits. The shared architecture help
 `arch/armv7/exception.h`. These lifters emit `LLIL_EXCEPTION` and report
 `ModeledExceptionBranch`, whose `branchTarget` is the discriminator, not a code address.
 The existing instruction-info structure and other branch kinds are unchanged. Basic-block
-analysis resolves each instruction's `ModeledExceptionBranch` directly through the platform
-cache, without lifting temporary LLIL. Platform-dependent control flow for exceptions inside
+analysis resolves each instruction's `ModeledExceptionBranch` through the function's effective
+exception model, without lifting temporary LLIL. Platform-dependent control flow for exceptions inside
 Thumb IT streams is not modeled in this implementation.
 
 ARMv7 standalone platforms install defaults that concrete platforms snapshot on creation:
@@ -351,6 +351,36 @@ own effect operands and retain the full architectural discriminator. `GetExcepti
 (C++), `get_exception_model_at` (Python), and `exception_model_at` (Rust) expose a function
 instruction's resolved model. Exception origins are saved with function analysis and
 restored on database reload.
+
+### Breakpoint continuation setting
+
+`analysis.exceptions.breakpointContinuation` controls fallthrough for exceptions whose
+resolved model is `BreakpointExceptionModel`:
+
+- `default` (the default): inherit the platform's continuation policy.
+- `continue`: allow analysis to continue after the breakpoint.
+- `stop`: stop fallthrough analysis at the breakpoint.
+
+The setting supports user defaults and binary-local overrides. It changes native
+basic-block discovery, linear sweep, and LLIL/MLIL/HLIL control flow consistently without
+changing the platform's registered rules, exception kind, discriminator, presentation, or
+calling convention.
+
+Changing the setting in the UI reanalyzes the binary. Scripts should explicitly reanalyze
+existing functions after changing it:
+
+```python
+from binaryninja import Settings
+
+Settings().set_string("analysis.exceptions.breakpointContinuation", "continue", bv)
+bv.reanalyze()
+bv.update_analysis_and_wait()
+```
+
+Function `GetExceptionModel` / `get_exception_model` / `exception_model` resolve a discriminator using the
+function's analysis settings, even before its exception-origin cache is populated.
+`GetExceptionModelAt` / `get_exception_model_at` expose the same effective model at a
+known instruction address. Platform model queries continue to return the unmodified rules.
 
 ### Instruction-specific calling conventions
 

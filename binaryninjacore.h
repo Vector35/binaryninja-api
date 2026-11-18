@@ -8770,6 +8770,7 @@ extern "C"
 	BINARYNINJACOREAPI BNExceptionModelRule* BNGetPlatformExceptionModels(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI void BNFreeExceptionModelRuleList(BNExceptionModelRule* rules);
 	BINARYNINJACOREAPI bool BNGetPlatformExceptionModel(BNPlatform* platform, uint64_t discriminator, BNExceptionModel* model);
+	BINARYNINJACOREAPI bool BNGetFunctionExceptionModel(BNFunction* function, uint64_t discriminator, BNExceptionModel* model);
 	BINARYNINJACOREAPI bool BNGetFunctionExceptionModelAt(BNFunction* function, uint64_t address, BNExceptionModel* model);
 	BINARYNINJACOREAPI bool BNGetFunctionExceptionDiscriminatorAt(BNFunction* function, uint64_t address, uint64_t* discriminator);
 	BINARYNINJACOREAPI BNCallingConvention* BNGetUserExceptionCallingConvention(BNFunction* function, uint64_t address);

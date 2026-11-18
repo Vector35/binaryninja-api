@@ -4334,20 +4334,14 @@ bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& resul
 	char* errorStr;
 
 	BNQualifiedNameList typesList;
-	typesList.count = typesAllowRedefinition.size();
-	typesList.names = new BNQualifiedName[typesList.count];
-	size_t i = 0;
-	for (auto& type : typesAllowRedefinition)
-	{
-		typesList.names[i] = type.ToAPIStruct();
-		i++;
-	}
+	typesList.names = AllocAPIStructList<QualifiedName>(typesAllowRedefinition, &typesList.count);
 
-	if (!BNParseTypeString(m_object, text.c_str(), &nt, &errorStr, &typesList, importDependencies))
+	bool ok = BNParseTypeString(m_object, text.c_str(), &nt, &errorStr, &typesList, importDependencies);
+	FreeAPIStructList<QualifiedName>(typesList.names, typesList.count);
+	if (!ok)
 	{
 		errors = errorStr;
 		BNFreeString(errorStr);
-		delete[] typesList.names;
 		return false;
 	}
 
@@ -4355,7 +4349,6 @@ bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& resul
 	result.type = new Type(BNNewTypeReference(nt.type));
 	errors = "";
 	BNFreeQualifiedNameAndType(&nt);
-	delete[] typesList.names;
 	return true;
 }
 
@@ -4372,14 +4365,7 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 	functions.clear();
 
 	BNQualifiedNameList typesList;
-	typesList.count = typesAllowRedefinition.size();
-	typesList.names = new BNQualifiedName[typesList.count];
-	size_t i = 0;
-	for (auto& type : typesAllowRedefinition)
-	{
-		typesList.names[i] = type.ToAPIStruct();
-		i++;
-	}
+	typesList.names = AllocAPIStructList<QualifiedName>(typesAllowRedefinition, &typesList.count);
 
 	vector<const char*> options;
 	vector<const char*> includeDirs;
@@ -4391,7 +4377,7 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 		errors = errorStr;
 		BNFreeString(errorStr);
 	}
-	delete[] typesList.names;
+	FreeAPIStructList<QualifiedName>(typesList.names, typesList.count);
 	if (!ok)
 		return false;
 
@@ -4419,14 +4405,7 @@ bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>
 	TypeParserResult& result, string& errors, const std::set<QualifiedName>& typesAllowRedefinition, bool importDependencies)
 {
 	BNQualifiedNameList typesList;
-	typesList.count = typesAllowRedefinition.size();
-	typesList.names = new BNQualifiedName[typesList.count];
-	size_t i = 0;
-	for (auto& type : typesAllowRedefinition)
-	{
-		typesList.names[i] = type.ToAPIStruct();
-		i++;
-	}
+	typesList.names = AllocAPIStructList<QualifiedName>(typesAllowRedefinition, &typesList.count);
 
 	vector<const char*> coreOptions;
 	coreOptions.reserve(options.size());
@@ -4448,7 +4427,7 @@ bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>
 		errors = errorStr;
 		BNFreeString(errorStr);
 	}
-	delete[] typesList.names;
+	FreeAPIStructList<QualifiedName>(typesList.names, typesList.count);
 	if (!ok)
 		return false;
 

@@ -254,3 +254,88 @@ fn test_custom_parser_success() {
     assert_eq!(parsed_type.name, "value_t".into());
     assert_eq!(Type::int(4, true), parsed_type.ty);
 }
+
+struct FailingTypeParser;
+
+impl TypeParser for FailingTypeParser {
+    fn get_option_text(&self, _option: TypeParserOption, _value: &str) -> Option<String> {
+        None
+    }
+
+    fn preprocess_source(
+        &self,
+        _source: &str,
+        _file_name: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+        _options: &[String],
+        _include_dirs: &[PathBuf],
+    ) -> Result<String, Vec<TypeParserError>> {
+        Err(vec![])
+    }
+
+    fn parse_types_from_source(
+        &self,
+        _source: &str,
+        _file_name: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+        _options: &[String],
+        _include_dirs: &[PathBuf],
+        _auto_type_source: &str,
+    ) -> Result<TypeParserResult, Vec<TypeParserError>> {
+        Err(vec![])
+    }
+
+    fn parse_type_string(
+        &self,
+        _source: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+    ) -> Result<QualifiedNameAndType, Vec<TypeParserError>> {
+        Err(vec![TypeParserError::new(
+            ErrorSeverity,
+            "expected failure".to_string(),
+            "string.hpp".to_string(),
+            1,
+            1,
+        )])
+    }
+}
+
+#[test]
+fn test_custom_parser_error() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
+    register_type_parser("failing_type_parser", FailingTypeParser);
+    let parser = CoreTypeParser::parser_by_name("failing_type_parser")
+        .expect("Failed to get the failing type parser");
+    let parser_error = parser
+        .parse_type_string("int32_t", &platform, None)
+        .expect_err("Parsing should fail!");
+    assert_eq!(
+        parser_error,
+        vec![TypeParserError {
+            severity: ErrorSeverity,
+            message: "expected failure".to_string(),
+            file_name: "string.hpp".to_string(),
+            line: 1,
+            column: 1
+        }]
+    );
+
+    parser
+        .preprocess_source("int32_t value;", "test_file.h", &platform, None, &[], &[])
+        .expect_err("Preprocessing should fail!");
+    parser
+        .parse_types_from_source(
+            "int32_t value;",
+            "test_file.h",
+            &platform,
+            None,
+            &[],
+            &[],
+            "",
+        )
+        .expect_err("Parsing should fail!");
+}

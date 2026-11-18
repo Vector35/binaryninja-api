@@ -242,38 +242,41 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 		errorsCpp
 	);
 
-	result->typeCount = resultCpp.types.size();
-	result->variableCount = resultCpp.variables.size();
-	result->functionCount = resultCpp.functions.size();
-	result->types = new BNParsedType[resultCpp.types.size()];
-	result->variables = new BNParsedType[resultCpp.variables.size()];
-	result->functions = new BNParsedType[resultCpp.functions.size()];
-
-	size_t n = 0;
-	for (auto& i : resultCpp.types)
+	if (success)
 	{
-		result->types[n].name = i.name.ToAPIStruct();
-		result->types[n].type = BNNewTypeReference(i.type->GetObject());
-		result->types[n].isUser = i.isUser;
-		n++;
-	}
+		result->typeCount = resultCpp.types.size();
+		result->variableCount = resultCpp.variables.size();
+		result->functionCount = resultCpp.functions.size();
+		result->types = new BNParsedType[resultCpp.types.size()];
+		result->variables = new BNParsedType[resultCpp.variables.size()];
+		result->functions = new BNParsedType[resultCpp.functions.size()];
 
-	n = 0;
-	for (auto& i : resultCpp.variables)
-	{
-		result->variables[n].name = i.name.ToAPIStruct();
-		result->variables[n].type = BNNewTypeReference(i.type->GetObject());
-		result->variables[n].isUser = i.isUser;
-		n++;
-	}
+		size_t n = 0;
+		for (auto& i : resultCpp.types)
+		{
+			result->types[n].name = i.name.ToAPIStruct();
+			result->types[n].type = BNNewTypeReference(i.type->GetObject());
+			result->types[n].isUser = i.isUser;
+			n++;
+		}
 
-	n = 0;
-	for (auto& i : resultCpp.functions)
-	{
-		result->functions[n].name = i.name.ToAPIStruct();
-		result->functions[n].type = BNNewTypeReference(i.type->GetObject());
-		result->functions[n].isUser = i.isUser;
-		n++;
+		n = 0;
+		for (auto& i : resultCpp.variables)
+		{
+			result->variables[n].name = i.name.ToAPIStruct();
+			result->variables[n].type = BNNewTypeReference(i.type->GetObject());
+			result->variables[n].isUser = i.isUser;
+			n++;
+		}
+
+		n = 0;
+		for (auto& i : resultCpp.functions)
+		{
+			result->functions[n].name = i.name.ToAPIStruct();
+			result->functions[n].type = BNNewTypeReference(i.type->GetObject());
+			result->functions[n].isUser = i.isUser;
+			n++;
+		}
 	}
 
 	*errorCount = errorsCpp.size();
@@ -310,8 +313,11 @@ bool TypeParser::ParseTypeStringCallback(void* ctxt,
 		errorsCpp
 	);
 
-	result->name = resultCpp.name.ToAPIStruct();
-	result->type = BNNewTypeReference(resultCpp.type->GetObject());
+	if (success)
+	{
+		result->name = resultCpp.name.ToAPIStruct();
+		result->type = BNNewTypeReference(resultCpp.type->GetObject());
+	}
 
 	*errorCount = errorsCpp.size();
 	*errors = new BNTypeParserError[errorsCpp.size()];

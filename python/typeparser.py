@@ -301,17 +301,19 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 				source_py, file_name_py, platform_py, existing_types_py, options_py,
 				include_dirs_py)
 
-			if output_py is not None and output is not None:
-				TypeParser._cached_string = core.cstr(output_py)
-				output[0] = TypeParser._cached_string
-			if errorCount is not None:
-				errorCount[0] = len(errors_py)
 			if errors is not None:
 				errors_out = (core.BNTypeParserError * len(errors_py))()
 				for i in range(len(errors_py)):
 					errors_out[i] = errors_py[i]._to_core_struct()
 				TypeParser._cached_error = errors_out
 				errors[0] = errors_out
+			if errorCount is not None:
+				errorCount[0] = len(errors_py)
+
+			# Core frees the output only on success, so return it after everything that can raise.
+			if output_py is not None and output is not None:
+				TypeParser._cached_string = core.cstr(output_py)
+				output[0] = TypeParser._cached_string
 
 			return output_py is not None
 		except Exception:
@@ -347,25 +349,23 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 				source_py, file_name_py, platform_py, existing_types_py, options_py,
 				include_dirs_py, auto_type_source)
 
-			if result_py is not None and result is not None:
-				result_struct = result_py._to_core_struct()
-				TypeParser._cached_result = result_struct
-				result[0] = result_struct
-
-			if errorCount is not None:
-				errorCount[0] = len(errors_py)
 			if errors is not None:
 				errors_out = (core.BNTypeParserError * len(errors_py))()
 				for i in range(len(errors_py)):
 					errors_out[i] = errors_py[i]._to_core_struct()
 				TypeParser._cached_error = errors_out
 				errors[0] = errors_out
+			if errorCount is not None:
+				errorCount[0] = len(errors_py)
+
+			# Core frees the result only on success, so return it after everything that can raise.
+			if result_py is not None and result is not None:
+				result_struct = result_py._to_core_struct()
+				TypeParser._cached_result = result_struct
+				result[0] = result_struct
 
 			return result_py is not None
 		except Exception:
-			result[0].typeCount = 0
-			result[0].variableCount = 0
-			result[0].functionCount = 0
 			errorCount[0] = 0
 			log_error_for_exception("Unhandled Python exception in TypeParser._parse_types_from_source")
 			return False
@@ -385,18 +385,18 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 			(result_py, errors_py) = self.parse_type_string(
 				source_py, platform_py, existing_types_py)
 
-			if result_py is not None and result is not None:
-				result[0].name = types.QualifiedName(result_py[0])._to_core_struct()
-				result[0].type = core.BNNewTypeReference(result_py[1].handle)
-
-			if errorCount is not None:
-				errorCount[0] = len(errors_py)
 			if errors is not None:
 				errors_out = (core.BNTypeParserError * len(errors_py))()
 				for i in range(len(errors_py)):
 					errors_out[i] = errors_py[i]._to_core_struct()
 				TypeParser._cached_error = errors_out
 				errors[0] = errors_out
+			if errorCount is not None:
+				errorCount[0] = len(errors_py)
+
+			if result_py is not None and result is not None:
+				result[0].name = types.QualifiedName(result_py[0])._to_core_struct()
+				result[0].type = core.BNNewTypeReference(result_py[1].handle)
 
 			return result_py is not None
 		except Exception:

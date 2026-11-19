@@ -843,7 +843,7 @@ dependencies = [
  "gimli",
  "indexmap",
  "iset",
- "object 0.36.7",
+ "object 0.41.0",
  "regex",
  "tracing",
 ]
@@ -865,7 +865,7 @@ dependencies = [
  "binaryninja",
  "binaryninjacore-sys",
  "gimli",
- "object 0.36.7",
+ "object 0.41.0",
  "thiserror 2.0.18",
  "zstd",
 ]
@@ -1845,9 +1845,7 @@ version = "0.36.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62948e14d923ea95ea2c7c86c71013138b66525b86bdc08d2dcc262bdb497b87"
 dependencies = [
- "flate2",
  "memchr",
- "ruzstd 0.7.3",
 ]
 
 [[package]]
@@ -1859,6 +1857,17 @@ dependencies = [
  "flate2",
  "memchr",
  "ruzstd 0.8.2",
+]
+
+[[package]]
+name = "object"
+version = "0.41.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11dbdb66876026054e4ffc8d757d862bdf5df5aebd5c0b95a41f17832a94f7d2"
+dependencies = [
+ "flate2",
+ "memchr",
+ "ruzstd 0.9.1",
 ]
 
 [[package]]
@@ -2423,18 +2432,18 @@ dependencies = [
 
 [[package]]
 name = "ruzstd"
-version = "0.7.3"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fad02996bfc73da3e301efe90b1837be9ed8f4a462b6ed410aa35d00381de89f"
+checksum = "e5ff0cc5e135c8870a775d3320910cd9b564ec036b4dc0b8741629020be63f01"
 dependencies = [
- "twox-hash 1.6.3",
+ "twox-hash 2.1.2",
 ]
 
 [[package]]
 name = "ruzstd"
-version = "0.8.2"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5ff0cc5e135c8870a775d3320910cd9b564ec036b4dc0b8741629020be63f01"
+checksum = "69e4ce4a039f42bf25920b95667e4d789e98749ab11bbb8d2c2936f788421bb5"
 dependencies = [
  "twox-hash 2.1.2",
 ]

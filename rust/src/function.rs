@@ -59,6 +59,12 @@ use std::ptr::NonNull;
 use std::time::Duration;
 use std::{hash::Hash, ops::Range};
 
+const METRIC_UNKNOWN: u64 = u64::MAX;
+
+fn metric_or_none(value: u64) -> Option<u64> {
+    (value != METRIC_UNKNOWN).then_some(value)
+}
+
 /// Used to describe a location within a [`Function`].
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Location {
@@ -410,6 +416,60 @@ impl Function {
 
     pub fn highest_address(&self) -> u64 {
         unsafe { BNGetFunctionHighestAddress(self.handle) }
+    }
+
+    /// Total bytes covered by the basic blocks of this function. Blocks can overlap or leave gaps, so
+    /// this can differ from the span between [`Function::lowest_address`] and [`Function::highest_address`].
+    pub fn total_bytes(&self) -> u64 {
+        unsafe { BNGetFunctionTotalBytes(self.handle) }
+    }
+
+    /// Number of basic blocks in this function.
+    pub fn basic_block_count(&self) -> u64 {
+        unsafe { BNGetFunctionBasicBlockCount(self.handle) }
+    }
+
+    pub fn instruction_count(&self) -> u64 {
+        unsafe { BNGetFunctionInstructionCount(self.handle) }
+    }
+
+    pub fn llil_instruction_count(&self) -> Option<u64> {
+        metric_or_none(unsafe { BNGetFunctionLowLevelILInstructionCount(self.handle) })
+    }
+
+    pub fn mlil_instruction_count(&self) -> Option<u64> {
+        metric_or_none(unsafe { BNGetFunctionMediumLevelILInstructionCount(self.handle) })
+    }
+
+    pub fn hlil_instruction_count(&self) -> Option<u64> {
+        metric_or_none(unsafe { BNGetFunctionHighLevelILInstructionCount(self.handle) })
+    }
+
+    pub fn caller_count(&self) -> u64 {
+        unsafe { BNGetFunctionCallerCount(self.handle) }
+    }
+
+    /// Number of distinct call targets across the call sites of this function.
+    pub fn callee_count(&self) -> u64 {
+        unsafe { BNGetFunctionCalleeCount(self.handle) }
+    }
+
+    /// Count of incoming code references to this function's entry address. Includes self references
+    pub fn code_reference_count(&self) -> u64 {
+        unsafe { BNGetFunctionCodeReferenceCount(self.handle) }
+    }
+
+    /// Number of outgoing instruction references from this function to data.
+    /// Counts automatic and user-added source/target pairs, including repeated targets.
+    /// Targets covered by code in the source architecture are excluded, as are call sites.
+    pub fn data_reference_count(&self) -> u64 {
+        unsafe { BNGetFunctionDataReferenceCount(self.handle) }
+    }
+
+    /// Number of call sites in this function that target its own entry address.
+    /// Non-call references and indirect recursion through other functions are excluded.
+    pub fn recursive_reference_count(&self) -> u64 {
+        unsafe { BNGetFunctionRecursiveReferenceCount(self.handle) }
     }
 
     pub fn address_ranges(&self) -> Array<AddressRange> {

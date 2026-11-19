@@ -418,6 +418,9 @@ class TagList:
 		raise ValueError("TagList.__getitem__ supports argument of type integer or slice only")
 
 
+_FUNCTION_METRIC_UNKNOWN = 0xffffffffffffffff
+
+
 class Function:
 	_associated_data = {}
 	"""
@@ -574,7 +577,80 @@ class Function:
 		Total bytes of a function calculated by summing each basic_block. Because basic blocks can overlap and
 		have gaps between them this may or may not be equivalent to a .size property.
 		"""
-		return sum(map(len, self))
+		return core.BNGetFunctionTotalBytes(self.handle)
+
+	@property
+	def basic_block_count(self) -> int:
+		"""Number of basic blocks in the function"""
+		return core.BNGetFunctionBasicBlockCount(self.handle)
+
+	@property
+	def instruction_count(self) -> int:
+		"""Number of native instructions in the function's basic blocks. Does not trigger analysis."""
+		return core.BNGetFunctionInstructionCount(self.handle)
+
+	@staticmethod
+	def _metric_or_none(value: int) -> Optional[int]:
+		return None if value == _FUNCTION_METRIC_UNKNOWN else value
+
+	@property
+	def llil_instruction_count(self) -> Optional[int]:
+		"""
+		Number of instructions in the function's Low Level IL as of the last time the IL was generated, or None if the IL has not been
+		generated for this function. Does not trigger analysis.
+		"""
+		return self._metric_or_none(core.BNGetFunctionLowLevelILInstructionCount(self.handle))
+
+	@property
+	def mlil_instruction_count(self) -> Optional[int]:
+		"""
+		Number of instructions in the function's Medium Level IL as of the last time the IL was generated, or None if the IL has not
+		been generated for this function. Does not trigger analysis.
+		"""
+		return self._metric_or_none(core.BNGetFunctionMediumLevelILInstructionCount(self.handle))
+
+	@property
+	def hlil_instruction_count(self) -> Optional[int]:
+		"""
+		Number of instructions in the function's High Level IL as of the last time the IL was generated, or None if the IL has not been
+		generated for this function. Does not trigger analysis.
+		"""
+		return self._metric_or_none(core.BNGetFunctionHighLevelILInstructionCount(self.handle))
+
+	@property
+	def caller_count(self) -> int:
+		"""Number of distinct functions that call this one"""
+		return core.BNGetFunctionCallerCount(self.handle)
+
+	@property
+	def callee_count(self) -> int:
+		"""Number of distinct call targets across this function's call sites"""
+		return core.BNGetFunctionCalleeCount(self.handle)
+
+	@property
+	def code_reference_count(self) -> int:
+		"""
+		Number of incoming code references to this function's entry address.
+		Each recorded reference is counted, including self-references.
+		"""
+		return core.BNGetFunctionCodeReferenceCount(self.handle)
+
+	@property
+	def data_reference_count(self) -> int:
+		"""
+		Number of outgoing instruction references from this function to data.
+		Counts automatic and user-added source/target pairs, including repeated targets.
+		Targets covered by code in the source architecture are excluded, as are call sites.
+		"""
+		return core.BNGetFunctionDataReferenceCount(self.handle)
+
+	@property
+	def recursive_reference_count(self) -> int:
+		"""
+		Number of call sites in this function that target its own entry address.
+		Non-call references and indirect recursion through other functions are excluded.
+		"""
+		return core.BNGetFunctionRecursiveReferenceCount(self.handle)
 
 	@property
 	def highest_address(self) -> int:

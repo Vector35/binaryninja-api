@@ -375,10 +375,23 @@ The Symbol List shows the following columns by default:
 - `Address`: the virtual address for the symbol
 - `Kind`: may be one of "Folder", "Function", "Data", and "Bare Symbol"
 - `Section`: the section of the binary the symbol appears in
+- `HLIL Instructions`: in the case of functions, the number of High Level IL instructions as of the last time it was generated. This shows `—` until the IL has been generated for that function
 
 Additionally, the following columns are hidden by default and can be enabled by right-clicking the header:
 
 - `Total Bytes`: in the case of functions, the sum of size of basic blocks
+- `Instructions`: in the case of functions, the number of native instructions. This is calculated the first time it is needed, so sorting by it for the first time in a large binary can take a moment
+- `Basic Blocks`: in the case of functions, the number of basic blocks
+- `Callers`: in the case of functions, the number of distinct functions that call it
+- `Callees`: in the case of functions, the number of distinct call targets across its call sites
+- `Code Ref.`: in the case of functions, the number of incoming code references to the function's entry address. Includes calls, other instruction references, user-added references, and self-references. Multiple references from the same function count separately
+- `Data Ref.`: in the case of functions, the number of outgoing instruction references from the function to data, such as strings and globals. Includes automatic and user-added source/target pairs; separate references to the same target count separately. Targets covered by analyzed code in the source architecture are excluded, as are calls. Hover over either reference column header for details
+- `LLIL Instructions`, `MLIL Instructions`: in the case of functions, the number of instructions in each intermediate language as of the last time it was generated. These show `—` until the IL has been generated for that function
+
+!!! Warning "Beta"
+    The function metric columns are new and may change in future releases. The same values are available from the API as `Function.instruction_count`, `Function.basic_block_count`, `Function.caller_count`, `Function.callee_count`, `Function.code_reference_count`, `Function.data_reference_count`, `Function.llil_instruction_count`, `Function.mlil_instruction_count` and `Function.hlil_instruction_count`. The IL counts return `None` when the IL has not been generated, and reading any of them never triggers analysis.
+
+The API also provides `Function.recursive_reference_count`, which counts call sites in a function that target its own entry address. Non-call references and indirect recursion through other functions are excluded. This metric has no Symbol List column.
 
 These columns can be re-arranged, hidden, and used for sorting.
 

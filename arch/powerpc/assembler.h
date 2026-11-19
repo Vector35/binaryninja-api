@@ -1,5 +1,6 @@
 /* this is intended for use by BINJA */
-int assemble_multiline(const std::string& code, std::vector<uint8_t>& result, std::string& err);
+int assemble_multiline(const std::string& code, std::vector<uint8_t>& result, std::string& err,
+	uint64_t origin = 0, bool littleEndian = false);
 
 /* this is lower level API intended to be use by benchmarking tools (eg: test_asm.cpp) */
 int assemble_single(std::string src, uint32_t addr, uint8_t *result, std::string& err, int& failures);

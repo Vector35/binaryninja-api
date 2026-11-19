@@ -594,19 +594,20 @@ class Arm64Architecture : public Architecture
 		char *instrBytes = NULL, *err = NULL;
 		int instrBytesLen = 0, errLen = 0;
 
-		string prepend = ".arch_extension crc\n" ".arch_extension sm4\n"
-			".arch_extension sha3\n" ".arch_extension sha2\n" ".arch_extension aes\n"
-			".arch_extension crypto\n" ".arch_extension fp\n" ".arch_extension simd\n"
-			".arch_extension ras\n" ".arch_extension lse\n" ".arch_extension predres\n"
-			".arch_extension ccdp\n" ".arch_extension mte\n" ".arch_extension memtag\n"
-			".arch_extension tlb-rmi\n" ".arch_extension pan\n" ".arch_extension pan-rwv\n"
-			".arch_extension ccpp\n" ".arch_extension rcpc\n" ".arch_extension rng\n"
-			".arch_extension sve\n" ".arch_extension sve2\n" ".arch_extension sve2-aes\n"
-			".arch_extension sve2-sm4\n" ".arch_extension sve2-sha3\n" ".arch_extension sve2-bitperm\n"
-			".arch_extension ls64\n" ".arch_extension xs\n" ".arch_extension pauth\n"
-			".arch_extension flagm\n" ".arch_extension rme\n" ".arch_extension sme\n"
-			".arch_extension sme-f64f64\n" ".arch_extension sme-i16i64\n" ".arch_extension hbc\n"
-			".arch_extension mops\n";
+		// Separate directives with semicolons so diagnostics retain the original source line numbers.
+		string prepend = ".arch_extension crc; " ".arch_extension sm4; "
+			".arch_extension sha3; " ".arch_extension sha2; " ".arch_extension aes; "
+			".arch_extension crypto; " ".arch_extension fp; " ".arch_extension simd; "
+			".arch_extension ras; " ".arch_extension lse; " ".arch_extension predres; "
+			".arch_extension ccdp; " ".arch_extension mte; " ".arch_extension memtag; "
+			".arch_extension tlb-rmi; " ".arch_extension pan; " ".arch_extension pan-rwv; "
+			".arch_extension ccpp; " ".arch_extension rcpc; " ".arch_extension rng; "
+			".arch_extension sve; " ".arch_extension sve2; " ".arch_extension sve2-aes; "
+			".arch_extension sve2-sm4; " ".arch_extension sve2-sha3; " ".arch_extension sve2-bitperm; "
+			".arch_extension ls64; " ".arch_extension xs; " ".arch_extension pauth; "
+			".arch_extension flagm; " ".arch_extension rme; " ".arch_extension sme; "
+			".arch_extension sme-f64f64; " ".arch_extension sme-i16i64; " ".arch_extension hbc; "
+			".arch_extension mops; ";
 
 		BNLlvmServicesInit();
 

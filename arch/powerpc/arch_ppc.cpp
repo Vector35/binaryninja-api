@@ -2161,25 +2161,16 @@ class PowerpcArchitecture: public Architecture
 	{
 		MYLOG("%s()\n", __func__);
 
-		/* prepend directives to command the assembler's origin and endianness */
-		string src;
-		char buf[1024];
-		snprintf(buf, sizeof(buf), ".org %" PRIx64 "\n", addr);
-		src += string(buf);
-		snprintf(buf, sizeof(buf), ".endian %s\n", (endian == BigEndian) ? "big" : "little");
-		src += string(buf);
-		src += code;
-
 		/* assemble */
 		vector<uint8_t> byteEncoding;
-		if(assemble_multiline(src, byteEncoding, errors)) {
+		if(assemble_multiline(code, byteEncoding, errors, addr, endian == LittleEndian)) {
 			MYLOG("assemble_multiline() failed, errors contains: %s\n", errors.c_str());
 			return false;
 		}
 
 		result.Clear();
 		//for(int i=0; i<byteEncoding.size(); ++i)
-		result.Append(&(byteEncoding[0]), byteEncoding.size());
+		result.Append(byteEncoding.data(), byteEncoding.size());
 		return true;
 	}
 

@@ -14,6 +14,7 @@
 
 /* c++ stuff */
 #include <map>
+#include <sstream>
 #include <string>
 #include <vector>
 using namespace std;
@@ -2773,67 +2774,6 @@ uint32_t special_handling(uint32_t seed, uint32_t insword, int bit, vector<token
 /* string processing crap */
 /*****************************************************************************/
 
-int split_newlines(const string& chunk, vector<string> &lines)
-{
-	lines.clear();
-
-	const char *p = chunk.c_str();
-
-	unsigned i=0, left=0;
-	while(1) {
-		if(p[i]=='\x00') {
-			if(left < i) {
-				lines.push_back(string(p,left,i-left));
-			}
-
-			break;
-		}
-
-		if(p[i]=='\x0a') {
-			if(left < i) {
-				lines.push_back(string(p,left,i-left));
-			}
-
-			left = i = (i+1);
-		}
-		else if(i+1 < chunk.size() && p[i]=='\x0d' && p[i+1]=='\x0a') {
-			if(left < i) {
-				lines.push_back(string(p,left,i-left));
-			}
-
-			left = i = (i+2);
-		}
-		else {
-			i += 1;
-		}
-	}
-
-	return 0;
-}
-
-int trim_lines(vector<string> &lines)
-{
-	vector<string> filtered;
-
-	for(size_t i=0; i<lines.size(); ++i) {
-		const char *p = lines[i].c_str();
-		int left = 0, right = (int)lines[i].size()-1;
-
-		while(isspace(p[left]))
-			left += 1;
-
-		while(right>=0 && isspace(p[right]))
-			right -= 1;
-
-		if(right >= left)
-			filtered.push_back(string(p, left, right-left+1));
-	}
-
-	lines = filtered;
-
-	return 0;
-}
-
 // \S - one or more spaces
 // \s - zero or more spaces
 // \H - hex number (captures)
@@ -3063,43 +3003,43 @@ int assemble_single(string src, uint32_t addr, uint8_t *result, string& err,
 	return rc;
 }
 
-int assemble_multiline(const string& code, vector<uint8_t>& result, string& err)
+int assemble_multiline(const string& code, vector<uint8_t>& result, string& err, uint64_t origin, bool lilEndian)
 {
 	int rc = -1;
 	vector<string> lines, fields;
 
-	split_newlines(code, lines);
-	trim_lines(lines);
+	if (origin & 3)
+	{
+		err = "ERROR: .org address is not 4-byte aligned";
+		return -1;
+	}
 
-	bool lilEndian = false;
+	istringstream input(code);
+	string line;
+	while (getline(input, line))
+	{
+		auto start = line.find_first_not_of(" \t\r\f\v");
+		auto end = line.find_last_not_of(" \t\r\f\v");
+		lines.push_back(start == string::npos ? "" : line.substr(start, end - start + 1));
+	}
 
-	uint64_t vaddr = 0;
+	uint64_t vaddr = origin;
 	map<string,uint64_t> symbols;
 
 	/* FIRST PASS */
 	for(unsigned i=0; i<lines.size(); ++i) {
+		if (lines[i].empty())
+			continue;
 		MYLOG("line %d: -%s-\n", i, lines[i].c_str());
 
 		/* .org directive */
 		if(fmt_match(".org\\S\\H", lines[i], fields)) {
 			vaddr = strtol(fields[0].c_str(), 0, 16);
 			if(vaddr & 0x3) {
-				err = "ERROR: .org address is not 4-byte aligned";
+				err = "line " + to_string(i + 1) + ": .org address is not 4-byte aligned";
 				goto cleanup;
 			}
 			MYLOG("PASS1, set vaddr to: %" PRIx64 "\n", vaddr);
-		}
-		/* .endian directive */
-		else
-		if(fmt_match(".endian\\S\\I", lines[i], fields)) {
-			if(fields[0] == "big")
-				lilEndian = false;
-			else
-			if(fields[0] == "little")
-				lilEndian = true;
-			else {
-				err = "invalid argument to .endian directive (expected big or little)";
-			}
 		}
 		/* .equ directive */
 		else
@@ -3117,8 +3057,10 @@ int assemble_multiline(const string& code, vector<uint8_t>& result, string& err)
 	}
 
 	/* SECOND PASS */
-	vaddr = 0;
+	vaddr = origin;
 	for(unsigned i=0; i<lines.size(); ++i) {
+		if (lines[i].empty())
+			continue;
 		vector<string> fields;
 
 		MYLOG("line %d: -%s-\n", i, lines[i].c_str());
@@ -3137,7 +3079,8 @@ int assemble_multiline(const string& code, vector<uint8_t>& result, string& err)
 			if(fields[0] == "little")
 				lilEndian = true;
 			else {
-				err = "invalid argument to .endian directive (expected big or little)";
+				err = "line " + to_string(i + 1) + ": invalid argument to .endian directive (expected big or little)";
+				goto cleanup;
 			}
 		}
 		/* .equ directive */
@@ -3190,6 +3133,7 @@ int assemble_multiline(const string& code, vector<uint8_t>& result, string& err)
 			MYLOG("assembling: %s at address %" PRIx64 "\n", line.c_str(), vaddr);
 			int failures;
 			if(assemble_single(line, (uint32_t)vaddr, encoding, err, failures)) {
+				err = "line " + to_string(i + 1) + ": " + err;
 				MYLOG("assemble_single failed, err contains: %s\n", err.c_str());
 				goto cleanup;
 			}

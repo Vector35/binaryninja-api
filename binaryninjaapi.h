@@ -14003,6 +14003,78 @@ namespace BinaryNinja {
 		*/
 		uint64_t GetLowestAddress();
 
+		/*! Total bytes covered by the function's basic blocks. Blocks may overlap or leave gaps, so this can differ
+			from the span between the lowest and highest address.
+
+			\return Total bytes across all basic blocks
+		*/
+		uint64_t GetTotalBytes();
+
+		/*! Number of basic blocks in the function
+
+			\return The basic block count
+		*/
+		uint64_t GetBasicBlockCount();
+
+		/*! Number of native instructions in the function. Computed the first time it is requested and cached until
+			the function's basic blocks change.
+
+			\return The native instruction count
+		*/
+		uint64_t GetInstructionCount();
+
+		/*! Number of instructions in the function's Low Level IL, as of the last time it was generated
+
+			\return The instruction count, or std::nullopt if the IL has not been generated for this function
+		*/
+		std::optional<uint64_t> GetLowLevelILInstructionCount();
+
+		/*! Number of instructions in the function's Medium Level IL, as of the last time it was generated
+
+			\return The instruction count, or std::nullopt if the IL has not been generated for this function
+		*/
+		std::optional<uint64_t> GetMediumLevelILInstructionCount();
+
+		/*! Number of instructions in the function's High Level IL, as of the last time it was generated
+
+			\return The instruction count, or std::nullopt if the IL has not been generated for this function
+		*/
+		std::optional<uint64_t> GetHighLevelILInstructionCount();
+
+		/*! Number of distinct functions that call this one
+
+			\return The caller count
+		*/
+		uint64_t GetCallerCount();
+
+		/*! Number of distinct call targets across this function's call sites
+
+			\return The callee count
+		*/
+		uint64_t GetCalleeCount();
+
+		/*! Number of incoming code references to this function's entry address.
+			Each recorded reference is counted, including self-references.
+
+			\return The code reference count
+		*/
+		uint64_t GetCodeReferenceCount();
+
+		/*! Number of outgoing instruction references from this function to data.
+			Counts automatic and user-added source/target pairs, including repeated targets.
+			Targets covered by code in the source architecture are excluded, as are call sites.
+
+			\return The data reference count
+		*/
+		uint64_t GetDataReferenceCount();
+
+		/*! Number of call sites in this function that target its own entry address.
+			Non-call references and indirect recursion through other functions are excluded.
+
+			\return The self-call site count
+		*/
+		uint64_t GetRecursiveReferenceCount();
+
 		/*! All of the address ranges covered by a function
 
 			\return All of the address ranges covered by a function

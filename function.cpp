@@ -3301,6 +3301,69 @@ uint64_t Function::GetLowestAddress()
 	return BNGetFunctionLowestAddress(m_object);
 }
 
+static std::optional<uint64_t> MetricOrNullopt(uint64_t value)
+{
+	if (value == BN_FUNCTION_METRIC_UNKNOWN)
+		return std::nullopt;
+	return value;
+}
+
+
+uint64_t Function::GetTotalBytes()
+{
+	return BNGetFunctionTotalBytes(m_object);
+}
+
+uint64_t Function::GetBasicBlockCount()
+{
+	return BNGetFunctionBasicBlockCount(m_object);
+}
+
+uint64_t Function::GetInstructionCount()
+{
+	return BNGetFunctionInstructionCount(m_object);
+}
+
+std::optional<uint64_t> Function::GetLowLevelILInstructionCount()
+{
+	return MetricOrNullopt(BNGetFunctionLowLevelILInstructionCount(m_object));
+}
+
+std::optional<uint64_t> Function::GetMediumLevelILInstructionCount()
+{
+	return MetricOrNullopt(BNGetFunctionMediumLevelILInstructionCount(m_object));
+}
+
+std::optional<uint64_t> Function::GetHighLevelILInstructionCount()
+{
+	return MetricOrNullopt(BNGetFunctionHighLevelILInstructionCount(m_object));
+}
+
+uint64_t Function::GetCallerCount()
+{
+	return BNGetFunctionCallerCount(m_object);
+}
+
+uint64_t Function::GetCalleeCount()
+{
+	return BNGetFunctionCalleeCount(m_object);
+}
+
+uint64_t Function::GetCodeReferenceCount()
+{
+	return BNGetFunctionCodeReferenceCount(m_object);
+}
+
+uint64_t Function::GetDataReferenceCount()
+{
+	return BNGetFunctionDataReferenceCount(m_object);
+}
+
+uint64_t Function::GetRecursiveReferenceCount()
+{
+	return BNGetFunctionRecursiveReferenceCount(m_object);
+}
+
 
 std::vector<BNAddressRange> Function::GetAddressRanges()
 {

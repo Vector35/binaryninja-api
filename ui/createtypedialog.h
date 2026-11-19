@@ -6,6 +6,8 @@
 #include "dialogtextedit.h"
 #include "uicontext.h"
 
+class CodeDialogTextEdit;
+
 /*!
 
     \ingroup uiapi
@@ -15,7 +17,7 @@ class BINARYNINJAUIAPI CreateTypeDialog : public QDialog
 	Q_OBJECT
 
 	QTextEdit* m_arguments;
-	DialogTextEdit* m_code;
+	CodeDialogTextEdit* m_code;
 	QTextEdit* m_errors;
 
 	BinaryNinja::TypeContainer m_container;

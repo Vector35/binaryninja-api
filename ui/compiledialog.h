@@ -8,6 +8,8 @@
 #include "dialogtextedit.h"
 #include "uicontext.h"
 
+class CodeDialogTextEdit;
+
 /*!
 
 	\defgroup compiledialog CompileDialog
@@ -36,7 +38,7 @@ class BINARYNINJAUIAPI CompileDialog : public QDialog
 	uint64_t m_addr;
 	QComboBox* m_arch;
 	QComboBox* m_os;
-	DialogTextEdit* m_code;
+	CodeDialogTextEdit* m_code;
 	QLabel* m_optionsText;
 	bool m_saveOSSetting;
 	std::map<std::string, std::string> m_options;

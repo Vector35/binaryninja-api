@@ -6,6 +6,8 @@
 #include "dialogtextedit.h"
 #include "uicontext.h"
 
+class CodeDialogTextEdit;
+
 /*!
 
 	\defgroup assembledialog AssembleDialog
@@ -25,7 +27,7 @@ class BINARYNINJAUIAPI AssembleDialog : public QDialog
 	size_t m_length;
 	QComboBox* m_archSelection;
 	ArchitectureRef m_fixedArch;
-	DialogTextEdit* m_code;
+	CodeDialogTextEdit* m_code;
 	BinaryNinja::DataBuffer m_bytes;
 	bool m_setDefault;
 

@@ -13372,6 +13372,10 @@ namespace BinaryNinja {
 
 		/*! Resolve an architectural exception using this function's analysis settings. */
 		std::optional<BNExceptionModel> GetExceptionModel(uint64_t discriminator) const;
+		bool IsSystemCallAt(uint64_t address) const;
+		Ref<CallingConvention> GetSystemCallCallingConventionAt(uint64_t address) const;
+		Ref<CallingConvention> GetUserSystemCallCallingConvention(uint64_t address) const;
+		bool SetUserSystemCallCallingConvention(uint64_t address, CallingConvention* convention);
 		/*! Resolve the effective model emitted at an instruction address, if present. */
 		std::optional<BNExceptionModel> GetExceptionModelAt(uint64_t address) const;
 		// Exception origins include events without a platform model. Calling-convention overrides
@@ -14539,6 +14543,21 @@ namespace BinaryNinja {
 		LowLevelILLabel();
 	};
 
+	struct SystemCallContext
+	{
+		Ref<Platform> platform;
+		Ref<CallingConvention> callingConvention;
+		uint32_t nameSpace = 0;
+		uint64_t discriminator = 0;
+		bool hasExceptionOrigin = false;
+		bool serviceLookup = true;
+		bool explicitlySelectedConvention = false;
+		bool forwardArguments = false;
+
+		BNSystemCallContext ToAPI() const;
+		static SystemCallContext FromAPI(BNSystemCallContext& c);
+	};
+
 	struct ILSourceLocation
 	{
 		uint64_t address;
@@ -14573,6 +14592,10 @@ namespace BinaryNinja {
 	  public:
 		LowLevelILFunction(Architecture* arch, Function* func = nullptr);
 		LowLevelILFunction(BNLowLevelILFunction* func);
+
+		std::optional<SystemCallContext> GetSystemCallContext(size_t expr) const;
+		bool SetSystemCallContext(size_t expr, const std::optional<SystemCallContext>& context);
+		ExprId SystemCallWithContext(const SystemCallContext& context, const ILSourceLocation& loc = ILSourceLocation());
 
 		Ref<Function> GetFunction() const;
 		Ref<Architecture> GetArchitecture() const;
@@ -16176,6 +16199,8 @@ namespace BinaryNinja {
 	  public:
 		MediumLevelILFunction(Architecture* arch, Function* func = nullptr, LowLevelILFunction* lowLevelIL = nullptr);
 		MediumLevelILFunction(BNMediumLevelILFunction* func);
+		std::optional<SystemCallContext> GetSystemCallContext(size_t expr) const;
+		bool SetSystemCallContext(size_t expr, const std::optional<SystemCallContext>& context);
 
 		Ref<Function> GetFunction() const;
 		Ref<Architecture> GetArchitecture() const;
@@ -16605,6 +16630,8 @@ namespace BinaryNinja {
 	  public:
 		HighLevelILFunction(Architecture* arch, Function* func = nullptr);
 		HighLevelILFunction(BNHighLevelILFunction* func);
+		std::optional<SystemCallContext> GetSystemCallContext(size_t expr) const;
+		bool SetSystemCallContext(size_t expr, const std::optional<SystemCallContext>& context);
 
 		Ref<Function> GetFunction() const;
 		Ref<Architecture> GetArchitecture() const;

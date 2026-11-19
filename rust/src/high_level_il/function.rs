@@ -17,6 +17,16 @@ pub struct HighLevelILFunction {
 }
 
 impl HighLevelILFunction {
+    pub fn system_call_context(
+        &self,
+        expr: HighLevelExpressionIndex,
+    ) -> Option<crate::platform::SystemCallContext> {
+        let mut context = std::mem::MaybeUninit::uninit();
+        unsafe {
+            BNGetHighLevelILSystemCallContext(self.handle, expr.0, context.as_mut_ptr())
+                .then(|| crate::platform::SystemCallContext::from_raw(context.assume_init()))
+        }
+    }
     pub(crate) unsafe fn from_raw(handle: *mut BNHighLevelILFunction, full_ast: bool) -> Self {
         debug_assert!(!handle.is_null());
         Self { handle, full_ast }

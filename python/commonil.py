@@ -120,7 +120,24 @@ class Call(ControlFlow):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class Syscall(Call):
-	pass
+	@property
+	def system_call_context(self):
+		"""Resolved syscall metadata, or None for an unchanged legacy syscall."""
+		from . import _binaryninjacore as core
+		from .platform import SystemCallContext
+		getter = {
+			'LLIL': core.BNGetLowLevelILSystemCallContext,
+			'MLIL': core.BNGetMediumLevelILSystemCallContext,
+			'HLIL': core.BNGetHighLevelILSystemCallContext,
+		}[self.operation.name.split('_', 1)[0]]
+		context = core.BNSystemCallContext()
+		return SystemCallContext._from_core(context) if getter(self.function.handle, self.expr_index, context) else None
+
+	@property
+	def discriminator(self):
+		"""Architectural origin, if the syscall was lowered from a modeled exception."""
+		context = self.system_call_context
+		return context.discriminator if context else None
 
 
 @dataclass(frozen=True, repr=False, eq=False)

@@ -25,6 +25,46 @@ using namespace BinaryNinja;
 using namespace std;
 
 
+BNSystemCallContext SystemCallContext::ToAPI() const
+{
+	return {platform ? platform->GetObject() : nullptr, callingConvention ? callingConvention->GetObject() : nullptr,
+		nameSpace, discriminator, hasExceptionOrigin, serviceLookup, explicitlySelectedConvention, forwardArguments};
+}
+
+SystemCallContext SystemCallContext::FromAPI(BNSystemCallContext& c)
+{
+	SystemCallContext result;
+	if (c.platform) result.platform = new CorePlatform(c.platform);
+	if (c.callingConvention) result.callingConvention = new CoreCallingConvention(c.callingConvention);
+	result.nameSpace = c.nameSpace;
+	result.discriminator = c.discriminator;
+	result.hasExceptionOrigin = c.hasExceptionOrigin;
+	result.serviceLookup = c.serviceLookup;
+	result.explicitlySelectedConvention = c.explicitlySelectedConvention;
+	result.forwardArguments = c.forwardArguments;
+	return result;
+}
+
+std::optional<SystemCallContext> LowLevelILFunction::GetSystemCallContext(size_t expr) const
+{
+	BNSystemCallContext context;
+	if (!BNGetLowLevelILSystemCallContext(m_object, expr, &context)) return std::nullopt;
+	return SystemCallContext::FromAPI(context);
+}
+
+bool LowLevelILFunction::SetSystemCallContext(size_t expr, const std::optional<SystemCallContext>& context)
+{
+	BNSystemCallContext raw = context ? context->ToAPI() : BNSystemCallContext{};
+	return BNSetLowLevelILSystemCallContext(m_object, expr, context ? &raw : nullptr);
+}
+
+ExprId LowLevelILFunction::SystemCallWithContext(const SystemCallContext& context, const ILSourceLocation& loc)
+{
+	auto expr = SystemCall(loc);
+	SetSystemCallContext(expr, context);
+	return expr;
+}
+
 ILSourceLocation::ILSourceLocation(const struct LowLevelILInstruction& instr):
 	address(instr.address), sourceOperand(instr.sourceOperand), valid(true),
 	ilBased(true), ilDirect(true), ilExprIndex(instr.exprIndex)

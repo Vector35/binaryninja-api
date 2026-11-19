@@ -1678,6 +1678,11 @@ void MediumLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const Medi
 }
 
 
+std::optional<SystemCallContext> MediumLevelILInstruction::GetSystemCallContext() const
+{
+	return (attributes & ILHasSystemCallContext) ? function->GetSystemCallContext(exprIndex) : std::nullopt;
+}
+
 ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest, const ILSourceLocation& sourceLocation) const
 {
 	return CopyTo(dest, [&](const MediumLevelILInstruction& subExpr) { return subExpr.CopyTo(dest, sourceLocation); }, sourceLocation);
@@ -1693,6 +1698,14 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 	BNMediumLevelILLabel* labelB;
 
 	const auto& loc = sourceLocation.valid ? sourceLocation : ILSourceLocation{*this};
+	if (auto context = GetSystemCallContext())
+	{
+		auto plain = *this;
+		plain.attributes &= ~ILHasSystemCallContext;
+		auto result = plain.CopyTo(dest, subExprHandler, loc);
+		dest->SetSystemCallContext(result, context);
+		return result;
+	}
 
 	switch (operation)
 	{

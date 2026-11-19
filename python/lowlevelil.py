@@ -4269,6 +4269,8 @@ class LowLevelILFunction:
 		if expr.operation == LowLevelILOperation.LLIL_FLOAT_CONST:
 			expr: LowLevelILFloatConst
 			return dest.float_const_raw(expr.size, expr.raw_operands[0], loc)
+		if expr.operation == LowLevelILOperation.LLIL_SYSCALL:
+			return dest.system_call(loc, context=expr.system_call_context)
 		if expr.operation in [
 			LowLevelILOperation.LLIL_POP,
 			LowLevelILOperation.LLIL_NORET,
@@ -5920,7 +5922,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_BOOL_TO_INT, a, size=size, source_location=loc)
 
-	def system_call(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+	def system_call(self, loc: Optional['ILSourceLocation'] = None, *, context=None) -> ExpressionIndex:
 		"""
 		``system_call`` return a system call expression.
 
@@ -5928,7 +5930,11 @@ class LowLevelILFunction:
 		:return: a system call expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_SYSCALL, source_location=loc)
+		expr = self.expr(LowLevelILOperation.LLIL_SYSCALL, source_location=loc)
+		if context is not None:
+			if not core.BNSetLowLevelILSystemCallContext(self.handle, expr, context._to_core()):
+				raise ValueError('Invalid syscall context')
+		return expr
 
 	def intrinsic(
 	    self, outputs: List[Union[ILRegisterType, ILFlag, 'architecture.RegisterInfo']], intrinsic: 'architecture.IntrinsicType',

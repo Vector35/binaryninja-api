@@ -88,6 +88,34 @@ class SystemCallNamespaceInfo:
 	calling_convention: Optional['callingconvention.CallingConvention']
 
 
+@dataclass(frozen=True)
+class SystemCallContext:
+	"""Optional resolved syscall ABI, namespace, and architectural provenance."""
+	platform: 'Platform'
+	calling_convention: Optional['callingconvention.CallingConvention'] = None
+	namespace: int = 0
+	discriminator: Optional[int] = None
+	service_lookup: bool = True
+	explicitly_selected_convention: bool = False
+	forward_arguments: bool = False
+
+	@classmethod
+	def _from_core(cls, context):
+		return cls(CorePlatform(handle=context.platform),
+			callingconvention.CoreCallingConvention(context.callingConvention) if context.callingConvention else None,
+			context.nameSpace, context.discriminator if context.hasExceptionOrigin else None,
+			context.serviceLookup, context.explicitlySelectedConvention, context.forwardArguments)
+
+	def _to_core(self):
+		_validate_namespace_id(self.namespace)
+		if self.discriminator is not None and not 0 <= self.discriminator <= 0xffffffffffffffff:
+			raise ValueError('Exception discriminator must be a uint64')
+		return core.BNSystemCallContext(self.platform.handle,
+			self.calling_convention.handle if self.calling_convention else None, self.namespace,
+			self.discriminator or 0, self.discriminator is not None, self.service_lookup,
+			self.explicitly_selected_convention, self.forward_arguments)
+
+
 def _validate_namespace_id(namespace_id: int) -> None:
 	if not isinstance(namespace_id, int) or not 0 <= namespace_id <= 0xffffffff:
 		raise ValueError("Syscall namespace ID must be a uint32")

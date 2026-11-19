@@ -2126,6 +2126,11 @@ void LowLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const LowLeve
 }
 
 
+std::optional<SystemCallContext> LowLevelILInstruction::GetSystemCallContext() const
+{
+	return (attributes & ILHasSystemCallContext) ? function->GetSystemCallContext(exprIndex) : std::nullopt;
+}
+
 ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest, const ILSourceLocation& sourceLocation) const
 {
 	return CopyTo(dest, [&](const LowLevelILInstruction& subExpr) { return subExpr.CopyTo(dest, sourceLocation); }, sourceLocation);
@@ -2140,6 +2145,14 @@ ExprId LowLevelILInstruction::CopyTo(
 	BNLowLevelILLabel* labelB;
 
 	const auto& loc = sourceLocation.valid ? sourceLocation : ILSourceLocation{*this};
+	if (auto context = GetSystemCallContext())
+	{
+		auto plain = *this;
+		plain.attributes &= ~ILHasSystemCallContext;
+		auto result = plain.CopyTo(dest, subExprHandler, loc);
+		dest->SetSystemCallContext(result, context);
+		return result;
+	}
 
 	switch (operation)
 	{

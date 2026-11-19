@@ -4453,7 +4453,7 @@ class MediumLevelILFunction:
 				expr: MediumLevelILSyscall
 				output = [sub_expr_handler(output) for output in expr.output_exprs]
 				params = [sub_expr_handler(param) for param in expr.params]
-				return dest.system_call(output, params, loc)
+				return dest.system_call(output, params, loc, context=expr.system_call_context)
 			if expr.operation == MediumLevelILOperation.MLIL_SYSCALL_UNTYPED:
 				expr: MediumLevelILSyscallUntyped
 				output = [sub_expr_handler(output) for output in expr.output_exprs]
@@ -4462,7 +4462,7 @@ class MediumLevelILFunction:
 					output,
 					params,
 					sub_expr_handler(expr.stack),
-					loc
+					loc, context=expr.system_call_context
 				)
 			if expr.operation == MediumLevelILOperation.MLIL_TAILCALL:
 				expr: MediumLevelILTailcall
@@ -5973,7 +5973,7 @@ class MediumLevelILFunction:
 
 	def system_call(
 		self, output: CallOutputList, params: List[ExpressionIndex],
-		loc: Optional['ILSourceLocation'] = None
+		loc: Optional['ILSourceLocation'] = None, *, context=None
 	) -> ExpressionIndex:
 		"""
 		``system_call`` returns an expression which performs a system call
@@ -5985,7 +5985,7 @@ class MediumLevelILFunction:
 		:return: The expression ``output = syscall(dest, params...)``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(
+		expr = self.expr(
 			MediumLevelILOperation.MLIL_SYSCALL,
 			len(output),
 			self.add_operand_list(self._call_output_list(output)),
@@ -5994,6 +5994,10 @@ class MediumLevelILFunction:
 			size=0,
 			source_location=loc
 		)
+		if context is not None:
+			if not core.BNSetMediumLevelILSystemCallContext(self.handle, expr, context._to_core()):
+				raise ValueError('Invalid syscall context')
+		return expr
 
 
 	def exception(
@@ -6016,7 +6020,7 @@ class MediumLevelILFunction:
 
 	def system_call_untyped(
 		self, output: CallOutputList, params: List[ExpressionIndex],
-		stack: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+		stack: ExpressionIndex, loc: Optional['ILSourceLocation'] = None, *, context=None
 	) -> ExpressionIndex:
 		"""
 		``system_call_untyped`` returns an expression which performs a system call
@@ -6030,7 +6034,7 @@ class MediumLevelILFunction:
 		:return: The expression ``output = syscall(dest, params..., stack = stack)``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(
+		expr = self.expr(
 			MediumLevelILOperation.MLIL_SYSCALL_UNTYPED,
 			len(output),
 			self.add_operand_list(self._call_output_list(output)),
@@ -6045,6 +6049,10 @@ class MediumLevelILFunction:
 			size=0,
 			source_location=loc
 		)
+		if context is not None:
+			if not core.BNSetMediumLevelILSystemCallContext(self.handle, expr, context._to_core()):
+				raise ValueError('Invalid syscall context')
+		return expr
 
 	def tailcall(
 		self, output: CallOutputList, dest: ExpressionIndex, params: List[ExpressionIndex],

@@ -174,6 +174,18 @@ where
         }
     }
 
+    /// None denotes an unchanged legacy syscall (or a non-syscall expression).
+    pub fn system_call_context(
+        &self,
+        expr: LowLevelExpressionIndex,
+    ) -> Option<crate::platform::SystemCallContext> {
+        let mut context = std::mem::MaybeUninit::uninit();
+        unsafe {
+            BNGetLowLevelILSystemCallContext(self.handle, expr.0, context.as_mut_ptr())
+                .then(|| crate::platform::SystemCallContext::from_raw(context.assume_init()))
+        }
+    }
+
     pub fn function(&self) -> Option<Ref<Function>> {
         unsafe {
             let func = BNGetLowLevelILOwnerFunction(self.handle);

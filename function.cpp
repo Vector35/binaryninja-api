@@ -209,6 +209,27 @@ Ref<Platform> Function::GetPlatform() const
 }
 
 
+bool Function::IsSystemCallAt(uint64_t address) const
+{
+	return BNIsFunctionSystemCallAt(m_object, address);
+}
+
+Ref<CallingConvention> Function::GetSystemCallCallingConventionAt(uint64_t address) const
+{
+	auto result = BNGetSystemCallCallingConventionAt(m_object, address);
+	return result ? new CoreCallingConvention(result) : nullptr;
+}
+
+Ref<CallingConvention> Function::GetUserSystemCallCallingConvention(uint64_t address) const
+{
+	return GetUserExceptionCallingConvention(address);
+}
+
+bool Function::SetUserSystemCallCallingConvention(uint64_t address, CallingConvention* convention)
+{
+	return SetUserExceptionCallingConvention(address, convention);
+}
+
 std::optional<BNExceptionModel> Function::GetExceptionModel(uint64_t discriminator) const
 {
 	BNExceptionModel model;

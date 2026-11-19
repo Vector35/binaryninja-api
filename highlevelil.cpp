@@ -25,6 +25,19 @@
 using namespace BinaryNinja;
 using namespace std;
 
+std::optional<SystemCallContext> HighLevelILFunction::GetSystemCallContext(size_t expr) const
+{
+	BNSystemCallContext context;
+	if (!BNGetHighLevelILSystemCallContext(m_object, expr, &context)) return std::nullopt;
+	return SystemCallContext::FromAPI(context);
+}
+
+bool HighLevelILFunction::SetSystemCallContext(size_t expr, const std::optional<SystemCallContext>& context)
+{
+	BNSystemCallContext raw = context ? context->ToAPI() : BNSystemCallContext{};
+	return BNSetHighLevelILSystemCallContext(m_object, expr, context ? &raw : nullptr);
+}
+
 
 ILSourceLocation::ILSourceLocation(const struct HighLevelILInstruction& instr):
 	address(instr.address), sourceOperand(instr.sourceOperand), valid(true),

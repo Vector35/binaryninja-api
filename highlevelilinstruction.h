@@ -823,6 +823,7 @@ namespace BinaryNinja
 		int64_t GetConstant() const;
 		ConstantData GetConstantData() const;
 		uint64_t GetDiscriminator() const;
+		std::optional<SystemCallContext> GetSystemCallContext() const;
 		int64_t GetVector() const;
 		uint32_t GetIntrinsic() const;
 		uint64_t GetTarget() const;

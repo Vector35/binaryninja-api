@@ -1939,6 +1939,22 @@ class Function:
 		_name = types.QualifiedName(name)._to_core_struct()
 		core.BNRemoveUserTypeFieldReference(self.handle, from_arch.handle, from_addr, _name, offset, size)
 
+	def is_system_call_at(self, address: int) -> bool:
+		"""Whether analyzed LLIL contains a syscall at this native instruction."""
+		return core.BNIsFunctionSystemCallAt(self.handle, address)
+
+	def get_system_call_calling_convention_at(self, address: int):
+		"""Return the resolved ABI of a legacy or modeled syscall."""
+		result = core.BNGetSystemCallCallingConventionAt(self.handle, address)
+		return callingconvention.CoreCallingConvention(result) if result else None
+
+	def get_user_system_call_calling_convention(self, address: int):
+		return self.get_user_exception_calling_convention(address)
+
+	def set_user_system_call_calling_convention(self, address: int, convention) -> None:
+		"""Override a syscall ABI without changing its service namespace. Pass None to restore its default."""
+		self.set_user_exception_calling_convention(address, convention)
+
 	def get_exception_model(self, discriminator: int) -> Optional['_platform.ExceptionModel']:
 		"""Resolve an architectural exception using this function's analysis settings."""
 		model = core.BNExceptionModel()

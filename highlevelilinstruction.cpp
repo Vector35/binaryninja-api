@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include <algorithm>
+#include <tuple>
 #include <array>
 #include <cstring>
 
@@ -1473,6 +1474,11 @@ void HighLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const HighLe
 }
 
 
+std::optional<SystemCallContext> HighLevelILInstruction::GetSystemCallContext() const
+{
+	return (attributes & ILHasSystemCallContext) ? function->GetSystemCallContext(exprIndex) : std::nullopt;
+}
+
 ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest, const ILSourceLocation& sourceLocation) const
 {
 	return CopyTo(dest, [&](const HighLevelILInstruction& subExpr) { return subExpr.CopyTo(dest, sourceLocation); }, sourceLocation);
@@ -1485,6 +1491,14 @@ ExprId HighLevelILInstruction::CopyTo(
 	vector<ExprId> output, params;
 
 	const auto& loc = sourceLocation.valid ? sourceLocation : ILSourceLocation{*this};
+	if (auto context = GetSystemCallContext())
+	{
+		auto plain = *this;
+		plain.attributes &= ~ILHasSystemCallContext;
+		auto result = plain.CopyTo(dest, subExprHandler, loc);
+		dest->SetSystemCallContext(result, context);
+		return result;
+	}
 
 	switch (operation)
 	{
@@ -1801,6 +1815,27 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 		return true;
 	if (operation > other.operation)
 		return false;
+	if (operation == HLIL_SYSCALL || operation == HLIL_SYSCALL_SSA)
+	{
+		auto left = GetSystemCallContext(), right = other.GetSystemCallContext();
+		if (left.has_value() != right.has_value()) return !left;
+		if (left)
+		{
+			auto key = [](const SystemCallContext& context) {
+#ifdef BINARYNINJACORE_LIBRARY
+				auto platform = context.platform.GetPtr();
+				auto convention = context.callingConvention.GetPtr();
+#else
+				auto platform = context.platform ? context.platform->GetObject() : nullptr;
+				auto convention = context.callingConvention ? context.callingConvention->GetObject() : nullptr;
+#endif
+				return std::tuple{reinterpret_cast<uintptr_t>(platform), reinterpret_cast<uintptr_t>(convention),
+					context.nameSpace, context.hasExceptionOrigin, context.discriminator,
+					context.serviceLookup, context.explicitlySelectedConvention, context.forwardArguments};
+			};
+			if (key(*left) != key(*right)) return key(*left) < key(*right);
+		}
+	}
 
 	switch (operation)
 	{

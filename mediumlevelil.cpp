@@ -24,6 +24,19 @@
 using namespace BinaryNinja;
 using namespace std;
 
+std::optional<SystemCallContext> MediumLevelILFunction::GetSystemCallContext(size_t expr) const
+{
+	BNSystemCallContext context;
+	if (!BNGetMediumLevelILSystemCallContext(m_object, expr, &context)) return std::nullopt;
+	return SystemCallContext::FromAPI(context);
+}
+
+bool MediumLevelILFunction::SetSystemCallContext(size_t expr, const std::optional<SystemCallContext>& context)
+{
+	BNSystemCallContext raw = context ? context->ToAPI() : BNSystemCallContext{};
+	return BNSetMediumLevelILSystemCallContext(m_object, expr, context ? &raw : nullptr);
+}
+
 namespace {
 
 // Memoizes the reverse (LLIL-SSA -> MLIL) expr lookups for one LLIL-SSA function.

@@ -47,6 +47,39 @@ pub struct SystemCallNamespaceInfo {
     pub calling_convention: Option<Ref<CoreCallingConvention>>,
 }
 
+/// Optional resolved metadata on a syscall lowered from an architectural exception.
+#[derive(Debug)]
+pub struct SystemCallContext {
+    pub platform: Ref<Platform>,
+    pub calling_convention: Option<Ref<CoreCallingConvention>>,
+    pub namespace: u32,
+    pub discriminator: Option<u64>,
+    pub service_lookup: bool,
+    pub explicitly_selected_convention: bool,
+    pub forward_arguments: bool,
+}
+
+impl SystemCallContext {
+    pub(crate) unsafe fn from_raw(raw: BNSystemCallContext) -> Self {
+        let platform = Platform::ref_from_raw(raw.platform);
+        let calling_convention = (!raw.callingConvention.is_null()).then(|| {
+            CoreCallingConvention::ref_from_raw(
+                raw.callingConvention,
+                CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(raw.callingConvention)),
+            )
+        });
+        Self {
+            platform,
+            calling_convention,
+            namespace: raw.nameSpace,
+            discriminator: raw.hasExceptionOrigin.then_some(raw.discriminator),
+            service_lookup: raw.serviceLookup,
+            explicitly_selected_convention: raw.explicitlySelectedConvention,
+            forward_arguments: raw.forwardArguments,
+        }
+    }
+}
+
 macro_rules! cc_func {
     ($get_name:ident, $get_api:ident, $set_name:ident, $set_api:ident) => {
         pub fn $get_name(&self) -> Option<Ref<CoreCallingConvention>> {

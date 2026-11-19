@@ -1218,6 +1218,8 @@ extern "C"
 
 		// Function call returns its result onto the caller's stack
 		ILStackReturn = 0x4000,
+		// The otherwise-unused syscall operand contains a function-local context identifier.
+		ILHasSystemCallContext = 0x8000,
 
 	};
 
@@ -3738,6 +3740,27 @@ extern "C"
 		uint32_t nameSpace;
 		BNExceptionContinuation continuation;
 	} BNExceptionModel;
+
+	/** Resolved syscall metadata. Returned platform/convention references are owned by the caller. */
+	typedef struct BNSystemCallContext
+	{
+		BNPlatform* platform;
+		BNCallingConvention* callingConvention;
+		uint32_t nameSpace;
+		uint64_t discriminator;
+		bool hasExceptionOrigin;
+		bool serviceLookup;
+		bool explicitlySelectedConvention;
+		bool forwardArguments;
+	} BNSystemCallContext;
+
+	BINARYNINJACOREAPI void BNFreeSystemCallContext(BNSystemCallContext* context);
+	BINARYNINJACOREAPI bool BNGetLowLevelILSystemCallContext(BNLowLevelILFunction* func, size_t expr, BNSystemCallContext* context);
+	BINARYNINJACOREAPI bool BNSetLowLevelILSystemCallContext(BNLowLevelILFunction* func, size_t expr, const BNSystemCallContext* context);
+	BINARYNINJACOREAPI bool BNGetMediumLevelILSystemCallContext(BNMediumLevelILFunction* func, size_t expr, BNSystemCallContext* context);
+	BINARYNINJACOREAPI bool BNSetMediumLevelILSystemCallContext(BNMediumLevelILFunction* func, size_t expr, const BNSystemCallContext* context);
+	BINARYNINJACOREAPI bool BNGetHighLevelILSystemCallContext(BNHighLevelILFunction* func, size_t expr, BNSystemCallContext* context);
+	BINARYNINJACOREAPI bool BNSetHighLevelILSystemCallContext(BNHighLevelILFunction* func, size_t expr, const BNSystemCallContext* context);
 
 	typedef struct BNExceptionModelRule
 	{
@@ -8771,6 +8794,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeExceptionModelRuleList(BNExceptionModelRule* rules);
 	BINARYNINJACOREAPI bool BNGetPlatformExceptionModel(BNPlatform* platform, uint64_t discriminator, BNExceptionModel* model);
 	BINARYNINJACOREAPI bool BNGetFunctionExceptionModel(BNFunction* function, uint64_t discriminator, BNExceptionModel* model);
+	BINARYNINJACOREAPI bool BNIsFunctionSystemCallAt(BNFunction* function, uint64_t address);
+	BINARYNINJACOREAPI BNCallingConvention* BNGetSystemCallCallingConventionAt(BNFunction* function, uint64_t address);
 	BINARYNINJACOREAPI bool BNGetFunctionExceptionModelAt(BNFunction* function, uint64_t address, BNExceptionModel* model);
 	BINARYNINJACOREAPI bool BNGetFunctionExceptionDiscriminatorAt(BNFunction* function, uint64_t address, uint64_t* discriminator);
 	BINARYNINJACOREAPI BNCallingConvention* BNGetUserExceptionCallingConvention(BNFunction* function, uint64_t address);

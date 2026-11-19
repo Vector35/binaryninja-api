@@ -22,6 +22,16 @@ pub struct MediumLevelILFunction {
 }
 
 impl MediumLevelILFunction {
+    pub fn system_call_context(
+        &self,
+        expr: MediumLevelExpressionIndex,
+    ) -> Option<crate::platform::SystemCallContext> {
+        let mut context = std::mem::MaybeUninit::uninit();
+        unsafe {
+            BNGetMediumLevelILSystemCallContext(self.handle, expr.0, context.as_mut_ptr())
+                .then(|| crate::platform::SystemCallContext::from_raw(context.assume_init()))
+        }
+    }
     pub(crate) unsafe fn from_raw(handle: *mut BNMediumLevelILFunction) -> Self {
         debug_assert!(!handle.is_null());
         Self { handle }

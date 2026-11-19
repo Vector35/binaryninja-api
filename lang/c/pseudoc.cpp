@@ -768,6 +768,15 @@ void PseudoCFunction::GetExprText(const HighLevelILInstruction& instr, HighLevel
 void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, HighLevelILTokenEmitter& tokens,
 	DisassemblySettings* settings, BNOperatorPrecedence precedence, bool statement, optional<bool> signedHint)
 {
+	if (instr.operation == HLIL_SYSCALL)
+		if (auto context = instr.GetSystemCallContext(); context && context->hasExceptionOrigin)
+		{
+			auto display = instr;
+			display.operation = HLIL_EXCEPTION;
+			display.operands[2] = context->discriminator;
+			GetExprTextInternal(display, tokens, settings, precedence, statement, signedHint);
+			return;
+		}
 	// The lambdas in this function are here to reduce stack frame size of this function. Without them,
 	// complex expression can cause the process to crash from a stack overflow.
 	auto exprGuard = tokens.SetCurrentExpr(instr);
@@ -2952,10 +2961,11 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 
 	case HLIL_EXCEPTION:
 		[&]() {
-			auto displayPlatform = GetFunction() ? GetFunction()->GetPlatform() : GetArchitecture()->GetStandalonePlatform();
+			auto context = instr.GetSystemCallContext();
+			auto displayPlatform = context ? context->platform : (GetFunction() ? GetFunction()->GetPlatform() : GetArchitecture()->GetStandalonePlatform());
 			auto display = displayPlatform->GetExceptionDisplayOrDefault(instr.GetDiscriminator());
 			auto displayValue = display.GetValue(instr.GetDiscriminator());
-			if (displayValue == 0 && GetFunction() && GetFunction()->GetExceptionCallingConventionAt(instr.address))
+			if (displayValue == 0 && (context ? !!context->callingConvention : GetFunction() && GetFunction()->GetExceptionCallingConventionAt(instr.address)))
 				displayValue.reset();
 			tokens.Append(KeywordToken, display.name);
 			tokens.AppendOpenParen();
@@ -2964,12 +2974,13 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			if (displayValue && instr.GetParameterExprs().size() != 0)
 				tokens.Append(TextToken, ", ");
 			const auto operandList = instr.GetParameterExprs<HLIL_EXCEPTION>();
-			auto exceptionModel = GetFunction() ? GetFunction()->GetPlatform()->GetExceptionModel(instr.GetDiscriminator()) : std::nullopt;
+			auto exceptionModel = context ? std::optional<BNExceptionModel>({context->serviceLookup ? SystemCallExceptionModel : TrapExceptionModel, context->nameSpace, ContinueAfterException})
+				: (GetFunction() ? GetFunction()->GetPlatform()->GetExceptionModel(instr.GetDiscriminator()) : std::nullopt);
 			vector<FunctionParameter> namedParams;
 			bool skipSyscallNumber = false;
 			if (exceptionModel && exceptionModel->kind == SystemCallExceptionModel && (operandList.size() > 0) && operandList[0].GetValue().IsConstant())
 			{
-				const auto platform = GetFunction()->GetPlatform();
+				const auto platform = displayPlatform;
 				const auto view = GetFunction()->GetView();
 				if (platform)
 				{

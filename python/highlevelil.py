@@ -4440,7 +4440,7 @@ class HighLevelILFunction:
 		)
 
 	def system_call(
-		self, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None
+		self, params: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None, *, context=None
 	) -> ExpressionIndex:
 		"""
 		``system_call`` returns an expression which performs a system call
@@ -4451,13 +4451,17 @@ class HighLevelILFunction:
 		:return: The expression ``syscall(dest, params...)``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(
+		expr = self.expr(
 			HighLevelILOperation.HLIL_SYSCALL,
 			len(params),
 			self.add_operand_list(params),
 			size=0,
 			source_location=loc
 		)
+		if context is not None:
+			if not core.BNSetHighLevelILSystemCallContext(self.handle, expr, context._to_core()):
+				raise ValueError('Invalid syscall context')
+		return expr
 
 
 	def exception(

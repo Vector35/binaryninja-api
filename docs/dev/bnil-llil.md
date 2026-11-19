@@ -332,19 +332,51 @@ registered nonzero namespaces from the standalone platform before installing its
 rules; namespace 0 remains controlled by the existing syscall APIs. Changing semantic
 rules requires reanalysis of existing functions.
 
-Exception rules are consulted only for exception operations. The raw discriminator remains
-on `LLIL_EXCEPTION` and `LLIL_EXCEPTION_SSA`, and on the corresponding `MLIL_EXCEPTION` /
-`MLIL_EXCEPTION_SSA` and `HLIL_EXCEPTION` / `HLIL_EXCEPTION_SSA` forms. MLIL also has untyped
-exception forms while service argument and return layouts are being resolved. These are
-independent opcodes; no legacy trap, breakpoint, or syscall operation is reinterpreted.
+### Lowering modeled service calls
+
+Architecture plugins continue to emit `LLIL_EXCEPTION(discriminator)` in lifted IL.
+During lifted-to-LLIL conversion, before SSA construction, the core resolves the platform
+model and any eligible instruction-specific ABI override. Events modeled as services,
+and opaque events with an explicitly selected ABI, become `LLIL_SYSCALL` with an optional
+resolved syscall context. Syscall SSA construction and the ordinary MLIL/HLIL syscall
+paths then handle their parameters, return values, and register/memory effects. They do
+not reclassify the architectural exception at each IL level.
+
+The context records the originating platform, service namespace, selected convention,
+argument-recovery policy, and optional full architectural discriminator. Namespace
+selection is independent of an instruction-specific convention override. Assigning an
+ABI to an opaque trap does not create a service namespace or enable service-table lookup.
+An explicit terminating model is materialized as `LLIL_SYSCALL` followed by `LLIL_NORET`
+on the event-taking path; independently reachable code is retained.
+
+Contexts are local to an IL graph and copied/remapped with the instruction, including
+through SSA and cross-function copies. They are not encoded as raw calling-convention
+pointers or recovered solely from instruction addresses. `GetSystemCallContext` (C++),
+`system_call_context` (Python/Rust), and the C getters expose the resolved descriptor.
+Architectural display rules still allow a lowered syscall to render as `hvc(...)`,
+`smc(...)`, or a platform-specific name.
+
+Existing architecture plugins may continue to emit `IL_SYSCALL`, `IL_TRAP`, and `IL_BP`
+directly. Their opcodes, builder entry points, and instruction structure sizes are
+unchanged. A syscall without the `ILHasSystemCallContext` marker uses the legacy
+namespace-0/platform-convention behavior, regardless of unused operand contents.
+Context-aware builders opt in explicitly; for example, Python accepts
+`il.system_call(context=SystemCallContext(...))` while preserving the existing positional
+location argument. The context is metadata, not a runtime syscall argument.
+
+Non-service exceptions without an assigned ABI retain their exception operations and
+discriminators, including their modeled continuation behavior. Legacy trap/breakpoint
+operations are never reinterpreted. Function exception-origin queries remain available
+after service lowering and database reload; resolved IL contexts are rebuilt when IL is
+regenerated, while user ABI overrides are persisted by architecture/convention name.
 
 For individually reported exception events, basic-block analysis and exception IL analysis
 consult the same cached rule resolver.
-Unknown exceptions conservatively terminate. Continuation applies only to exception
-operations, without an attribute that changes the meaning of `TRAP` or `BP`. A service
-exception obtains its register effects, argument layout, and namespace-qualified service
-name/type from its model and namespace convention. Existing syscall calling-convention
-fallbacks and parameter heuristics remain unchanged for directly emitted `SYSCALL`.
+Unknown exceptions conservatively terminate. Model continuation does not change the
+meaning of legacy `TRAP` or `BP`. A service exception obtains its register effects,
+argument layout, and namespace-qualified service name/type from its resolved syscall
+context. Existing calling-convention fallbacks and parameter heuristics remain unchanged
+for directly emitted, context-free `SYSCALL`.
 
 The existing IL layouts and opcode numbers are preserved. Exception SSA forms have their
 own effect operands and retain the full architectural discriminator. `GetExceptionModelAt`
@@ -384,14 +416,19 @@ known instruction address. Platform model queries continue to return the unmodif
 
 ### Instruction-specific calling conventions
 
-In graph or linear views, select an exception instruction and choose **Set Exception
-Calling Convention...** from the context menu. The chooser lists conventions registered
-as eligible for the instruction's discriminator. ARMv7 and Thumb (both byte orders) allow
+In graph or linear views, select a syscall and choose **Set System Call Calling
+Convention...** from the context menu. Opaque exception instructions retain **Set Exception
+Calling Convention...**; choosing an ABI lowers that site to a syscall on reanalysis.
+For modeled instructions, the chooser lists conventions registered as eligible for the
+architectural discriminator. For legacy syscalls, it offers compatible registered
+conventions on the instruction's architecture. ARMv7 and Thumb (both byte orders) allow
 `smccc32` on both HVC #0 and SMC #0, and `linux-syscall` only on
 the SVC family. Other conventions require explicit eligibility registration. Exclusion
 from automatic function-convention heuristics does not exclude explicit exception selection.
-**Use platform default** removes the override. Choices that match the platform default
-are omitted, and the context-menu action is hidden when no distinct alternative remains.
+**Use platform/namespace default** removes the override. The syscall context-menu action
+is hidden when fewer than two conventions are available, unless an existing override can
+be cleared. The reset-to-default entry does not count as another convention. An opaque
+exception can still select its first ABI even when only one convention is eligible.
 
 Architecture plugins register eligibility separately from ordinary calling conventions:
 
@@ -415,6 +452,10 @@ reanalysis to rebuild existing IL. Stored overrides without a matching rule are 
 and can still be cleared. Eligibility does not automatically assign any convention and
 does not alter platform namespace models or ordinary function/call-site convention selection.
 The core instruction-override setter enforces the same rules as the menu.
+Function `SetUserSystemCallCallingConvention` / `set_user_system_call_calling_convention`
+also apply to legacy syscalls. Clearing the override restores the platform default and
+removes any context that was introduced solely by that override. The original exception
+override APIs remain supported.
 
 LLIL SSA conservatively retains all candidate register inputs described by an exception
 convention. Register capacity alone does not establish service arity. Untyped exception

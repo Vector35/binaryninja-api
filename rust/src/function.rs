@@ -414,6 +414,34 @@ impl Function {
         }
     }
 
+    /// Whether analyzed LLIL contains a syscall at this native instruction.
+    pub fn is_system_call_at(&self, address: u64) -> bool {
+        unsafe { BNIsFunctionSystemCallAt(self.handle, address) }
+    }
+
+    pub fn system_call_calling_convention_at(&self, address: u64) -> Option<Ref<CoreCallingConvention>> {
+        let value = unsafe { BNGetSystemCallCallingConventionAt(self.handle, address) };
+        if value.is_null() {
+            None
+        } else {
+            Some(unsafe {
+                CoreCallingConvention::ref_from_raw(
+                    value,
+                    CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(value)),
+                )
+            })
+        }
+    }
+
+    /// Override a legacy or modeled syscall ABI. None restores its default.
+    pub fn set_user_system_call_calling_convention(
+        &self,
+        address: u64,
+        convention: Option<&CoreCallingConvention>,
+    ) -> bool {
+        self.set_user_exception_calling_convention(address, convention)
+    }
+
     /// Resolve an exception using this function's analysis settings.
     pub fn exception_model(&self, discriminator: u64) -> Option<crate::platform::ExceptionModel> {
         let mut model = std::mem::MaybeUninit::uninit();

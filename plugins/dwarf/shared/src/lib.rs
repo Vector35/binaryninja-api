@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use gimli::{EndianRcSlice, Endianity, RunTimeEndian, SectionId};
-use object::{Object, ObjectSection};
+use object::{Object, ObjectSection, ObjectSymbol, RelocationTarget};
 
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewBase},
@@ -22,6 +22,7 @@ use binaryninja::{
 };
 
 use binaryninja::settings::QueryOptions;
+use std::collections::HashMap;
 use std::rc::Rc;
 //////////////////////
 // Dwarf Validation
@@ -102,8 +103,15 @@ pub fn create_section_reader<Endian: Endianity>(
     let raw_view = view.raw_view().unwrap();
     let view_data = raw_view.read_vec(0, raw_view.len() as usize);
     let file = object::File::parse(&*view_data)?;
-    create_section_reader_object(section_id, &file, endian, is_dwo)
+    create_section_reader_object(section_id, &file, endian, is_dwo, &SectionAddresses::new())
 }
+
+/// The addresses to place the sections of a relocatable object at, by section index.
+///
+/// Every section of a relocatable object is at address 0, so an address in its debug info is
+/// an offset into the section that the relocation's symbol is defined in. Adding the address
+/// the section was placed at turns it into an address in the view.
+pub type SectionAddresses = HashMap<object::SectionIndex, u64>;
 
 #[derive(Debug, Clone)]
 pub struct RelocationMap(Rc<object::read::RelocationMap>);
@@ -115,14 +123,39 @@ impl Default for RelocationMap {
 }
 
 impl RelocationMap {
-    fn add(&mut self, file: &object::File, section: &object::Section) -> Result<(), Error> {
+    fn add(
+        &mut self,
+        file: &object::File,
+        section: &object::Section,
+        section_addresses: &SectionAddresses,
+    ) -> Result<(), Error> {
         let map =
             Rc::get_mut(&mut self.0).expect("Failed to get mutable reference to RelocationMap");
-        for (offset, relocation) in section.relocations() {
+        for (offset, mut relocation) in section.relocations() {
+            if let Some(address) = target_section_address(file, &relocation, section_addresses) {
+                relocation.set_addend(relocation.addend().wrapping_add(address as i64));
+            }
             map.add(file, offset, relocation)?
         }
         Ok(())
     }
+}
+
+/// The address in `section_addresses` of the section that `relocation` refers into.
+fn target_section_address(
+    file: &object::File,
+    relocation: &object::Relocation,
+    section_addresses: &SectionAddresses,
+) -> Option<u64> {
+    if section_addresses.is_empty() {
+        return None;
+    }
+    let section_index = match relocation.target() {
+        RelocationTarget::Symbol(index) => file.symbol_by_index(index).ok()?.section_index()?,
+        RelocationTarget::Section(index) => index,
+        _ => return None,
+    };
+    section_addresses.get(&section_index).copied()
 }
 
 impl gimli::read::Relocate for RelocationMap {
@@ -142,6 +175,7 @@ pub fn create_section_reader_object<Endian: gimli::Endianity>(
     file: &object::File,
     endian: Endian,
     is_dwo: bool,
+    section_addresses: &SectionAddresses,
 ) -> Result<RelocateOwned<gimli::EndianRcSlice<Endian>>, Error> {
     let mut relocations = RelocationMap::default();
     let name = if is_dwo {
@@ -155,7 +189,7 @@ pub fn create_section_reader_object<Endian: gimli::Endianity>(
         Some(ref section) => {
             // DWO sections never have relocations, so don't bother.
             if !is_dwo {
-                relocations.add(file, section)?;
+                relocations.add(file, section, section_addresses)?;
             }
             section.uncompressed_data()?.into_owned()
         }

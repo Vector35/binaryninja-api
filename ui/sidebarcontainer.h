@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QtCore/QPointer>
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QStackedWidget>
 #include <QtWidgets/QWidget>
@@ -85,7 +86,7 @@ class BINARYNINJAUIAPI SidebarWidgetContainer : public QWidget
 	std::set<SidebarWidgetType*> m_active, m_docked;
 	std::map<SidebarWidgetType*, SidebarStackedWidget> m_stackedWidgets;
 	std::map<SplitPaneWidget*,
-		std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>>>
+		std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, QPointer<SidebarWidgetAndHeader>>>>>
 		m_widgets;
 	std::map<SplitPaneWidget*,
 		std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarContentClassifier*>>>>
@@ -97,9 +98,11 @@ class BINARYNINJAUIAPI SidebarWidgetContainer : public QWidget
 	SidebarWidgetType* m_focusedType = nullptr;
 
 	SidebarStackedWidget& stackedWidgetForType(SidebarWidgetType* type);
-	std::vector<SidebarWidgetAndHeader*> widgetsForContext() const;
+	std::vector<QPointer<SidebarWidgetAndHeader>> widgetsForContext() const;
 	std::vector<SidebarContentClassifier*> contentClassifiersForContext() const;
 	void insertWidgetIntoContainer(SidebarWidgetType* type, QStackedWidget* widget);
+	void trackWidget(SidebarWidgetAndHeader* widget);
+	void pruneDeadWidgets();
 	void updateContentsVisibility();
 
 private Q_SLOTS:

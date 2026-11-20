@@ -3470,7 +3470,7 @@ extern "C"
 	// core passes it to `freeString`, `freeResult` or `freeQualifiedNameAndType`. Core reads
 	// the error list either way, then passes it to `freeErrorList`. `freeErrorList` receives
 	// null when the callback set none. Core ignores every other output of a callback that
-	// returns false.
+	// returns false. Core reads a null `message` or `fileName` in an error as empty.
 	typedef struct BNTypeParserCallbacks
 	{
 		void* context;

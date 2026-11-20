@@ -30,7 +30,7 @@ use crate::component::Component;
 use crate::confidence::Conf;
 use crate::data_buffer::DataBuffer;
 use crate::debuginfo::DebugInfo;
-use crate::disassembly::DisassemblySettings;
+use crate::disassembly::{DisassemblyOption, DisassemblySettings};
 use crate::external_library::{ExternalLibrary, ExternalLocation};
 use crate::file_accessor::{
     raw_mut as raw_file_accessor, Accessor, BorrowedFileAccessor, FileAccessor, FileAccessorHandle,
@@ -1113,6 +1113,9 @@ impl BinaryView {
     /// Find every line of `view_type` that shows `constant` between `start` and `end`.
     ///
     /// In the `on_match` callback return `false` to stop searching.
+    ///
+    /// Uses the same disassembly settings as the Python API's default, which
+    /// waits for IL to be generated so IL-level searches are complete.
     pub fn find_all_constant<C: FnMut(u64, &LinearDisassemblyLine) -> bool>(
         &self,
         start: u64,
@@ -1121,8 +1124,7 @@ impl BinaryView {
         view_type: FunctionViewType,
         on_match: C,
     ) -> bool {
-        // TODO: What are the best "default" settings?
-        let settings = DisassemblySettings::new();
+        let settings = find_all_default_settings();
         self.find_all_constant_with_opts(
             start,
             end,
@@ -1160,8 +1162,10 @@ impl BinaryView {
             line: *mut BNLinearDisassemblyLine,
         ) -> bool {
             let f = ctx as *mut C;
-            let line = LinearDisassemblyLine::from_raw(&*line);
-            (*f)(addr, &line)
+            let owned_line = LinearDisassemblyLine::from_raw(&*line);
+            // The core hands us ownership of the line.
+            BNFreeLinearDisassemblyLines(line, 1);
+            (*f)(addr, &owned_line)
         }
 
         let raw_view_type = FunctionViewType::into_raw(view_type);
@@ -1246,6 +1250,9 @@ impl BinaryView {
     ///
     /// In the `on_match` callback return `false` to stop searching. It is
     /// given the matching text and the line it was found on.
+    ///
+    /// Uses the same disassembly settings as the Python API's default, which
+    /// waits for IL to be generated so IL-level searches are complete.
     pub fn find_all_text<C: FnMut(u64, &str, &LinearDisassemblyLine) -> bool>(
         &self,
         start: u64,
@@ -1254,8 +1261,7 @@ impl BinaryView {
         view_type: FunctionViewType,
         on_match: C,
     ) -> bool {
-        // TODO: What are the best "default" settings?
-        let settings = DisassemblySettings::new();
+        let settings = find_all_default_settings();
         self.find_all_text_with_opts(
             start,
             end,
@@ -1299,8 +1305,10 @@ impl BinaryView {
         ) -> bool {
             let f = ctx as *mut C;
             let text = CStr::from_ptr(text).to_string_lossy();
-            let line = LinearDisassemblyLine::from_raw(&*line);
-            (*f)(addr, &text, &line)
+            let owned_line = LinearDisassemblyLine::from_raw(&*line);
+            // The core hands us ownership of the line.
+            BNFreeLinearDisassemblyLines(line, 1);
+            (*f)(addr, &text, &owned_line)
         }
 
         let text = text.to_cstr();
@@ -3993,4 +4001,15 @@ where
             .view
             .save(context.core_view.assume_init_ref(), &mut file)
     })
+}
+
+/// The disassembly settings `find_all_constant` and `find_all_text` use by
+/// default, matching the Python API.
+fn find_all_default_settings() -> Ref<DisassemblySettings> {
+    let settings = DisassemblySettings::new();
+    settings.set_option(DisassemblyOption::ShowAddress, false);
+    settings.set_option(DisassemblyOption::ShowOpcode, false);
+    settings.set_option(DisassemblyOption::ShowVariableTypesWhenAssigned, true);
+    settings.set_option(DisassemblyOption::WaitForIL, true);
+    settings
 }

@@ -20,6 +20,11 @@ impl LoadSettings {
 
     pub fn register() {
         let bn_settings = Settings::global();
+        bn_settings.register_group_with_description(
+            "analysis.svd",
+            "SVD",
+            "How peripheral memory maps are imported from System View Description files.",
+        );
 
         let add_backing_region_props = json!({
             "title" : "Add Backing Regions",

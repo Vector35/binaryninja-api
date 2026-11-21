@@ -14,6 +14,7 @@ impl LoadSettings {
 
     pub fn register() {
         let bn_settings = Settings::global();
+        bn_settings.register_group("analysis.idb", "IDB Import");
 
         let file_props = json!({
             "title" : "IDB File",

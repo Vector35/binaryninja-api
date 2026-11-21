@@ -202,6 +202,7 @@ extern "C"
 	BINARYNINJAPLUGIN bool CorePluginInit()
 	{
 		EfiGuidRenderer::Register();
+		Settings::Instance()->RegisterGroup("analysis.efi", "EFI", "How types are applied to UEFI modules.");
 		auto workflow = Workflow::Get("core.module.metaAnalysis")->Clone();
 		workflow->RegisterActivity(new Activity(R"~({
 			"title": "EFI Resolver",

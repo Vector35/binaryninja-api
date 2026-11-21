@@ -28,6 +28,7 @@ pub extern "C" fn CorePluginInit() -> bool {
     binaryninja::tracing_init!("Plugin.Swift");
 
     let settings = Settings::global();
+    settings.register_group("analysis.swift", "Swift");
     settings.register_setting_json(
         SETTING_EXTRACT_TYPES,
         r#"{

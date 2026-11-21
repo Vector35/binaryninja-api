@@ -85,6 +85,7 @@ extern "C" {
 		BINARYNINJAPLUGIN bool CorePluginInit()
 #endif
 	{
+		Settings::Instance()->RegisterGroup("analysis.rtti", "RTTI", "How classes are recovered from run-time type information.");
 		// TODO: In the future we will have a function level workflow which:
 		// TODO:	1. Uses MSVC metadata to identify if a function is apart of a VFT
 		// TODO:		a. Or possibly we can tag some info to the function as apart of the VFT analysis, this would save a lookup.

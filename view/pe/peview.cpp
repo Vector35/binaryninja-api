@@ -4019,6 +4019,7 @@ Ref<Settings> PEViewType::GetLoadSettingsForData(BinaryView* data)
 	}
 
 	// register additional settings
+	settings->RegisterGroup("loader.pe", "PE");
 	settings->RegisterSetting("loader.pe.maxSectionNameLength",
 			R"({
 			"title" : "Maximum PE Section Name Length",

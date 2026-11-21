@@ -122,7 +122,27 @@ fn plugin_init() -> bool {
 
     // Register our matcher and plugin settings globally.
     let mut global_bn_settings = Settings::global();
-    global_bn_settings.register_group("warp", "WARP");
+    global_bn_settings.register_group_with_description(
+        "warp",
+        "WARP",
+        "How known functions are identified using WARP signatures.",
+    );
+    global_bn_settings.register_group_with_description(
+        "warp.container",
+        "Containers",
+        "Where WARP signatures are loaded from.",
+    );
+    global_bn_settings.register_group_with_description(
+        "warp.fetcher",
+        "Fetcher",
+        "How signatures are fetched from WARP servers.",
+    );
+    global_bn_settings.register_group_with_description(
+        "warp.matcher",
+        "Matcher",
+        "How strictly functions are matched to signatures.",
+    );
+    global_bn_settings.register_group("analysis.warp", "WARP");
     MatcherSettings::register(&mut global_bn_settings);
     PluginSettings::register(&mut global_bn_settings);
 

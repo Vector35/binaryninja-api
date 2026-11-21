@@ -58,6 +58,7 @@ Ref<Settings> KernelCacheViewType::GetLoadSettingsForData(BinaryView* data)
 			settings->UpdateProperty(override, "readOnly", false);
 	}
 
+	settings->RegisterGroup("loader.kc", "Kernel Cache");
 	settings->RegisterSetting("loader.kc.autoLoadPattern",
 		R"({
 		"title" : "Image Auto-Load Regex Pattern",

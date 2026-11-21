@@ -24,6 +24,7 @@ void BinaryNinja::InitUniversalViewType()
 	g_universalViewType = &type;
 
 	Ref<Settings> settings = Settings::Instance();
+	settings->RegisterGroup("files.universal", "Universal Binaries");
 	settings->RegisterSetting("files.universal.architecturePreference",
 			R"({
 			"title" : "Universal Mach-O Architecture Preference",
@@ -90,6 +91,7 @@ Ref<Settings> UniversalViewType::GetLoadSettingsForData(BinaryView* data)
 
 	Ref<Settings> settings = Settings::Instance(GetUniqueIdentifierString());
 	settings->RegisterGroup("loader", "Load Options");
+	settings->RegisterGroup("loader.universal", "Universal Binaries");
 	settings->RegisterSetting("loader.universal.architectures",
 			R"({
 			"title" : "Universal Mach-O Multi-Architecture Binary Description",
@@ -101,6 +103,7 @@ Ref<Settings> UniversalViewType::GetLoadSettingsForData(BinaryView* data)
 
 	Ref<Settings> entrySettings = Settings::Instance(GetUniqueIdentifierString());
 	entrySettings->RegisterGroup("loader", "Load Options");
+	entrySettings->RegisterGroup("loader.macho", "Mach-O");
 	entrySettings->RegisterSetting("loader.macho.universalImageOffset",
 			R"({
 			"title" : "Universal Mach-O Object File Offset",

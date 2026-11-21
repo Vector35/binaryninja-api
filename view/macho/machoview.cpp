@@ -382,6 +382,7 @@ void BinaryNinja::InitMachoViewType()
 	BinaryViewType::Register(&type);
 	g_machoViewType = &type;
 
+	Settings::Instance()->RegisterGroup("loader.macho", "Mach-O");
 	Settings::Instance()->RegisterSetting("loader.macho.maxRebaseBindEntriesMultiplier",
 		R"~({
 		"title" : "Mach-O Rebase/Bind Table Entry Count Limit Multiplier",
@@ -4006,6 +4007,7 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 	}
 
 	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);
+	settings->RegisterGroup("loader.macho", "Mach-O");
 
 	// specify default load settings that can be overridden
 	vector<string> overrides = {"loader.imageBase", "loader.platform"};

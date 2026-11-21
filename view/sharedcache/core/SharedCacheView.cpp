@@ -79,6 +79,7 @@ Ref<Settings> SharedCacheViewType::GetLoadSettingsForData(BinaryView* data)
 			settings->UpdateProperty(override, "readOnly", false);
 	}
 
+	settings->RegisterGroup("loader.dsc", "Shared Cache");
 	settings->RegisterSetting("loader.dsc.processCFStrings",
 		R"({
 		"title" : "Process CFString Metadata",

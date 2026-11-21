@@ -4232,6 +4232,8 @@ public:
 static void InitMipsSettings()
 {
 	Ref<Settings> settings = Settings::Instance();
+	settings->RegisterGroup("arch.mips", "MIPS");
+	settings->RegisterGroup("arch.mips.disassembly", "Disassembly");
 
 	settings->RegisterSetting("arch.mips.disassembly.pseudoOps",
 			R"({

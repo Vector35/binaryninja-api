@@ -3729,6 +3729,8 @@ public:
 static void InitAArch64Settings()
 {
 	Ref<Settings> settings = Settings::Instance();
+	settings->RegisterGroup("arch.aarch64", "AArch64");
+	settings->RegisterGroup("arch.aarch64.disassembly", "Disassembly");
 
 	settings->RegisterSetting("arch.aarch64.disassembly.alignRequired",
 			R"({

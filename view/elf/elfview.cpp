@@ -23,6 +23,7 @@ void BinaryNinja::InitElfViewType()
 	g_elfViewType = &type;
 
 	Ref<Settings> settings = Settings::Instance();
+	settings->RegisterGroup("files.elf", "ELF");
 	settings->RegisterSetting("files.elf.maxSectionHeaderCount",
 		R"({
 		"title" : "Maximum ELF Section Header Count",

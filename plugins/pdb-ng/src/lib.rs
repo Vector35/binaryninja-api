@@ -754,7 +754,21 @@ fn init_plugin() -> bool {
     DebugInfoParser::register("PDB", PDBParser {});
 
     let settings = Settings::global();
-    settings.register_group("pdb", "PDB Loader");
+    settings.register_group_with_description(
+        "pdb",
+        "PDB Loader",
+        "How debug information is imported from PDB files.",
+    );
+    settings.register_group_with_description(
+        "pdb.features",
+        "Features",
+        "What is imported from a PDB file.",
+    );
+    settings.register_group_with_description(
+        "pdb.files",
+        "Files",
+        "Where PDB files are found and stored.",
+    );
     settings.register_setting_json(
         "pdb.files.localStoreAbsolute",
         r#"{

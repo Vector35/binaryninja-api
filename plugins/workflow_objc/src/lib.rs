@@ -17,6 +17,13 @@ fn plugin_init() -> bool {
     };
 
     let settings = Settings::global();
+    settings.register_group("analysis.objectiveC", "Objective-C");
+    settings.register_group_with_description(
+        "core.function.objectiveC",
+        "Objective-C",
+        "How Objective-C runtime calls are analyzed and simplified.",
+    );
+    settings.register_group("core.function.objectiveC.types", "Types");
     settings.register_setting_json(
         "analysis.objectiveC.resolveDynamicDispatch",
         r#"{

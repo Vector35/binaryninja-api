@@ -6760,6 +6760,8 @@ public:
 static void InitX86Settings()
 {
 	Ref<Settings> settings = Settings::Instance();
+	settings->RegisterGroup("arch.x86", "x86");
+	settings->RegisterGroup("arch.x86.disassembly", "Disassembly");
 	settings->RegisterSetting("arch.x86.disassembly.syntax",
 			R"~({
 			"title" : "x86 Disassembly Syntax",

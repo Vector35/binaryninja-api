@@ -607,11 +607,16 @@ unsafe impl CoreArrayProviderInner for TransformContext {
 
 /// Converts the options passed to a [`TransformSession`] constructor to the JSON string the core
 /// expects, using an empty object when there are none.
+///
+/// Returns `None` if the options aren't a JSON object.
 fn session_options<O: IntoJson>(options: Option<O>) -> Option<CString> {
-    match options {
-        Some(options) => Some(options.get_json_string().ok()?.to_cstr().to_owned()),
-        None => Some(c"{}".to_owned()),
-    }
+    let Some(options) = options else {
+        return Some(c"{}".to_owned());
+    };
+    let options = options.get_json_string().ok()?.to_cstr().to_owned();
+    serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(options.to_str().ok()?)
+        .ok()?;
+    Some(options)
 }
 
 /// A [`TransformSession`] manages the lifetime of a set of [`TransformContext`]s, performing transformations
@@ -647,7 +652,8 @@ impl TransformSession {
     /// `options` are per-session setting overrides as a JSON object of setting keys and values, for
     /// example `{"files.container.excludedTransforms": ["Zip"]}`. Pass `None` to use the settings as they are.
     ///
-    /// Returns `None` if `options` cannot be converted to JSON.
+    /// Returns `None` if `options` isn't a JSON object, or if the core can't create the session, for
+    /// example because it hasn't been initialized.
     ///
     /// NOTE: The [`TransformSessionMode`] will be set to the default specified by the `files.container.mode`
     /// setting in the Binary Ninja global settings (_not_ the options passed into this function). To

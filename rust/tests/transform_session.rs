@@ -92,4 +92,10 @@ fn test_session_options() {
     assert_eq!(process_root(&session), not_unzipped);
     let session = TransformSession::from_view_with_mode(&view, Some(options), mode).unwrap();
     assert_eq!(process_root(&session), not_unzipped);
+
+    // Options that aren't a JSON object are rejected.
+    for options in ["", "not json", "[]", r#""Zip""#, "null"] {
+        assert!(TransformSession::new_with_mode(&zip_path, Some(options), mode).is_none());
+        assert!(TransformSession::from_view_with_mode(&view, Some(options), mode).is_none());
+    }
 }

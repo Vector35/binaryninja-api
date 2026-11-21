@@ -19,7 +19,7 @@ mod functions;
 mod helpers;
 mod types;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext};
@@ -554,25 +554,51 @@ fn object_section_addresses(bv: &BinaryView, file: &object::File) -> SectionAddr
     // `post_process` rebases function addresses by this much, unless the view is below the
     // file's image base.
     let rebase = bv.start().saturating_sub(bv.original_image_base());
-    let mut seen_names = HashSet::new();
+
+    // The ELF view gives sections with the same name unique names, which can't be predicted
+    // from the file alone. It also adds each section with contents to the raw view at its file
+    // offset under the same name, so that offset finds the name.
+    let mut raw_names = HashMap::new();
+    if let Some(raw_view) = bv.parent_view() {
+        for raw_section in raw_view.sections().iter() {
+            raw_names.insert(
+                (raw_section.start(), raw_section.len() as u64),
+                raw_section.name().to_string_lossy().into_owned(),
+            );
+        }
+    }
+    // Sections without contents (`SHT_NOBITS`) aren't in the raw view; those are found by
+    // name, which is only reliable if no other section has it.
+    let mut name_counts = HashMap::new();
+    for section in file.sections() {
+        if let Ok(name) = section.name() {
+            *name_counts.entry(name).or_insert(0usize) += 1;
+        }
+    }
+
     for section in file.sections() {
         let Ok(name) = section.name() else {
             continue;
         };
-        // The ELF view keeps the first section with a given name as is, and suffixes the
-        // name of each later one with `#` and its section index.
-        let view_name = if seen_names.insert(name) {
-            name.to_string()
-        } else {
-            format!("{name}#{}", section.index().0)
-        };
-
         let SectionFlags::Elf { sh_flags, .. } = section.flags() else {
             continue;
         };
         if !sh_flags.contains(object::elf::SHF_ALLOC) || section.size() == 0 {
             continue;
         }
+
+        let view_name = section
+            .file_range()
+            .and_then(|range| raw_names.get(&range).cloned())
+            .or_else(|| (name_counts.get(name) == Some(&1)).then(|| name.to_string()));
+        let Some(view_name) = view_name else {
+            tracing::debug!(
+                "Section {} (index {}) of the object can't be found in the view; addresses in it will not be relocated",
+                name,
+                section.index().0
+            );
+            continue;
+        };
 
         match bv.section_by_name(view_name.as_str()) {
             Some(view_section) if view_section.len() as u64 == section.size() => {

@@ -30,7 +30,7 @@ use crate::component::Component;
 use crate::confidence::Conf;
 use crate::data_buffer::DataBuffer;
 use crate::debuginfo::DebugInfo;
-use crate::disassembly::DisassemblySettings;
+use crate::disassembly::{DisassemblyOption, DisassemblySettings};
 use crate::external_library::{ExternalLibrary, ExternalLocation};
 use crate::file_accessor::{
     raw_mut as raw_file_accessor, Accessor, BorrowedFileAccessor, FileAccessor, FileAccessorHandle,
@@ -61,7 +61,7 @@ use crate::variable::DataVariable;
 use crate::workflow::Workflow;
 use crate::{Endianness, BN_FULL_CONFIDENCE};
 use std::collections::{BTreeMap, HashMap};
-use std::ffi::{c_char, c_void, CString};
+use std::ffi::{c_char, c_void, CStr, CString};
 use std::fmt::{Debug, Display, Formatter};
 use std::mem::MaybeUninit;
 use std::ops::Range;
@@ -1049,6 +1049,144 @@ impl BinaryView {
         }
     }
 
+    /// Find every occurrence of `data` between `start` and `end`.
+    ///
+    /// In the `on_match` callback return `false` to stop searching.
+    pub fn find_all_data<C: FnMut(u64, &DataBuffer) -> bool>(
+        &self,
+        start: u64,
+        end: u64,
+        data: &DataBuffer,
+        on_match: C,
+    ) -> bool {
+        self.find_all_data_with_opts(
+            start,
+            end,
+            data,
+            FindFlag::FindCaseInsensitive,
+            NoProgressCallback,
+            on_match,
+        )
+    }
+
+    /// Find every occurrence of `data` between `start` and `end`.
+    ///
+    /// In the `on_match` callback return `false` to stop searching.
+    ///
+    /// # Warning
+    ///
+    /// This function is likely to be changed to take in a "query" structure. Or deprecated entirely.
+    pub fn find_all_data_with_opts<P: ProgressCallback, C: FnMut(u64, &DataBuffer) -> bool>(
+        &self,
+        start: u64,
+        end: u64,
+        data: &DataBuffer,
+        flag: FindFlag,
+        mut progress: P,
+        mut on_match: C,
+    ) -> bool {
+        unsafe extern "C" fn cb_on_match<C: FnMut(u64, &DataBuffer) -> bool>(
+            ctx: *mut c_void,
+            addr: u64,
+            data: *mut BNDataBuffer,
+        ) -> bool {
+            let f = ctx as *mut C;
+            let buffer = DataBuffer::from_raw(data);
+            (*f)(addr, &buffer)
+        }
+
+        unsafe {
+            BNFindAllDataWithProgress(
+                self.handle,
+                start,
+                end,
+                data.as_raw(),
+                flag,
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
+                &mut on_match as *mut C as *mut c_void,
+                Some(cb_on_match::<C>),
+            )
+        }
+    }
+
+    /// Find every line of `view_type` that shows `constant` between `start` and `end`.
+    ///
+    /// In the `on_match` callback return `false` to stop searching.
+    ///
+    /// Uses the same disassembly settings as the Python API's default, which
+    /// waits for IL to be generated so IL-level searches are complete.
+    pub fn find_all_constant<C: FnMut(u64, &LinearDisassemblyLine) -> bool>(
+        &self,
+        start: u64,
+        end: u64,
+        constant: u64,
+        view_type: FunctionViewType,
+        on_match: C,
+    ) -> bool {
+        let settings = find_all_default_settings();
+        self.find_all_constant_with_opts(
+            start,
+            end,
+            constant,
+            &settings,
+            view_type,
+            NoProgressCallback,
+            on_match,
+        )
+    }
+
+    /// Find every line of `view_type` that shows `constant` between `start` and `end`.
+    ///
+    /// In the `on_match` callback return `false` to stop searching.
+    ///
+    /// # Warning
+    ///
+    /// This function is likely to be changed to take in a "query" structure.
+    pub fn find_all_constant_with_opts<
+        P: ProgressCallback,
+        C: FnMut(u64, &LinearDisassemblyLine) -> bool,
+    >(
+        &self,
+        start: u64,
+        end: u64,
+        constant: u64,
+        disasm_settings: &DisassemblySettings,
+        view_type: FunctionViewType,
+        mut progress: P,
+        mut on_match: C,
+    ) -> bool {
+        unsafe extern "C" fn cb_on_match<C: FnMut(u64, &LinearDisassemblyLine) -> bool>(
+            ctx: *mut c_void,
+            addr: u64,
+            line: *mut BNLinearDisassemblyLine,
+        ) -> bool {
+            let f = ctx as *mut C;
+            let owned_line = LinearDisassemblyLine::from_raw(&*line);
+            // The core hands us ownership of the line.
+            BNFreeLinearDisassemblyLines(line, 1);
+            (*f)(addr, &owned_line)
+        }
+
+        let raw_view_type = FunctionViewType::into_raw(view_type);
+        let result = unsafe {
+            BNFindAllConstantWithProgress(
+                self.handle,
+                start,
+                end,
+                constant,
+                disasm_settings.handle,
+                raw_view_type,
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
+                &mut on_match as *mut C as *mut c_void,
+                Some(cb_on_match::<C>),
+            )
+        };
+        FunctionViewType::free_raw(raw_view_type);
+        result
+    }
+
     pub fn find_next_text(
         &self,
         start: u64,
@@ -1106,6 +1244,92 @@ impl BinaryView {
         } else {
             None
         }
+    }
+
+    /// Find every line of `view_type` containing `text` between `start` and `end`.
+    ///
+    /// In the `on_match` callback return `false` to stop searching. It is
+    /// given the matching text and the line it was found on.
+    ///
+    /// Uses the same disassembly settings as the Python API's default, which
+    /// waits for IL to be generated so IL-level searches are complete.
+    pub fn find_all_text<C: FnMut(u64, &str, &LinearDisassemblyLine) -> bool>(
+        &self,
+        start: u64,
+        end: u64,
+        text: &str,
+        view_type: FunctionViewType,
+        on_match: C,
+    ) -> bool {
+        let settings = find_all_default_settings();
+        self.find_all_text_with_opts(
+            start,
+            end,
+            text,
+            &settings,
+            FindFlag::FindCaseInsensitive,
+            view_type,
+            NoProgressCallback,
+            on_match,
+        )
+    }
+
+    /// Find every line of `view_type` containing `text` between `start` and `end`.
+    ///
+    /// In the `on_match` callback return `false` to stop searching. It is
+    /// given the matching text and the line it was found on.
+    ///
+    /// # Warning
+    ///
+    /// This function is likely to be changed to take in a "query" structure.
+    #[allow(clippy::too_many_arguments)]
+    pub fn find_all_text_with_opts<
+        P: ProgressCallback,
+        C: FnMut(u64, &str, &LinearDisassemblyLine) -> bool,
+    >(
+        &self,
+        start: u64,
+        end: u64,
+        text: &str,
+        disasm_settings: &DisassemblySettings,
+        flag: FindFlag,
+        view_type: FunctionViewType,
+        mut progress: P,
+        mut on_match: C,
+    ) -> bool {
+        unsafe extern "C" fn cb_on_match<C: FnMut(u64, &str, &LinearDisassemblyLine) -> bool>(
+            ctx: *mut c_void,
+            addr: u64,
+            text: *const c_char,
+            line: *mut BNLinearDisassemblyLine,
+        ) -> bool {
+            let f = ctx as *mut C;
+            let text = CStr::from_ptr(text).to_string_lossy();
+            let owned_line = LinearDisassemblyLine::from_raw(&*line);
+            // The core hands us ownership of the line.
+            BNFreeLinearDisassemblyLines(line, 1);
+            (*f)(addr, &text, &owned_line)
+        }
+
+        let text = text.to_cstr();
+        let raw_view_type = FunctionViewType::into_raw(view_type);
+        let result = unsafe {
+            BNFindAllTextWithProgress(
+                self.handle,
+                start,
+                end,
+                text.as_ptr(),
+                disasm_settings.handle,
+                flag,
+                raw_view_type,
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
+                &mut on_match as *mut C as *mut c_void,
+                Some(cb_on_match::<C>),
+            )
+        };
+        FunctionViewType::free_raw(raw_view_type);
+        result
     }
 
     pub fn notify_data_written(&self, offset: u64, len: usize) {
@@ -2786,7 +3010,6 @@ impl BinaryView {
     /// NOTE: Modifying an auto type will promote it to a user type.
     pub fn type_container(&self) -> TypeContainer {
         let type_container_ptr = NonNull::new(unsafe { BNGetAnalysisTypeContainer(self.handle) });
-        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
         unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 
@@ -2794,8 +3017,7 @@ impl BinaryView {
     pub fn user_type_container(&self) -> TypeContainer {
         let type_container_ptr =
             NonNull::new(unsafe { BNGetAnalysisUserTypeContainer(self.handle) });
-        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
-        unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }.clone()
+        unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 
     /// Type container for auto types in the Binary View.
@@ -2804,7 +3026,6 @@ impl BinaryView {
     pub fn auto_type_container(&self) -> TypeContainer {
         let type_container_ptr =
             NonNull::new(unsafe { BNGetAnalysisAutoTypeContainer(self.handle) });
-        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
         unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 
@@ -3777,4 +3998,15 @@ where
             .view
             .save(context.core_view.assume_init_ref(), &mut file)
     })
+}
+
+/// The disassembly settings `find_all_constant` and `find_all_text` use by
+/// default, matching the Python API.
+fn find_all_default_settings() -> Ref<DisassemblySettings> {
+    let settings = DisassemblySettings::new();
+    settings.set_option(DisassemblyOption::ShowAddress, false);
+    settings.set_option(DisassemblyOption::ShowOpcode, false);
+    settings.set_option(DisassemblyOption::ShowVariableTypesWhenAssigned, true);
+    settings.set_option(DisassemblyOption::WaitForIL, true);
+    settings
 }

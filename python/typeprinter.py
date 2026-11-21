@@ -96,9 +96,6 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 
 	name = None
 	_registered_printers = []
-	_cached_tokens = None
-	_cached_string = None
-	_cached_error = None
 
 	def __init__(self, handle=None):
 		if handle is not None:
@@ -107,6 +104,10 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 
 	def register(self):
 		assert self.__class__.name is not None
+
+		# Holds each result returned to core until core frees it, keyed by the address core passes to the
+		# free callback.
+		self._pending_results = {}
 
 		self._cb = core.BNTypePrinterCallbacks()
 		self._cb.context = 0
@@ -119,7 +120,10 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		self._cb.getTypeLines = self._cb.getTypeLines.__class__(self._get_type_lines)
 		self._cb.printAllTypes = self._cb.printAllTypes.__class__(self._print_all_types)
 		self._cb.freeTokens = self._cb.freeTokens.__class__(self._free_tokens)
-		self._cb.freeString = self._cb.freeString.__class__(self._free_string)
+		# The generated `freeString` type converts the string to `bytes`, which loses the address
+		# that identifies it.
+		self._free_string_cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_void_p)(self._free_string)
+		self._cb.freeString = ctypes.cast(self._free_string_cb, self._cb.freeString.__class__)
 		self._cb.freeLines = self._cb.freeLines.__class__(self._free_lines)
 		self.handle = core.BNRegisterTypePrinter(self.__class__.name, self._cb)
 		self.__class__._registered_printers.append(self)
@@ -130,6 +134,16 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 	def __repr__(self):
 		return f'<TypePrinter: {self.name}>'
 
+	def _return_string(self, value: str) -> ctypes.c_char_p:
+		buffer = ctypes.create_string_buffer(core.cstr(value))
+		self._pending_results[ctypes.addressof(buffer)] = buffer
+		return ctypes.cast(buffer, ctypes.c_char_p)
+
+	def _return_tokens(self, tokens: List[_function.InstructionTextToken]) -> 'ctypes.Array[core.BNInstructionTextToken]':
+		tokens_out = _function.InstructionTextToken._get_core_struct(tokens)
+		self._pending_results[ctypes.addressof(tokens_out)] = tokens_out
+		return tokens_out
+
 	def _get_type_tokens(self, ctxt, type, platform, name, base_confidence, escaping, result, result_count):
 		try:
 			platform_py = None
@@ -139,8 +153,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				types.QualifiedName._from_core_struct(name.contents), base_confidence, escaping)
 
-			TypePrinter._cached_tokens = _function.InstructionTextToken._get_core_struct(result_py)
-			result[0] = TypePrinter._cached_tokens
+			result[0] = self._return_tokens(result_py)
 			result_count[0] = len(result_py)
 
 			return True
@@ -160,8 +173,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				base_confidence, parent_type_py, escaping)
 
-			TypePrinter._cached_tokens = _function.InstructionTextToken._get_core_struct(result_py)
-			result[0] = TypePrinter._cached_tokens
+			result[0] = self._return_tokens(result_py)
 			result_count[0] = len(result_py)
 
 			return True
@@ -181,8 +193,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				base_confidence, parent_type_py, escaping)
 
-			TypePrinter._cached_tokens = _function.InstructionTextToken._get_core_struct(result_py)
-			result[0] = TypePrinter._cached_tokens
+			result[0] = self._return_tokens(result_py)
 			result_count[0] = len(result_py)
 
 			return True
@@ -199,8 +210,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				types.QualifiedName._from_core_struct(name.contents), escaping)
 
-			TypePrinter._cached_string = core.cstr(result_py)
-			result[0] = TypePrinter._cached_string
+			result[0] = self._return_string(result_py)
 			return True
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypePrinter._get_type_string")
@@ -215,8 +225,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				escaping)
 
-			TypePrinter._cached_string = core.cstr(result_py)
-			result[0] = TypePrinter._cached_string
+			result[0] = self._return_string(result_py)
 			return True
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypePrinter._get_type_string_before_name")
@@ -231,8 +240,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				escaping)
 
-			TypePrinter._cached_string = core.cstr(result_py)
-			result[0] = TypePrinter._cached_string
+			result[0] = self._return_string(result_py)
 			return True
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypePrinter._get_type_string_after_name")
@@ -242,14 +250,21 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		try:
 			result_py = self.get_type_lines(
 				types.Type.create(handle=core.BNNewTypeReference(type)),
-				typecontainer.TypeContainer(handle=container),
+				typecontainer.TypeContainer(handle=core.BNDuplicateTypeContainer(container)),
 				types.QualifiedName._from_core_struct(name.contents),
 				padding_cols, collapsed, escaping)
 
-			TypePrinter._cached_lines = (core.BNTypeDefinitionLine * len(result_py))()
-			for (i, line) in enumerate(result_py):
-				TypePrinter._cached_lines[i] = line._to_core_struct()
-			result[0] = TypePrinter._cached_lines
+			lines_out = (core.BNTypeDefinitionLine * len(result_py))()
+			try:
+				for (i, line) in enumerate(result_py):
+					lines_out[i] = line._to_core_struct()
+			except Exception:
+				for line in lines_out:
+					types.TypeDefinitionLine._free_core_struct(line)
+				raise
+
+			self._pending_results[ctypes.addressof(lines_out)] = lines_out
+			result[0] = lines_out
 			result_count[0] = len(result_py)
 
 			return True
@@ -271,39 +286,31 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 				binaryview.BinaryView(handle=core.BNNewViewReference(data)),
 				padding_cols, escaping)
 
-			TypePrinter._cached_string = core.cstr(result_py)
-			result[0] = TypePrinter._cached_string
+			result[0] = self._return_string(result_py)
 			return True
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypePrinter._print_all_types")
 			return False
 
-	def _free_tokens(self, ctxt, tokens, count):
+	def _free_tokens(self, ctxt, tokens, count) -> None:
 		try:
-			TypePrinter._cached_tokens = None
-			return True
+			self._pending_results.pop(ctypes.cast(tokens, ctypes.c_void_p).value)
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypePrinter._free_tokens")
-			return False
 
-	def _free_string(self, ctxt, string):
+	def _free_string(self, ctxt, string) -> None:
 		try:
-			TypePrinter._cached_string = None
-			return True
+			self._pending_results.pop(string)
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypePrinter._free_string")
-			return False
 
-	def _free_lines(self, ctxt, lines, count):
+	def _free_lines(self, ctxt, lines, count) -> None:
 		try:
-			for line in TypePrinter._cached_lines:
-				core.BNFreeType(line.type)
-				core.BNFreeType(line.rootType)
-			TypePrinter._cached_lines = None
-			return True
+			lines_out = self._pending_results.pop(ctypes.cast(lines, ctypes.c_void_p).value)
+			for line in lines_out:
+				types.TypeDefinitionLine._free_core_struct(line)
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in TypePrinter._free_lines")
-			return False
 
 	def _default_print_all_types(self, types_: Sequence[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		cpp_names = (core.BNQualifiedName * len(types_))()
@@ -317,7 +324,9 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 
 		result = ctypes.c_char_p()
 		core.BNTypePrinterDefaultPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, padding_cols, core.TokenEscapingTypeEnum(escaping), result)
-		return core.pyNativeStr(result.value)
+		result_py = core.pyNativeStr(result.value)
+		core.free_string(result)
+		return result_py
 
 	def get_type_tokens(self, type: types.Type, platform: Optional[_platform.Platform] = None, name: types.QualifiedNameType = "", base_confidence: int = core.max_confidence, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[_function.InstructionTextToken]:
 		"""
@@ -553,4 +562,6 @@ class CoreTypePrinter(TypePrinter):
 
 		result = ctypes.c_char_p()
 		core.BNTypePrinterPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, padding_cols, core.TokenEscapingTypeEnum(escaping), result)
-		return core.pyNativeStr(result.value)
+		result_py = core.pyNativeStr(result.value)
+		core.free_string(result)
+		return result_py

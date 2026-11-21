@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 194
+#define BN_CURRENT_CORE_ABI_VERSION 195
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 193
+#define BN_MINIMUM_CORE_ABI_VERSION 195
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -3464,6 +3464,13 @@ extern "C"
 		void (*addAction)(void* ctxt, BNMainThreadAction* action);
 	} BNMainThreadCallbacks;
 
+	// Core lends every handle it passes to these callbacks. `platform` is never null.
+	// `existingTypes` is null when there are no existing types. `options` and `includeDirs`
+	// may be null when their count is zero. A callback that returns true owns its output until
+	// core passes it to `freeString`, `freeResult` or `freeQualifiedNameAndType`. Core reads
+	// the error list either way, then passes it to `freeErrorList`. `freeErrorList` receives
+	// null when the callback set none. Core ignores every other output of a callback that
+	// returns false. Core reads a null `message` or `fileName` in an error as empty.
 	typedef struct BNTypeParserCallbacks
 	{
 		void* context;
@@ -3491,9 +3498,16 @@ extern "C"
 		);
 		void (*freeString)(void* ctxt, char* string);
 		void (*freeResult)(void* ctxt, BNTypeParserResult* result);
+		void (*freeQualifiedNameAndType)(void* ctxt, BNQualifiedNameAndType* result);
 		void (*freeErrorList)(void* ctxt, BNTypeParserError* errors, size_t errorCount);
 	} BNTypeParserCallbacks;
 
+	// Core lends every handle it passes to these callbacks. `platform` and `parentType` may
+	// be null. A callback that returns true owns its output until core passes it to
+	// `freeTokens`, `freeString` or `freeLines`. Core ignores the output of a callback that
+	// returns false. A line from `getTypeLines` may leave `parentType` or `rootType` null, and
+	// `rootTypeName` null or empty. Core then uses the type being printed and its name. Core
+	// prints all types itself when `printAllTypes` or `freeString` is null.
 	typedef struct BNTypePrinterCallbacks
 	{
 		void* context;

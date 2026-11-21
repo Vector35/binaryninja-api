@@ -447,6 +447,7 @@ bool TypeContainer::ParseTypesFromSource(
 
 	if (!success)
 	{
+		BNFreeTypeParserResult(&apiResult);
 		return false;
 	}
 

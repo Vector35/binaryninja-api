@@ -1018,7 +1018,7 @@ impl TypeLibProcessor {
                 &header_contents,
                 &file_name,
                 &platform,
-                &platform_type_container,
+                Some(&platform_type_container),
                 &self.compiler_options,
                 &include_dirs,
                 "",

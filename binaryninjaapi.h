@@ -20026,6 +20026,7 @@ namespace BinaryNinja {
 		);
 		static void FreeStringCallback(void* ctxt, char* result);
 		static void FreeResultCallback(void* ctxt, BNTypeParserResult* result);
+		static void FreeQualifiedNameAndTypeCallback(void* ctxt, BNQualifiedNameAndType* result);
 		static void FreeErrorListCallback(void* ctxt, BNTypeParserError* errors, size_t errorCount);
 
 	  public:

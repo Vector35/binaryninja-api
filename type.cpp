@@ -484,8 +484,8 @@ BNTypeDefinitionLine* TypeDefinitionLine::CreateTypeDefinitionLineList(
 		result[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(lines[i].tokens);
 		result[i].count = lines[i].tokens.size();
 		result[i].type = BNNewTypeReference(lines[i].type->GetObject());
-		result[i].parentType = BNNewTypeReference(lines[i].parentType->GetObject());
-		result[i].rootType = BNNewTypeReference(lines[i].rootType->GetObject());
+		result[i].parentType = lines[i].parentType ? BNNewTypeReference(lines[i].parentType->GetObject()) : nullptr;
+		result[i].rootType = lines[i].rootType ? BNNewTypeReference(lines[i].rootType->GetObject()) : nullptr;
 		result[i].rootTypeName = BNAllocString(lines[i].rootTypeName.c_str());
 		result[i].baseType = lines[i].baseType ? BNNewNamedTypeReference(lines[i].baseType->GetObject()) : nullptr;
 		result[i].baseOffset = lines[i].baseOffset;

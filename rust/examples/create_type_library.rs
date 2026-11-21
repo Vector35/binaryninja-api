@@ -33,7 +33,7 @@ fn main() {
             &header_contents,
             header_name,
             &type_lib_plat,
-            &plat_type_container,
+            Some(&plat_type_container),
             &[],
             &[],
             "",

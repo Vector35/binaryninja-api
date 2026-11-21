@@ -6,6 +6,15 @@ using namespace std;
 namespace fs = std::filesystem;
 
 
+static std::optional<TypeContainer> ExistingTypesFromAPI(BNTypeContainer* existingTypes)
+{
+	if (!existingTypes)
+		return std::nullopt;
+
+	return TypeContainer {BNDuplicateTypeContainer(existingTypes)};
+}
+
+
 TypeParser::TypeParser(const string& name) : m_nameForRegister(name) {}
 
 
@@ -45,7 +54,7 @@ Ref<TypeParser> TypeParser::GetDefault()
 
 void TypeParser::Register(TypeParser* parser)
 {
-	BNTypeParserCallbacks cb;
+	BNTypeParserCallbacks cb {};
 	cb.context = parser;
 	cb.getOptionText = GetOptionTextCallback;
 	cb.preprocessSource = PreprocessSourceCallback;
@@ -53,6 +62,7 @@ void TypeParser::Register(TypeParser* parser)
 	cb.parseTypeString = ParseTypeStringCallback;
 	cb.freeString = FreeStringCallback;
 	cb.freeResult = FreeResultCallback;
+	cb.freeQualifiedNameAndType = FreeQualifiedNameAndTypeCallback;
 	cb.freeErrorList = FreeErrorListCallback;
 	parser->m_object = BNRegisterTypeParser(parser->m_nameForRegister.c_str(), &cb);
 }
@@ -162,8 +172,8 @@ bool TypeParser::PreprocessSourceCallback(void* ctxt,
 	bool success = parser->PreprocessSource(
 		source,
 		fileName,
-		new CorePlatform(platform),
-		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
+		new CorePlatform(BNNewPlatformReference(platform)),
+		ExistingTypesFromAPI(existingTypes),
 		optionsCpp,
 		includeDirsCpp,
 		outputCpp,
@@ -224,8 +234,8 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 	bool success = parser->ParseTypesFromSource(
 		source,
 		fileName,
-		new CorePlatform(platform),
-		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
+		new CorePlatform(BNNewPlatformReference(platform)),
+		ExistingTypesFromAPI(existingTypes),
 		optionsCpp,
 		includeDirsCpp,
 		autoTypeSource,
@@ -233,38 +243,41 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 		errorsCpp
 	);
 
-	result->typeCount = resultCpp.types.size();
-	result->variableCount = resultCpp.variables.size();
-	result->functionCount = resultCpp.functions.size();
-	result->types = new BNParsedType[resultCpp.types.size()];
-	result->variables = new BNParsedType[resultCpp.variables.size()];
-	result->functions = new BNParsedType[resultCpp.functions.size()];
-
-	size_t n = 0;
-	for (auto& i : resultCpp.types)
+	if (success)
 	{
-		result->types[n].name = i.name.ToAPIStruct();
-		result->types[n].type = BNNewTypeReference(i.type->GetObject());
-		result->types[n].isUser = i.isUser;
-		n++;
-	}
+		result->typeCount = resultCpp.types.size();
+		result->variableCount = resultCpp.variables.size();
+		result->functionCount = resultCpp.functions.size();
+		result->types = new BNParsedType[resultCpp.types.size()];
+		result->variables = new BNParsedType[resultCpp.variables.size()];
+		result->functions = new BNParsedType[resultCpp.functions.size()];
 
-	n = 0;
-	for (auto& i : resultCpp.variables)
-	{
-		result->variables[n].name = i.name.ToAPIStruct();
-		result->variables[n].type = BNNewTypeReference(i.type->GetObject());
-		result->variables[n].isUser = i.isUser;
-		n++;
-	}
+		size_t n = 0;
+		for (auto& i : resultCpp.types)
+		{
+			result->types[n].name = i.name.ToAPIStruct();
+			result->types[n].type = BNNewTypeReference(i.type->GetObject());
+			result->types[n].isUser = i.isUser;
+			n++;
+		}
 
-	n = 0;
-	for (auto& i : resultCpp.functions)
-	{
-		result->functions[n].name = i.name.ToAPIStruct();
-		result->functions[n].type = BNNewTypeReference(i.type->GetObject());
-		result->functions[n].isUser = i.isUser;
-		n++;
+		n = 0;
+		for (auto& i : resultCpp.variables)
+		{
+			result->variables[n].name = i.name.ToAPIStruct();
+			result->variables[n].type = BNNewTypeReference(i.type->GetObject());
+			result->variables[n].isUser = i.isUser;
+			n++;
+		}
+
+		n = 0;
+		for (auto& i : resultCpp.functions)
+		{
+			result->functions[n].name = i.name.ToAPIStruct();
+			result->functions[n].type = BNNewTypeReference(i.type->GetObject());
+			result->functions[n].isUser = i.isUser;
+			n++;
+		}
 	}
 
 	*errorCount = errorsCpp.size();
@@ -295,14 +308,17 @@ bool TypeParser::ParseTypeStringCallback(void* ctxt,
 	vector<TypeParserError> errorsCpp;
 	bool success = parser->ParseTypeString(
 		source,
-		new CorePlatform(platform),
-		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
+		new CorePlatform(BNNewPlatformReference(platform)),
+		ExistingTypesFromAPI(existingTypes),
 		resultCpp,
 		errorsCpp
 	);
 
-	result->name = resultCpp.name.ToAPIStruct();
-	result->type = BNNewTypeReference(resultCpp.type->GetObject());
+	if (success)
+	{
+		result->name = resultCpp.name.ToAPIStruct();
+		result->type = BNNewTypeReference(resultCpp.type->GetObject());
+	}
 
 	*errorCount = errorsCpp.size();
 	*errors = new BNTypeParserError[errorsCpp.size()];
@@ -348,6 +364,13 @@ void TypeParser::FreeResultCallback(void* ctxt, BNTypeParserResult* result)
 }
 
 
+void TypeParser::FreeQualifiedNameAndTypeCallback(void* ctxt, BNQualifiedNameAndType* result)
+{
+	QualifiedName::FreeAPIStruct(&result->name);
+	BNFreeType(result->type);
+}
+
+
 void TypeParser::FreeErrorListCallback(void* ctxt, BNTypeParserError* errors, size_t errorCount)
 {
 	for (size_t i = 0; i < errorCount; i ++)
@@ -383,6 +406,7 @@ bool TypeParser::ParseTypesFromSourceFile(const string& fileName, Ref<Platform> 
 	if(size == -1)
 	{
 		errors.push_back(TypeParserError(FatalSeverity, string("error: unable to open '") + fileName));
+		fclose(fp);
 		return false;
 	}
 	fseek(fp, 0, SEEK_SET);
@@ -519,6 +543,7 @@ bool CoreTypeParser::ParseTypesFromSource(const std::string& source, const std::
 
 	if (!success)
 	{
+		BNFreeTypeParserResult(&apiResult);
 		return false;
 	}
 

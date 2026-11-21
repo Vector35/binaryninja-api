@@ -163,6 +163,59 @@ fn test_binary_view_search() {
 }
 
 #[test]
+fn test_binary_view_find_all() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+    let image_base = view.original_image_base();
+
+    // Test text search, keeping the matched lines past the callback.
+    let mut text_matches = Vec::new();
+    view.find_all_text(
+        0,
+        view.end(),
+        "minkernel",
+        FunctionViewType::MediumLevelIL,
+        |addr, text, line| {
+            text_matches.push((addr, text.to_string(), line.clone()));
+            true
+        },
+    );
+    assert!(text_matches
+        .iter()
+        .any(|(addr, _, _)| *addr == image_base + 0x1580));
+    assert!(text_matches
+        .iter()
+        .all(|(_, text, line)| !text.is_empty() && !line.to_string().is_empty()));
+
+    // Test data search.
+    let data = DataBuffer::new(b"minkernel");
+    let mut data_matches = Vec::new();
+    view.find_all_data(0, view.end(), &data, |addr, buffer| {
+        assert_eq!(buffer.get_data(), b"minkernel");
+        data_matches.push(addr);
+        true
+    });
+    assert!(data_matches.contains(&(image_base + 0x1582)));
+
+    // Test constant search, and that returning false stops the search.
+    let constant = 0x80000000;
+    let mut constant_matches = Vec::new();
+    view.find_all_constant(
+        0,
+        view.end(),
+        constant,
+        FunctionViewType::MediumLevelIL,
+        |addr, line| {
+            constant_matches.push((addr, line.clone()));
+            false
+        },
+    );
+    assert_eq!(constant_matches.len(), 1);
+    assert_eq!(constant_matches[0].0, image_base + 0x26080);
+}
+
+#[test]
 fn test_binary_tags() {
     let _session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();

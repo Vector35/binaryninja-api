@@ -796,7 +796,10 @@ bool Platform::ParseTypesFromSource(const string& source, const string& fileName
 	BNFreeString(errorStr);
 	delete[] includeDirList;
 	if (!ok)
+	{
+		BNFreeTypeParserResult(&result);
 		return false;
+	}
 
 	for (size_t i = 0; i < result.typeCount; i++)
 	{
@@ -839,7 +842,10 @@ bool Platform::ParseTypesFromSourceFile(const string& fileName, map<QualifiedNam
 	BNFreeString(errorStr);
 	delete[] includeDirList;
 	if (!ok)
+	{
+		BNFreeTypeParserResult(&result);
 		return false;
+	}
 
 	for (size_t i = 0; i < result.typeCount; i++)
 	{

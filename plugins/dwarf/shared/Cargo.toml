@@ -12,4 +12,4 @@ binaryninjacore-sys.workspace = true
 gimli = "0.31"
 zstd = "0.13.2"
 thiserror = "2.0"
-object = "0.36"
+object = "0.41"

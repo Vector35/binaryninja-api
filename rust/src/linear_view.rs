@@ -143,6 +143,25 @@ impl LinearViewObject {
         }
     }
 
+    pub fn single_function_llil(function: &Function, settings: &DisassemblySettings) -> Ref<Self> {
+        unsafe {
+            let handle =
+                BNCreateLinearViewSingleFunctionLowLevelIL(function.handle, settings.handle);
+            Self::ref_from_raw(handle)
+        }
+    }
+
+    pub fn single_function_llil_ssa(
+        function: &Function,
+        settings: &DisassemblySettings,
+    ) -> Ref<Self> {
+        unsafe {
+            let handle =
+                BNCreateLinearViewSingleFunctionLowLevelILSSAForm(function.handle, settings.handle);
+            Self::ref_from_raw(handle)
+        }
+    }
+
     pub fn single_function_mlil(function: &Function, settings: &DisassemblySettings) -> Ref<Self> {
         unsafe {
             let handle =
@@ -157,6 +176,32 @@ impl LinearViewObject {
     ) -> Ref<Self> {
         unsafe {
             let handle = BNCreateLinearViewSingleFunctionMediumLevelILSSAForm(
+                function.handle,
+                settings.handle,
+            );
+            Self::ref_from_raw(handle)
+        }
+    }
+
+    pub fn single_function_mapped_mlil(
+        function: &Function,
+        settings: &DisassemblySettings,
+    ) -> Ref<Self> {
+        unsafe {
+            let handle = BNCreateLinearViewSingleFunctionMappedMediumLevelIL(
+                function.handle,
+                settings.handle,
+            );
+            Self::ref_from_raw(handle)
+        }
+    }
+
+    pub fn single_function_mapped_mlil_ssa(
+        function: &Function,
+        settings: &DisassemblySettings,
+    ) -> Ref<Self> {
+        unsafe {
+            let handle = BNCreateLinearViewSingleFunctionMappedMediumLevelILSSAForm(
                 function.handle,
                 settings.handle,
             );

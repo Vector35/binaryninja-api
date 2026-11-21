@@ -83,7 +83,7 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
 	}
 	auto lines = renderer->GetLinesForData(viewObj, addr, typeObj, prefixes, width, context,
 		language ? language : string());
-	BNDisassemblyTextLine* result = AllocAPIStructList(lines, count);
+	BNDisassemblyTextLine* result = AllocAPIStructList<DisassemblyTextLine>(lines, count);
 	for (size_t i = 0; i < ctxCount; i++)
 		context[i].first->Release();
 	return result;

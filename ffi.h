@@ -2,6 +2,7 @@
 #pragma once
 
 #include <optional>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -73,14 +74,14 @@ namespace BinaryNinja
 	using bn::base::capi::ParseAPIStruct;
 	using bn::base::capi::ParseAPIStructList;
 
-	template<APIStruct T>
-	void AllocAPIStructList(const std::vector<T>& objects, APIStructType<T> BN_API_PTR** output, size_t* count)
+	template<APIStruct T, std::ranges::sized_range R>
+	void AllocAPIStructList(const R& objects, APIStructType<T> BN_API_PTR** output, size_t* count)
 	{
 		bn::base::capi::AllocAPIStructList<T>(objects, output, count);
 	}
 
-	template<APIStruct T>
-	APIStructType<T> BN_API_PTR* AllocAPIStructList(const std::vector<T>& objects, size_t* count)
+	template<APIStruct T, std::ranges::sized_range R>
+	APIStructType<T> BN_API_PTR* AllocAPIStructList(const R& objects, size_t* count)
 	{
 		return bn::base::capi::AllocAPIStructList<T>(objects, count);
 	}

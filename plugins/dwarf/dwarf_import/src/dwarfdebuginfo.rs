@@ -143,7 +143,11 @@ pub(crate) struct DebugInfoBuilderContext<R: ReaderType> {
 }
 
 impl<R: ReaderType> DebugInfoBuilderContext<R> {
-    pub(crate) fn new(bv: &BinaryView, default_address_size: usize, dwarf: &Dwarf<R>) -> Option<Self> {
+    pub(crate) fn new(
+        bv: &BinaryView,
+        default_address_size: usize,
+        dwarf: &Dwarf<R>,
+    ) -> Option<Self> {
         let mut units = vec![];
         let mut iter = dwarf.units();
         while let Ok(Some(header)) = iter.next() {
@@ -830,7 +834,11 @@ impl DebugInfoBuilder {
                     // A slot with no DIE: its size is known from the register, its type is not, so leave
                     // the type to analysis. A placeholder may not be passed at all (see Placeholder).
                     ConcreteParameter::Gap { size } | ConcreteParameter::Placeholder { size } => {
-                        FunctionParameter::new(Conf::new(Type::int(*size, false), 0), String::new(), None)
+                        FunctionParameter::new(
+                            Conf::new(Type::int(*size, false), 0),
+                            String::new(),
+                            None,
+                        )
                     }
                 })
                 .collect();

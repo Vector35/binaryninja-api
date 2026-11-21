@@ -1,7 +1,12 @@
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
-use binaryninja::types::{CoreTypeParser, Type, TypeParser, TypeParserError};
+use binaryninja::types::parser::{register_type_parser, ParsedType, TypeParserOption};
+use binaryninja::types::{
+    CoreTypeParser, QualifiedNameAndType, Type, TypeContainer, TypeParser, TypeParserError,
+    TypeParserResult,
+};
 use binaryninjacore_sys::BNTypeParserErrorSeverity::ErrorSeverity;
+use std::path::PathBuf;
 
 const TEST_TYPES: &str = r#"
 typedef int int32_t;
@@ -32,10 +37,69 @@ fn test_string_to_type() {
     let plat_type_container = platform.type_container();
     let parser = CoreTypeParser::default();
     let parsed_type = parser
-        .parse_type_string("int32_t", &platform, &plat_type_container)
+        .parse_type_string("int32_t", &platform, Some(&plat_type_container))
         .expect("Parsed int32_t");
     let test_type = Type::int(4, true);
     assert_eq!(test_type, parsed_type.ty);
+}
+
+struct OptionTextTypeParser;
+
+impl TypeParser for OptionTextTypeParser {
+    fn get_option_text(&self, option: TypeParserOption, value: &str) -> Option<String> {
+        match (option, value) {
+            (TypeParserOption::IncludeSystemTypes, "true") => Some("--option-text".to_string()),
+            _ => None,
+        }
+    }
+
+    fn preprocess_source(
+        &self,
+        _source: &str,
+        _file_name: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+        _options: &[String],
+        _include_dirs: &[PathBuf],
+    ) -> Result<String, Vec<TypeParserError>> {
+        Err(vec![])
+    }
+
+    fn parse_types_from_source(
+        &self,
+        _source: &str,
+        _file_name: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+        _options: &[String],
+        _include_dirs: &[PathBuf],
+        _auto_type_source: &str,
+    ) -> Result<TypeParserResult, Vec<TypeParserError>> {
+        Err(vec![])
+    }
+
+    fn parse_type_string(
+        &self,
+        _source: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+    ) -> Result<QualifiedNameAndType, Vec<TypeParserError>> {
+        Err(vec![])
+    }
+}
+
+#[test]
+fn test_option_text() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let (_, parser) = register_type_parser("option_text_type_parser", OptionTextTypeParser);
+    assert_eq!(
+        parser.get_option_text(TypeParserOption::IncludeSystemTypes, "true"),
+        Some("--option-text".to_string())
+    );
+    assert_eq!(
+        parser.get_option_text(TypeParserOption::IncludeSystemTypes, "maybe"),
+        None
+    );
 }
 
 #[test]
@@ -49,7 +113,7 @@ fn test_string_to_types() {
             TEST_TYPES,
             "test_file.h",
             &platform,
-            &plat_type_container,
+            Some(&plat_type_container),
             &[],
             &[],
             "",
@@ -65,7 +129,7 @@ fn test_parse_error() {
     let plat_type_container = platform.type_container();
     let parser = CoreTypeParser::default();
     let parser_error = parser
-        .parse_type_string("AAAAA", &platform, &plat_type_container)
+        .parse_type_string("AAAAA", &platform, Some(&plat_type_container))
         .expect_err("Parsing should fail!");
     assert_eq!(
         parser_error,
@@ -77,4 +141,201 @@ fn test_parse_error() {
             column: 1
         }]
     );
+}
+
+struct CannedTypeParser;
+
+impl TypeParser for CannedTypeParser {
+    fn get_option_text(&self, _option: TypeParserOption, _value: &str) -> Option<String> {
+        None
+    }
+
+    fn preprocess_source(
+        &self,
+        source: &str,
+        _file_name: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+        options: &[String],
+        include_dirs: &[PathBuf],
+    ) -> Result<String, Vec<TypeParserError>> {
+        Ok(format!(
+            "{source}: {} options, {} include dirs",
+            options.len(),
+            include_dirs.len()
+        ))
+    }
+
+    fn parse_types_from_source(
+        &self,
+        _source: &str,
+        file_name: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+        options: &[String],
+        include_dirs: &[PathBuf],
+        _auto_type_source: &str,
+    ) -> Result<TypeParserResult, Vec<TypeParserError>> {
+        let name = format!(
+            "{file_name}: {} options, {} include dirs",
+            options.len(),
+            include_dirs.len()
+        );
+        Ok(TypeParserResult {
+            types: vec![ParsedType {
+                name: name.into(),
+                ty: Type::int(4, true),
+                user: true,
+            }],
+            variables: vec![],
+            functions: vec![],
+        })
+    }
+
+    fn parse_type_string(
+        &self,
+        source: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+    ) -> Result<QualifiedNameAndType, Vec<TypeParserError>> {
+        Ok(QualifiedNameAndType {
+            name: source.into(),
+            ty: Type::int(4, true),
+        })
+    }
+}
+
+#[test]
+fn test_custom_parser_success() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
+    let plat_type_container = platform.type_container();
+    let (_, parser) = register_type_parser("canned_type_parser", CannedTypeParser);
+
+    let preprocessed = parser
+        .preprocess_source(
+            "int value;",
+            "test_file.h",
+            &platform,
+            Some(&plat_type_container),
+            &[],
+            &[],
+        )
+        .expect("Preprocessed source");
+    assert_eq!(preprocessed, "int value;: 0 options, 0 include dirs");
+
+    let parsed_types = parser
+        .parse_types_from_source(
+            "int value;",
+            "test_file.h",
+            &platform,
+            Some(&plat_type_container),
+            &[],
+            &[],
+            "",
+        )
+        .expect("Parsed types");
+    assert_eq!(
+        parsed_types,
+        TypeParserResult {
+            types: vec![ParsedType {
+                name: "test_file.h: 0 options, 0 include dirs".into(),
+                ty: Type::int(4, true),
+                user: true,
+            }],
+            variables: vec![],
+            functions: vec![],
+        }
+    );
+
+    let parsed_type = parser
+        .parse_type_string("value_t", &platform, None)
+        .expect("Parsed value_t");
+    assert_eq!(parsed_type.name, "value_t".into());
+    assert_eq!(Type::int(4, true), parsed_type.ty);
+}
+
+struct FailingTypeParser;
+
+impl TypeParser for FailingTypeParser {
+    fn get_option_text(&self, _option: TypeParserOption, _value: &str) -> Option<String> {
+        None
+    }
+
+    fn preprocess_source(
+        &self,
+        _source: &str,
+        _file_name: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+        _options: &[String],
+        _include_dirs: &[PathBuf],
+    ) -> Result<String, Vec<TypeParserError>> {
+        Err(vec![])
+    }
+
+    fn parse_types_from_source(
+        &self,
+        _source: &str,
+        _file_name: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+        _options: &[String],
+        _include_dirs: &[PathBuf],
+        _auto_type_source: &str,
+    ) -> Result<TypeParserResult, Vec<TypeParserError>> {
+        Err(vec![])
+    }
+
+    fn parse_type_string(
+        &self,
+        _source: &str,
+        _platform: &Platform,
+        _existing_types: Option<&TypeContainer>,
+    ) -> Result<QualifiedNameAndType, Vec<TypeParserError>> {
+        Err(vec![TypeParserError::new(
+            ErrorSeverity,
+            "expected failure".to_string(),
+            "string.hpp".to_string(),
+            1,
+            1,
+        )])
+    }
+}
+
+#[test]
+fn test_custom_parser_error() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
+    register_type_parser("failing_type_parser", FailingTypeParser);
+    let parser = CoreTypeParser::parser_by_name("failing_type_parser")
+        .expect("Failed to get the failing type parser");
+    let parser_error = parser
+        .parse_type_string("int32_t", &platform, None)
+        .expect_err("Parsing should fail!");
+    assert_eq!(
+        parser_error,
+        vec![TypeParserError {
+            severity: ErrorSeverity,
+            message: "expected failure".to_string(),
+            file_name: "string.hpp".to_string(),
+            line: 1,
+            column: 1
+        }]
+    );
+
+    parser
+        .preprocess_source("int32_t value;", "test_file.h", &platform, None, &[], &[])
+        .expect_err("Preprocessing should fail!");
+    parser
+        .parse_types_from_source(
+            "int32_t value;",
+            "test_file.h",
+            &platform,
+            None,
+            &[],
+            &[],
+            "",
+        )
+        .expect_err("Parsing should fail!");
 }

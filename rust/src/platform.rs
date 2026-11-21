@@ -175,9 +175,6 @@ impl Platform {
 
     pub fn type_container(&self) -> TypeContainer {
         let type_container_ptr = NonNull::new(unsafe { BNGetPlatformTypeContainer(self.handle) });
-        // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
-        // TODO: We are cloning here for platforms but we dont need to do this for [BinaryView::type_container]
-        // TODO: Why does this require that we, construct a TypeContainer, duplicate the type container, then drop the original.
         unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 
@@ -342,14 +339,17 @@ impl Platform {
             )
         };
 
+        // Core allocates the output and the error text whether or not preprocessing succeeds.
+        assert!(!result.is_null());
+        assert!(!error_string.is_null());
+        let result = unsafe { BnString::from_raw(result) };
+        let error_string = unsafe { BnString::into_string(error_string) };
         if success {
-            assert!(!result.is_null());
-            Ok(unsafe { BnString::from_raw(result) })
+            Ok(result)
         } else {
-            assert!(!error_string.is_null());
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
-                unsafe { BnString::into_string(error_string) },
+                error_string,
                 file_name.to_string(),
                 0,
                 0,
@@ -384,21 +384,20 @@ impl Platform {
             )
         };
 
-        if success {
-            let result = TypeParserResult::from_raw(&raw_result);
-            // NOTE: This is safe because the core allocated the TypeParserResult
-            TypeParserResult::free_raw(raw_result);
-            Ok(result)
-        } else {
-            assert!(!error_string.is_null());
-            Err(TypeParserError::new(
+        // Core allocates the result and the error text whether or not parsing succeeds.
+        assert!(!error_string.is_null());
+        let error_string = unsafe { BnString::into_string(error_string) };
+        let result = success.then(|| TypeParserResult::from_raw(&raw_result));
+        TypeParserResult::free_raw(raw_result);
+        result.ok_or_else(|| {
+            TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
-                unsafe { BnString::into_string(error_string) },
+                error_string,
                 filename.to_string(),
                 0,
                 0,
-            ))
-        }
+            )
+        })
     }
 
     // TODO: Documentation, specifically how this differs from the TypeParser impl
@@ -425,21 +424,20 @@ impl Platform {
             )
         };
 
-        if success {
-            let result = TypeParserResult::from_raw(&raw_result);
-            // NOTE: This is safe because the core allocated the TypeParserResult
-            TypeParserResult::free_raw(raw_result);
-            Ok(result)
-        } else {
-            assert!(!error_string.is_null());
-            Err(TypeParserError::new(
+        // Core allocates the result and the error text whether or not parsing succeeds.
+        assert!(!error_string.is_null());
+        let error_string = unsafe { BnString::into_string(error_string) };
+        let result = success.then(|| TypeParserResult::from_raw(&raw_result));
+        TypeParserResult::free_raw(raw_result);
+        result.ok_or_else(|| {
+            TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
-                unsafe { BnString::into_string(error_string) },
+                error_string,
                 filename.to_string(),
                 0,
                 0,
-            ))
-        }
+            )
+        })
     }
 }
 

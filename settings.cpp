@@ -39,9 +39,9 @@ void Settings::SetResourceId(const string& resourceId)
 }
 
 
-bool Settings::RegisterGroup(const string& group, const string& title)
+bool Settings::RegisterGroup(const string& group, const string& title, const string& description)
 {
-	return BNSettingsRegisterGroup(m_object, group.c_str(), title.c_str());
+	return BNSettingsRegisterGroup(m_object, group.c_str(), title.c_str(), description.c_str());
 }
 
 

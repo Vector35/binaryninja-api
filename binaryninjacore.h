@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 195
+#define BN_CURRENT_CORE_ABI_VERSION 196
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 195
+#define BN_MINIMUM_CORE_ABI_VERSION 196
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -9165,7 +9165,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeSettings(BNSettings* settings);
 	BINARYNINJACOREAPI bool BNLoadSettingsFile(BNSettings* settings, const char* fileName, BNSettingsScope scope, BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSettingsSetResourceId(BNSettings* settings, const char* resourceId);
-	BINARYNINJACOREAPI bool BNSettingsRegisterGroup(BNSettings* settings, const char* group, const char* title);
+	BINARYNINJACOREAPI bool BNSettingsRegisterGroup(
+		BNSettings* settings, const char* group, const char* title, const char* description);
 	BINARYNINJACOREAPI bool BNSettingsRegisterSetting(BNSettings* settings, const char* key, const char* properties);
 	BINARYNINJACOREAPI bool BNSettingsContains(BNSettings* settings, const char* key);
 	BINARYNINJACOREAPI bool BNSettingsIsEmpty(BNSettings* settings, BNBinaryView* view, BNFunction* func, BNSettingsScope scope);

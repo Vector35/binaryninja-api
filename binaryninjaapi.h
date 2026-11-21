@@ -21113,9 +21113,10 @@ namespace BinaryNinja {
 			</table>
 
 		Settings are identified by a key, which is a string in the form of <b><tt><group>.<name></tt></b> or <b><tt><group>.<subGroup>.<name></tt></b> . Groups provide
-		a simple way to categorize settings. Sub-groups are optional and multiple sub-groups are allowed. When defining a settings group, the
-		\c RegisterGroup method allows for specifying a UI friendly title for use in the Binary Ninja UI. Defining a new setting requires a
-		unique setting key and a JSON string of property, value pairs. The following table describes the available properties and values.
+		a simple way to categorize settings. The segments of a key before the setting's name form nested groups. For example, <tt>ui.font.view.size</tt> is in
+		the group <tt>ui.font.view</tt>, inside <tt>ui.font</tt> and <tt>ui</tt>. The \c RegisterGroup method gives a group at any level a title and description
+		for the Binary Ninja UI. Defining a new setting requires a unique setting key and a JSON string of property, value pairs. The following table describes
+		the available properties and values.
 
 			<table>
 			<tr><th>Property</th><th>JSON Data Type</th><th>Prerequisite</th><th>Optional</th><th>{Allowed Values} and Notes</th></tr>
@@ -21216,11 +21217,15 @@ namespace BinaryNinja {
 
 		/*! Registers a group in the schema for this \c Settings instance
 
-			\param group a unique identifier
+			A group ID is one or more leading segments of a setting key, such as \c "myPlugin" or \c "myPlugin.advanced". Registering a
+			group is optional and only sets its title and description. Each group can be registered once, before or after its settings.
+
+			\param group one or more non-empty segments separated by dots
 			\param title a user friendly name appropriate for UI presentation
-			\return True on success, False on failure
+			\param description an optional description of the group's settings
+			\return True on success, False if the identifier is invalid, the title is empty, or the group is already registered
 		*/
-		bool RegisterGroup(const std::string& group, const std::string& title);
+		bool RegisterGroup(const std::string& group, const std::string& title, const std::string& description = "");
 
 		/*! Registers a new setting with this \c Settings instance
 

@@ -58,9 +58,10 @@ class Settings:
 		================= ========================== ============== ==============================================
 
 	Settings are identified by a key, which is a string in the form of **'<group>.<name>'** or **'<group>.<subGroup>.<name>'**. Groups provide \
-	a simple way to categorize settings. Sub-groups are optional and multiple sub-groups are allowed. When defining a settings group, the \
-	:func:`register_group` method allows for specifying a UI friendly title for use in the Binary Ninja UI. Defining a new setting requires a \
-	unique setting key and a JSON string of property, value pairs. The following table describes the available properties and values.
+	a simple way to categorize settings. The segments of a key before the setting's name form nested groups. For example, ``ui.font.view.size`` is in \
+	the group ``ui.font.view``, inside ``ui.font`` and ``ui``. The :func:`register_group` method gives a group at any level a title and description \
+	for the Binary Ninja UI. Defining a new setting requires a unique setting key and a JSON string of property, value pairs. The following table \
+	describes the available properties and values.
 
 		====================  ======================================   ==================   ========   =======================================================================
 		Property              JSON Data Type                           Prerequisite         Optional   {Allowed Values} and Notes
@@ -201,21 +202,27 @@ class Settings:
 			resource_id = ""
 		core.BNSettingsSetResourceId(self.handle, resource_id)
 
-	def register_group(self, group: str, title: str) -> bool:
+	def register_group(self, group: str, title: str, description: str = "") -> bool:
 		"""
 		``register_group`` registers a group in the schema for this :class:`Settings` instance
 
-		:param str group: a unique identifier
+		A group ID is one or more leading segments of a setting key, such as ``"solver"`` or ``"solver.limits"``. Registering a \
+		group is optional and only sets its title and description. Each group can be registered once, before or after its settings.
+
+		:param str group: one or more non-empty segments separated by dots
 		:param str title: a user friendly name appropriate for UI presentation
-		:return: True on success, False on failure.
+		:param str description: an optional description of the group's settings
+		:return: True on success, False if the identifier is invalid, the title is empty, or the group is already registered.
 		:rtype: bool
 		:Example:
 
 			>>> Settings().register_group("solver", "Solver")
 			True
+			>>> Settings().register_group("solver.limits", "Limits", "How much time and memory the solver may use.")
+			True
 			>>>
 		"""
-		return core.BNSettingsRegisterGroup(self.handle, group, title)
+		return core.BNSettingsRegisterGroup(self.handle, group, title, description)
 
 	def register_setting(self, key: str, properties: str) -> bool:
 		"""

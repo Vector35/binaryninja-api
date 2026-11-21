@@ -514,11 +514,35 @@ impl Settings {
         }
     }
 
+    /// Registers a title for a settings group.
+    ///
+    /// `group` is one or more leading segments of a setting key, such as `"myPlugin"` or
+    /// `"myPlugin.advanced"`. Each group can be registered once, before or after its settings.
     pub fn register_group(&self, group: &str, title: &str) -> bool {
+        self.register_group_with_description(group, title, "")
+    }
+
+    /// Registers a title and description for a settings group.
+    ///
+    /// See [`Settings::register_group`] for the form of `group`.
+    pub fn register_group_with_description(
+        &self,
+        group: &str,
+        title: &str,
+        description: &str,
+    ) -> bool {
         let group = group.to_cstr();
         let title = title.to_cstr();
+        let description = description.to_cstr();
 
-        unsafe { BNSettingsRegisterGroup(self.handle, group.as_ptr(), title.as_ptr()) }
+        unsafe {
+            BNSettingsRegisterGroup(
+                self.handle,
+                group.as_ptr(),
+                title.as_ptr(),
+                description.as_ptr(),
+            )
+        }
     }
 
     pub fn register_setting_json(&self, key: &str, properties: &str) -> bool {

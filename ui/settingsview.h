@@ -56,16 +56,39 @@ class QSplitter;
 /*!
     \ingroup settingsview
 */
+struct SettingsRow
+{
+	//! The setting this row shows, or nullptr for a heading row
+	Json::Value* setting = nullptr;
+	//! The full ID of the group a heading row introduces
+	QString groupId;
+	//! The titles of a heading row's group and its ancestors below the top-level group, joined with " › "
+	QString heading;
+	//! A heading row's own title, or the joined titles of the groups merged into it
+	QString title;
+	QString description;
+	//! How many levels the outline indents a heading row below its top-level group
+	int depth = 0;
+	//! Whether a heading row is drawn in the settings list as well as the outline
+	bool listed = false;
+	//! One past the last row of a heading row's group and its child groups
+	int sectionEnd = 0;
+	//! The text that searches match against a setting row
+	QString filterText;
+};
+
+
+/*!
+    \ingroup settingsview
+*/
 struct SettingsEntry
 {
-	SettingsEntry(int p, const QString& h, const QString& g, std::vector<void*>&& j) :
-	    parent(p), heading(h), group(g), jsonDefs(j)
-	{}
 	int parent;
 	QString heading;
 	QString group;
-	std::vector<void*> jsonDefs;
-	std::vector<QString> subgroups;
+	QString description;
+	//! Headings and settings in display order. Each group's own settings come before its child groups.
+	std::vector<SettingsRow> rows;
 };
 
 
@@ -79,7 +102,6 @@ class BINARYNINJAUIAPI SettingsTreeModel : public QAbstractItemModel
   private:
 	Json::Value m_schema;
 	std::vector<SettingsEntry> m_store;
-	std::map<std::string, QString> m_filterText;
 	std::map<std::string, int> m_ignoreScope;
 
   public:
@@ -112,8 +134,8 @@ class BINARYNINJAUIAPI SettingsFilterProxyModel : public QSortFilterProxyModel
 	int m_scopeFilter = SettingsAutoScope;
 	int m_scopeForSchema = SettingsAutoScope;
 	std::map<std::string, int> m_itemScope;
-	mutable QRegularExpression m_regExp;
-	mutable std::map<QString, std::set<QString>> m_subgroupFilterCache;
+
+	bool acceptsSetting(const QModelIndex& sourceIndex) const;
 
   public:
 	SettingsFilterProxyModel(QObject* parent = 0);
@@ -123,14 +145,12 @@ class BINARYNINJAUIAPI SettingsFilterProxyModel : public QSortFilterProxyModel
 	{
 		beginFilterChange();
 		m_scopeFilter = scope;
-		m_subgroupFilterCache.clear();
 		endFilterChange();
 	}
 	int scopeForSchema() { return m_scopeForSchema; }
 	void setScopeForSchema(int scope)
 	{
 		beginFilterChange();
-		m_subgroupFilterCache.clear();
 		m_scopeForSchema = scope;
 		endFilterChange();
 	}
@@ -139,7 +159,6 @@ class BINARYNINJAUIAPI SettingsFilterProxyModel : public QSortFilterProxyModel
 
   protected:
 	bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
-	bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
 
   public Q_SLOTS:
 	void updateScope(const std::string& key, int scope) { m_itemScope[key] = scope; }
@@ -155,6 +174,8 @@ class BINARYNINJAUIAPI SettingsOutlineProxyModel : public QSortFilterProxyModel
 
   public:
 	SettingsOutlineProxyModel(QObject* parent = 0);
+
+	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
   protected:
 	bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
@@ -360,16 +381,18 @@ class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
 
 	QTreeView* m_treeView;
 	std::function<void(const QModelIndex& index)> m_hoverAction = nullptr;
-	std::function<void(const QString&, const QString&)> m_defaultSelectionAction = nullptr;
+	std::function<void(const QString&)> m_defaultSelectionAction = nullptr;
 	QString m_defaultGroupSelection;
-	QString m_defaultSubgroupSelection;
+
+	int descriptionWidth() const;
+	int descriptionHeight(const QString& description) const;
 
   public:
 	SettingsDelegate(QWidget* parent, SettingsRef settings, SettingsFilterProxyModel* filterModel,
 	    const std::function<void(const QModelIndex& index)>& hoverAction = nullptr);
 	~SettingsDelegate();
 
-	void setDefaultSelection(const QString& group, const QString& subgroup, const std::function<void(const QString&, const QString&)>& selectionAction);
+	void setDefaultSelection(const QString& groupId, const std::function<void(const QString&)>& selectionAction);
 
 	void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
@@ -538,6 +561,8 @@ class BINARYNINJAUIAPI SettingsView : public QWidget
 	bool m_outlineNavEnabled = true;
 	int m_nextGroupIdx = 0;
 
+	void scrollToGroup(const QModelIndex& outlineIndex);
+
   public:
 	SettingsView(QWidget* parent);
 	SettingsView(QWidget* parent, SettingsRef settings);
@@ -552,7 +577,8 @@ class BINARYNINJAUIAPI SettingsView : public QWidget
 	void setData(BinaryViewRef view, const QString& name = "");
 	void setScope(BNSettingsScope scope);
 	void setOutlineVisible(bool visible);
-	void setDefaultGroupSelection(const QString& group, const QString& subgroup = "");
+	//! Selects a group in the outline by its full ID, such as "loader" or "ui.font.view".
+	void setDefaultGroupSelection(const QString& groupId);
 	void focusSearch();
 	void setSearchFilter(const QString& filter) { if (m_search) m_search->setText(filter); };
 

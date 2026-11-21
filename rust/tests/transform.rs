@@ -1,7 +1,6 @@
 use binaryninja::binary_view::{BinaryReader, BinaryView, BinaryViewBase};
 use binaryninja::data_buffer::DataBuffer;
 use binaryninja::file_metadata::FileMetadata;
-use binaryninja::settings::Settings;
 use binaryninja::transform::{
     register_transform, register_transform_with_context, register_transform_with_detection,
     ContextTransform, CustomTransform, DetectionTransform, ProcessResult, Transform,
@@ -159,7 +158,7 @@ fn test_context_transform() {
     assert!(transform.supports_context());
     let view = BinaryView::from_data(&FileMetadata::new(), b"initial_data");
     // Create session and grab root context
-    let session = TransformSession::from_view(&view, &Settings::global());
+    let session = TransformSession::from_view(&view, None::<&str>).expect("Should create session");
     let root = session.root_context().expect("Should have root context");
     // Tell the root context to explicitly use our context transform
     root.set_transform_name("MyContextTransform");

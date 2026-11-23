@@ -8067,6 +8067,8 @@ namespace BinaryNinja {
 
 		/*! Creates a user-defined segment that specifies how data from the raw file is mapped into a virtual address space
 
+			\deprecated User segments are deprecated in favor of mapped memory regions; use MemoryMap::AddMappedMemoryRegion (since 6.1)
+
 			\param start Starting virtual address
 			\param length Length within the virtual address space
 			\param dataOffset Data offset in the raw file
@@ -8077,11 +8079,15 @@ namespace BinaryNinja {
 
 		/*! Creates user-defined segments that specify how data from the raw file is mapped into a virtual address space
 
+			\deprecated User segments are deprecated in favor of mapped memory regions; use MemoryMap::AddMappedMemoryRegion (since 6.1)
+
 			\param segments Segments to add to the BinaryView
 		*/
 		void AddUserSegments(const std::vector<BNSegmentInfo>& segments);
 
 		/*! Removes a user-defined segment from th current segment mapping
+
+			\deprecated User segments are deprecated in favor of mapped memory regions; use MemoryMap::RemoveMemoryRegion (since 6.1)
 
 			\param start Virtual address of the start of the segment
 			\param length Length of the segment
@@ -8490,6 +8496,8 @@ namespace BinaryNinja {
 		bool hasTarget;
 		bool absoluteAddressMode;
 		bool local;
+		uint64_t dataOffset;
+		BNMemoryRegionKind kind;
 	};
 
 	struct ResolvedMemoryRange
@@ -8556,6 +8564,11 @@ namespace BinaryNinja {
 		bool AddUnbackedMemoryRegion(const std::string& name, uint64_t start, uint64_t length, uint32_t flags = 0, uint8_t fill = 0)
 		{
 			return BNAddUnbackedMemoryRegion(m_object, name.c_str(), start, length, flags, fill);
+		}
+
+		bool AddMappedMemoryRegion(const std::string& name, uint64_t start, uint64_t length, uint64_t fileOffset, uint32_t flags = 0)
+		{
+			return BNAddMappedMemoryRegion(m_object, name.c_str(), start, length, fileOffset, flags);
 		}
 
 		bool RemoveMemoryRegion(const std::string& name)
@@ -8636,7 +8649,7 @@ namespace BinaryNinja {
 				return std::nullopt;
 			MemoryRegionInfo result {info.name, info.displayName, info.start, info.length,
 				info.flags, info.enabled, info.rebaseable, info.fill,
-				info.hasTarget, info.absoluteAddressMode, info.local};
+				info.hasTarget, info.absoluteAddressMode, info.local, info.dataOffset, info.kind};
 			BNFreeMemoryRegionInfo(&info);
 			return result;
 		}
@@ -8648,7 +8661,7 @@ namespace BinaryNinja {
 				return std::nullopt;
 			MemoryRegionInfo result {info.name, info.displayName, info.start, info.length,
 				info.flags, info.enabled, info.rebaseable, info.fill,
-				info.hasTarget, info.absoluteAddressMode, info.local};
+				info.hasTarget, info.absoluteAddressMode, info.local, info.dataOffset, info.kind};
 			BNFreeMemoryRegionInfo(&info);
 			return result;
 		}
@@ -8667,7 +8680,7 @@ namespace BinaryNinja {
 				auto& r = raw.regions[j];
 				result.regions.push_back({r.name, r.displayName, r.start, r.length,
 					r.flags, r.enabled, r.rebaseable, r.fill,
-					r.hasTarget, r.absoluteAddressMode, r.local});
+					r.hasTarget, r.absoluteAddressMode, r.local, r.dataOffset, r.kind});
 			}
 			BNFreeResolvedMemoryRange(&raw);
 			return result;
@@ -8693,6 +8706,8 @@ namespace BinaryNinja {
 					regions[i].hasTarget,
 					regions[i].absoluteAddressMode,
 					regions[i].local,
+					regions[i].dataOffset,
+					regions[i].kind,
 				});
 			}
 			BNFreeMemoryRegions(regions, count);
@@ -8717,7 +8732,7 @@ namespace BinaryNinja {
 					range.regions.push_back({
 						r.name, r.displayName, r.start, r.length,
 						r.flags, r.enabled, r.rebaseable, r.fill,
-						r.hasTarget, r.absoluteAddressMode, r.local,
+						r.hasTarget, r.absoluteAddressMode, r.local, r.dataOffset, r.kind,
 					});
 				}
 				result.push_back(std::move(range));
@@ -9405,7 +9420,7 @@ namespace BinaryNinja {
 		bool IsEndOfFile() const;
 
 		/*! Create a new reader that represents a bounded slice of this reader
-		
+
 			\param offset The start offset for the new slice
 			\param length The length of the new slice
 

@@ -68,11 +68,17 @@ class BINARYNINJAUIAPI MemoryRegionDialog : public QDialog
 	SegmentRef m_segment;
 	std::optional<std::string> m_filePath;
 	bool m_nameManuallyEdited = false;
+	bool m_editExisting = false;
+	std::string m_editName;
+	BNMemoryRegionKind m_editKind = MappedMemoryRegion;
+	// The full definition of the region being edited, looked up by name: the selected row is only one resolved
+	// fragment of it when other regions overlap
+	std::optional<BinaryNinja::MemoryRegionInfo> m_editDefinition;
 
 	void SelectFile();
 	void Submit();
 public:
-	MemoryRegionDialog(QWidget* parent, BinaryViewRef data, SegmentRef associatedSegment = nullptr);
+	MemoryRegionDialog(QWidget* parent, BinaryViewRef data, SegmentRef associatedSegment = nullptr, bool editExisting = false);
 };
 
 /*!
@@ -184,7 +190,6 @@ class BINARYNINJAUIAPI SegmentWidget : public QWidget
 	void restoreDefaults();
 
 	void addMemoryRegion(SegmentRef segment);
-	void addSegment();
 	void editSegment(SegmentRef segment);
 	void disableSegment(SegmentRef segment);
 	void enableSegment(const std::string& regionName);

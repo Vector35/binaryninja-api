@@ -2055,7 +2055,7 @@ class Section:
 			"length": length,
 			"link": link,
 			"name": name,
-			"semantics": semantics,
+			"semantics": _section_semantics_name(semantics),
 			"start": start - image_base,
 			"type": type
 		}
@@ -2126,6 +2126,22 @@ class Section:
 			info_data=self.info_data
 		)
 
+# Section semantics as named in section descriptions (loader.sections), matching what the core writes and reads
+_SECTION_SEMANTICS_NAMES = {
+	SectionSemantics.DefaultSectionSemantics: "default",
+	SectionSemantics.ReadOnlyCodeSectionSemantics: "code",
+	SectionSemantics.ReadOnlyDataSectionSemantics: "read_only_data",
+	SectionSemantics.ReadWriteDataSectionSemantics: "writable_data",
+	SectionSemantics.ExternalSectionSemantics: "external",
+}
+
+
+def _section_semantics_name(semantics: Union['SectionSemantics', str]) -> str:
+	if isinstance(semantics, str):
+		return semantics
+	return _SECTION_SEMANTICS_NAMES[SectionSemantics(semantics)]
+
+
 class SectionDescriptorList(list):
 	def __init__(self, image_base: int):
 		"""
@@ -2158,7 +2174,7 @@ class SectionDescriptorList(list):
 			"name": name,
 			"start": start - self.image_base,
 			"length": length,
-			"semantics": semantics,
+			"semantics": _section_semantics_name(semantics),
 			"type": type,
 			"align": align,
 			"entry_size": entry_size,

@@ -143,6 +143,8 @@ enum Arm64Intrinsic : uint32_t
 	ARM64_INTRIN_HINT_GCSB,
 	/* FEAT_JSCVT */
 	ARM64_INTRIN_JCVT,
+	/* BRK, when arch.aarch64.disassembly.brkEndsBlock is off */
+	ARM64_INTRIN_BRK,
 	ARM64_INTRIN_NORMAL_END, /* The SysOp, ACLE and Apple vendor intrinsics follow, in that order */
 	ARM64_INTRIN_INVALID = 0xFFFFFFFF,
 };
@@ -157,7 +159,7 @@ static_assert(FAKEREG_SYSREG_UNKNOWN >= SYSREG_END);
 
 bool GetLowLevelILForInstruction(BinaryNinja::Architecture* arch, uint64_t addr,
     BinaryNinja::LowLevelILFunction& il, const exarmo_aarch64_instruction& instr, size_t addrSize,
-    bool alignmentRequired, std::function<bool()> preferIntrinsics);
+    bool alignmentRequired, bool brkEndsBlock, std::function<bool()> preferIntrinsics);
 
 BinaryNinja::ExprId ExtractRegister(BinaryNinja::LowLevelILFunction& il,
     exarmo_aarch64_operand& operand, size_t regNum, size_t extractSize, bool signExtend,

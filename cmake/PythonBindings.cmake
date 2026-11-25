@@ -73,11 +73,22 @@ function(generate_python_bindings)
 		list(APPEND GENERATOR_OPTIONS --core-header ${ARGS_CORE_HEADER})
 	endif()
 
+	set(GENERATOR_ENV ASAN_OPTIONS=detect_leaks=0)
+	if(WIN32)
+		if(BN_INTERNAL_BUILD)
+			set(CORE_DLL_DIR ${BN_CORE_OUTPUT_DIR})
+		else()
+			set(CORE_DLL_DIR ${BN_INSTALL_DIR})
+		endif()
+		list(PREPEND GENERATOR_ENV
+			--modify "PATH=path_list_prepend:${CORE_DLL_DIR}")
+	endif()
+
 	add_custom_command(
 		OUTPUT ${CORE_SOURCE_PATH} ${ENUMS_SOURCE_PATH}
 		DEPENDS ${GENERATOR_DEPENDS}
 		COMMENT "Generating ${ARGS_DISPLAY_NAME} Python Sources"
-		COMMAND ${CMAKE_COMMAND} -E env ASAN_OPTIONS=detect_leaks=0 $<TARGET_FILE:${ARGS_GENERATOR_TARGET}>
+		COMMAND ${CMAKE_COMMAND} -E env ${GENERATOR_ENV} -- $<TARGET_FILE:${ARGS_GENERATOR_TARGET}>
 			${ARGS_HEADER_FILE}
 			${CORE_SOURCE_PATH}
 			${ARGS_TEMPLATE_FILE}

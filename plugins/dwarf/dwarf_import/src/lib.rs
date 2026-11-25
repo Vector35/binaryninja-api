@@ -35,7 +35,7 @@ use binaryninja::{
     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
     settings::Settings,
 };
-use dwarfreader::create_section_reader_object;
+use dwarfreader::{create_section_reader_object, SectionAddresses};
 
 use functions::parse_lexical_block;
 use gimli::{
@@ -46,7 +46,7 @@ use gimli::{
 use helpers::{get_build_id, load_debug_info_for_build_id};
 use iset::IntervalMap;
 use object::read::macho::FatArch;
-use object::{Object, ObjectSection};
+use object::{BinaryFormat, Object, ObjectKind, ObjectSection, SectionFlags};
 
 trait ReaderType: Reader<Offset = usize> {}
 impl<T: Reader<Offset = usize>> ReaderType for T {}
@@ -489,7 +489,10 @@ where
     }
 }
 
-fn parse_range_data_offsets(file: &object::File) -> Result<IntervalMap<u64, i64>, String> {
+fn parse_range_data_offsets(
+    file: &object::File,
+    section_addresses: &SectionAddresses,
+) -> Result<IntervalMap<u64, i64>, String> {
     let dwo_file = file.section_by_name(".debug_info.dwo").is_some();
     let endian = match file.endianness() {
         object::Endianness::Little => gimli::RunTimeEndian::Little,
@@ -497,7 +500,7 @@ fn parse_range_data_offsets(file: &object::File) -> Result<IntervalMap<u64, i64>
     };
 
     let section_reader = |section_id: SectionId| -> _ {
-        create_section_reader_object(section_id, &file, endian, dwo_file)
+        create_section_reader_object(section_id, &file, endian, dwo_file, section_addresses)
     };
 
     if file.section_by_name(".eh_frame").is_some() {
@@ -538,6 +541,81 @@ fn parse_range_data_offsets(file: &object::File) -> Result<IntervalMap<u64, i64>
     }
 }
 
+/// Where `bv` placed the allocated sections of `file`, if it's a relocatable ELF object.
+///
+/// The addresses are before rebasing, like the other addresses read from the DWARF info, since
+/// [`DebugInfoBuilder::post_process`] rebases them all. Linked files keep their own addresses.
+fn object_section_addresses(bv: &BinaryView, file: &object::File) -> SectionAddresses {
+    let mut section_addresses = SectionAddresses::new();
+    if file.format() != BinaryFormat::Elf || file.kind() != ObjectKind::Relocatable {
+        return section_addresses;
+    }
+
+    // `post_process` rebases function addresses by this much, unless the view is below the
+    // file's image base.
+    let rebase = bv.start().saturating_sub(bv.original_image_base());
+
+    // The ELF view gives sections with the same name unique names, which can't be predicted
+    // from the file alone. It also adds each section with contents to the raw view at its file
+    // offset under the same name, so that offset finds the name.
+    let mut raw_names = HashMap::new();
+    if let Some(raw_view) = bv.parent_view() {
+        for raw_section in raw_view.sections().iter() {
+            raw_names.insert(
+                (raw_section.start(), raw_section.len() as u64),
+                raw_section.name().to_string_lossy().into_owned(),
+            );
+        }
+    }
+    // Sections without contents (`SHT_NOBITS`) aren't in the raw view; those are found by
+    // name, which is only reliable if no other section has it.
+    let mut name_counts = HashMap::new();
+    for section in file.sections() {
+        if let Ok(name) = section.name() {
+            *name_counts.entry(name).or_insert(0usize) += 1;
+        }
+    }
+
+    for section in file.sections() {
+        let Ok(name) = section.name() else {
+            continue;
+        };
+        let SectionFlags::Elf { sh_flags, .. } = section.flags() else {
+            continue;
+        };
+        if !sh_flags.contains(object::elf::SHF_ALLOC) || section.size() == 0 {
+            continue;
+        }
+
+        let view_name = section
+            .file_range()
+            .and_then(|range| raw_names.get(&range).cloned())
+            .or_else(|| (name_counts.get(name) == Some(&1)).then(|| name.to_string()));
+        let Some(view_name) = view_name else {
+            tracing::debug!(
+                "Section {} (index {}) of the object can't be found in the view; addresses in it will not be relocated",
+                name,
+                section.index().0
+            );
+            continue;
+        };
+
+        match bv.section_by_name(view_name.as_str()) {
+            Some(view_section) if view_section.len() as u64 == section.size() => {
+                section_addresses.insert(
+                    section.index(),
+                    view_section.start().wrapping_sub(rebase),
+                );
+            }
+            _ => tracing::debug!(
+                "Section {} of the object is not in the view; addresses in it will not be relocated",
+                view_name
+            ),
+        }
+    }
+    section_addresses
+}
+
 fn parse_dwarf(
     bv: &BinaryView,
     debug_file: &object::File,
@@ -553,7 +631,9 @@ fn parse_dwarf(
         None => bv.address_size(),
     };
 
-    let range_data_offsets = parse_range_data_offsets(debug_file).unwrap_or_default();
+    let section_addresses = object_section_addresses(bv, debug_file);
+    let range_data_offsets =
+        parse_range_data_offsets(debug_file, &section_addresses).unwrap_or_default();
 
     let dwo_file = debug_file.section_by_name(".debug_info.dwo").is_some();
     let endian = match debug_file.endianness() {
@@ -562,7 +642,13 @@ fn parse_dwarf(
     };
 
     let mut section_reader = |section_id: SectionId| -> _ {
-        create_section_reader_object(section_id, &debug_file, endian, dwo_file)
+        create_section_reader_object(
+            section_id,
+            &debug_file,
+            endian,
+            dwo_file,
+            &section_addresses,
+        )
     };
 
     let mut dwarf = Dwarf::load(&mut section_reader)
@@ -582,7 +668,13 @@ fn parse_dwarf(
 
         let sup_dwo_file = sup_file.section_by_name(".debug_info.dwo").is_some();
         let sup_section_reader = |section_id: SectionId| -> _ {
-            create_section_reader_object(section_id, &sup_file, sup_endian, sup_dwo_file)
+            create_section_reader_object(
+                section_id,
+                &sup_file,
+                sup_endian,
+                sup_dwo_file,
+                &SectionAddresses::new(),
+            )
         };
         if let Err(e) = dwarf.load_sup(sup_section_reader) {
             tracing::error!("Failed to load supplementary file: {}", e);

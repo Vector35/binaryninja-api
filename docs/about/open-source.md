@@ -111,6 +111,7 @@ Due to its different document generation system, all our rust dependencies and t
 * [NDS32 Rust Licenses](./rust-nds32.html)
 * [TMS320C6x Rust Licenses](./rust-tms320c6x.html)
 * [TI COFF Rust Licenses](./rust-ticoff.html)
+* [Transforms Rust Licenses](./rust-transforms.html)
 
 ## First Party Open Source
 

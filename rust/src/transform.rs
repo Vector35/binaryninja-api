@@ -505,6 +505,11 @@ impl TransformContext {
         unsafe { BNTransformContextIsRoot(self.handle) }
     }
 
+    /// If a list of files available for extraction has been set.
+    pub fn has_available_files(&self) -> bool {
+        unsafe { BNTransformContextHasAvailableFiles(self.handle) }
+    }
+
     /// The list of available files for extraction.
     pub fn available_files(&self) -> Array<BnString> {
         let mut count = 0;

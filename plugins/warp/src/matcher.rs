@@ -10,6 +10,7 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::hash::Hash;
 use warp::r#type::class::TypeClass;
+use warp::r#type::guid::TypeGUID;
 use warp::r#type::Type;
 use warp::signature::function::Function;
 
@@ -95,6 +96,37 @@ impl Matcher {
             Ordering::Equal => matched_func,
             Ordering::Greater => matched_func,
             Ordering::Less => None,
+        }
+    }
+
+    pub fn add_function_types_to_view<A: BNArchitecture + Copy>(
+        &self,
+        container: &dyn Container,
+        possible_sources: &[SourceId],
+        view: &BinaryView,
+        arch: A,
+        function: &Function,
+    ) where
+        Self: Sized,
+    {
+        if let Some(matched_func_ty) = &function.ty {
+            // NOTE: We only need one source with the guid, types with the same guid
+            // should be identical across sources, and types should be referable across
+            // sources, otherwise we will end up with a lot of duplicate types.
+            // TODO: Add a special type reference system for referring to types in a different source.
+            // TODO: If a child type is in a source other than the function type this will
+            // TODO: Fail to work, so we are enumerating all sources here, this is just
+            // TODO: so annoying and a bunch of wasted effort.
+            for source in possible_sources {
+                self.add_type_to_view(container, source, view, arch, matched_func_ty);
+            }
+        }
+        for variable in &function.variables {
+            if let Some(var_ty) = &variable.ty {
+                for source in possible_sources {
+                    self.add_type_to_view(container, source, view, arch, var_ty)
+                }
+            }
         }
     }
 
@@ -248,6 +280,14 @@ impl Matcher {
                     // Adds the ref'd type to the view.
                     match (c.guid, &c.name, resolved_ty) {
                         (Some(guid), Some(name), Some(ref_ty)) => {
+                            inner_add_type_to_view(
+                                container,
+                                source,
+                                view,
+                                arch,
+                                visited_refs,
+                                &ref_ty,
+                            );
                             view.define_auto_type_with_id(
                                 name,
                                 &guid.to_string(),
@@ -275,10 +315,10 @@ impl Matcher {
                 | TypeClass::Float(_) => {}
             }
 
-            // TODO: Some refs likely need to ommitted because they are just that, refs to another type.
-            // let guid = TypeGUID::from(ty);
-            // let name = ty.name.clone().unwrap_or(guid.to_string());
-            // view.define_auto_type_with_id(name, &guid.to_string(), &to_bn_type(arch, ty));
+            if let Some(name) = ty.name.clone() {
+                let guid = TypeGUID::from(ty);
+                view.define_auto_type_with_id(name, &guid.to_string(), &to_bn_type(Some(arch), ty));
+            }
         }
         inner_add_type_to_view(container, source, view, arch, &mut HashSet::new(), ty)
     }
